@@ -331,6 +331,8 @@ def handle_driver_text_message(chat_id, text):
         send_driver_welcome_message(chat_id)
     elif text == '/help':
         send_driver_help_message(chat_id)
+    elif text == '/status':
+        send_driver_status_message(chat_id)
     elif text == '/test':
         # Test command to verify bot is working
         send_driver_message(chat_id, "✅ Driver bot is working correctly!\n\nThis is a test message to verify the connection.")
@@ -368,6 +370,45 @@ def send_driver_welcome_message(chat_id):
     }
     
     send_driver_message(chat_id, message, keyboard=keyboard)
+
+def send_driver_status_message(chat_id):
+    """Send driver status information"""
+    try:
+        from models import Driver, Order
+        from extensions import db
+        
+        driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+        if not driver:
+            send_driver_message(chat_id, "❌ You are not registered as a driver. Contact admin for registration.")
+            return
+        
+        # Get active orders
+        active_orders = Order.query.filter_by(driver_id=driver.id).filter(
+            Order.status.in_(['out_for_delivery', 'preparing', 'confirmed'])
+        ).all()
+        
+        message = f"📊 *Your Driver Status*\n\n"
+        message += f"👤 Name: {driver.name}\n"
+        message += f"🚗 Vehicle: {driver.vehicle_type.title()}\n"
+        message += f"📞 Phone: {driver.phone_number}\n"
+        message += f"✅ Status: {'Active' if driver.is_active else 'Inactive'}\n"
+        message += f"🔄 Availability: {'Available' if driver.is_available else 'Busy'}\n"
+        message += f"🎯 Approval: {'Approved' if driver.is_approved else 'Pending'}\n\n"
+        message += f"📋 Active Orders: {len(active_orders)}\n"
+        
+        if active_orders:
+            message += f"\n🚚 *Current Deliveries:*\n"
+            for order in active_orders:
+                message += f"• Order #{order.id} - {order.customer_name} ({order.status})\n"
+        
+        if driver.last_location_update:
+            message += f"\n📍 Last Location Update: {driver.last_location_update.strftime('%Y-%m-%d %H:%M')}\n"
+        
+        send_driver_message(chat_id, message)
+        
+    except Exception as e:
+        logger.error(f"Error sending driver status: {e}")
+        send_driver_message(chat_id, "❌ Error retrieving status information.")
 
 def send_driver_help_message(chat_id):
     """Send help message to driver"""

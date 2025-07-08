@@ -943,5 +943,91 @@ def get_live_tracking_data():
         
     except Exception as e:
         logger.error(f"Error getting live tracking data: {e}")
-        return jsonify({'error': 'Failed to get live tracking data'}), 500, 500
+        return jsonify({'error': 'Failed to get live tracking data'}), 500
+
+@app.route('/api/admin/drivers/add', methods=['POST'])
+def add_driver_employee():
+    """Add new driver employee from admin panel"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'phone_number', 'telegram_user_id', 'vehicle_type']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Validate telegram_user_id is a valid integer
+        try:
+            telegram_user_id = int(data['telegram_user_id'])
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid Telegram User ID'}), 400
+        
+        # Check if driver with this telegram_user_id already exists
+        existing_driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if existing_driver:
+            return jsonify({'error': 'Driver with this Telegram ID already exists'}), 409
+        
+        # Create new driver
+        new_driver = Driver(
+            name=data['name'].strip(),
+            phone_number=data['phone_number'].strip(),
+            telegram_user_id=telegram_user_id,
+            vehicle_type=data['vehicle_type'],
+            is_active=True,
+            is_available=True,
+            is_approved=data.get('auto_approve', True),
+            approval_status='approved' if data.get('auto_approve', True) else 'pending'
+        )
+        
+        db.session.add(new_driver)
+        db.session.commit()
+        
+        # Send welcome message to driver via driver bot
+        try:
+            from driver_bot import send_driver_message
+            
+            welcome_message = f"""
+🎉 *Welcome to ET-FOOD Driver System!*
+
+Hello {new_driver.name}! You have been added as a delivery driver for ET-FOOD.
+
+📋 *Your Details:*
+• Name: {new_driver.name}
+• Phone: {new_driver.phone_number}
+• Vehicle: {new_driver.vehicle_type.title()}
+• Status: {'Approved' if new_driver.is_approved else 'Pending Approval'}
+
+🚀 *How to Use:*
+• You will receive notifications about new delivery orders
+• Accept orders by clicking the "Accept" button
+• Use the driver panel to manage your orders
+• Share your location when requested
+
+📱 *Commands:*
+• /start - Show main menu
+• /help - Get help and support
+• /status - Check your current status
+
+Welcome to the team! 🏍️
+"""
+            
+            send_driver_message(telegram_user_id, welcome_message)
+            logger.info(f"Welcome message sent to new driver {new_driver.name} (ID: {telegram_user_id})")
+            
+        except Exception as e:
+            logger.error(f"Error sending welcome message to driver: {e}")
+            # Continue without failing the entire operation
+        
+        return jsonify({
+            'success': True,
+            'message': 'Driver added successfully',
+            'driver_id': new_driver.id,
+            'driver_name': new_driver.name
+        })
+        
+    except Exception as e:
+        logger.error(f"Error adding driver employee: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add driver employee'}), 500, 500
 

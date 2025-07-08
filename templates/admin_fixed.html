@@ -260,6 +260,9 @@
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h4>Driver Management & Live Status</h4>
                             <div>
+                                <button class="btn btn-primary me-2" onclick="openAddDriverModal()">
+                                    <i class="fas fa-plus"></i> Add Driver Employee
+                                </button>
                                 <button class="btn btn-success me-2" onclick="refreshDriverStatus()">
                                     <i class="fas fa-sync"></i> Refresh
                                 </button>
@@ -1148,6 +1151,67 @@
         </div>
     </div>
 
+    <!-- Add Driver Employee Modal -->
+    <div class="modal fade" id="addDriverModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus"></i> Add Driver Employee
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addDriverForm">
+                        <div class="mb-3">
+                            <label for="driverName" class="form-label">Driver Name *</label>
+                            <input type="text" class="form-control" id="driverName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverPhone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="driverPhone" placeholder="+251911234567" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverTelegramId" class="form-label">Telegram User ID *</label>
+                            <input type="number" class="form-control" id="driverTelegramId" placeholder="383870190" required>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle"></i> To get Telegram ID: Send /start to @userinfobot
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverVehicle" class="form-label">Vehicle Type *</label>
+                            <select class="form-select" id="driverVehicle" required>
+                                <option value="">Select Vehicle</option>
+                                <option value="motorcycle">Motorcycle</option>
+                                <option value="car">Car</option>
+                                <option value="bicycle">Bicycle</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="driverAutoApprove" checked>
+                                <label class="form-check-label" for="driverAutoApprove">
+                                    Auto-approve driver (skip document verification)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-robot"></i> 
+                            <strong>Driver Bot Access:</strong> After adding, the driver will receive a welcome message 
+                            from the driver bot with instructions on how to use the system.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addDriverEmployee()">
+                        <i class="fas fa-plus"></i> Add Driver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Driver Management Functions
         let driversData = [];
@@ -1403,6 +1467,107 @@
                 }
             }, 5000);
         }
+
+        // Add Driver Employee Functions
+        function openAddDriverModal() {
+            // Reset form
+            document.getElementById('addDriverForm').reset();
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addDriverModal'));
+            modal.show();
+        }
+
+        function addDriverEmployee() {
+            const form = document.getElementById('addDriverForm');
+            
+            // Get form data
+            const driverData = {
+                name: document.getElementById('driverName').value.trim(),
+                phone_number: document.getElementById('driverPhone').value.trim(),
+                telegram_user_id: parseInt(document.getElementById('driverTelegramId').value),
+                vehicle_type: document.getElementById('driverVehicle').value,
+                auto_approve: document.getElementById('driverAutoApprove').checked
+            };
+            
+            // Validate form
+            if (!driverData.name || !driverData.phone_number || !driverData.telegram_user_id || !driverData.vehicle_type) {
+                showAlert('error', 'Please fill in all required fields');
+                return;
+            }
+            
+            // Disable button to prevent double submission
+            const submitBtn = document.querySelector('#addDriverModal .btn-primary');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Driver...';
+            
+            // Submit driver data
+            fetch('/api/admin/drivers/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(driverData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('addDriverModal')).hide();
+                    
+                    // Show success message
+                    showAlert('success', `Driver ${driverData.name} added successfully! Driver bot notification sent.`);
+                    
+                    // Refresh drivers table
+                    loadDriversData();
+                } else {
+                    showAlert('error', data.error || 'Failed to add driver');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding driver:', error);
+                showAlert('error', 'Failed to add driver. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Driver';
+            });
+        }
+
+        // Helper function to validate Telegram ID
+        function validateTelegramId(telegramId) {
+            return Number.isInteger(telegramId) && telegramId > 0;
+        }
+
+        // Helper function to format phone number
+        function formatPhoneNumber(phone) {
+            // Remove any non-digit characters except +
+            phone = phone.replace(/[^\d+]/g, '');
+            
+            // Add +251 prefix if not present
+            if (!phone.startsWith('+')) {
+                if (phone.startsWith('251')) {
+                    phone = '+' + phone;
+                } else if (phone.startsWith('09')) {
+                    phone = '+251' + phone.substring(1);
+                } else {
+                    phone = '+251' + phone;
+                }
+            }
+            
+            return phone;
+        }
+
+        // Format phone number as user types
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('driverPhone');
+            if (phoneInput) {
+                phoneInput.addEventListener('blur', function() {
+                    this.value = formatPhoneNumber(this.value);
+                });
+            }
+        });
     </script>
 
 </body>
