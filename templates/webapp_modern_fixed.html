@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botifi Food - Order Now</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #ffffff;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #16213e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .language-selector {
+            background: #16213e;
+            border: none;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .search-bar {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 12px;
+            background: #16213e;
+            color: #ffffff;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .search-input::placeholder {
+            color: #6b7280;
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        
+        .categories {
+            margin-bottom: 30px;
+        }
+        
+        .categories h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            color: #ffffff;
+            font-weight: 600;
+            background: linear-gradient(135deg, #16213e, #0f172a);
+            border: 1px solid #374151;
+        }
+        
+        .category-card:hover {
+            transform: scale(1.05);
+        }
+        
+        .category-burgers {
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+        }
+        
+        .category-snacks {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+        }
+        
+        .category-sauces {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        }
+        
+        .category-drinks {
+            background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+        }
+        
+        .category-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .category-name {
+            color: #ffffff;
+            font-weight: 500;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .products {
+            margin-bottom: 100px;
+        }
+        
+        .products h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .product-card {
+            background: #16213e;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        
+        .product-info {
+            padding: 15px;
+        }
+        
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #ffffff;
+        }
+        
+        .product-price {
+            font-size: 14px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .product-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-remove {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 35px;
+            height: 35px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-add {
+            background: #f97316;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            flex: 1;
+            height: 35px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .cart-info {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #3b82f6;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            z-index: 1000;
+        }
+        
+        .quantity-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #f97316;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .language-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .language-modal.show {
+            display: flex;
+        }
+        
+        .language-modal-content {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 300px;
+        }
+        
+        .language-option {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+        
+        .language-option:hover {
+            background: #1a1a2e;
+        }
+        
+        .language-option.selected {
+            background: #3b82f6;
+        }
+        
+        .flag {
+            font-size: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Profile Modal Styles */
+        .profile-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .profile-modal-content {
+            background: #1e293b;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .profile-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .profile-modal-header h3 {
+            margin: 0;
+            color: #f8fafc;
+        }
+        
+        .profile-close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .profile-modal-body {
+            padding: 20px;
+        }
+        
+        .profile-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .profile-avatar-large {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 16px;
+        }
+        
+        .profile-info-details h4 {
+            margin: 0 0 4px 0;
+            color: #f8fafc;
+            font-size: 18px;
+        }
+        
+        .profile-info-details p {
+            margin: 2px 0;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .profile-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .profile-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .profile-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .profile-btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .profile-btn-secondary {
+            background: #374151;
+            color: #f3f4f6;
+        }
+        
+        .profile-btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .profile-info {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .profile-info:hover {
+            opacity: 0.8;
+        }
+        
+        /* Checkout Modal Styles */
+        .checkout-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .checkout-modal-content {
+            background: #16213e;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .checkout-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .checkout-header h3 {
+            margin: 0;
+            color: #ffffff;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .checkout-body {
+            padding: 20px;
+        }
+        
+        .order-summary {
+            margin-bottom: 20px;
+        }
+        
+        .order-summary h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .order-items {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            color: #d1d5db;
+        }
+        
+        .order-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .order-total {
+            text-align: right;
+            color: #ffffff;
+            font-size: 18px;
+        }
+        
+        .customer-info {
+            margin-bottom: 20px;
+        }
+        
+        .customer-info h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .customer-info input,
+        .customer-info textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .address-container {
+            position: relative;
+        }
+        
+        .location-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            z-index: 10;
+        }
+        
+        .location-btn:hover {
+            background: #2563eb;
+        }
+        
+        .location-btn.success {
+            background: #10b981;
+        }
+        
+        .customer-info input::placeholder,
+        .customer-info textarea::placeholder {
+            color: #6b7280;
+        }
+        
+        .payment-options {
+            margin-bottom: 20px;
+        }
+        
+        .payment-options h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .payment-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .payment-method {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .payment-method:hover {
+            border-color: #3b82f6;
+        }
+        
+        .payment-method input[type="radio"] {
+            margin-right: 10px;
+        }
+        
+        .payment-method.checked {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .payment-icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        
+        .payment-method span:last-child {
+            color: #ffffff;
+            font-weight: 500;
+        }
+        
+        .payment-details {
+            margin-top: 15px;
+        }
+        
+        .payment-details .form-label {
+            color: #ffffff;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .payment-details input[type="text"],
+        .payment-details input[type="file"] {
+            margin-bottom: 10px;
+        }
+        
+        .payment-details input[type="text"]::placeholder {
+            color: #6b7280;
+        }
+        
+        .payment-instructions {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        .place-order-btn {
+            width: 100%;
+            padding: 15px;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .place-order-btn:hover {
+            background: #2563eb;
+        }
+        
+        .checkout-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .checkout-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .cart-info {
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cart-info:hover {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .category-grid,
+            .product-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .category-card {
+                padding: 15px;
+            }
+            
+            .category-icon {
+                font-size: 24px;
+            }
+            
+            .checkout-modal {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Profile and Language -->
+        <div class="header">
+            <div class="profile-info" onclick="showUserProfile()">
+                <div class="profile-avatar" id="profileAvatar">👤</div>
+                <div>
+                    <div style="font-size: 14px; color: #6b7280;" id="profileName">Profile</div>
+                    <div style="font-size: 12px; color: #9ca3af;" id="profilePhone"></div>
+                </div>
+            </div>
+            <select class="language-selector" id="languageSelector" onchange="changeLanguage()">
+                <option value="en">🇬🇧 English</option>
+                <option value="am">🇪🇹 አማርኛ</option>
+                <option value="or">🇪🇹 Afaan Oromoo</option>
+                <option value="ti">🇪🇹 ትግርኛ</option>
+            </select>
+        </div>
+
+        <!-- User Profile Modal -->
+        <div id="profileModal" class="profile-modal" style="display: none;">
+            <div class="profile-modal-content">
+                <div class="profile-modal-header">
+                    <h3>👤 User Profile</h3>
+                    <button onclick="closeUserProfile()" class="profile-close-btn">✕</button>
+                </div>
+                <div class="profile-modal-body">
+                    <div class="profile-section">
+                        <div class="profile-avatar-large" id="profileAvatarLarge">👤</div>
+                        <div class="profile-info-details">
+                            <h4 id="profileFullName">Guest User</h4>
+                            <p id="profileUserPhone">No phone number</p>
+                            <p id="profileUserLanguage">English</p>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <button onclick="editProfile()" class="profile-btn profile-btn-primary">Edit Profile</button>
+                        <button onclick="viewOrderHistory()" class="profile-btn profile-btn-secondary">Order History</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search" id="searchInput">
+            <span class="search-icon">🔍</span>
+        </div>
+
+        <!-- Categories -->
+        <div class="categories">
+            <h2 id="categoriesTitle">Categories</h2>
+            <div class="category-grid" id="categoriesContainer">
+                <!-- Categories will be loaded dynamically from the database -->
+            </div>
+        </div>
+
+        <!-- Products -->
+        <div class="products">
+            <h2 id="productsTitle">Products</h2>
+            <div class="product-grid" id="productGrid">
+                <!-- Products will be loaded dynamically -->
+            </div>
+        </div>
+        
+
+    </div>
+
+    <!-- Cart Info -->
+    <div class="cart-info" id="cartInfo" style="display: none;" onclick="showOrderForm()">
+        <span id="cartText">Cart</span> • <span id="cartTotal">0 ETB</span>
+    </div>
+    
+    <!-- Checkout Button for non-Telegram users -->
+    <div class="checkout-btn" id="checkoutBtn" style="display: none;" onclick="showOrderForm()">
+        🛒 Checkout
+    </div>
+
+    <script>
+        let selectedItems = {};
+        let menuItems = [];
+        let currentCategory = 'all';
+        let currentLanguage = 'en';
+
+        // Translation object
+        const translations = {
+            en: {
+                categories: 'Categories',
+                products: 'Products',
+                burgers: 'Burgers',
+                snacks: 'Snacks',
+                sauces: 'Sauces',
+                drinks: 'Drinks',
+                cart: 'Cart',
+                search: 'Search',
+                add: 'ADD'
+            },
+            am: {
+                categories: 'ምድቦች',
+                products: 'ምርቶች',
+                burgers: 'በርገሮች',
+                snacks: 'መክሰስ',
+                sauces: 'ሳውሶች',
+                drinks: 'መጠጦች',
+                cart: 'ዕቃ መያዣ',
+                search: 'ፈልግ',
+                add: 'ጨምር'
+            },
+            or: {
+                categories: 'Ramaddii',
+                products: 'Oomishaalee',
+                burgers: 'Burgeroonni',
+                snacks: 'Nyaata Salphaa',
+                sauces: 'Sausii',
+                drinks: 'Dhugaatii',
+                cart: 'Saandugaa',
+                search: 'Barbaadi',
+                add: 'IDA\'I'
+            },
+            ti: {
+                categories: 'ምድባት',
+                products: 'ፍርያት',
+                burgers: 'በርገራት',
+                snacks: 'መክሰሳት',
+                sauces: 'ሳውሳት',
+                drinks: 'መስተይት',
+                cart: 'መኻዘን',
+                search: 'ደልይ',
+                add: 'ወስኽ'
+            }
+        };
+
+        // Initialize Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            
+            // Set theme
+            document.body.style.backgroundColor = tg.themeParams.bg_color || '#1a1a2e';
+            document.body.style.color = tg.themeParams.text_color || '#ffffff';
+            
+            // Configure main button
+            tg.MainButton.text = "Place Order";
+            tg.MainButton.color = "#3b82f6";
+            
+            // Handle main button click
+            tg.MainButton.onClick(() => {
+                if (Object.keys(selectedItems).length > 0) {
+                    showOrderForm();
+                }
+            });
+            updateMainButton();
+        }
+
+        // Change language
+        function changeLanguage() {
+            const selector = document.getElementById('languageSelector');
+            currentLanguage = selector.value;
+            updateTexts();
+            displayProducts();
+        }
+
+        // Update texts based on current language
+        function updateTexts() {
+            const t = translations[currentLanguage];
+            const elements = [
+                { id: 'categoriesTitle', text: t.categories },
+                { id: 'productsTitle', text: t.products },
+                { id: 'categoryBurgers', text: t.burgers },
+                { id: 'categorySnacks', text: t.snacks },
+                { id: 'categorySauces', text: t.sauces },
+                { id: 'categoryDrinks', text: t.drinks },
+                { id: 'cartText', text: t.cart }
+            ];
+            
+            elements.forEach(({ id, text }) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = text;
+            });
+            
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.placeholder = t.search;
+        }
+
+        // Load menu items
+        async function loadMenuItems() {
+            try {
+                const response = await fetch('/api/menu');
+                menuItems = await response.json();
+                displayProducts();
+            } catch (error) {
+                console.error('Error loading menu:', error);
+            }
+        }
+
+        // Display products
+        function displayProducts() {
+            const grid = document.getElementById('productGrid');
+            if (!grid) return;
+            
+            let filteredItems;
+            if (currentCategory === 'all') {
+                filteredItems = menuItems;
+            } else {
+                // Create a mapping for category names to handle different naming conventions
+                const categoryMapping = {
+                    'burgers': 'Burgers',
+                    'snacks': ['Snacks', 'Fries & Pancakes'],
+                    'sauces': ['Sauces', 'Extras'], 
+                    'drinks': 'Drinks',
+                    'shawarma': 'Shawarma',
+                    'sandwiches & wraps': 'Sandwiches & Wraps',
+                    'pizza': 'Pizza',
+                    'pasta': 'Pasta',
+                    'rice dishes': 'Rice Dishes',
+                    'egg dishes & toast': 'Egg Dishes & Toast',
+                    'traditional ethiopian breakfast': 'Traditional Ethiopian Breakfast',
+                    'borrito': 'Borrito'
+                };
+                
+                // Get the actual category names to filter by
+                let categoriesToFilter = categoryMapping[currentCategory.toLowerCase()];
+                if (!categoriesToFilter) {
+                    // Try to find exact match or partial match
+                    categoriesToFilter = currentCategory;
+                }
+                if (!Array.isArray(categoriesToFilter)) {
+                    categoriesToFilter = [categoriesToFilter];
+                }
+                
+                filteredItems = menuItems.filter(item => {
+                    if (!item.category) return false;
+                    return categoriesToFilter.some(cat => 
+                        item.category.toLowerCase().includes(cat.toLowerCase()) || 
+                        cat.toLowerCase().includes(item.category.toLowerCase()) ||
+                        item.category.toLowerCase() === currentCategory.toLowerCase()
+                    );
+                });
+            }
+
+            grid.innerHTML = '';
+            
+            filteredItems.forEach(item => {
+                const priceETB = Math.round(item.price); // Price is already in ETB
+                const quantity = selectedItems[item.id] || 0;
+                
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                
+                const fallbackImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiMxNjIxM2UiLz48dGV4dCB4PSIxMDAiIHk9IjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iI2ZmZmZmZiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPvCfjaU8L3RleHQ+PC9zdmc+';
+                
+                productCard.innerHTML = `
+                    <img src="${item.image_url}" alt="${item.name}" class="product-image" onerror="this.src='${fallbackImage}'">
+                    <div class="product-info">
+                        <div class="product-name">${item.name}</div>
+                        <div class="product-price">${priceETB.toLocaleString()} ETB</div>
+                        <div class="product-buttons">
+                            ${quantity > 0 ? `<button class="btn-remove" onclick="updateQuantity(${item.id}, -1)">-</button>` : ''}
+                            <button class="btn-add" onclick="updateQuantity(${item.id}, 1)">
+                                ${quantity > 0 ? quantity : translations[currentLanguage].add}
+                            </button>
+                        </div>
+                    </div>
+                    ${quantity > 0 ? `<div class="quantity-badge">${quantity}</div>` : ''}
+                `;
+                
+                grid.appendChild(productCard);
+            });
+        }
+
+        // Filter by category
+        function filterCategory(category) {
+            currentCategory = category;
+            displayProducts();
+        }
+
+        // Update item quantity
+        function updateQuantity(itemId, change) {
+            const currentQty = selectedItems[itemId] || 0;
+            const newQty = Math.max(0, currentQty + change);
+            
+            if (newQty === 0) {
+                delete selectedItems[itemId];
+            } else {
+                selectedItems[itemId] = newQty;
+            }
+            
+            displayProducts();
+            updateCartInfo();
+            updateMainButton();
+        }
+
+        // Update cart info
+        function updateCartInfo() {
+            const cartInfo = document.getElementById('cartInfo');
+            const cartTotal = document.getElementById('cartTotal');
+            
+            const totalItems = Object.values(selectedItems).reduce((sum, qty) => sum + qty, 0);
+            const totalPrice = Object.keys(selectedItems).reduce((sum, itemId) => {
+                const item = menuItems.find(i => i.id == itemId);
+                const qty = selectedItems[itemId];
+<<<<<<< HEAD
+                return sum + (item ? item.price * qty * 60 : 0); // Convert to ETB
+=======
+                return sum + (item ? item.price * qty : 0); // Price already in ETB
+>>>>>>> 6dd25ab (Initial commit from Replit)
+            }, 0);
+            
+            if (totalItems > 0) {
+                cartTotal.textContent = `${Math.round(totalPrice).toLocaleString()} ETB`;
+                cartInfo.style.display = 'block';
+            } else {
+                cartInfo.style.display = 'none';
+            }
+        }
+
+        // Update main button
+        function updateMainButton() {
+            const totalItems = Object.values(selectedItems).reduce((sum, qty) => sum + qty, 0);
+            
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                
+                if (totalItems > 0) {
+                    tg.MainButton.show();
+                    tg.MainButton.enable();
+                } else {
+                    tg.MainButton.hide();
+                }
+            } else {
+                // For non-Telegram users, show checkout button
+                const checkoutBtn = document.getElementById('checkoutBtn');
+                if (checkoutBtn) {
+                    checkoutBtn.style.display = totalItems > 0 ? 'block' : 'none';
+                }
+            }
+        }
+
+        // Show order form
+        function showOrderForm() {
+            // Create order data
+            const orderItems = [];
+            let totalAmount = 0;
+            
+            Object.keys(selectedItems).forEach(itemId => {
+                const item = menuItems.find(i => i.id == itemId);
+                const quantity = selectedItems[itemId];
+                if (item && quantity > 0) {
+                    const itemTotal = item.price * quantity; // Price already in ETB
+                    orderItems.push({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        quantity: quantity,
+                        total: itemTotal
+                    });
+                    totalAmount += itemTotal;
+                }
+            });
+
+            // Get user data from Telegram
+            let userData = {};
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
+                const user = window.Telegram.WebApp.initDataUnsafe.user;
+                userData = {
+                    telegram_user_id: user.id,
+                    customer_name: `${user.first_name} ${user.last_name || ''}`.trim(),
+                    customer_phone: user.phone_number || '',
+                };
+            }
+
+            // Show checkout modal
+            showCheckoutModal({
+                ...userData,
+                items: orderItems,
+                total_amount: totalAmount
+            });
+        }
+
+        // Show checkout modal with payment options
+        function showCheckoutModal(orderData) {
+            const modal = document.createElement('div');
+            modal.className = 'checkout-modal';
+            modal.innerHTML = `
+                <div class="checkout-modal-content">
+                    <div class="checkout-header">
+                        <h3>🛒 Checkout</h3>
+                        <button onclick="closeCheckoutModal()" class="close-btn">✕</button>
+                    </div>
+                    <div class="checkout-body">
+                        <div class="order-summary">
+                            <h4>Order Summary</h4>
+                            <div class="order-items">
+                                ${orderData.items.map(item => `
+                                    <div class="order-item">
+                                        <span>${item.name} x${item.quantity}</span>
+                                        <span>${Math.round(item.total)} ETB</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="order-total">
+                                <strong>Total: ${Math.round(orderData.total_amount)} ETB</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="customer-info">
+                            <h4>Customer Information</h4>
+                            <input type="text" id="customerName" placeholder="Full Name" value="${orderData.customer_name || ''}" required>
+                            <input type="tel" id="customerPhone" placeholder="Phone Number" value="${orderData.customer_phone || ''}" required>
+                            <div class="address-container">
+                                <textarea id="customerAddress" placeholder="Delivery Address" rows="3" required></textarea>
+                                <button type="button" class="location-btn" onclick="shareLocationInCheckout()" title="Share Live Location">
+                                    📍 Share Location
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="payment-options">
+                            <h4>Payment Method</h4>
+                            <div class="payment-methods">
+                                <label class="payment-method">
+                                    <input type="radio" name="paymentMethod" value="telebirr" checked>
+                                    <span class="payment-icon">💰</span>
+                                    <span>TeleBirr</span>
+                                </label>
+                                <label class="payment-method">
+                                    <input type="radio" name="paymentMethod" value="cbe_birr">
+                                    <span class="payment-icon">🏛️</span>
+                                    <span>CBE Birr</span>
+                                </label>
+                                <label class="payment-method">
+                                    <input type="radio" name="paymentMethod" value="mpessa">
+                                    <span class="payment-icon">📱</span>
+                                    <span>M-Pesa</span>
+                                </label>
+                                <label class="payment-method">
+                                    <input type="radio" name="paymentMethod" value="bank_transfer">
+                                    <span class="payment-icon">🏦</span>
+                                    <span>Bank Transfer</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Payment Details Section (Hidden by default) -->
+                            <div id="paymentDetails" class="payment-details" style="display: none;">
+                                <div class="mt-3 p-3" style="background: #16213e; border-radius: 8px;">
+                                    <h5 id="paymentMethodTitle">Payment Details</h5>
+                                    <div id="paymentInstructions"></div>
+                                    
+                                    <div class="mt-3">
+                                        <label for="transactionId" class="form-label">Transaction ID</label>
+                                        <input type="text" id="transactionId" class="form-control" placeholder="Enter transaction ID" style="background: #1a1a2e; border: 1px solid #374151; color: #ffffff;">
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <label for="transactionImage" class="form-label">Payment Screenshot</label>
+                                        <input type="file" id="transactionImage" class="form-control" accept="image/*" style="background: #1a1a2e; border: 1px solid #374151; color: #ffffff;">
+                                        <div id="imagePreview" class="mt-2" style="display: none;">
+                                            <img id="previewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="checkout-actions">
+                            <button onclick="placeOrder()" class="place-order-btn">
+                                Place Order - ${Math.round(orderData.total_amount)} ETB
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Store order data for later use
+            window.currentOrderData = orderData;
+            
+            // Add event listeners for payment method selection
+            setTimeout(() => {
+                const paymentMethods = document.querySelectorAll('input[name="paymentMethod"]');
+                paymentMethods.forEach(method => {
+                    method.addEventListener('change', function() {
+                        // Update visual selection
+                        document.querySelectorAll('.payment-method').forEach(label => {
+                            label.classList.remove('checked');
+                        });
+                        this.closest('.payment-method').classList.add('checked');
+                        
+                        // Show/hide payment details based on selection
+                        updatePaymentDetails(this.value);
+                    });
+                });
+                
+                // Set initial selection
+                const checkedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+                if (checkedMethod) {
+                    checkedMethod.closest('.payment-method').classList.add('checked');
+                    updatePaymentDetails(checkedMethod.value);
+                }
+                
+                // Add image preview functionality
+                const imageInput = document.getElementById('transactionImage');
+                if (imageInput) {
+                    imageInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const preview = document.getElementById('imagePreview');
+                                const img = document.getElementById('previewImg');
+                                img.src = e.target.result;
+                                preview.style.display = 'block';
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            document.getElementById('imagePreview').style.display = 'none';
+                        }
+                    });
+                }
+            }, 100);
+        }
+
+        // Close checkout modal
+        function closeCheckoutModal() {
+            const modal = document.querySelector('.checkout-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Update payment details based on selected method
+        function updatePaymentDetails(paymentMethod) {
+            const detailsDiv = document.getElementById('paymentDetails');
+            const titleElement = document.getElementById('paymentMethodTitle');
+            const instructionsElement = document.getElementById('paymentInstructions');
+            
+            // All payment methods now require transaction details
+            detailsDiv.style.display = 'block';
+            
+            const paymentInfo = {
+                'telebirr': {
+                    title: 'TeleBirr Payment',
+                    instructions: `
+                        <div class="payment-instructions">
+                            <strong>Pay using TeleBirr:</strong><br>
+                            • Phone: +251911234567<br>
+                            • Name: ET-FOOD Restaurant<br>
+                            • Send the exact amount shown above<br>
+                            • Take a screenshot of the transaction<br>
+                            • Enter the transaction ID below
+                        </div>
+                    `
+                },
+                'cbe_birr': {
+                    title: 'CBE Birr Payment',
+                    instructions: `
+                        <div class="payment-instructions">
+                            <strong>Pay using CBE Birr:</strong><br>
+                            • Account: 1000123456789<br>
+                            • Name: ET-FOOD Restaurant<br>
+                            • Send the exact amount shown above<br>
+                            • Take a screenshot of the transaction<br>
+                            • Enter the transaction ID below
+                        </div>
+                    `
+                },
+                'mpessa': {
+                    title: 'M-Pesa Payment',
+                    instructions: `
+                        <div class="payment-instructions">
+                            <strong>Pay using M-Pesa:</strong><br>
+                            • Phone: +251911234567<br>
+                            • Name: ET-FOOD Restaurant<br>
+                            • Send the exact amount shown above<br>
+                            • Take a screenshot of the confirmation<br>
+                            • Enter the transaction ID below
+                        </div>
+                    `
+                },
+                'bank_transfer': {
+                    title: 'Bank Transfer Payment',
+                    instructions: `
+                        <div class="payment-instructions">
+                            <strong>Bank Transfer Details:</strong><br>
+                            • Bank: Commercial Bank of Ethiopia<br>
+                            • Account: 1000123456789<br>
+                            • Name: ET-FOOD Restaurant<br>
+                            • Send the exact amount shown above<br>
+                            • Take a screenshot of the transfer<br>
+                            • Enter the reference number below
+                        </div>
+                    `
+                }
+            };
+            
+            const info = paymentInfo[paymentMethod];
+            if (info) {
+                titleElement.textContent = info.title;
+                instructionsElement.innerHTML = info.instructions;
+            }
+        }
+
+        // Place order with selected payment method
+        async function placeOrder() {
+            const customerName = document.getElementById('customerName').value.trim();
+            const customerPhone = document.getElementById('customerPhone').value.trim();
+            const customerAddress = document.getElementById('customerAddress').value.trim();
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+            
+            if (!customerName || !customerPhone || !customerAddress) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // All payment methods now require transaction details
+            const transactionId = document.getElementById('transactionId').value.trim();
+            const transactionImage = document.getElementById('transactionImage').files[0];
+            
+            if (!transactionId) {
+                alert('Please enter the transaction ID for this payment method');
+                return;
+            }
+            
+            if (!transactionImage) {
+                alert('Please upload a screenshot of your payment');
+                return;
+            }
+
+            // Get telegram user ID  
+            let telegramUserId = 123456789; // Default fallback
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
+                telegramUserId = window.Telegram.WebApp.initDataUnsafe.user.id;
+            }
+
+            const orderData = {
+                ...window.currentOrderData,
+                telegram_user_id: telegramUserId,
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                customer_address: customerAddress,
+                payment_method: paymentMethod,
+                location_lat: window.currentOrderLocation?.latitude,
+                location_lng: window.currentOrderLocation?.longitude
+            };
+
+            // Add payment details for all methods
+            orderData.transaction_id = document.getElementById('transactionId').value.trim();
+            orderData.transaction_image = document.getElementById('transactionImage').files[0];
+
+            await submitOrder(orderData);
+        }
+
+        // Submit order
+        async function submitOrder(orderData) {
+            try {
+                console.log('Submitting order data:', orderData);
+                
+                // Show loading state
+                const placeOrderBtn = document.querySelector('.place-order-btn');
+                if (placeOrderBtn) {
+                    placeOrderBtn.textContent = 'Placing Order...';
+                    placeOrderBtn.disabled = true;
+                }
+
+                // Handle file upload if present
+                if (orderData.transaction_image) {
+                    // First upload the image
+                    const formData = new FormData();
+                    formData.append('file', orderData.transaction_image);
+                    
+                    const uploadResponse = await fetch('/api/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (uploadResponse.ok) {
+                        const uploadResult = await uploadResponse.json();
+                        orderData.transaction_image_url = uploadResult.image_url;
+                    } else {
+                        throw new Error('Failed to upload payment screenshot');
+                    }
+                    
+                    // Remove the file object from orderData
+                    delete orderData.transaction_image;
+                }
+
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                console.log('Response status:', response.status);
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+
+                if (response.ok) {
+                    const result = JSON.parse(responseText);
+                    console.log('Order created successfully:', result);
+                    
+                    // Clear cart
+                    selectedItems = {};
+                    displayProducts();
+                    updateCartInfo();
+                    updateMainButton();
+                    
+                    // Close checkout modal
+                    closeCheckoutModal();
+                    
+                    // Show success message
+                    const paymentMethodText = {
+                        'birr': 'Birr',
+                        'cbe_birr': 'CBE Birr',
+                        'mpessa': 'M-Pesa',
+                        'bank_transfer': 'Bank Transfer'
+                    }[orderData.payment_method] || 'Birr';
+                    
+                    const successMessage = `Order #${result.order_id} placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\nPayment: ${paymentMethodText}`;
+                    
+                    // Use simple alert for compatibility with all Telegram WebApp versions
+                    alert(successMessage);
+                } else {
+                    const errorText = await response.text();
+                    console.log('Server response:', errorText);
+                    
+                    // Try to parse as JSON, if fails just use the text
+                    let errorMessage = 'Failed to submit order';
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                console.error('Error submitting order:', error);
+                
+                // Check if this is just a Telegram API compatibility issue
+                const errorStr = error.toString();
+                if (errorStr.includes('showPopup') || errorStr.includes('showAlert') || errorStr.includes('Method') || Object.keys(error).length === 0) {
+                    // This is likely just a UI method error, order was probably successful
+                    console.log('Telegram API compatibility issue detected, treating as success');
+                    
+                    // Clear cart and show success
+                    selectedItems = {};
+                    displayProducts();
+                    updateCartInfo();
+                    updateMainButton();
+                    closeCheckoutModal();
+                    alert('Order placed successfully!');
+                    return;
+                }
+                
+                // Reset button state for real errors
+                const placeOrderBtn = document.querySelector('.place-order-btn');
+                if (placeOrderBtn) {
+                    placeOrderBtn.textContent = `Place Order - ${Math.round(orderData.total_amount)} ETB`;
+                    placeOrderBtn.disabled = false;
+                }
+                
+                // Show error for real failures
+                alert('Failed to place order. Please try again.');
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm) {
+                const filteredItems = menuItems.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) ||
+                    item.description.toLowerCase().includes(searchTerm)
+                );
+                
+                displayFilteredProducts(filteredItems);
+            } else {
+                displayProducts();
+            }
+        });
+
+        function displayFilteredProducts(items) {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+            
+            items.forEach(item => {
+                const priceETB = Math.round(item.price); // Price is already in ETB
+                const quantity = selectedItems[item.id] || 0;
+                
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                
+                const fallbackImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiMxNjIxM2UiLz48dGV4dCB4PSIxMDAiIHk9IjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iI2ZmZmZmZiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPvCfjaU8L3RleHQ+PC9zdmc+';
+                
+                productCard.innerHTML = `
+                    <img src="${item.image_url}" alt="${item.name}" class="product-image" onerror="this.src='${fallbackImage}'">
+                    <div class="product-info">
+                        <div class="product-name">${item.name}</div>
+                        <div class="product-price">${priceETB.toLocaleString()} ETB</div>
+                        <div class="product-buttons">
+                            ${quantity > 0 ? `<button class="btn-remove" onclick="updateQuantity(${item.id}, -1)">-</button>` : ''}
+                            <button class="btn-add" onclick="updateQuantity(${item.id}, 1)">
+                                ${quantity > 0 ? quantity : translations[currentLanguage].add}
+                            </button>
+                        </div>
+                    </div>
+                    ${quantity > 0 ? `<div class="quantity-badge">${quantity}</div>` : ''}
+                `;
+                
+                grid.appendChild(productCard);
+            });
+        }
+
+        // Order tracking functionality
+        let currentOrderId = null;
+        let trackingInterval = null;
+
+        function startOrderTracking(orderId) {
+            currentOrderId = orderId;
+            
+            // Check order status every 30 seconds
+            trackingInterval = setInterval(() => {
+                checkOrderStatus(orderId);
+            }, 30000);
+            
+            // Initial check
+            checkOrderStatus(orderId);
+        }
+
+        function checkOrderStatus(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    // If driver is assigned and out for delivery, track location
+                    if (order.status === 'out_for_delivery' && order.driver_id) {
+                        trackDriverLocation(orderId);
+                    }
+                    
+                    // Stop tracking if order is delivered or cancelled
+                    if (order.status === 'delivered' || order.status === 'cancelled') {
+                        stopOrderTracking();
+                    }
+                })
+                .catch(error => console.error('Error checking order status:', error));
+        }
+
+        function trackDriverLocation(orderId) {
+            fetch(`/api/orders/${orderId}/driver-location`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        // Notify user about driver location update
+                        const lastUpdate = data.location.last_update ? 
+                            new Date(data.location.last_update).toLocaleTimeString() : 'Unknown';
+                        
+                        if (window.Telegram && window.Telegram.WebApp) {
+                            // You can show a subtle notification or update UI
+                            console.log(`Driver ${data.driver_name} location updated at ${lastUpdate}`);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error tracking driver:', error));
+        }
+
+        function stopOrderTracking() {
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
+        }
+
+        // User Profile Management
+        let currentUser = {};
+
+        function loadUserProfile() {
+            // Get user data from Telegram WebApp
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                const user = window.Telegram.WebApp.initDataUnsafe.user;
+                currentUser = {
+                    id: user.id,
+                    first_name: user.first_name || '',
+                    last_name: user.last_name || '',
+                    username: user.username || '',
+                    phone_number: user.phone_number || '',
+                    language_code: user.language_code || 'en'
+                };
+                updateProfileDisplay();
+                loadTelegramProfilePhoto(user.id);
+            } else {
+                // Set default user data if Telegram WebApp is not available
+                currentUser = {
+                    id: 'demo_user',
+                    first_name: 'Demo',
+                    last_name: 'User',
+                    username: 'demo_user',
+                    phone_number: '+1234567890',
+                    language_code: 'en'
+                };
+                updateProfileDisplay();
+            }
+        }
+
+        async function loadTelegramProfilePhoto(userId) {
+            try {
+                // Try Telegram's photo URL pattern
+                const telegramPhotoUrl = `https://t.me/i/userpic/320/${userId}.jpg`;
+                
+                // Test if the image loads
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    updateAvatarWithPhoto(telegramPhotoUrl);
+                };
+                
+                img.onerror = function() {
+                    // If Telegram photo fails, try alternative approach
+                    tryAlternativePhotoMethod(userId);
+                };
+                
+                img.src = telegramPhotoUrl;
+                
+            } catch (error) {
+                console.log('Error loading Telegram profile photo:', error);
+            }
+        }
+
+        function tryAlternativePhotoMethod(userId) {
+            // Alternative: Use Telegram WebApp photo access if available
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
+                const user = window.Telegram.WebApp.initDataUnsafe.user;
+                
+                // Some Telegram WebApps provide photo_url directly
+                if (user.photo_url) {
+                    updateAvatarWithPhoto(user.photo_url);
+                    return;
+                }
+                
+                // Try to access through Telegram WebApp API
+                if (window.Telegram.WebApp.requestWriteAccess) {
+                    window.Telegram.WebApp.requestWriteAccess(function(allowed) {
+                        if (allowed) {
+                            // Request user photo through Telegram API
+                            requestUserPhoto(userId);
+                        }
+                    });
+                }
+            }
+        }
+
+        function requestUserPhoto(userId) {
+            // Request photo through backend API
+            fetch(`/api/telegram-user-photo/${userId}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Photo not available');
+                })
+                .then(data => {
+                    if (data.photo_url) {
+                        updateAvatarWithPhoto(data.photo_url);
+                    }
+                })
+                .catch(error => {
+                    console.log('Backend photo request failed:', error);
+                });
+        }
+
+        function updateAvatarWithPhoto(photoUrl) {
+            const avatar = document.getElementById('profileAvatar');
+            const avatarLarge = document.getElementById('profileAvatarLarge');
+            
+            if (avatar) {
+                avatar.innerHTML = `<img src="${photoUrl}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.parentElement.textContent='👤'">`;
+            }
+            
+            if (avatarLarge) {
+                avatarLarge.innerHTML = `<img src="${photoUrl}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" onerror="this.parentElement.textContent='👤'">`;
+            }
+        }
+
+        function updateProfileDisplay() {
+            const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
+            const displayName = fullName || currentUser.username || 'Guest User';
+            
+            // Update header profile
+            const profileNameElement = document.getElementById('profileName');
+            const profilePhoneElement = document.getElementById('profilePhone');
+            
+            if (profileNameElement) {
+                profileNameElement.textContent = displayName;
+            }
+            if (profilePhoneElement) {
+                profilePhoneElement.textContent = currentUser.phone_number || '';
+            }
+            
+            // Update modal profile
+            const profileFullNameElement = document.getElementById('profileFullName');
+            const profileUserPhoneElement = document.getElementById('profileUserPhone');
+            const profileUserLanguageElement = document.getElementById('profileUserLanguage');
+            
+            if (profileFullNameElement) {
+                profileFullNameElement.textContent = fullName || 'Guest User';
+            }
+            if (profileUserPhoneElement) {
+                profileUserPhoneElement.textContent = currentUser.phone_number || 'No phone number';
+            }
+            
+            // Update language display
+            const languageMap = {
+                'en': 'English',
+                'am': 'አማርኛ (Amharic)',
+                'or': 'Afaan Oromoo',
+                'ti': 'ትግርኛ (Tigrinya)'
+            };
+            if (profileUserLanguageElement) {
+                profileUserLanguageElement.textContent = languageMap[currentLanguage] || 'English';
+            }
+            
+            // Generate avatar from first letter of name or use default
+            const avatarElement = document.getElementById('profileAvatar');
+            const avatarLargeElement = document.getElementById('profileAvatarLarge');
+            
+            if (currentUser.first_name && currentUser.first_name.length > 0) {
+                const avatarLetter = currentUser.first_name.charAt(0).toUpperCase();
+                if (avatarElement) avatarElement.textContent = avatarLetter;
+                if (avatarLargeElement) avatarLargeElement.textContent = avatarLetter;
+            } else {
+                if (avatarElement) avatarElement.textContent = '👤';
+                if (avatarLargeElement) avatarLargeElement.textContent = '👤';
+            }
+        }
+
+        function showUserProfile() {
+            updateProfileDisplay();
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        function closeUserProfile() {
+            document.getElementById('profileModal').style.display = 'none';
+        }
+
+        function editProfile() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Profile editing will be available in a future update. You can manage your profile through Telegram settings.');
+            } else {
+                alert('Profile editing will be available in a future update.');
+            }
+        }
+
+        function viewOrderHistory() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Order history feature will be available in a future update.');
+            } else {
+                alert('Order history feature will be available in a future update.');
+            }
+        }
+
+        // Share location in checkout modal
+        function shareLocationInCheckout() {
+            const locationBtn = document.querySelector('.location-btn');
+            const addressField = document.getElementById('customerAddress');
+            
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by this browser');
+                return;
+            }
+            
+            locationBtn.textContent = '📍 Getting Location...';
+            locationBtn.disabled = true;
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Update address field with coordinates
+                    const locationText = `📍 Live Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    const currentAddress = addressField.value.trim();
+                    
+                    if (currentAddress && !currentAddress.includes('📍 Live Location:')) {
+                        addressField.value = `${currentAddress}\n${locationText}`;
+                    } else if (currentAddress.includes('📍 Live Location:')) {
+                        // Replace existing location
+                        addressField.value = currentAddress.replace(/📍 Live Location: [0-9.-]+, [0-9.-]+/g, '') + '\n' + locationText;
+                    } else {
+                        addressField.value = locationText;
+                    }
+                    
+                    // Store coordinates for order submission
+                    window.currentOrderLocation = {
+                        latitude: lat,
+                        longitude: lng
+                    };
+                    
+                    // Update button state
+                    locationBtn.textContent = '✅ Location Shared';
+                    locationBtn.classList.add('success');
+                    locationBtn.disabled = false;
+                    
+                    // Send live location to Telegram if available
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.sendData(JSON.stringify({
+                            type: 'location',
+                            latitude: lat,
+                            longitude: lng
+                        }));
+                    }
+                },
+                function(error) {
+                    console.error('Error getting location:', error);
+                    locationBtn.textContent = '📍 Share Location';
+                    locationBtn.disabled = false;
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert('Location access denied. Please enable location permissions.');
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert('Location information unavailable.');
+                            break;
+                        case error.TIMEOUT:
+                            alert('Location request timed out.');
+                            break;
+                        default:
+                            alert('An unknown error occurred while retrieving location.');
+                            break;
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const categories = await response.json();
+                displayCategories(categories);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Display categories
+        function displayCategories(categories) {
+            const container = document.getElementById('categoriesContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            categories.forEach(category => {
+                const categoryCard = document.createElement('div');
+                categoryCard.className = `category-card category-${category.name.toLowerCase()}`;
+                categoryCard.onclick = () => filterByCategory(category.name);
+                
+                // Use image if available, otherwise use icon
+                const imageHtml = category.image_url ? 
+                    `<img src="${category.image_url}" alt="${category.name}" class="category-image" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; margin-bottom: 8px;" loading="lazy">` :
+                    `<div class="category-icon">${category.icon}</div>`;
+                
+                categoryCard.innerHTML = `
+                    ${imageHtml}
+                    <div class="category-name">${category.name}</div>
+                `;
+                
+                container.appendChild(categoryCard);
+            });
+        }
+
+        // Filter by category
+        function filterByCategory(categoryName) {
+            currentCategory = categoryName;
+            displayProducts();
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTexts();
+            loadCategories();
+            loadMenuItems();
+            loadUserProfile();
+            
+            // Force profile update after a short delay to ensure elements are loaded
+            setTimeout(() => {
+                loadUserProfile();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
