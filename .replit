@@ -2,7 +2,7 @@ modules = ["web", "python-3.11", "nodejs-20", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["cacert", "glibcLocales", "openssl", "postgresql", "sqlite"]
+packages = ["cacert", "glibcLocales", "openssl", "postgresql", "sqlite", "nano"]
 
 [deployment]
 deploymentTarget = "autoscale"
