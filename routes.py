@@ -705,4 +705,3 @@ def request_driver_location_update(driver_id):
     except Exception as e:
         logger.error(f"Error requesting driver location: {e}")
         return jsonify({'error': 'Failed to request location'}), 500
->>>>>>> 6dd25ab (Initial commit from Replit)
