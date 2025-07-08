@@ -776,5 +776,172 @@ def override_bot_delivery():
             
     except Exception as e:
         logger.error(f"Error overriding bot delivery: {e}")
-        return jsonify({'error': 'Failed to override bot delivery'}), 500
+        return jsonify({'error': 'Failed to override bot delivery'})
+
+# Admin Driver Management and Live Status Control
+@app.route('/api/admin/drivers/status', methods=['GET'])
+def get_drivers_status():
+    """Get live status of all drivers for admin"""
+    try:
+        drivers = Driver.query.all()
+        
+        drivers_data = []
+        for driver in drivers:
+            driver_data = {
+                'id': driver.id,
+                'name': driver.name,
+                'phone_number': driver.phone_number,
+                'telegram_user_id': driver.telegram_user_id,
+                'vehicle_type': driver.vehicle_type,
+                'is_active': driver.is_active,
+                'is_available': driver.is_available,
+                'is_approved': driver.is_approved,
+                'approval_status': driver.approval_status,
+                'current_lat': driver.current_lat,
+                'current_lng': driver.current_lng,
+                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                'created_at': driver.created_at.isoformat() if driver.created_at else None
+            }
+            
+            # Get current active orders for this driver
+            active_orders = Order.query.filter_by(driver_id=driver.id).filter(
+                Order.status.in_(['out_for_delivery', 'preparing', 'confirmed'])
+            ).all()
+            
+            driver_data['active_orders'] = len(active_orders)
+            driver_data['current_orders'] = [
+                {
+                    'id': order.id,
+                    'customer_name': order.customer_name,
+                    'status': order.status,
+                    'total_amount': order.total_amount,
+                    'created_at': order.created_at.isoformat() if order.created_at else None
+                }
+                for order in active_orders
+            ]
+            
+            drivers_data.append(driver_data)
+        
+        return jsonify({
+            'drivers': drivers_data,
+            'total_drivers': len(drivers_data),
+            'active_drivers': len([d for d in drivers_data if d['is_active']]),
+            'available_drivers': len([d for d in drivers_data if d['is_available']])
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting drivers status: {e}")
+        return jsonify({'error': 'Failed to get drivers status'}), 500
+
+@app.route('/api/admin/drivers/<int:driver_id>/toggle-status', methods=['POST'])
+def toggle_driver_status(driver_id):
+    """Toggle driver active/inactive status"""
+    try:
+        data = request.get_json()
+        status_type = data.get('status_type')  # 'active' or 'available'
+        new_status = data.get('status')
+        
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if status_type == 'active':
+            driver.is_active = new_status
+            if not new_status:
+                driver.is_available = False  # If inactive, also unavailable
+        elif status_type == 'available':
+            driver.is_available = new_status
+        else:
+            return jsonify({'error': 'Invalid status type'}), 400
+        
+        db.session.commit()
+        
+        # Notify driver about status change
+        if driver.telegram_user_id:
+            from driver_bot import send_driver_message
+            status_msg = f"📊 *Status Update*\n\n"
+            if status_type == 'active':
+                status_msg += f"Your account is now {'ACTIVE' if new_status else 'INACTIVE'}\n"
+            else:
+                status_msg += f"Your availability is now {'AVAILABLE' if new_status else 'UNAVAILABLE'}\n"
+            
+            send_driver_message(driver.telegram_user_id, status_msg)
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Driver {status_type} status updated successfully',
+            'driver_id': driver_id,
+            'new_status': new_status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error toggling driver status: {e}")
+        return jsonify({'error': 'Failed to update driver status'}), 500
+
+@app.route('/api/admin/drivers/<int:driver_id>/location', methods=['GET'])
+def get_driver_location(driver_id):
+    """Get specific driver's current location"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        return jsonify({
+            'driver_id': driver_id,
+            'name': driver.name,
+            'current_lat': driver.current_lat,
+            'current_lng': driver.current_lng,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+            'is_active': driver.is_active,
+            'is_available': driver.is_available
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting driver location: {e}")
+        return jsonify({'error': 'Failed to get driver location'}), 500
+
+@app.route('/api/admin/drivers/live-tracking', methods=['GET'])
+def get_live_tracking_data():
+    """Get real-time tracking data for all drivers"""
+    try:
+        drivers = Driver.query.filter_by(is_active=True).all()
+        
+        tracking_data = []
+        for driver in drivers:
+            if driver.current_lat and driver.current_lng:
+                # Get current order for this driver
+                current_order = Order.query.filter_by(driver_id=driver.id).filter(
+                    Order.status == 'out_for_delivery'
+                ).first()
+                
+                driver_tracking = {
+                    'driver_id': driver.id,
+                    'name': driver.name,
+                    'phone_number': driver.phone_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'current_lat': driver.current_lat,
+                    'current_lng': driver.current_lng,
+                    'last_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                    'is_available': driver.is_available,
+                    'current_order': None
+                }
+                
+                if current_order:
+                    driver_tracking['current_order'] = {
+                        'id': current_order.id,
+                        'customer_name': current_order.customer_name,
+                        'customer_address': current_order.customer_address,
+                        'customer_lat': current_order.location_lat,
+                        'customer_lng': current_order.location_lng,
+                        'total_amount': current_order.total_amount,
+                        'estimated_delivery_time': current_order.estimated_delivery_time.isoformat() if current_order.estimated_delivery_time else None
+                    }
+                
+                tracking_data.append(driver_tracking)
+        
+        return jsonify({
+            'drivers': tracking_data,
+            'timestamp': datetime.utcnow().isoformat(),
+            'total_tracking': len(tracking_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting live tracking data: {e}")
+        return jsonify({'error': 'Failed to get live tracking data'}), 500, 500
 

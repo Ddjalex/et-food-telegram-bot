@@ -90,6 +90,11 @@
                                 <i class="fas fa-motorcycle"></i> Drivers
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
@@ -248,6 +253,96 @@
                         <div class="row" id="categoriesGrid">
                             <!-- Categories will be loaded here -->
                         </div>
+                    </div>
+
+                    <!-- Drivers Tab -->
+                    <div class="tab-pane fade" id="drivers">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Driver Management & Live Status</h4>
+                            <div>
+                                <button class="btn btn-success me-2" onclick="refreshDriverStatus()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                                <button class="btn btn-info" onclick="showLiveTrackingMap()">
+                                    <i class="fas fa-map"></i> Live Map
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Driver Statistics -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-users fa-2x mb-2"></i>
+                                        <h5 id="totalDrivers">0</h5>
+                                        <small>Total Drivers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-user-check fa-2x mb-2"></i>
+                                        <h5 id="activeDrivers">0</h5>
+                                        <small>Active Drivers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <h5 id="availableDrivers">0</h5>
+                                        <small>Available Now</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-route fa-2x mb-2"></i>
+                                        <h5 id="busyDrivers">0</h5>
+                                        <small>On Delivery</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Drivers Table -->
+                        <div class="card table-container">
+                            <div class="card-header">
+                                <h5 class="mb-0">Live Driver Status Control</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Phone</th>
+                                                <th>Vehicle</th>
+                                                <th>Status</th>
+                                                <th>Availability</th>
+                                                <th>Active Orders</th>
+                                                <th>Last Location</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="driversTable">
+                                            <tr>
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                         <div class="text-center mt-4" id="categoriesLoading">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading categories...</span>
@@ -1052,6 +1147,263 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Driver Management Functions
+        let driversData = [];
+        let liveTrackingInterval;
+
+        // Load drivers data when drivers tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load drivers when tab is clicked
+            document.querySelector('a[href="#drivers"]').addEventListener('click', function() {
+                loadDriversData();
+            });
+        });
+
+        function loadDriversData() {
+            fetch('/api/admin/drivers/status')
+                .then(response => response.json())
+                .then(data => {
+                    driversData = data.drivers || [];
+                    updateDriversTable();
+                    updateDriverStats(data);
+                })
+                .catch(error => {
+                    console.error('Error loading drivers data:', error);
+                    document.getElementById('driversTable').innerHTML = 
+                        '<tr><td colspan="8" class="text-center text-danger">Error loading drivers data</td></tr>';
+                });
+        }
+
+        function updateDriverStats(data) {
+            document.getElementById('totalDrivers').textContent = data.total_drivers || 0;
+            document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
+            document.getElementById('availableDrivers').textContent = data.available_drivers || 0;
+            
+            // Calculate busy drivers (drivers with active orders)
+            const busyDrivers = driversData.filter(driver => driver.active_orders > 0).length;
+            document.getElementById('busyDrivers').textContent = busyDrivers;
+        }
+
+        function updateDriversTable() {
+            const tbody = document.getElementById('driversTable');
+            
+            if (driversData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No drivers found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = driversData.map(driver => {
+                const statusBadge = driver.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-secondary">Inactive</span>';
+                
+                const availabilityBadge = driver.is_available ? 
+                    '<span class="badge bg-primary">Available</span>' : 
+                    '<span class="badge bg-warning">Busy</span>';
+                
+                const lastLocationText = driver.last_location_update ? 
+                    new Date(driver.last_location_update).toLocaleString() : 
+                    'Never';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2" style="width: 35px; height: 35px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                                    ${driver.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">${driver.name}</div>
+                                    <small class="text-muted">ID: ${driver.telegram_user_id || 'Not set'}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${driver.phone_number}</td>
+                        <td>
+                            <i class="fas fa-${getVehicleIcon(driver.vehicle_type)} me-1"></i>
+                            ${driver.vehicle_type || 'Unknown'}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${availabilityBadge}</td>
+                        <td>
+                            <span class="badge bg-info">${driver.active_orders}</span>
+                            ${driver.current_orders.length > 0 ? `
+                                <div class="mt-1">
+                                    ${driver.current_orders.map(order => `
+                                        <small class="text-muted d-block">Order #${order.id}: ${order.customer_name}</small>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <small>${lastLocationText}</small>
+                            ${driver.current_lat && driver.current_lng ? `
+                                <div class="mt-1">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDriverLocation(${driver.id})">
+                                        <i class="fas fa-map-marker-alt"></i> View
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm ${driver.is_active ? 'btn-warning' : 'btn-success'}" 
+                                        onclick="toggleDriverStatus(${driver.id}, 'active', ${!driver.is_active})">
+                                    <i class="fas fa-${driver.is_active ? 'pause' : 'play'}"></i>
+                                </button>
+                                <button class="btn btn-sm ${driver.is_available ? 'btn-secondary' : 'btn-primary'}" 
+                                        onclick="toggleDriverStatus(${driver.id}, 'available', ${!driver.is_available})"
+                                        ${!driver.is_active ? 'disabled' : ''}>
+                                    <i class="fas fa-${driver.is_available ? 'times' : 'check'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info" onclick="requestDriverLocation(${driver.id})">
+                                    <i class="fas fa-location-arrow"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getVehicleIcon(vehicleType) {
+            switch(vehicleType) {
+                case 'motorcycle': return 'motorcycle';
+                case 'car': return 'car';
+                case 'bicycle': return 'bicycle';
+                default: return 'question';
+            }
+        }
+
+        function toggleDriverStatus(driverId, statusType, newStatus) {
+            fetch(`/api/admin/drivers/${driverId}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status_type: statusType,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Driver ${statusType} status updated successfully`);
+                    loadDriversData(); // Refresh the table
+                } else {
+                    showAlert('error', data.error || 'Failed to update driver status');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating driver status:', error);
+                showAlert('error', 'Failed to update driver status');
+            });
+        }
+
+        function refreshDriverStatus() {
+            loadDriversData();
+            showAlert('info', 'Driver status refreshed');
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Location request sent to driver');
+                } else {
+                    showAlert('error', data.error || 'Failed to request location');
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting driver location:', error);
+                showAlert('error', 'Failed to request location');
+            });
+        }
+
+        function viewDriverLocation(driverId) {
+            const driver = driversData.find(d => d.id === driverId);
+            if (!driver || !driver.current_lat || !driver.current_lng) {
+                showAlert('error', 'Driver location not available');
+                return;
+            }
+
+            // Open map with driver location
+            const mapUrl = `https://www.google.com/maps?q=${driver.current_lat},${driver.current_lng}&z=15&t=k`;
+            window.open(mapUrl, '_blank');
+        }
+
+        function showLiveTrackingMap() {
+            fetch('/api/admin/drivers/live-tracking')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.drivers.length === 0) {
+                        showAlert('info', 'No drivers with location data available');
+                        return;
+                    }
+                    
+                    // Create a map with all driver locations
+                    const bounds = data.drivers.map(d => `${d.current_lat},${d.current_lng}`).join('|');
+                    const mapUrl = `https://www.google.com/maps?q=${bounds}&z=12&t=k`;
+                    window.open(mapUrl, '_blank');
+                })
+                .catch(error => {
+                    console.error('Error loading live tracking data:', error);
+                    showAlert('error', 'Failed to load live tracking data');
+                });
+        }
+
+        // Auto-refresh driver status every 30 seconds when on drivers tab
+        function startLiveTracking() {
+            if (liveTrackingInterval) {
+                clearInterval(liveTrackingInterval);
+            }
+            
+            liveTrackingInterval = setInterval(() => {
+                const driversTab = document.querySelector('#drivers');
+                if (driversTab.classList.contains('active')) {
+                    loadDriversData();
+                }
+            }, 30000);
+        }
+
+        // Start live tracking when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            startLiveTracking();
+        });
+
+        function showAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Add alert to the top of the drivers tab
+            const driversTab = document.querySelector('#drivers');
+            driversTab.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto-remove alert after 5 seconds
+            setTimeout(() => {
+                const alert = driversTab.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
 
 </body>
 </html>
