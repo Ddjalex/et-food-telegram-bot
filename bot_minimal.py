@@ -804,26 +804,27 @@ def handle_contact_share(chat_id, contact, user_id):
             user_profile.first_name = first_name
             db.session.commit()
             
-        # Send success message
-        send_message(chat_id, f"✅ Your phone number is saved\n\n📱 {phone_number}")
+        # Send success message and go directly to menu
+        send_message(chat_id, f"✅ Phone number saved: {phone_number}")
         
-        # Request location sharing
+        # Show menu WebApp directly
+        from config import Config
+        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
+        
         keyboard = {
-            "keyboard": [[{
-                "text": "📍 Share live location",
-                "request_location": True
-            }]],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
+            "inline_keyboard": [[{
+                "text": "🍽️ Open Menu",
+                "web_app": {"url": webapp_url}
+            }]]
         }
-        send_message(chat_id, "Now please share your live location for delivery:", keyboard)
+        send_message(chat_id, "🍽️ Welcome! Ready to order some delicious food?", keyboard)
         
     except Exception as e:
         logger.error(f"Failed to save contact: {e}")
         send_message(chat_id, "❌ Failed to save contact. Please try again.")
 
 def handle_location_share(chat_id, location, user_id):
-    """Handle location sharing and show main menu"""
+    """Handle location sharing (optional - save for delivery)"""
     lat = location.get('latitude')
     lng = location.get('longitude')
     
@@ -841,29 +842,19 @@ def handle_location_share(chat_id, location, user_id):
             user_profile.location_lng = lng
             db.session.commit()
             
-        send_message(chat_id, f"📍 Location saved successfully!\n\nLat: {lat}\nLng: {lng}")
+        send_message(chat_id, f"📍 Location saved for delivery!")
         
-        # Now show the main menu after both contact and location are shared
+        # Show menu WebApp after location (if user shares location later)
+        from config import Config
+        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
+        
         keyboard = {
-            "keyboard": [
-                [{"text": "🍔 Burgers"}, {"text": "🍟 Snacks"}],
-                [{"text": "🥫 Sauces"}, {"text": "🥤 Drinks"}],
-                [{"text": "🏔️ Go to main"}]
-            ],
-            "resize_keyboard": True
+            "inline_keyboard": [[{
+                "text": "🍽️ Open Menu",
+                "web_app": {"url": webapp_url}
+            }]]
         }
-        send_message(chat_id, "Order via convenient menu 🍽️\n\n👑 Get started", keyboard)
-        # Show inline buttons after location sharing
-        keyboard = {
-            "inline_keyboard": [
-                [{
-                    "text": "🍽️ Open Menu",
-                    "web_app": {"url": f"{Config.WEBHOOK_URL}/webapp"}
-                }],
-                [{"text": "💬 Leave Feedback", "callback_data": "leave_feedback"}]
-            ]
-        }
-        send_message(chat_id, "✅ Setup complete! What would you like to do?", keyboard)
+        send_message(chat_id, "🍽️ Ready to order!", keyboard)
         
     except Exception as e:
         logger.error(f"Failed to save location: {e}")
