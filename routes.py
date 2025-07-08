@@ -518,3 +518,73 @@ def request_driver_location_api(driver_id):
         logger.error(f"Error requesting driver location: {e}")
         return jsonify({'error': 'Failed to request location'}), 500
 
+# Driver Panel Routes
+@app.route('/driver-panel')
+def driver_panel():
+    """Driver panel WebApp page"""
+    return render_template('driver_panel.html')
+
+@app.route('/api/drivers/<int:driver_id>/orders')
+def get_driver_orders(driver_id):
+    """Get orders assigned to specific driver"""
+    try:
+        orders = Order.query.filter_by(driver_id=driver_id).filter(
+            Order.status.in_(['pending', 'accepted', 'confirmed', 'preparing', 'out_for_delivery'])
+        ).all()
+        
+        return jsonify({
+            'orders': [order.to_dict() for order in orders]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver orders: {e}")
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/driver/accept-order', methods=['POST'])
+def driver_accept_order():
+    """Handle order acceptance by driver"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        driver_telegram_id = data.get('driver_id')
+        
+        # Find driver by telegram ID
+        driver = Driver.query.filter_by(telegram_user_id=driver_telegram_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+            
+        # Update order
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+            
+        order.driver_id = driver.id
+        order.status = 'accepted'
+        driver.is_available = False
+        
+        db.session.commit()
+        
+        # Notify customer
+        from bot_minimal import notify_customer_status_change
+        notify_customer_status_change(order_id, 'accepted')
+        
+        return jsonify({'success': True, 'message': 'Order accepted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error accepting order: {e}")
+        return jsonify({'error': 'Failed to accept order'}), 500
+
+@app.route('/api/driver/reject-order', methods=['POST'])
+def driver_reject_order():
+    """Handle order rejection by driver"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        
+        # TODO: Implement order reassignment logic
+        
+        return jsonify({'success': True, 'message': 'Order rejected'})
+        
+    except Exception as e:
+        logger.error(f"Error rejecting order: {e}")
+        return jsonify({'error': 'Failed to reject order'}), 500
+

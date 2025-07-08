@@ -54,28 +54,36 @@ def notify_driver_assignment(driver_id, order_id):
             db.session.commit()
             
         elif driver.telegram_user_id:
-            # Regular driver notification with location sharing request
-            message = f"🚚 *New Delivery Assignment*\n\n"
-            message += f"Order #{order.id}\n"
-            message += f"Customer: {order.customer_name}\n"
-            message += f"Phone: {order.customer_phone}\n"
-            message += f"Address: {order.customer_address}\n"
-            message += f"Total: {order.total_amount:.2f} ETB\n\n"
-            message += f"📍 Please share your live location to help admin track delivery progress."
-            
-            keyboard = {
-                "inline_keyboard": [
-                    [
-                        {"text": "✅ Accept & Share Location", "callback_data": f"accept_delivery_{order.id}"},
-                        {"text": "❌ Decline", "callback_data": f"decline_delivery_{order.id}"}
-                    ],
-                    [
-                        {"text": "📍 Share Live Location", "callback_data": f"share_location_{driver.id}"}
+            # Try to use driver bot first, fallback to main bot
+            try:
+                from driver_bot import notify_driver_assignment_via_driver_bot
+                order_data = order.to_dict()
+                notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
+            except Exception as driver_bot_error:
+                logger.warning(f"Driver bot notification failed, using main bot: {driver_bot_error}")
+                
+                # Fallback to main bot notification
+                message = f"🚚 *New Delivery Assignment*\n\n"
+                message += f"Order #{order.id}\n"
+                message += f"Customer: {order.customer_name}\n"
+                message += f"Phone: {order.customer_phone}\n"
+                message += f"Address: {order.customer_address}\n"
+                message += f"Total: {order.total_amount:.2f} ETB\n\n"
+                message += f"📍 Please share your live location to help admin track delivery progress."
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "✅ Accept & Share Location", "callback_data": f"accept_delivery_{order.id}"},
+                            {"text": "❌ Decline", "callback_data": f"decline_delivery_{order.id}"}
+                        ],
+                        [
+                            {"text": "📍 Share Live Location", "callback_data": f"share_location_{driver.id}"}
+                        ]
                     ]
-                ]
-            }
-            
-            send_message(driver.telegram_user_id, message, keyboard=keyboard, parse_mode="Markdown")
+                }
+                
+                send_message(driver.telegram_user_id, message, keyboard=keyboard, parse_mode="Markdown")
             
     except Exception as e:
         logger.error(f"Error notifying driver: {e}")
