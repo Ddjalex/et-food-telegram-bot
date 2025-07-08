@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Admin Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        .admin-sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .admin-sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin: 0.25rem;
+            transition: all 0.3s ease;
+        }
+        .admin-sidebar .nav-link:hover,
+        .admin-sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateX(5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 admin-sidebar">
+                <div class="sidebar-sticky p-3">
+                    <h4 class="text-white mb-4">ET-FOOD Admin</h4>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#orders">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#menu">
+                                <i class="fas fa-utensils"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#categories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-10 ms-sm-auto p-4">
+                <div class="tab-content">
+                    <!-- Dashboard Tab -->
+                    <div class="tab-pane fade show active" id="dashboard">
+                        <h2>Dashboard Overview</h2>
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalOrders">0</h3>
+                                        <p class="mb-0">Total Orders</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-dollar-sign fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalRevenue">ETB 0</h3>
+                                        <p class="mb-0">Total Revenue</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="pendingOrders">0</h3>
+                                        <p class="mb-0">Pending Orders</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-motorcycle fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="activeDrivers">0</h3>
+                                        <p class="mb-0">Active Drivers</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Live Tracking Stats Row -->
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-map-marker-alt fa-2x mb-3"></i>
+                                        <h5 class="card-title">Live Tracking</h5>
+                                        <h3 id="liveTrackingCount">0</h3>
+                                        <small>Drivers sharing location</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="showLiveTrackingMap()">
+                                            <i class="fas fa-map"></i> View Map
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-robot fa-2x mb-3"></i>
+                                        <h5 class="card-title">Delivery Bot</h5>
+                                        <h3 id="deliveryBotStatus">Offline</h3>
+                                        <small>Automated delivery system</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="assignDeliveryBot()">
+                                            <i class="fas fa-rocket"></i> Deploy Bot
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-route fa-2x mb-3"></i>
+                                        <h5 class="card-title">Active Deliveries</h5>
+                                        <h3 id="activeDeliveries">0</h3>
+                                        <small>Orders out for delivery</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="trackAllDeliveries()">
+                                            <i class="fas fa-search"></i> Track All
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Tab -->
+                    <div class="tab-pane fade" id="orders">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Order Management</h4>
+                            <div>
+                                <button class="btn btn-warning me-2" onclick="openClearOrdersModal()">
+                                    <i class="fas fa-trash-alt"></i> Clear Previous Orders
+                                </button>
+                                <button class="btn btn-success" onclick="loadOrders()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card table-container">
+                            <div class="card-header">
+                                <h5 class="mb-0">Active Orders</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Phone</th>
+                                                <th>Items</th>
+                                                <th>Total</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ordersTable">
+                                            <tr>
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menu Tab -->
+                    <div class="tab-pane fade" id="menu">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Menu Management</h4>
+                            <button class="btn btn-primary" onclick="openAddMenuModal()">
+                                <i class="fas fa-plus"></i> Add Menu Item
+                            </button>
+                        </div>
+                        <div class="row" id="menuItemsGrid">
+                            <!-- Menu items will be loaded here -->
+                        </div>
+                        <div class="text-center mt-4" id="menuLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading menu items...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories Tab -->
+                    <div class="tab-pane fade" id="categories">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Manage Categories</h4>
+                            <button class="btn btn-primary" onclick="addCategory()">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                        <div class="row" id="categoriesGrid">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Drivers Tab -->
+                    <div class="tab-pane fade" id="drivers">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Driver Management & Live Status</h4>
+                            <div>
+                                <button class="btn btn-primary me-2" onclick="openAddDriverModal()">
+                                    <i class="fas fa-plus"></i> Add Driver Employee
+                                </button>
+                                <button class="btn btn-success me-2" onclick="refreshDriverStatus()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                                <button class="btn btn-info" onclick="showLiveTrackingMap()">
+                                    <i class="fas fa-map"></i> Live Map
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Driver Statistics -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-users fa-2x mb-2"></i>
+                                        <h5 id="totalDrivers">0</h5>
+                                        <small>Total Drivers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-user-check fa-2x mb-2"></i>
+                                        <h5 id="activeDrivers">0</h5>
+                                        <small>Active Drivers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <h5 id="availableDrivers">0</h5>
+                                        <small>Available Now</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body">
+                                        <i class="fas fa-route fa-2x mb-2"></i>
+                                        <h5 id="busyDrivers">0</h5>
+                                        <small>On Delivery</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Drivers Table -->
+                        <div class="card table-container">
+                            <div class="card-header">
+                                <h5 class="mb-0">Live Driver Status Control</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Phone</th>
+                                                <th>Vehicle</th>
+                                                <th>Status</th>
+                                                <th>Availability</th>
+                                                <th>Active Orders</th>
+                                                <th>Location Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="driversTable">
+                                            <tr>
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                        <div class="text-center mt-4" id="categoriesLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading categories...</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin-enhanced.js"></script>
+    <script>
+        // Categories Management Functions
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const grid = document.getElementById('categoriesGrid');
+                    grid.innerHTML = '';
+                    
+                    categories.forEach(category => {
+                        const categoryCard = document.createElement('div');
+                        categoryCard.className = 'col-md-3 mb-3';
+                        const categoryImageHtml = category.image_url ? 
+                            `<img src="${category.image_url}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="${category.name}">` : 
+                            `<div class="card-img-top d-flex align-items-center justify-content-center" style="height: 120px; background: linear-gradient(45deg, #f0f2f5, #e4e7ea);">
+                                <div style="font-size: 3rem;">${category.icon}</div>
+                            </div>`;
+                        
+                        categoryCard.innerHTML = `
+                            <div class="card h-100">
+                                ${categoryImageHtml}
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">${category.name}</h5>
+                                    <p class="card-text">${category.description}</p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(categoryCard);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        function addCategory() {
+            // Create modal HTML for adding category
+            const modalHtml = `
+                <div class="modal fade" id="addCategoryModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Category</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addCategoryForm">
+                                    <div class="mb-3">
+                                        <label for="categoryName" class="form-label">Category Name</label>
+                                        <input type="text" class="form-control" id="categoryName" required placeholder="e.g., Pizza, Desserts, Salads">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="categoryDescription" rows="2" placeholder="Brief description of this category"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryIcon" class="form-label">Emoji Icon</label>
+                                        <input type="text" class="form-control" id="categoryIcon" value="🍽️" placeholder="🍕 🍰 🥤 🥗">
+                                        <div class="form-text">Enter an emoji that represents this category</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryImage" class="form-label">Upload Category Image</label>
+                                        <input type="file" class="form-control" id="categoryImage" accept="image/*">
+                                        <div class="form-text">Optional: Upload an image for this category (JPG, PNG, GIF, WebP)</div>
+                                    </div>
+                                    <div class="mb-3" id="categoryImagePreview" style="display: none;">
+                                        <label class="form-label">Image Preview</label>
+                                        <img id="categoryPreviewImg" src="" alt="Preview" class="img-fluid" style="max-height: 150px;">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="saveCategory()">Save Category</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addCategoryModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Setup image preview for category
+            const imageInput = document.getElementById('categoryImage');
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('categoryPreviewImg').src = e.target.result;
+                        document.getElementById('categoryImagePreview').style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+            modal.show();
+        }
+
+        function saveCategory() {
+            const name = document.getElementById('categoryName').value;
+            const description = document.getElementById('categoryDescription').value;
+            const icon = document.getElementById('categoryIcon').value || '🍽️';
+            const imageFile = document.getElementById('categoryImage').files[0];
+            
+            if (!name) {
+                alert('Please enter a category name.');
+                return;
+            }
+            
+            // If image is selected, upload it first
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                
+                fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.image_url) {
+                        createCategoryWithData(name, description, icon, data.image_url);
+                    } else {
+                        throw new Error(data.error || 'Failed to upload image');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading category image:', error);
+                    alert('Error uploading image: ' + error.message);
+                });
+            } else {
+                // Create category without image
+                createCategoryWithData(name, description, icon, null);
+            }
+        }
+
+        function createCategoryWithData(name, description, icon, imageUrl) {
+            const categoryData = {
+                name: name,
+                description: description,
+                icon: icon
+            };
+            
+            if (imageUrl) {
+                categoryData.image_url = imageUrl;
+            }
+            
+            fetch('/api/categories', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(categoryData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Category "' + name + '" added successfully!');
+                    loadCategories();
+                    bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+                } else {
+                    alert('Failed to add category: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding category:', error);
+                alert('Error adding category: ' + error.message);
+            });
+        }
+
+        function editCategory(categoryId) {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const category = categories.find(c => c.id === categoryId);
+                    if (category) {
+                        const name = prompt('Category Name:', category.name);
+                        const description = prompt('Description:', category.description);
+                        const icon = prompt('Emoji Icon:', category.icon);
+                        
+                        if (name) {
+                            fetch(`/api/categories/${categoryId}`, {
+                                method: 'PUT',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({name, description, icon})
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert('Category updated successfully!');
+                                    loadCategories();
+                                } else {
+                                    alert('Error updating category: ' + (data.error || 'Unknown error'));
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error updating category:', error);
+                                alert('Error updating category: ' + error.message);
+                            });
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching categories:', error);
+                    alert('Error fetching categories: ' + error.message);
+                });
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+                fetch(`/api/categories/${categoryId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Category deleted successfully!');
+                            loadCategories();
+                        } else {
+                            alert('Error deleting category: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting category:', error);
+                        alert('Error deleting category: ' + error.message);
+                    });
+            }
+        }
+
+        // Menu Management Functions
+        function loadMenuItems() {
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(menuItems => {
+                    const grid = document.getElementById('menuItemsGrid');
+                    grid.innerHTML = '';
+                    
+                    menuItems.forEach(item => {
+                        const itemCard = document.createElement('div');
+                        itemCard.className = 'col-md-4 mb-3';
+                        itemCard.innerHTML = `
+                            <div class="card">
+                                <img src="${item.image_url}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="${item.name}">
+                                <div class="card-body">
+                                    <h5 class="card-title">${item.name}</h5>
+                                    <p class="card-text">${item.description}</p>
+                                    <p class="card-text"><strong>ETB ${item.price.toFixed(2)}</strong></p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(itemCard);
+                    });
+                })
+                .catch(error => console.error('Error loading menu items:', error));
+        }
+
+        function openAddMenuModal() {
+            // Create modal HTML
+            const modalHtml = `
+                <div class="modal fade" id="addMenuModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Menu Item</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addMenuForm">
+                                    <div class="mb-3">
+                                        <label for="menuName" class="form-label">Item Name</label>
+                                        <input type="text" class="form-control" id="menuName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuPrice" class="form-label">Price (ETB)</label>
+                                        <input type="number" step="0.01" class="form-control" id="menuPrice" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="menuDescription" rows="3"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuCategory" class="form-label">Category</label>
+                                        <select class="form-control" id="menuCategory" required>
+                                            <option value="">Select a category...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuImage" class="form-label">Upload Image</label>
+                                        <input type="file" class="form-control" id="menuImage" accept="image/*" required>
+                                        <div class="form-text">Supported formats: JPG, PNG, GIF, WebP</div>
+                                    </div>
+                                    <div class="mb-3" id="imagePreview" style="display: none;">
+                                        <label class="form-label">Image Preview</label>
+                                        <img id="previewImg" src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="saveMenuItem()">Save Menu Item</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addMenuModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Setup image preview
+            const imageInput = document.getElementById('menuImage');
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('previewImg').src = e.target.result;
+                        document.getElementById('imagePreview').style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Load categories into dropdown
+            loadCategoriesIntoSelect('menuCategory');
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+            modal.show();
+        }
+
+        function saveMenuItem() {
+            const name = document.getElementById('menuName').value;
+            const price = parseFloat(document.getElementById('menuPrice').value);
+            const description = document.getElementById('menuDescription').value;
+            const category = document.getElementById('menuCategory').value;
+            const imageFile = document.getElementById('menuImage').files[0];
+            
+            if (!name || !price || !imageFile) {
+                alert('Please fill in all required fields and select an image.');
+                return;
+            }
+            
+            // Upload image first
+            const formData = new FormData();
+            formData.append('file', imageFile);
+            
+            fetch('/api/upload-image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_url) {
+                    // Create menu item with uploaded image URL
+                    return fetch('/api/menu', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            name: name,
+                            price: price,
+                            description: description,
+                            image_url: data.image_url,
+                            category: category,
+                            available: true
+                        })
+                    });
+                } else {
+                    throw new Error(data.error || 'Failed to upload image');
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Menu item "' + name + '" added successfully!');
+                    loadMenuItems();
+                    bootstrap.Modal.getInstance(document.getElementById('addMenuModal')).hide();
+                } else {
+                    alert('Failed to add menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding menu item:', error);
+                alert('Error adding menu item: ' + error.message);
+            });
+        }
+
+        function editMenuItem(itemId) {
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(menuItems => {
+                    const item = menuItems.find(i => i.id === itemId);
+                    if (item) {
+                        // Create edit modal HTML
+                        const editModalHtml = `
+                            <div class="modal fade" id="editMenuModal" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit Menu Item</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="editMenuForm">
+                                                <div class="mb-3">
+                                                    <label for="editMenuName" class="form-label">Item Name</label>
+                                                    <input type="text" class="form-control" id="editMenuName" value="${item.name}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="editMenuPrice" class="form-label">Price (ETB)</label>
+                                                    <input type="number" step="0.01" class="form-control" id="editMenuPrice" value="${item.price}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="editMenuDescription" class="form-label">Description</label>
+                                                    <textarea class="form-control" id="editMenuDescription" rows="3">${item.description}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="editMenuCategory" class="form-label">Category</label>
+                                                    <select class="form-control" id="editMenuCategory" required>
+                                                        <option value="">Select a category...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Current Image</label>
+                                                    <img src="${item.image_url}" alt="${item.name}" class="img-fluid mb-2" style="max-height: 150px;">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="editMenuImage" class="form-label">Upload New Image (optional)</label>
+                                                    <input type="file" class="form-control" id="editMenuImage" accept="image/*">
+                                                    <div class="form-text">Leave empty to keep current image</div>
+                                                </div>
+                                                <div class="mb-3" id="editImagePreview" style="display: none;">
+                                                    <label class="form-label">New Image Preview</label>
+                                                    <img id="editPreviewImg" src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-primary" onclick="updateMenuItem(${itemId})">Update Menu Item</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Remove existing modal if any
+                        const existingModal = document.getElementById('editMenuModal');
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
+                        // Add modal to page
+                        document.body.insertAdjacentHTML('beforeend', editModalHtml);
+                        
+                        // Setup image preview for edit
+                        const imageInput = document.getElementById('editMenuImage');
+                        imageInput.addEventListener('change', function(e) {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = function(e) {
+                                    document.getElementById('editPreviewImg').src = e.target.result;
+                                    document.getElementById('editImagePreview').style.display = 'block';
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        });
+                        
+                        // Load categories into dropdown and set current selection
+                        loadCategoriesIntoSelect('editMenuCategory', item.category);
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('editMenuModal'));
+                        modal.show();
+                    }
+                });
+        }
+
+        function updateMenuItem(itemId) {
+            const name = document.getElementById('editMenuName').value;
+            const price = parseFloat(document.getElementById('editMenuPrice').value);
+            const description = document.getElementById('editMenuDescription').value;
+            const category = document.getElementById('editMenuCategory').value;
+            const imageFile = document.getElementById('editMenuImage').files[0];
+            
+            if (!name || !price) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // If new image is selected, upload it first
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                
+                fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.image_url) {
+                        updateMenuItemData(itemId, name, price, description, category, data.image_url);
+                    } else {
+                        throw new Error(data.error || 'Failed to upload image');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading image:', error);
+                    alert('Error uploading image: ' + error.message);
+                });
+            } else {
+                // Update without changing image
+                updateMenuItemData(itemId, name, price, description, category, null);
+            }
+        }
+
+        function updateMenuItemData(itemId, name, price, description, category, newImageUrl) {
+            const updateData = {
+                name: name,
+                price: price,
+                description: description,
+                category: category,
+                available: true
+            };
+            
+            if (newImageUrl) {
+                updateData.image_url = newImageUrl;
+            }
+            
+            fetch(`/api/menu/${itemId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(updateData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Menu item updated successfully!');
+                    loadMenuItems();
+                    bootstrap.Modal.getInstance(document.getElementById('editMenuModal')).hide();
+                } else {
+                    alert('Failed to update menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating menu item:', error);
+                alert('Error updating menu item: ' + error.message);
+            });
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Delete this menu item?')) {
+                fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            alert('Menu item deleted successfully!');
+                            loadMenuItems();
+                        } else {
+                            alert('Failed to delete menu item: ' + (data.error || 'Unknown error'));
+                        }
+                    });
+            }
+        }
+
+        // Driver Management Functions
+        function openAddDriverModal() {
+            const name = prompt('Driver Name:');
+            if (!name) return;
+            
+            const phone = prompt('Phone Number:');
+            if (!phone) return;
+            
+            const vehicle = prompt('Vehicle Type (motorcycle, car, bicycle):', 'motorcycle');
+            if (!vehicle) return;
+            
+            fetch('/api/drivers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: name,
+                    phone_number: phone,
+                    vehicle_type: vehicle
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Driver "' + name + '" added successfully!');
+                    loadDrivers();
+                } else {
+                    alert('Failed to add driver: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding driver:', error);
+                alert('Error adding driver. Please try again.');
+            });
+        }
+
+        function loadDrivers() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const tbody = document.getElementById('driversTable');
+                    tbody.innerHTML = '';
+                    
+                    drivers.forEach(driver => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${driver.name}</td>
+                            <td>${driver.phone_number}</td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    ${driver.vehicle_type}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${driver.is_available ? 'bg-success' : 'bg-warning'}">
+                                    ${driver.is_available ? 'Available' : 'Busy'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editDriver(${driver.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading drivers:', error));
+        }
+
+        function editDriver(driverId) {
+            alert('Driver edit functionality - coming soon!');
+        }
+
+        function deleteDriver(driverId) {
+            if (confirm('Delete this driver?')) {
+                alert('Driver delete functionality - coming soon!');
+            }
+        }
+
+        // Helper function to load categories into select dropdown
+        function loadCategoriesIntoSelect(selectId, selectedValue = null) {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const select = document.getElementById(selectId);
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select a category...</option>';
+                    
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.name.toLowerCase();
+                        option.textContent = category.name;
+                        if (selectedValue && category.name.toLowerCase() === selectedValue) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            loadCategories();
+            loadMenuItems();
+            loadDrivers();
+        });
+    </script>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="orderDetailsContent">
+                    <!-- Order details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div class="modal fade" id="mapModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-map-marker-alt"></i> Delivery Location
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Customer:</strong> <span id="mapCustomerName"></span><br>
+                        <strong>Phone:</strong> <span id="mapCustomerPhone"></span><br>
+                        <strong>Address:</strong> <span id="mapCustomerAddress"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Coordinates:</strong> <span id="mapCoordinates"></span>
+                    </div>
+                    <div class="mb-3">
+                        <a href="#" target="_blank" id="googleMapsLink" class="btn btn-success me-2">
+                            <i class="fas fa-satellite"></i> Open in Google Satellite
+                        </a>
+                        <a href="#" target="_blank" id="appleMapsLink" class="btn btn-info">
+                            <i class="fas fa-map"></i> Open in Apple Maps
+                        </a>
+                    </div>
+                    <div id="mapContainer" style="height: 400px; border-radius: 8px; overflow: hidden;">
+                        <iframe id="mapFrame" width="100%" height="100%" frameborder="0" style="border:0" referrerpolicy="no-referrer-when-downgrade">
+                            <!-- Google Maps satellite view will be loaded here -->
+                        </iframe>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Previous Orders Modal -->
+    <div class="modal fade" id="clearOrdersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash-alt"></i> Clear Previous Orders
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This action will permanently delete orders from the database. This cannot be undone.
+                    </div>
+                    
+                    <form id="clearOrdersForm">
+                        <div class="mb-3">
+                            <label class="form-label">Order Types to Clear:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="clearDelivered" checked>
+                                <label class="form-check-label" for="clearDelivered">
+                                    <i class="fas fa-check-circle text-success"></i> Delivered Orders
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="clearCancelled" checked>
+                                <label class="form-check-label" for="clearCancelled">
+                                    <i class="fas fa-times-circle text-danger"></i> Cancelled Orders
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="olderThanDays" class="form-label">Clear orders older than:</label>
+                            <select class="form-select" id="olderThanDays">
+                                <option value="0.04">1 hour</option>
+                                <option value="1">24 hours (1 day)</option>
+                                <option value="7" selected>7 days (1 week)</option>
+                                <option value="14">14 days (2 weeks)</option>
+                                <option value="30">30 days (1 month)</option>
+                                <option value="0">Delete All (regardless of age)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            This will help keep your database clean and improve performance by removing old completed orders.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="clearPreviousOrders()">
+                        <i class="fas fa-trash-alt"></i> Clear Orders
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Driver Employee Modal -->
+    <div class="modal fade" id="addDriverModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus"></i> Add Driver Employee
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addDriverForm">
+                        <div class="mb-3">
+                            <label for="driverName" class="form-label">Driver Name *</label>
+                            <input type="text" class="form-control" id="driverName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverPhone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="driverPhone" placeholder="+251911234567" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverTelegramId" class="form-label">Telegram User ID *</label>
+                            <input type="number" class="form-control" id="driverTelegramId" placeholder="383870190" required>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle"></i> To get Telegram ID: Send /start to @userinfobot
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="driverVehicle" class="form-label">Vehicle Type *</label>
+                            <select class="form-select" id="driverVehicle" required>
+                                <option value="">Select Vehicle</option>
+                                <option value="motorcycle">Motorcycle</option>
+                                <option value="car">Car</option>
+                                <option value="bicycle">Bicycle</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="driverAutoApprove" checked>
+                                <label class="form-check-label" for="driverAutoApprove">
+                                    Auto-approve driver (skip document verification)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-robot"></i> 
+                            <strong>Driver Bot Access:</strong> After adding, the driver will receive a welcome message 
+                            from the driver bot with instructions on how to use the system.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addDriverEmployee()">
+                        <i class="fas fa-plus"></i> Add Driver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Driver Management Functions
+        let driversData = [];
+        let liveTrackingInterval;
+
+        // Load drivers data when drivers tab is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load drivers when tab is clicked
+            document.querySelector('a[href="#drivers"]').addEventListener('click', function() {
+                loadDriversData();
+            });
+        });
+
+        function loadDriversData() {
+            fetch('/api/admin/drivers/status')
+                .then(response => response.json())
+                .then(data => {
+                    driversData = data.drivers || [];
+                    updateDriversTable();
+                    updateDriverStats(data);
+                })
+                .catch(error => {
+                    console.error('Error loading drivers data:', error);
+                    document.getElementById('driversTable').innerHTML = 
+                        '<tr><td colspan="8" class="text-center text-danger">Error loading drivers data</td></tr>';
+                });
+        }
+
+        function updateDriverStats(data) {
+            document.getElementById('totalDrivers').textContent = data.total_drivers || 0;
+            document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
+            document.getElementById('availableDrivers').textContent = data.available_drivers || 0;
+            
+            // Calculate busy drivers (drivers with active orders)
+            const busyDrivers = driversData.filter(driver => driver.active_orders > 0).length;
+            document.getElementById('busyDrivers').textContent = busyDrivers;
+        }
+
+        function updateDriversTable() {
+            const tbody = document.getElementById('driversTable');
+            
+            if (driversData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No drivers found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = driversData.map(driver => {
+                const statusBadge = driver.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-secondary">Inactive</span>';
+                
+                const availabilityBadge = driver.is_available ? 
+                    '<span class="badge bg-primary">Available</span>' : 
+                    '<span class="badge bg-warning">Busy</span>';
+                
+                // Format location sharing status
+                let locationStatusHtml = '<span class="badge bg-danger">No Location</span>';
+                if (driver.last_location_update) {
+                    const date = new Date(driver.last_location_update);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - date) / (1000 * 60));
+                    
+                    if (diffMinutes < 10) {
+                        locationStatusHtml = `
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Active
+                            </span>
+                            <br><small class="text-muted">${diffMinutes} min ago</small>
+                        `;
+                    } else if (diffMinutes < 60) {
+                        locationStatusHtml = `
+                            <span class="badge bg-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Outdated
+                            </span>
+                            <br><small class="text-muted">${diffMinutes} min ago</small>
+                        `;
+                    } else {
+                        locationStatusHtml = `
+                            <span class="badge bg-danger">
+                                <i class="fas fa-times-circle"></i> Inactive
+                            </span>
+                            <br><small class="text-muted">${diffMinutes > 1440 ? date.toLocaleDateString() : Math.floor(diffMinutes / 60) + 'h ago'}</small>
+                        `;
+                    }
+                }
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2" style="width: 35px; height: 35px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                                    ${driver.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">${driver.name}</div>
+                                    <small class="text-muted">ID: ${driver.telegram_user_id || 'Not set'}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${driver.phone_number}</td>
+                        <td>
+                            <i class="fas fa-${getVehicleIcon(driver.vehicle_type)} me-1"></i>
+                            ${driver.vehicle_type || 'Unknown'}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${availabilityBadge}</td>
+                        <td>
+                            <span class="badge bg-info">${driver.active_orders}</span>
+                            ${driver.current_orders.length > 0 ? `
+                                <div class="mt-1">
+                                    ${driver.current_orders.map(order => `
+                                        <small class="text-muted d-block">Order #${order.id}: ${order.customer_name}</small>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            ${locationStatusHtml}
+                            ${driver.current_lat && driver.current_lng ? `
+                                <div class="mt-1">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewDriverLocation(${driver.id})">
+                                        <i class="fas fa-map-marker-alt"></i> View Map
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm ${driver.is_active ? 'btn-warning' : 'btn-success'}" 
+                                        onclick="toggleDriverStatus(${driver.id}, 'active', ${!driver.is_active})">
+                                    <i class="fas fa-${driver.is_active ? 'pause' : 'play'}"></i>
+                                </button>
+                                <button class="btn btn-sm ${driver.is_available ? 'btn-secondary' : 'btn-primary'}" 
+                                        onclick="toggleDriverStatus(${driver.id}, 'available', ${!driver.is_available})"
+                                        ${!driver.is_active ? 'disabled' : ''}>
+                                    <i class="fas fa-${driver.is_available ? 'times' : 'check'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info" onclick="requestDriverLocation(${driver.id})">
+                                    <i class="fas fa-location-arrow"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getVehicleIcon(vehicleType) {
+            switch(vehicleType) {
+                case 'motorcycle': return 'motorcycle';
+                case 'car': return 'car';
+                case 'bicycle': return 'bicycle';
+                default: return 'question';
+            }
+        }
+
+        function toggleDriverStatus(driverId, statusType, newStatus) {
+            fetch(`/api/admin/drivers/${driverId}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status_type: statusType,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Driver ${statusType} status updated successfully`);
+                    loadDriversData(); // Refresh the table
+                } else {
+                    showAlert('error', data.error || 'Failed to update driver status');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating driver status:', error);
+                showAlert('error', 'Failed to update driver status');
+            });
+        }
+
+        function refreshDriverStatus() {
+            loadDriversData();
+            showAlert('info', 'Driver status refreshed');
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Location request sent to driver');
+                } else {
+                    showAlert('error', data.error || 'Failed to request location');
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting driver location:', error);
+                showAlert('error', 'Failed to request location');
+            });
+        }
+
+        function viewDriverLocation(driverId) {
+            const driver = driversData.find(d => d.id === driverId);
+            if (!driver || !driver.current_lat || !driver.current_lng) {
+                showAlert('error', 'Driver location not available');
+                return;
+            }
+
+            // Open map with driver location
+            const mapUrl = `https://www.google.com/maps?q=${driver.current_lat},${driver.current_lng}&z=15&t=k`;
+            window.open(mapUrl, '_blank');
+        }
+
+        function showLiveTrackingMap() {
+            fetch('/api/admin/drivers/live-tracking')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.drivers.length === 0) {
+                        showAlert('info', 'No drivers with location data available');
+                        return;
+                    }
+                    
+                    // Create a map with all driver locations
+                    const bounds = data.drivers.map(d => `${d.current_lat},${d.current_lng}`).join('|');
+                    const mapUrl = `https://www.google.com/maps?q=${bounds}&z=12&t=k`;
+                    window.open(mapUrl, '_blank');
+                })
+                .catch(error => {
+                    console.error('Error loading live tracking data:', error);
+                    showAlert('error', 'Failed to load live tracking data');
+                });
+        }
+
+        // Auto-refresh driver status every 30 seconds when on drivers tab
+        function startLiveTracking() {
+            if (liveTrackingInterval) {
+                clearInterval(liveTrackingInterval);
+            }
+            
+            liveTrackingInterval = setInterval(() => {
+                const driversTab = document.querySelector('#drivers');
+                if (driversTab.classList.contains('active')) {
+                    loadDriversData();
+                }
+            }, 30000);
+        }
+
+        // Start live tracking when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            startLiveTracking();
+        });
+
+        function showAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Add alert to the top of the drivers tab
+            const driversTab = document.querySelector('#drivers');
+            driversTab.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto-remove alert after 5 seconds
+            setTimeout(() => {
+                const alert = driversTab.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Add Driver Employee Functions
+        function openAddDriverModal() {
+            // Reset form
+            document.getElementById('addDriverForm').reset();
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addDriverModal'));
+            modal.show();
+        }
+
+        function addDriverEmployee() {
+            const form = document.getElementById('addDriverForm');
+            
+            // Get form data
+            const driverData = {
+                name: document.getElementById('driverName').value.trim(),
+                phone_number: document.getElementById('driverPhone').value.trim(),
+                telegram_user_id: parseInt(document.getElementById('driverTelegramId').value),
+                vehicle_type: document.getElementById('driverVehicle').value,
+                auto_approve: document.getElementById('driverAutoApprove').checked
+            };
+            
+            // Validate form
+            if (!driverData.name || !driverData.phone_number || !driverData.telegram_user_id || !driverData.vehicle_type) {
+                showAlert('error', 'Please fill in all required fields');
+                return;
+            }
+            
+            // Disable button to prevent double submission
+            const submitBtn = document.querySelector('#addDriverModal .btn-primary');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Driver...';
+            
+            // Submit driver data
+            fetch('/api/admin/drivers/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(driverData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('addDriverModal')).hide();
+                    
+                    // Show success message
+                    showAlert('success', `Driver ${driverData.name} added successfully! Driver bot notification sent.`);
+                    
+                    // Refresh drivers table
+                    loadDriversData();
+                } else {
+                    showAlert('error', data.error || 'Failed to add driver');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding driver:', error);
+                showAlert('error', 'Failed to add driver. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Driver';
+            });
+        }
+
+        // Helper function to validate Telegram ID
+        function validateTelegramId(telegramId) {
+            return Number.isInteger(telegramId) && telegramId > 0;
+        }
+
+        // Helper function to format phone number
+        function formatPhoneNumber(phone) {
+            // Remove any non-digit characters except +
+            phone = phone.replace(/[^\d+]/g, '');
+            
+            // Add +251 prefix if not present
+            if (!phone.startsWith('+')) {
+                if (phone.startsWith('251')) {
+                    phone = '+' + phone;
+                } else if (phone.startsWith('09')) {
+                    phone = '+251' + phone.substring(1);
+                } else {
+                    phone = '+251' + phone;
+                }
+            }
+            
+            return phone;
+        }
+
+        // Format phone number as user types
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('driverPhone');
+            if (phoneInput) {
+                phoneInput.addEventListener('blur', function() {
+                    this.value = formatPhoneNumber(this.value);
+                });
+            }
+        });
+
+        // Clear Previous Orders Functions
+        function openClearOrdersModal() {
+            // Reset form
+            document.getElementById('clearOrdersForm').reset();
+            document.getElementById('clearDelivered').checked = true;
+            document.getElementById('clearCancelled').checked = true;
+            document.getElementById('olderThanDays').value = '7';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('clearOrdersModal'));
+            modal.show();
+        }
+
+        function clearPreviousOrders() {
+            const clearDelivered = document.getElementById('clearDelivered').checked;
+            const clearCancelled = document.getElementById('clearCancelled').checked;
+            const olderThanDays = parseInt(document.getElementById('olderThanDays').value);
+            
+            // Validate at least one type is selected
+            if (!clearDelivered && !clearCancelled) {
+                alert('Please select at least one order type to clear');
+                return;
+            }
+            
+            // Show confirmation
+            const typeText = [];
+            if (clearDelivered) typeText.push('delivered');
+            if (clearCancelled) typeText.push('cancelled');
+            
+            let timeDesc;
+            if (olderThanDays === 0) {
+                timeDesc = 'of any age';
+            } else if (olderThanDays === 0.04) {
+                timeDesc = 'older than 1 hour';
+            } else if (olderThanDays === 1) {
+                timeDesc = 'older than 24 hours';
+            } else {
+                timeDesc = `older than ${olderThanDays} days`;
+            }
+            
+            const confirmMessage = `Are you sure you want to permanently delete all ${typeText.join(' and ')} orders ${timeDesc}?`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Disable button to prevent double submission
+            const submitBtn = document.querySelector('#clearOrdersModal .btn-danger');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+            
+            // Submit clear request
+            fetch('/api/admin/orders/clear-previous', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    clear_delivered: clearDelivered,
+                    clear_cancelled: clearCancelled,
+                    time_filter: olderThanDays === 0 ? 'all' : (olderThanDays === 0.04 ? '1_hour' : (olderThanDays === 1 ? '24_hours' : '7_days')),
+                    clear_all: olderThanDays === 0
+                })
+            })
+            .then(response => {
+                console.log('Clear orders response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Clear orders response data:', data);
+                if (data.success) {
+                    // Close modal
+                    const modal = document.getElementById('clearOrdersModal');
+                    if (modal) {
+                        const bootstrapModal = bootstrap.Modal.getInstance(modal);
+                        if (bootstrapModal) {
+                            bootstrapModal.hide();
+                        }
+                    }
+                    
+                    // Show success message using custom alert function
+                    showOrdersAlert('success', data.message);
+                    
+                    // Refresh orders table
+                    loadOrders();
+                } else {
+                    showOrdersAlert('error', data.error || 'Failed to clear orders');
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing orders:', error);
+                showOrdersAlert('error', `Failed to clear orders: ${error.message}`);
+            })
+            .finally(() => {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Clear Orders';
+            });
+        }
+
+        // Individual order deletion function
+        function deleteOrder(orderId) {
+            if (!confirm(`Are you sure you want to permanently delete order #${orderId}?`)) {
+                return;
+            }
+            
+            fetch(`/api/admin/orders/${orderId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showOrdersAlert('success', `Order #${orderId} deleted successfully`);
+                    loadOrders();
+                } else {
+                    showOrdersAlert('error', data.error || 'Failed to delete order');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting order:', error);
+                showOrdersAlert('error', `Failed to delete order: ${error.message}`);
+            });
+        }
+
+        // Load orders function
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tbody = document.getElementById('ordersTable');
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No orders found</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = orders.map(order => {
+                        const statusBadge = getStatusBadge(order.status);
+                        const deleteBtn = (order.status === 'delivered' || order.status === 'cancelled') ? 
+                            `<button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})" title="Delete Order">
+                                <i class="fas fa-trash"></i>
+                            </button>` : '';
+                        
+                        let items = [];
+                        try {
+                            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        } catch (e) {
+                            items = [];
+                        }
+                        const itemsList = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                        
+                        return `
+                            <tr>
+                                <td><strong>#${order.id}</strong></td>
+                                <td>${order.customer_name}</td>
+                                <td>${order.customer_phone}</td>
+                                <td>${itemsList}</td>
+                                <td>${order.total_amount.toFixed(2)} ETB</td>
+                                <td>${statusBadge}</td>
+                                <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                                <i class="fas fa-check text-success me-2"></i>Confirm
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                                <i class="fas fa-utensils text-info me-2"></i>Preparing
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                                <i class="fas fa-check-circle text-success me-2"></i>Delivered
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus(${order.id}, 'cancelled')">
+                                                <i class="fas fa-times text-danger me-2"></i>Cancel
+                                            </a></li>
+                                        </ul>
+                                        ${deleteBtn}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                    const tbody = document.getElementById('ordersTable');
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading orders</td></tr>';
+                });
+        }
+
+        // Status badge helper
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'confirmed': '<span class="badge bg-info">Confirmed</span>',
+                'preparing': '<span class="badge bg-primary">Preparing</span>',
+                'out_for_delivery': '<span class="badge bg-secondary">Out for Delivery</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+            };
+            return badges[status] || `<span class="badge bg-light">${status}</span>`;
+        }
+
+        // Update order status function
+        function updateOrderStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showOrdersAlert('success', `Order #${orderId} status updated to ${newStatus}`);
+                    loadOrders();
+                } else {
+                    showOrdersAlert('error', data.error || 'Failed to update order status');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating order status:', error);
+                showOrdersAlert('error', `Failed to update order status: ${error.message}`);
+            });
+        }
+
+        // Enhanced alert function for orders tab
+        function showOrdersAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Add alert to the top of the orders tab
+            const ordersTab = document.querySelector('#orders');
+            ordersTab.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto-remove alert after 5 seconds
+            setTimeout(() => {
+                const alert = ordersTab.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
+
+</body>
+</html>

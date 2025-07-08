@@ -1,0 +1,16 @@
+import os
+
+class Config:
+    # Telegram Bot Configuration
+    BOT_TOKEN = os.environ.get('BOT_TOKEN', 'your_bot_token_here')
+    WEBHOOK_URL = os.environ.get('WEBHOOK_URL', f'https://{os.environ.get("REPLIT_DEV_DOMAIN", "localhost")}')
+    
+    # Admin Configuration
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    
+    # App Configuration
+    SECRET_KEY = os.environ.get('SESSION_SECRET', 'fallback_secret_key_for_dev')
+    
+    # Database Configuration
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///food_delivery.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
