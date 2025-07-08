@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-modules = ["web", "python-3.11", "nodejs-20"]
-=======
 modules = ["web", "python-3.11", "nodejs-20", "postgresql-16"]
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
 
 [nix]
 channel = "stable-24_05"
