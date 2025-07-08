@@ -1029,5 +1029,78 @@ Welcome to the team! 🏍️
     except Exception as e:
         logger.error(f"Error adding driver employee: {e}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to add driver employee'}), 500, 500
+        return jsonify({'error': 'Failed to add driver employee'}), 500
+
+@app.route('/api/admin/orders/clear-previous', methods=['POST'])
+def clear_previous_orders():
+    """Clear previous orders (delivered, cancelled) from admin dashboard"""
+    try:
+        data = request.get_json()
+        
+        # Get filter criteria
+        clear_delivered = data.get('clear_delivered', True)
+        clear_cancelled = data.get('clear_cancelled', True)
+        older_than_days = data.get('older_than_days', 7)  # Default: older than 7 days
+        
+        # Calculate date threshold
+        from datetime import datetime, timedelta
+        date_threshold = datetime.utcnow() - timedelta(days=older_than_days)
+        
+        # Build query for orders to clear
+        query = Order.query.filter(Order.created_at < date_threshold)
+        
+        # Add status filters
+        status_filters = []
+        if clear_delivered:
+            status_filters.append('delivered')
+        if clear_cancelled:
+            status_filters.append('cancelled')
+        
+        if status_filters:
+            query = query.filter(Order.status.in_(status_filters))
+        else:
+            return jsonify({'error': 'No order types selected for clearing'}), 400
+        
+        # Get orders to be cleared
+        orders_to_clear = query.all()
+        orders_count = len(orders_to_clear)
+        
+        if orders_count == 0:
+            return jsonify({
+                'success': True,
+                'message': 'No orders found matching the criteria',
+                'cleared_count': 0
+            })
+        
+        # Store order details for logging
+        cleared_orders = []
+        for order in orders_to_clear:
+            cleared_orders.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'total_amount': order.total_amount,
+                'status': order.status,
+                'created_at': order.created_at.isoformat()
+            })
+        
+        # Delete orders
+        for order in orders_to_clear:
+            db.session.delete(order)
+        
+        db.session.commit()
+        
+        # Log the clearing operation
+        logger.info(f"Cleared {orders_count} previous orders: {[o['id'] for o in cleared_orders]}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully cleared {orders_count} previous orders',
+            'cleared_count': orders_count,
+            'cleared_orders': cleared_orders
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing previous orders: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to clear previous orders'}), 500
 

@@ -190,9 +190,21 @@
 
                     <!-- Orders Tab -->
                     <div class="tab-pane fade" id="orders">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Order Management</h4>
+                            <div>
+                                <button class="btn btn-warning me-2" onclick="openClearOrdersModal()">
+                                    <i class="fas fa-trash-alt"></i> Clear Previous Orders
+                                </button>
+                                <button class="btn btn-success" onclick="loadOrders()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div class="card table-container">
                             <div class="card-header">
-                                <h5 class="mb-0">Order Management</h5>
+                                <h5 class="mb-0">Active Orders</h5>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
@@ -1151,6 +1163,67 @@
         </div>
     </div>
 
+    <!-- Clear Previous Orders Modal -->
+    <div class="modal fade" id="clearOrdersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash-alt"></i> Clear Previous Orders
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This action will permanently delete orders from the database. This cannot be undone.
+                    </div>
+                    
+                    <form id="clearOrdersForm">
+                        <div class="mb-3">
+                            <label class="form-label">Order Types to Clear:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="clearDelivered" checked>
+                                <label class="form-check-label" for="clearDelivered">
+                                    <i class="fas fa-check-circle text-success"></i> Delivered Orders
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="clearCancelled" checked>
+                                <label class="form-check-label" for="clearCancelled">
+                                    <i class="fas fa-times-circle text-danger"></i> Cancelled Orders
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="olderThanDays" class="form-label">Clear orders older than:</label>
+                            <select class="form-select" id="olderThanDays">
+                                <option value="1">1 day</option>
+                                <option value="3">3 days</option>
+                                <option value="7" selected>7 days (1 week)</option>
+                                <option value="14">14 days (2 weeks)</option>
+                                <option value="30">30 days (1 month)</option>
+                                <option value="90">90 days (3 months)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            This will help keep your database clean and improve performance by removing old completed orders.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="clearPreviousOrders()">
+                        <i class="fas fa-trash-alt"></i> Clear Orders
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Driver Employee Modal -->
     <div class="modal fade" id="addDriverModal" tabindex="-1">
         <div class="modal-dialog">
@@ -1568,6 +1641,109 @@
                 });
             }
         });
+
+        // Clear Previous Orders Functions
+        function openClearOrdersModal() {
+            // Reset form
+            document.getElementById('clearOrdersForm').reset();
+            document.getElementById('clearDelivered').checked = true;
+            document.getElementById('clearCancelled').checked = true;
+            document.getElementById('olderThanDays').value = '7';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('clearOrdersModal'));
+            modal.show();
+        }
+
+        function clearPreviousOrders() {
+            const clearDelivered = document.getElementById('clearDelivered').checked;
+            const clearCancelled = document.getElementById('clearCancelled').checked;
+            const olderThanDays = parseInt(document.getElementById('olderThanDays').value);
+            
+            // Validate at least one type is selected
+            if (!clearDelivered && !clearCancelled) {
+                alert('Please select at least one order type to clear');
+                return;
+            }
+            
+            // Show confirmation
+            const typeText = [];
+            if (clearDelivered) typeText.push('delivered');
+            if (clearCancelled) typeText.push('cancelled');
+            
+            const confirmMessage = `Are you sure you want to permanently delete all ${typeText.join(' and ')} orders older than ${olderThanDays} days?`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Disable button to prevent double submission
+            const submitBtn = document.querySelector('#clearOrdersModal .btn-danger');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+            
+            // Submit clear request
+            fetch('/api/admin/orders/clear-previous', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    clear_delivered: clearDelivered,
+                    clear_cancelled: clearCancelled,
+                    older_than_days: olderThanDays
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('clearOrdersModal')).hide();
+                    
+                    // Show success message
+                    alert(`Success: ${data.message}`);
+                    
+                    // Refresh orders table
+                    loadOrders();
+                } else {
+                    alert(`Error: ${data.error || 'Failed to clear orders'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing orders:', error);
+                alert('Error: Failed to clear orders. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Clear Orders';
+            });
+        }
+
+        // Enhanced alert function for orders tab
+        function showOrdersAlert(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Add alert to the top of the orders tab
+            const ordersTab = document.querySelector('#orders');
+            ordersTab.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto-remove alert after 5 seconds
+            setTimeout(() => {
+                const alert = ordersTab.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
     </script>
 
 </body>
