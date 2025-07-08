@@ -620,12 +620,13 @@ async function loadOrderHistory() {
         }
         
         // Fetch orders
-        const response = await fetch(`/api/orders/user/${telegramUserId}`);
-        const orders = await response.json();
+        const response = await fetch(`/api/user-orders/${telegramUserId}`);
         
         if (!response.ok) {
             throw new Error('Failed to fetch orders');
         }
+        
+        const orders = await response.json();
         
         if (orders.length === 0) {
             historyContent.innerHTML = `
@@ -644,34 +645,36 @@ async function loadOrderHistory() {
             const orderDate = new Date(order.created_at).toLocaleDateString();
             
             historyHTML += `
-                <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Order #${order.id}</h6>
-                        <div>
-                            ${statusBadge}
-                            <small class="text-muted ms-2">${orderDate}</small>
+                <div class="card mb-2" style="border-radius: 8px; border: 1px solid #374151;">
+                    <div class="card-body p-3" style="background: #1f2937;">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1 text-white">Order #${order.id}</h6>
+                                <small class="text-muted">${orderDate}</small>
+                            </div>
+                            <div class="text-end">
+                                ${statusBadge}
+                                <div class="mt-1">
+                                    <strong class="text-primary">ETB ${order.total_amount.toFixed(2)}</strong>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h6>Items:</h6>
-                                <ul class="list-unstyled">
-                                    ${order.items.map(item => `
-                                        <li class="d-flex justify-content-between">
-                                            <span>${item.name} x${item.quantity}</span>
-                                            <span>ETB ${(item.price * item.quantity).toFixed(2)}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>Delivery Details:</h6>
-                                <p class="mb-1"><strong>Name:</strong> ${order.customer_name}</p>
-                                <p class="mb-1"><strong>Phone:</strong> ${order.customer_phone}</p>
-                                <p class="mb-1"><strong>Payment:</strong> ${order.payment_method}</p>
-                                <p class="mb-1"><strong>Total:</strong> ETB ${order.total_amount.toFixed(2)}</p>
-                            </div>
+                        
+                        <div class="order-items mb-2">
+                            ${order.items.map(item => `
+                                <div class="d-flex justify-content-between py-1" style="font-size: 13px;">
+                                    <span class="text-light">${item.name} x${item.quantity}</span>
+                                    <span class="text-muted">ETB ${(item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="order-actions">
+                            ${order.status === 'pending' ? 
+                                '<button class="order-action-btn btn-cancel" onclick="cancelOrder(' + order.id + ')">Cancel</button>' : ''}
+                            ${order.status !== 'cancelled' && order.status !== 'delivered' ? 
+                                '<button class="order-action-btn btn-track" onclick="trackOrder(' + order.id + ')">Track</button>' : ''}
+                            <button class="order-action-btn btn-reorder" onclick="reorderItems(' + order.id + ')">Reorder</button>
                         </div>
                     </div>
                 </div>
@@ -689,6 +692,27 @@ async function loadOrderHistory() {
             </div>
         `;
     }
+}
+
+// Action functions for order history
+function cancelOrder(orderId) {
+    if (confirm('Are you sure you want to cancel this order?')) {
+        // Implementation for canceling order
+        console.log('Canceling order:', orderId);
+        // You can add API call here
+    }
+}
+
+function trackOrder(orderId) {
+    console.log('Tracking order:', orderId);
+    // Implementation for tracking order
+    alert('Order tracking feature will be available soon!');
+}
+
+function reorderItems(orderId) {
+    console.log('Reordering items from order:', orderId);
+    // Implementation for reordering
+    alert('Reorder feature will be available soon!');
 }
 
 // Get status badge HTML
