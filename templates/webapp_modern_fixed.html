@@ -1029,6 +1029,7 @@
             const totalPrice = Object.keys(selectedItems).reduce((sum, itemId) => {
                 const item = menuItems.find(i => i.id == itemId);
                 const qty = selectedItems[itemId];
+                return sum + (item ? item.price * qty : 0);
             }, 0);
             
             if (totalItems > 0) {
