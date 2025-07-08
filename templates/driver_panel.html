@@ -410,18 +410,23 @@
                     }
                     
                     displayOrder(order);
-                } else if (driverId) {
-                    // Load driver's active orders
-                    const response = await fetch(`/api/drivers/${driverId}/orders`);
-                    const data = await response.json();
+                } else {
+                    // Get current driver by Telegram user ID
+                    const telegramUserId = tg.initDataUnsafe?.user?.id || driverId;
                     
-                    if (data.orders && data.orders.length > 0) {
-                        displayOrder(data.orders[0]); // Show first active order
+                    if (telegramUserId) {
+                        // Load driver's active orders using telegram user ID
+                        const response = await fetch(`/api/drivers/telegram/${telegramUserId}/orders`);
+                        const data = await response.json();
+                        
+                        if (data.orders && data.orders.length > 0) {
+                            displayOrder(data.orders[0]); // Show first active order
+                        } else {
+                            showNoOrders();
+                        }
                     } else {
                         showNoOrders();
                     }
-                } else {
-                    showNoOrders();
                 }
             } catch (error) {
                 console.error('Error loading order:', error);

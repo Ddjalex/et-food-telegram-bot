@@ -498,9 +498,20 @@ def assign_driver_to_order(driver_id, order_id):
         # Notify customer about driver assignment
         notify_customer_status_change(order_id, 'out_for_delivery')
         
-        # Notify driver about assignment
-        from bot_minimal import notify_driver_assignment
-        notify_driver_assignment(driver_id, order_id)
+        # Notify driver about assignment using driver bot
+        if driver.telegram_user_id:
+            from driver_bot import notify_driver_assignment_via_driver_bot
+            order_data = {
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'customer_address': order.customer_address,
+                'total_amount': order.total_amount,
+                'location_lat': order.location_lat,
+                'location_lng': order.location_lng,
+                'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else 'Just now'
+            }
+            notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
         
         return jsonify({'success': True, 'message': f'Driver {driver.name} assigned to order #{order_id}'})
     except Exception as e:
@@ -537,6 +548,26 @@ def get_driver_orders(driver_id):
         })
     except Exception as e:
         logger.error(f"Error fetching driver orders: {e}")
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/orders')
+def get_driver_orders_by_telegram(telegram_user_id):
+    """Get orders assigned to driver by telegram user ID"""
+    try:
+        # Find driver by telegram user ID
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if not driver:
+            return jsonify({'orders': []})
+        
+        orders = Order.query.filter_by(driver_id=driver.id).filter(
+            Order.status.in_(['pending', 'accepted', 'confirmed', 'preparing', 'out_for_delivery'])
+        ).all()
+        
+        return jsonify({
+            'orders': [order.to_dict() for order in orders]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver orders by telegram ID: {e}")
         return jsonify({'error': 'Failed to fetch orders'}), 500
 
 @app.route('/api/driver/accept-order', methods=['POST'])
