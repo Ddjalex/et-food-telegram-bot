@@ -32,21 +32,52 @@ def notify_driver_assignment(driver_id, order_id):
         if not driver or not order:
             return
             
-        # If it's a bot driver, send automated response
+        # If it's a bot driver, send automated response and integrate with driver panel
         if driver.name == "Delivery Bot":
             # Send automated location updates for bot driver
             send_bot_location_updates(driver_id, order_id)
             
-            message = f"🤖 *Delivery Bot Assignment*\n\n"
-            message += f"Order #{order.id} assigned to Delivery Bot\n"
-            message += f"Customer: {order.customer_name}\n"
-            message += f"Phone: {order.customer_phone}\n"
-            message += f"Address: {order.customer_address}\n"
-            message += f"Total: {order.total_amount:.2f} ETB\n\n"
-            message += f"🚚 Delivery Bot is now processing your order..."
+            # Send notification to admin about bot assignment
+            admin_message = f"🤖 *Delivery Bot Assignment*\n\n"
+            admin_message += f"Order #{order.id} assigned to Delivery Bot\n"
+            admin_message += f"Customer: {order.customer_name}\n"
+            admin_message += f"Phone: {order.customer_phone}\n"
+            admin_message += f"Address: {order.customer_address}\n"
+            admin_message += f"Total: {order.total_amount:.2f} ETB\n\n"
+            admin_message += f"🚚 Delivery Bot is now processing your order..."
+            
+            # Create driver panel URL for monitoring
+            driver_panel_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN', 'localhost')}/driver-panel?order_id={order.id}&driver_id={driver.id}"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📱 Monitor Bot Panel",
+                            "web_app": {"url": driver_panel_url}
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Track Location",
+                            "callback_data": f"track_bot_{order.id}"
+                        },
+                        {
+                            "text": "🎯 Override Manual",
+                            "callback_data": f"override_bot_{order.id}"
+                        }
+                    ]
+                ]
+            }
             
             # Send to customer
-            send_message(order.telegram_user_id, message, parse_mode="Markdown")
+            send_message(order.telegram_user_id, admin_message, parse_mode="Markdown")
+            
+            # Send to admins with monitoring options
+            try:
+                send_order_notification(order.id)
+            except Exception as e:
+                logger.error(f"Error sending admin notification: {e}")
             
             # Auto-accept the order for bot driver
             from extensions import db
@@ -99,42 +130,46 @@ def send_bot_location_updates(driver_id, order_id):
     
     def simulate_delivery():
         try:
-            from extensions import db
-            from models import Driver, Order
+            # Get Flask app context for database operations
+            from app import app
             
-            # Simulate delivery route with location updates
-            locations = [
-                (9.145, 40.489658),  # Restaurant location (Addis Ababa)
-                (9.150, 40.495),     # En route 1
-                (9.155, 40.500),     # En route 2
-                (9.160, 40.505),     # En route 3
-                (9.165, 40.510),     # Customer location
-            ]
-            
-            for i, (lat, lng) in enumerate(locations):
-                time.sleep(30)  # 30 seconds between updates
+            with app.app_context():
+                from extensions import db
+                from models import Driver, Order
                 
-                driver = Driver.query.get(driver_id)
-                if not driver:
-                    break
+                # Simulate delivery route with location updates
+                locations = [
+                    (9.145, 40.489658),  # Restaurant location (Addis Ababa)
+                    (9.150, 40.495),     # En route 1
+                    (9.155, 40.500),     # En route 2
+                    (9.160, 40.505),     # En route 3
+                    (9.165, 40.510),     # Customer location
+                ]
+                
+                for i, (lat, lng) in enumerate(locations):
+                    time.sleep(30)  # 30 seconds between updates
                     
-                driver.current_lat = lat
-                driver.current_lng = lng
-                driver.last_location_update = datetime.utcnow()
-                db.session.commit()
-                
-                # Notify admin of location update
-                notify_admin_location_update(driver_id, order_id, lat, lng, i + 1, len(locations))
-                
-                # If final location, mark as delivered
-                if i == len(locations) - 1:
-                    time.sleep(60)  # Wait 1 minute at delivery location
-                    order = Order.query.get(order_id)
-                    if order:
-                        order.status = 'delivered'
-                        driver.is_available = True
-                        db.session.commit()
-                        notify_customer_status_change(order_id, 'delivered')
+                    driver = Driver.query.get(driver_id)
+                    if not driver:
+                        break
+                        
+                    driver.current_lat = lat
+                    driver.current_lng = lng
+                    driver.last_location_update = datetime.utcnow()
+                    db.session.commit()
+                    
+                    # Notify admin of location update
+                    notify_admin_location_update(driver_id, order_id, lat, lng, i + 1, len(locations))
+                    
+                    # If final location, mark as delivered
+                    if i == len(locations) - 1:
+                        time.sleep(60)  # Wait 1 minute at delivery location
+                        order = Order.query.get(order_id)
+                        if order:
+                            order.status = 'delivered'
+                            driver.is_available = True
+                            db.session.commit()
+                            notify_customer_status_change(order_id, 'delivered')
                         
         except Exception as e:
             logger.error(f"Error in bot location simulation: {e}")

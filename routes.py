@@ -588,3 +588,36 @@ def driver_reject_order():
         logger.error(f"Error rejecting order: {e}")
         return jsonify({'error': 'Failed to reject order'}), 500
 
+@app.route('/api/override-bot-delivery', methods=['POST'])
+def override_bot_delivery():
+    """Override automated bot delivery and assign to human driver"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+            
+        # Find the delivery bot driver
+        bot_driver = Driver.query.filter_by(name='Delivery Bot').first()
+        if order.driver_id == bot_driver.id:
+            # Reset order to pending and make bot available
+            order.driver_id = None
+            order.status = 'pending'
+            bot_driver.is_available = True
+            
+            db.session.commit()
+            
+            # Notify admins about override
+            from bot_minimal import send_order_notification
+            send_order_notification(order_id)
+            
+            return jsonify({'success': True, 'message': 'Bot delivery overridden successfully'})
+        else:
+            return jsonify({'error': 'Order is not assigned to delivery bot'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error overriding bot delivery: {e}")
+        return jsonify({'error': 'Failed to override bot delivery'}), 500
+

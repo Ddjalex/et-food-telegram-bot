@@ -307,6 +307,55 @@
             border: 1px solid #f44336;
             color: #f44336;
         }
+        
+        .bot-indicator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .bot-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .bot-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-track, .btn-override {
+            flex: 1;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-track {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        }
+        
+        .btn-override {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .btn-track:hover, .btn-override:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -396,11 +445,12 @@
                     <div class="restaurant-info">
                         <div class="restaurant-header">
                             <div class="restaurant-icon">
-                                <i class="fas fa-store"></i>
+                                ${order.driver_id && order.driver_id === 'delivery_bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-store"></i>'}
                             </div>
                             <div>
                                 <div class="restaurant-name">ET-FOOD Kitchen</div>
                                 <div class="restaurant-address">Addis Ababa, Ethiopia</div>
+                                ${order.driver_id && order.driver_id === 'delivery_bot' ? '<div class="bot-indicator">🤖 Automated Delivery System</div>' : ''}
                             </div>
                         </div>
                         <div class="info-row">
@@ -461,6 +511,18 @@
                             <button class="btn-reject" onclick="rejectOrder(${order.id})">
                                 <i class="fas fa-times"></i> Reject Order
                             </button>
+                        </div>
+                    ` : order.driver_id && order.driver_id === 'delivery_bot' ? `
+                        <div class="bot-status">
+                            <div class="bot-indicator">🤖 Automated Delivery in Progress</div>
+                            <div class="bot-actions">
+                                <button class="btn-track" onclick="trackDelivery(${order.id})">
+                                    <i class="fas fa-map-marker-alt"></i> Track Location
+                                </button>
+                                <button class="btn-override" onclick="overrideBot(${order.id})">
+                                    <i class="fas fa-user"></i> Override Manual
+                                </button>
+                            </div>
                         </div>
                     ` : ''}
                     
@@ -595,6 +657,42 @@
         
         function showNoOrders() {
             document.getElementById('noOrders').style.display = 'block';
+        }
+        
+        function trackDelivery(orderId) {
+            showMessage('Opening delivery tracking...', 'info');
+            
+            // Open tracking map or admin dashboard
+            const trackingUrl = `https://${window.location.hostname}/admin#track-${orderId}`;
+            window.open(trackingUrl, '_blank');
+        }
+        
+        function overrideBot(orderId) {
+            if (confirm('Are you sure you want to override automated delivery and assign to a human driver?')) {
+                showMessage('Overriding bot delivery...', 'info');
+                
+                // Call API to override bot delivery
+                fetch('/api/override-bot-delivery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showMessage('✅ Bot delivery overridden. Order reassigned to human driver.', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showMessage('❌ Failed to override bot delivery: ' + result.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error overriding bot delivery:', error);
+                    showMessage('❌ Network error occurred', 'error');
+                });
+            }
         }
         
         // Load order data on page load
