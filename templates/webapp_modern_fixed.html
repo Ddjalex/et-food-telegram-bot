@@ -702,6 +702,205 @@
             opacity: 0.8;
         }
 
+        /* Order History Modal Styles */
+        .order-history-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .order-history-content {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 0;
+            width: 95%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid #374151;
+        }
+
+        .order-history-header {
+            background: linear-gradient(135deg, #16213e, #0f172a);
+            padding: 20px;
+            border-bottom: 1px solid #374151;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-history-header h3 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .order-history-close {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .order-history-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .order-history-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .order-item {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #374151;
+        }
+
+        .order-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .order-id {
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 14px;
+        }
+
+        .order-status {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fbbf24;
+            color: #92400e;
+        }
+
+        .status-confirmed {
+            background: #3b82f6;
+            color: #ffffff;
+        }
+
+        .status-preparing {
+            background: #f59e0b;
+            color: #ffffff;
+        }
+
+        .status-out_for_delivery {
+            background: #8b5cf6;
+            color: #ffffff;
+        }
+
+        .status-delivered {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .status-cancelled {
+            background: #ef4444;
+            color: #ffffff;
+        }
+
+        .order-details {
+            color: #e5e7eb;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .order-items {
+            color: #9ca3af;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .order-total {
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 16px;
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .order-action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-track {
+            background: #3b82f6;
+            color: #ffffff;
+        }
+
+        .btn-track:hover {
+            background: #2563eb;
+        }
+
+        .btn-reorder {
+            background: #16a34a;
+            color: #ffffff;
+        }
+
+        .btn-reorder:hover {
+            background: #15803d;
+        }
+
+        .btn-cancel {
+            background: #ef4444;
+            color: #ffffff;
+        }
+
+        .btn-cancel:hover {
+            background: #dc2626;
+        }
+
+        .no-orders {
+            text-align: center;
+            color: #9ca3af;
+            padding: 40px 20px;
+        }
+
+        .no-orders-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
         @media (max-width: 480px) {
             .container {
                 padding: 15px;
@@ -766,6 +965,19 @@
                         <button onclick="editProfile()" class="profile-btn profile-btn-primary">Edit Profile</button>
                         <button onclick="viewOrderHistory()" class="profile-btn profile-btn-secondary">Order History</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order History Modal -->
+        <div id="orderHistoryModal" class="order-history-modal">
+            <div class="order-history-content">
+                <div class="order-history-header">
+                    <h3>📋 Order History</h3>
+                    <button onclick="closeOrderHistory()" class="order-history-close">✕</button>
+                </div>
+                <div class="order-history-body" id="orderHistoryBody">
+                    <!-- Order history will be loaded here -->
                 </div>
             </div>
         </div>
@@ -1780,11 +1992,185 @@
             }
         }
 
-        function viewOrderHistory() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.showAlert('Order history feature will be available in a future update.');
-            } else {
-                alert('Order history feature will be available in a future update.');
+        async function viewOrderHistory() {
+            // Close profile modal
+            closeUserProfile();
+            
+            // Show order history modal
+            document.getElementById('orderHistoryModal').style.display = 'flex';
+            
+            // Load order history
+            await loadOrderHistory();
+        }
+
+        function closeOrderHistory() {
+            document.getElementById('orderHistoryModal').style.display = 'none';
+        }
+
+        async function loadOrderHistory() {
+            try {
+                const orderHistoryBody = document.getElementById('orderHistoryBody');
+                orderHistoryBody.innerHTML = '<div style="text-align: center; padding: 20px; color: #9ca3af;">Loading orders...</div>';
+                
+                // Get user ID from Telegram WebApp
+                const userId = currentUser.id || 'demo_user';
+                
+                const response = await fetch(`/api/user/${userId}/orders`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch orders');
+                }
+                
+                const orders = await response.json();
+                
+                if (orders.length === 0) {
+                    orderHistoryBody.innerHTML = `
+                        <div class="no-orders">
+                            <div class="no-orders-icon">🛍️</div>
+                            <h3>No orders yet</h3>
+                            <p>Start browsing our menu and place your first order!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Display orders
+                orderHistoryBody.innerHTML = orders.map(order => `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div class="order-id">Order #${order.id}</div>
+                            <div class="order-status status-${order.status}">${getStatusText(order.status)}</div>
+                        </div>
+                        <div class="order-details">
+                            <div>📅 ${formatDate(order.created_at)}</div>
+                            <div>💳 ${order.payment_method}</div>
+                        </div>
+                        <div class="order-items">
+                            ${order.items.map(item => `${item.name} x${item.quantity}`).join(', ')}
+                        </div>
+                        <div class="order-total">Total: ${Math.round(order.total_amount)} ETB</div>
+                        <div class="order-actions">
+                            ${getOrderActions(order)}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading order history:', error);
+                document.getElementById('orderHistoryBody').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #ef4444;">
+                        Failed to load order history. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Pending',
+                'confirmed': 'Confirmed',
+                'preparing': 'Preparing',
+                'out_for_delivery': 'Out for Delivery',
+                'delivered': 'Delivered',
+                'cancelled': 'Cancelled'
+            };
+            return statusMap[status] || status;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function getOrderActions(order) {
+            const actions = [];
+            
+            if (order.status === 'pending' || order.status === 'confirmed') {
+                actions.push(`<button class="order-action-btn btn-cancel" onclick="cancelOrder(${order.id})">Cancel</button>`);
+            }
+            
+            if (order.status === 'out_for_delivery' || order.status === 'preparing') {
+                actions.push(`<button class="order-action-btn btn-track" onclick="trackOrder(${order.id})">Track</button>`);
+            }
+            
+            if (order.status === 'delivered') {
+                actions.push(`<button class="order-action-btn btn-reorder" onclick="reorderItems(${order.id})">Reorder</button>`);
+            }
+            
+            return actions.join('');
+        }
+
+        async function cancelOrder(orderId) {
+            if (confirm('Are you sure you want to cancel this order?')) {
+                try {
+                    const response = await fetch(`/api/orders/${orderId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: 'cancelled' })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Order cancelled successfully');
+                        loadOrderHistory(); // Refresh the list
+                    } else {
+                        alert('Failed to cancel order');
+                    }
+                } catch (error) {
+                    console.error('Error cancelling order:', error);
+                    alert('Failed to cancel order');
+                }
+            }
+        }
+
+        async function trackOrder(orderId) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                if (response.ok) {
+                    const order = await response.json();
+                    alert(`Order #${orderId} Status: ${getStatusText(order.status)}\nEstimated delivery: ${order.estimated_delivery_time || 'Not available'}`);
+                } else {
+                    alert('Failed to track order');
+                }
+            } catch (error) {
+                console.error('Error tracking order:', error);
+                alert('Failed to track order');
+            }
+        }
+
+        async function reorderItems(orderId) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                if (response.ok) {
+                    const order = await response.json();
+                    
+                    // Clear current cart
+                    selectedItems = {};
+                    
+                    // Add items from previous order to cart
+                    order.items.forEach(item => {
+                        selectedItems[item.id] = {
+                            ...item,
+                            quantity: item.quantity
+                        };
+                    });
+                    
+                    // Update UI
+                    displayProducts();
+                    updateCartInfo();
+                    updateMainButton();
+                    
+                    // Close order history modal
+                    closeOrderHistory();
+                    
+                    alert('Items added to cart successfully!');
+                } else {
+                    alert('Failed to reorder items');
+                }
+            } catch (error) {
+                console.error('Error reordering items:', error);
+                alert('Failed to reorder items');
             }
         }
 
