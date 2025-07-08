@@ -132,6 +132,19 @@ def handle_driver_callback(callback_query):
             order_id = callback_data.split('_')[2]
             request_driver_location_sharing(chat_id, order_id)
             
+        elif callback_data.startswith('call_restaurant_'):
+            send_driver_message(chat_id, "📞 *Restaurant Contact*\n\nET-FOOD Kitchen\nPhone: +251-911-123-456\n\nPlease call to coordinate order pickup.")
+            
+        elif callback_data.startswith('call_customer_'):
+            order_id = callback_data.split('_')[2]
+            from models import Order
+            order = Order.query.get(order_id)
+            if order:
+                send_driver_message(chat_id, f"📞 *Customer Contact*\n\nCustomer: {order.customer_name}\nPhone: {order.customer_phone}\n\nPlease call to coordinate delivery.")
+                
+        elif callback_data == 'contact_support':
+            send_driver_message(chat_id, "📞 *Support Contact*\n\nET-FOOD Support\nPhone: +251-911-123-456\nEmail: support@et-food.com\n\nContact us for any assistance!")
+            
         # Answer callback query
         answer_callback_query(callback_query['id'], "Action processed!")
         
@@ -180,11 +193,11 @@ def handle_order_acceptance(driver_chat_id, order_id, message_id):
                 [
                     {
                         "text": "📞 Call Restaurant",
-                        "url": "tel:+251911123456"
+                        "callback_data": f"call_restaurant_{order_id}"
                     },
                     {
                         "text": "📞 Call Customer", 
-                        "url": f"tel:{order.customer_phone}"
+                        "callback_data": f"call_customer_{order_id}"
                     }
                 ]
             ]
@@ -316,6 +329,9 @@ def handle_driver_text_message(chat_id, text):
         send_driver_welcome_message(chat_id)
     elif text == '/help':
         send_driver_help_message(chat_id)
+    elif text == '/test':
+        # Test command to verify bot is working
+        send_driver_message(chat_id, "✅ Driver bot is working correctly!\n\nThis is a test message to verify the connection.")
     else:
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
@@ -343,7 +359,7 @@ def send_driver_welcome_message(chat_id):
             [
                 {
                     "text": "📞 Contact Support",
-                    "url": "tel:+251911123456"
+                    "callback_data": "contact_support"
                 }
             ]
         ]
