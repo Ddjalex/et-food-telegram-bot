@@ -22,8 +22,6 @@ def send_message(chat_id, text, keyboard=None, parse_mode=None):
     if not result.get("ok"):
         logger.error(f"Failed to send message: {result}")
 
-<<<<<<< HEAD
-=======
 def notify_driver_assignment(driver_id, order_id):
     """Notify driver about order assignment"""
     try:
@@ -217,7 +215,6 @@ def handle_driver_location(chat_id, location, driver_id):
     except Exception as e:
         logger.error(f"Error handling driver location: {e}")
 
->>>>>>> 6dd25ab (Initial commit from Replit)
 def send_order_notification(order_id):
     """Send order notification to admins"""
     try:
@@ -232,11 +229,8 @@ def send_order_notification(order_id):
         message += f"Customer: {order.customer_name}\n"
         message += f"Phone: {order.customer_phone}\n"
         message += f"Address: {order.customer_address}\n"
-<<<<<<< HEAD
         message += f"Total: ${order.total_amount:.2f}\n"
-=======
         message += f"Total: {order.total_amount:.2f} ETB\n"
->>>>>>> 6dd25ab (Initial commit from Replit)
         message += f"Payment: {order.payment_method}\n\n"
 
         admin_keyboard = {
@@ -246,13 +240,10 @@ def send_order_notification(order_id):
                     {"text": "👨‍🍳 Preparing", "callback_data": f"preparing_order_{order.id}"}
                 ],
                 [
-<<<<<<< HEAD
-=======
                     {"text": "🚚 Assign Bot", "callback_data": f"assign_bot_{order.id}"},
                     {"text": "👤 Assign Driver", "callback_data": f"assign_driver_{order.id}"}
                 ],
                 [
->>>>>>> 6dd25ab (Initial commit from Replit)
                     {"text": "🚚 Delivered", "callback_data": f"delivered_order_{order.id}"},
                     {"text": "❌ Cancel", "callback_data": f"cancel_order_{order.id}"}
                 ]
@@ -311,9 +302,7 @@ def handle_message(message):
     
     # Handle location sharing
     if 'location' in message:
-<<<<<<< HEAD
         handle_location_share(chat_id, message['location'], user_id)
-=======
         # Check if it's from a driver
         from models import Driver
         driver = Driver.query.filter_by(telegram_user_id=user_id).first()
@@ -321,7 +310,6 @@ def handle_message(message):
             handle_driver_location(chat_id, message['location'], user_id)
         else:
             handle_location_share(chat_id, message['location'], user_id)
->>>>>>> 6dd25ab (Initial commit from Replit)
         return
 
     if text == "/start":
@@ -391,29 +379,23 @@ def handle_message(message):
         else:
             send_start_message(chat_id)
     else:
-<<<<<<< HEAD
         send_message(chat_id, "🤖 I didn't understand that. Try /start or /menu.")
-=======
         # Check if user is in feedback mode
         if check_feedback_mode(user_id):
             handle_feedback_submission(chat_id, user_id, text)
         else:
             send_message(chat_id, "🤖 I didn't understand that. Try /start or /menu.")
->>>>>>> 6dd25ab (Initial commit from Replit)
 
 def handle_callback_query(callback_query):
     chat_id = callback_query["message"]["chat"]["id"]
     data = callback_query["data"]
     user_id = callback_query["from"]["id"]
     
-<<<<<<< HEAD
-=======
     # Admin callback handlers
     if data.startswith(('confirm_order_', 'preparing_order_', 'assign_bot_', 'assign_driver_', 'delivered_order_', 'cancel_order_', 'select_driver_', 'accept_delivery_', 'decline_delivery_')):
         handle_admin_callback(callback_query)
         return
     
->>>>>>> 6dd25ab (Initial commit from Replit)
     if data == "share_contact":
         keyboard = {
             "keyboard": [[{
@@ -431,8 +413,6 @@ def handle_callback_query(callback_query):
         send_category_products(chat_id, category)
     elif data == "catalog":
         send_catalog(chat_id)
-<<<<<<< HEAD
-=======
     elif data == "leave_feedback":
         handle_feedback_request(chat_id, user_id)
     elif data == "cancel_feedback":
@@ -448,7 +428,6 @@ def handle_callback_query(callback_query):
             ]
         }
         send_message(chat_id, "What would you like to do?", keyboard)
->>>>>>> 6dd25ab (Initial commit from Replit)
     elif data == "settings":
         send_settings_menu(chat_id)
     elif data == "cart":
@@ -458,8 +437,6 @@ def handle_callback_query(callback_query):
     else:
         send_message(chat_id, f"📦 You selected: {data}")
 
-<<<<<<< HEAD
-=======
 def handle_admin_callback(callback_query):
     """Handle admin callback queries"""
     try:
@@ -678,7 +655,6 @@ def handle_admin_callback(callback_query):
     except Exception as e:
         logger.error(f"Error handling admin callback query: {e}")
 
->>>>>>> 6dd25ab (Initial commit from Replit)
 def init_bot(flask_app):
     """Initialize the Telegram bot with Flask app context"""
     if not Config.BOT_TOKEN or Config.BOT_TOKEN == 'your_bot_token_here':
@@ -867,7 +843,6 @@ def handle_location_share(chat_id, location, user_id):
             
         send_message(chat_id, f"📍 Location saved successfully!\n\nLat: {lat}\nLng: {lng}")
         
-<<<<<<< HEAD
         # Now show the main menu after both contact and location are shared
         keyboard = {
             "keyboard": [
@@ -878,7 +853,6 @@ def handle_location_share(chat_id, location, user_id):
             "resize_keyboard": True
         }
         send_message(chat_id, "Order via convenient menu 🍽️\n\n👑 Get started", keyboard)
-=======
         # Show inline buttons after location sharing
         keyboard = {
             "inline_keyboard": [
@@ -890,7 +864,6 @@ def handle_location_share(chat_id, location, user_id):
             ]
         }
         send_message(chat_id, "✅ Setup complete! What would you like to do?", keyboard)
->>>>>>> 6dd25ab (Initial commit from Replit)
         
     except Exception as e:
         logger.error(f"Failed to save location: {e}")
@@ -976,8 +949,6 @@ def check_user_registration(chat_id, user_id):
         logger.error(f"Failed to check user registration: {e}")
         return False
 
-<<<<<<< HEAD
-=======
 # Global variable to track users in feedback mode
 feedback_mode_users = set()
 
@@ -1055,7 +1026,6 @@ def handle_feedback_submission(chat_id, user_id, feedback_text):
         logger.error(f"Failed to send feedback: {e}")
         send_message(chat_id, "❌ Sorry, there was an error sending your feedback. Please try again later.")
 
->>>>>>> 6dd25ab (Initial commit from Replit)
 def set_webhook_once():
     """Set webhook only if it is not already set correctly"""
     try:
