@@ -47,6 +47,7 @@ def notify_driver_assignment(driver_id, order_id):
             admin_message += f"🚚 Delivery Bot is now processing your order..."
             
             # Create driver panel URL for monitoring
+            import os
             driver_panel_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN', 'localhost')}/driver-panel?order_id={order.id}&driver_id={driver.id}"
             
             keyboard = {

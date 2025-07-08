@@ -433,14 +433,23 @@ async function viewOrderDetails(orderId) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${order.items.map(item => `
-                            <tr>
-                                <td>${item.name}</td>
-                                <td>${item.quantity}</td>
-                                <td>ETB ${item.price.toFixed(2)}</td>
-                                <td>ETB ${(item.price * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
+                        ${(() => {
+                            let items = [];
+                            try {
+                                items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                            } catch (e) {
+                                console.error('Error parsing items for order', order.id, e);
+                                items = [];
+                            }
+                            return items.map(item => `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.quantity}</td>
+                                    <td>ETB ${item.price.toFixed(2)}</td>
+                                    <td>ETB ${(item.price * item.quantity).toFixed(2)}</td>
+                                </tr>
+                            `).join('');
+                        })()}
                     </tbody>
                 </table>
             </div>
@@ -812,7 +821,17 @@ async function loadOrdersTab() {
         orders.forEach(order => {
             const row = document.createElement('tr');
             const statusBadge = getStatusBadge(order.status);
-            const itemsList = order.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+            
+            // Parse items from JSON string if needed
+            let items = [];
+            try {
+                items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+            } catch (e) {
+                console.error('Error parsing items for order', order.id, e);
+                items = [];
+            }
+            
+            const itemsList = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
             
             // Check if order has location data
             const hasLocation = order.location_lat && order.location_lng;
