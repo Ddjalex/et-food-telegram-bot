@@ -408,6 +408,7 @@ def set_driver_webhook():
 def notify_driver_assignment_via_driver_bot(driver_telegram_id, order_data):
     """Main function to notify driver via driver bot"""
     if DRIVER_BOT_TOKEN and driver_telegram_id:
+        logger.info(f"Sending driver notification to Telegram ID: {driver_telegram_id} for order {order_data.get('id')}")
         notify_driver_order_assignment(driver_telegram_id, order_data)
     else:
-        logger.warning("Driver bot token not configured or driver telegram ID missing")
+        logger.warning(f"Driver bot notification failed - Token: {bool(DRIVER_BOT_TOKEN)}, Telegram ID: {driver_telegram_id}")

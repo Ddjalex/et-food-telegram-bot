@@ -58,6 +58,7 @@ def notify_driver_assignment(driver_id, order_id):
             try:
                 from driver_bot import notify_driver_assignment_via_driver_bot
                 order_data = order.to_dict()
+                logger.info(f"Attempting to notify driver {driver.name} (Telegram ID: {driver.telegram_user_id}) about order {order.id}")
                 notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
             except Exception as driver_bot_error:
                 logger.warning(f"Driver bot notification failed, using main bot: {driver_bot_error}")
@@ -84,6 +85,8 @@ def notify_driver_assignment(driver_id, order_id):
                 }
                 
                 send_message(driver.telegram_user_id, message, keyboard=keyboard, parse_mode="Markdown")
+        else:
+            logger.warning(f"Driver {driver.name} (ID: {driver.id}) has no telegram_user_id set. Cannot send notification.")
             
     except Exception as e:
         logger.error(f"Error notifying driver: {e}")
