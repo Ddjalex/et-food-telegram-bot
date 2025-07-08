@@ -49,15 +49,17 @@ def notify_driver_order_assignment(driver_telegram_id, order_data):
         customer_coords = (order_data.get('location_lat', 9.165), order_data.get('location_lng', 40.510))
         distance = calculate_distance(restaurant_coords, customer_coords)
         
-        message = f"🚚 *New Delivery Assignment*\n\n"
+        message = f"🚚 *New Delivery Request*\n\n"
         message += f"📋 Order #{order_data['id']}\n"
         message += f"🏪 Restaurant: ET-FOOD Kitchen\n"
         message += f"👤 Customer: {order_data['customer_name']}\n"
         message += f"📞 Phone: {order_data['customer_phone']}\n"
-        message += f"📍 Distance: {distance:.1f} km\n"
+        message += f"📍 Distance: {order_data.get('distance', distance):.1f} km\n"
         message += f"💰 Total: {order_data['total_amount']:.2f} ETB\n"
+        message += f"💳 Payment: {order_data.get('payment_method', 'Not specified')}\n"
         message += f"🕒 Order Time: {order_data.get('created_at', 'Just now')}\n\n"
-        message += f"📱 Open the driver panel to view full details and manage this order."
+        message += f"⚡ *First to accept gets the order!*\n"
+        message += f"📱 Open driver panel for full details or use quick actions below."
         
         # Create inline keyboard with WebApp
         webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?order_id={order_data['id']}&driver_id={driver_telegram_id}"

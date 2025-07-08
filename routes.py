@@ -10,6 +10,9 @@ from extensions import db
 from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver
 from bot_minimal import send_order_notification, notify_customer_status_change
 import logging
+import math
+import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,100 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def calculate_distance(lat1, lng1, lat2, lng2):
+    """Calculate distance between two coordinates in kilometers"""
+    R = 6371  # Earth's radius in km
+    dLat = math.radians(lat2 - lat1)
+    dLng = math.radians(lng2 - lng1)
+    a = (math.sin(dLat/2) * math.sin(dLat/2) + 
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * 
+         math.sin(dLng/2) * math.sin(dLng/2))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
+
+def find_and_notify_nearby_drivers(order_id):
+    """Find available drivers and notify them about new order"""
+    try:
+        with app.app_context():
+            order = Order.query.get(order_id)
+            if not order:
+                return
+            
+            # Get all active and available drivers
+            available_drivers = Driver.query.filter_by(
+                is_active=True,
+                is_available=True,
+                is_approved=True
+            ).filter(Driver.telegram_user_id.isnot(None)).all()
+            
+            # Restaurant location (ET-FOOD Kitchen)
+            restaurant_lat = 9.145
+            restaurant_lng = 40.489658
+            
+            # Customer location
+            customer_lat = order.location_lat or 9.165
+            customer_lng = order.location_lng or 40.510
+            
+            # Calculate distance for each driver and sort by proximity
+            drivers_with_distance = []
+            for driver in available_drivers:
+                # If driver has current location, use it; otherwise use restaurant location
+                driver_lat = driver.current_lat or restaurant_lat
+                driver_lng = driver.current_lng or restaurant_lng
+                
+                # Calculate distance from driver to customer
+                distance = calculate_distance(driver_lat, driver_lng, customer_lat, customer_lng)
+                drivers_with_distance.append((driver, distance))
+            
+            # Sort by distance (nearest first)
+            drivers_with_distance.sort(key=lambda x: x[1])
+            
+            # Take the nearest 3 drivers and notify them
+            nearest_drivers = drivers_with_distance[:3]
+            
+            if nearest_drivers:
+                # Prepare order data
+                order_data = {
+                    'id': order.id,
+                    'customer_name': order.customer_name,
+                    'customer_phone': order.customer_phone,
+                    'customer_address': order.customer_address,
+                    'total_amount': order.total_amount,
+                    'payment_method': order.payment_method,
+                    'location_lat': order.location_lat,
+                    'location_lng': order.location_lng,
+                    'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else 'Just now',
+                    'items': order.items
+                }
+                
+                # Notify each nearby driver
+                from driver_bot import notify_driver_assignment_via_driver_bot
+                
+                for driver, distance in nearest_drivers:
+                    logger.info(f"Notifying driver {driver.name} (ID: {driver.telegram_user_id}) about order #{order.id}, distance: {distance:.1f}km")
+                    
+                    # Add distance to order data
+                    order_data['distance'] = distance
+                    
+                    # Send notification using driver bot
+                    notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
+                    
+                    # Small delay between notifications to avoid spam
+                    time.sleep(0.5)
+                
+                logger.info(f"Notified {len(nearest_drivers)} drivers about order #{order.id}")
+            else:
+                logger.warning(f"No available drivers found for order #{order.id}")
+                
+    except Exception as e:
+        logger.error(f"Error in find_and_notify_nearby_drivers: {e}")
+
+def notify_drivers_in_background(order_id):
+    """Run driver notification in background thread"""
+    thread = threading.Thread(target=find_and_notify_nearby_drivers, args=(order_id,))
+    thread.daemon = True
+    thread.start()
 
 @app.route('/')
 def index():
@@ -116,6 +213,9 @@ def create_order():
         
         # Send notification to admins
         send_order_notification(order.id)
+        
+        # Automatically find and notify nearby drivers in background
+        notify_drivers_in_background(order.id)
         
         return jsonify({'message': 'Order created successfully', 'order_id': order.id}), 201
     
@@ -583,25 +683,51 @@ def driver_accept_order():
         if not driver:
             return jsonify({'error': 'Driver not found'}), 404
             
+        # Check if driver is available
+        if not driver.is_available:
+            return jsonify({'error': 'Driver is not available'}), 400
+            
         # Update order
         order = Order.query.get(order_id)
         if not order:
             return jsonify({'error': 'Order not found'}), 404
             
+        # Check if order is still pending (not already accepted by another driver)
+        if order.status != 'pending':
+            return jsonify({'error': 'Order already accepted by another driver'}), 400
+            
+        if order.driver_id is not None:
+            return jsonify({'error': 'Order already assigned to another driver'}), 400
+        
+        # Assign order to driver
         order.driver_id = driver.id
-        order.status = 'accepted'
+        order.status = 'out_for_delivery'
         driver.is_available = False
         
         db.session.commit()
         
-        # Notify customer
+        # Notify customer about driver assignment
         from bot_minimal import notify_customer_status_change
-        notify_customer_status_change(order_id, 'accepted')
+        notify_customer_status_change(order_id, 'out_for_delivery')
+        
+        # Send confirmation to driver
+        from driver_bot import send_driver_message
+        confirmation_msg = f"✅ *Order Accepted!*\n\n"
+        confirmation_msg += f"You have successfully accepted Order #{order.id}\n"
+        confirmation_msg += f"Customer: {order.customer_name}\n"
+        confirmation_msg += f"Phone: {order.customer_phone}\n"
+        confirmation_msg += f"Address: {order.customer_address}\n\n"
+        confirmation_msg += f"Please proceed to ET-FOOD Kitchen to pick up the order."
+        
+        send_driver_message(driver_telegram_id, confirmation_msg)
+        
+        logger.info(f"Order #{order.id} accepted by driver {driver.name} (ID: {driver.telegram_user_id})")
         
         return jsonify({'success': True, 'message': 'Order accepted successfully'})
         
     except Exception as e:
         logger.error(f"Error accepting order: {e}")
+        db.session.rollback()
         return jsonify({'error': 'Failed to accept order'}), 500
 
 @app.route('/api/driver/reject-order', methods=['POST'])
