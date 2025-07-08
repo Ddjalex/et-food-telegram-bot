@@ -1029,11 +1029,6 @@
             const totalPrice = Object.keys(selectedItems).reduce((sum, itemId) => {
                 const item = menuItems.find(i => i.id == itemId);
                 const qty = selectedItems[itemId];
-<<<<<<< HEAD
-                return sum + (item ? item.price * qty * 60 : 0); // Convert to ETB
-=======
-                return sum + (item ? item.price * qty : 0); // Price already in ETB
->>>>>>> 6dd25ab (Initial commit from Replit)
             }, 0);
             
             if (totalItems > 0) {
