@@ -507,3 +507,14 @@ def assign_driver_to_order(driver_id, order_id):
         logger.error(f"Error assigning driver: {e}")
         return jsonify({'error': 'Failed to assign driver'}), 500
 
+@app.route('/api/drivers/<int:driver_id>/request-location', methods=['POST'])
+def request_driver_location_api(driver_id):
+    """Request location from driver via API"""
+    try:
+        from bot_minimal import request_driver_location
+        request_driver_location(driver_id)
+        return jsonify({'success': True, 'message': 'Location request sent to driver'})
+    except Exception as e:
+        logger.error(f"Error requesting driver location: {e}")
+        return jsonify({'error': 'Failed to request location'}), 500
+

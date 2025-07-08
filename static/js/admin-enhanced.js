@@ -48,6 +48,9 @@ async function loadDashboardData() {
 function processDashboardData(orders, drivers) {
     dashboardData.totalOrders = orders.length;
     dashboardData.totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+    dashboardData.liveTrackingDrivers = drivers.filter(driver => driver.current_location && driver.current_location.lat).length;
+    dashboardData.activeDeliveries = orders.filter(order => order.status === 'out_for_delivery').length;
+    dashboardData.deliveryBotActive = drivers.some(driver => driver.name === 'Delivery Bot' && !driver.is_available);
     dashboardData.pendingOrders = orders.filter(order => order.status === 'pending').length;
     dashboardData.activeDrivers = drivers.filter(driver => driver.is_active && driver.is_available).length;
     dashboardData.recentOrders = orders.slice(0, 5); // Last 5 orders
@@ -59,6 +62,17 @@ function updateDashboardStats() {
     document.getElementById('totalRevenue').textContent = `ETB ${dashboardData.totalRevenue.toFixed(2)}`;
     document.getElementById('pendingOrders').textContent = dashboardData.pendingOrders;
     document.getElementById('activeDrivers').textContent = dashboardData.activeDrivers;
+    
+    // Update live tracking stats
+    if (document.getElementById('liveTrackingCount')) {
+        document.getElementById('liveTrackingCount').textContent = dashboardData.liveTrackingDrivers || 0;
+    }
+    if (document.getElementById('activeDeliveries')) {
+        document.getElementById('activeDeliveries').textContent = dashboardData.activeDeliveries || 0;
+    }
+    if (document.getElementById('deliveryBotStatus')) {
+        document.getElementById('deliveryBotStatus').textContent = dashboardData.deliveryBotActive ? 'Active' : 'Offline';
+    }
 }
 
 // Setup Charts
@@ -495,6 +509,284 @@ async function updateOrderStatus(orderId, newStatus) {
 }
 
 // Load Orders Tab
+// Live Tracking Functions
+function showLiveTrackingMap() {
+    // Create modal for live tracking map
+    const modalHtml = `
+        <div class="modal fade" id="liveTrackingModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Live Driver Tracking</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="liveTrackingMap" style="height: 500px; border-radius: 8px;"></div>
+                        <div class="mt-3">
+                            <div class="row" id="driversList">
+                                <!-- Driver info cards will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to body if not exists
+    if (!document.getElementById('liveTrackingModal')) {
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+    
+    // Show modal and initialize map
+    const modal = new bootstrap.Modal(document.getElementById('liveTrackingModal'));
+    modal.show();
+    
+    // Initialize map after modal is shown
+    setTimeout(() => {
+        initializeLiveTrackingMap();
+    }, 500);
+}
+
+function initializeLiveTrackingMap() {
+    // Initialize Leaflet map
+    const map = L.map('liveTrackingMap').setView([9.145, 40.489658], 12);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Load and display driver locations
+    fetch('/api/drivers')
+        .then(response => response.json())
+        .then(drivers => {
+            const driversList = document.getElementById('driversList');
+            driversList.innerHTML = '';
+            
+            drivers.forEach(driver => {
+                if (driver.current_location && driver.current_location.lat) {
+                    // Add marker to map
+                    const marker = L.marker([driver.current_location.lat, driver.current_location.lng])
+                        .addTo(map)
+                        .bindPopup(`
+                            <strong>${driver.name}</strong><br>
+                            Vehicle: ${driver.vehicle_type}<br>
+                            Status: ${driver.is_available ? 'Available' : 'Busy'}<br>
+                            Last Update: ${new Date(driver.current_location.last_update).toLocaleTimeString()}
+                        `);
+                    
+                    // Add driver info card
+                    const driverCard = document.createElement('div');
+                    driverCard.className = 'col-md-4 mb-3';
+                    driverCard.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">${driver.name}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Vehicle: ${driver.vehicle_type}<br>
+                                        Status: ${driver.is_available ? 'Available' : 'Busy'}<br>
+                                        Last Update: ${new Date(driver.current_location.last_update).toLocaleTimeString()}
+                                    </small>
+                                </p>
+                                <button class="btn btn-sm btn-primary" onclick="focusOnDriver(${driver.current_location.lat}, ${driver.current_location.lng})">
+                                    <i class="fas fa-crosshairs"></i> Focus
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="requestDriverLocation(${driver.id})">
+                                    <i class="fas fa-sync"></i> Update
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    driversList.appendChild(driverCard);
+                }
+            });
+            
+            if (drivers.filter(d => d.current_location).length === 0) {
+                driversList.innerHTML = '<div class="col-12"><div class="alert alert-info">No drivers are currently sharing their location.</div></div>';
+            }
+        })
+        .catch(error => console.error('Error loading driver locations:', error));
+}
+
+function assignDeliveryBot() {
+    // Find pending orders to assign to delivery bot
+    fetch('/api/orders')
+        .then(response => response.json())
+        .then(data => {
+            const pendingOrders = data.orders.filter(order => order.status === 'pending' || order.status === 'confirmed');
+            
+            if (pendingOrders.length === 0) {
+                alert('No pending orders to assign to delivery bot.');
+                return;
+            }
+            
+            // Show order selection modal
+            showDeliveryBotAssignmentModal(pendingOrders);
+        })
+        .catch(error => console.error('Error loading orders:', error));
+}
+
+function showDeliveryBotAssignmentModal(orders) {
+    const modalHtml = `
+        <div class="modal fade" id="deliveryBotModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Assign Delivery Bot</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Select orders to assign to the automated delivery bot:</p>
+                        <div id="ordersList">
+                            ${orders.map(order => `
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" value="${order.id}" id="order${order.id}">
+                                    <label class="form-check-label" for="order${order.id}">
+                                        Order #${order.id} - ${order.customer_name} - ETB ${order.total_amount.toFixed(2)}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="assignSelectedOrdersToBot()">Assign to Bot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('deliveryBotModal'));
+    modal.show();
+}
+
+function assignSelectedOrdersToBot() {
+    const selectedOrders = Array.from(document.querySelectorAll('#ordersList input:checked')).map(cb => cb.value);
+    
+    if (selectedOrders.length === 0) {
+        alert('Please select at least one order.');
+        return;
+    }
+    
+    // Create or get delivery bot driver
+    fetch('/api/drivers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: 'Delivery Bot',
+            phone_number: '+251000000000',
+            vehicle_type: 'autonomous',
+            telegram_user_id: null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const botDriverId = data.driver_id || 1; // Fallback to existing bot driver
+        
+        // Assign each selected order to the bot
+        selectedOrders.forEach(orderId => {
+            fetch(`/api/drivers/${botDriverId}/assign/${orderId}`, { method: 'POST' })
+                .then(() => console.log(`Order ${orderId} assigned to delivery bot`))
+                .catch(error => console.error(`Error assigning order ${orderId}:`, error));
+        });
+        
+        // Close modal and refresh dashboard
+        bootstrap.Modal.getInstance(document.getElementById('deliveryBotModal')).hide();
+        setTimeout(() => {
+            loadDashboardData();
+            loadOrdersTab();
+        }, 1000);
+        
+        alert(`${selectedOrders.length} order(s) assigned to delivery bot!`);
+    })
+    .catch(error => console.error('Error creating delivery bot:', error));
+}
+
+function trackAllDeliveries() {
+    // Show tracking modal for all active deliveries
+    fetch('/api/orders')
+        .then(response => response.json())
+        .then(data => {
+            const activeDeliveries = data.orders.filter(order => order.status === 'out_for_delivery');
+            
+            if (activeDeliveries.length === 0) {
+                alert('No active deliveries to track.');
+                return;
+            }
+            
+            showAllDeliveriesModal(activeDeliveries);
+        })
+        .catch(error => console.error('Error loading deliveries:', error));
+}
+
+function showAllDeliveriesModal(deliveries) {
+    const modalHtml = `
+        <div class="modal fade" id="allDeliveriesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Active Deliveries Tracking</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            ${deliveries.map(order => `
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Order #${order.id}</h6>
+                                            <p class="card-text">
+                                                Customer: ${order.customer_name}<br>
+                                                Driver: ${order.driver_name || 'Delivery Bot'}<br>
+                                                Total: ETB ${order.total_amount.toFixed(2)}
+                                            </p>
+                                            <button class="btn btn-sm btn-primary" onclick="viewOrderDetails(${order.id})">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </button>
+                                            <button class="btn btn-sm btn-success" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                                <i class="fas fa-check"></i> Mark Delivered
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('allDeliveriesModal'));
+    modal.show();
+}
+
+function requestDriverLocation(driverId) {
+    fetch(`/api/drivers/${driverId}/request-location`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Location request sent to driver!');
+            } else {
+                alert('Failed to send location request.');
+            }
+        })
+        .catch(error => console.error('Error requesting location:', error));
+}
+
+function focusOnDriver(lat, lng) {
+    // Get the map instance and focus on driver location
+    const mapContainer = document.getElementById('liveTrackingMap');
+    if (mapContainer && mapContainer._leaflet_map) {
+        const map = mapContainer._leaflet_map;
+        map.setView([lat, lng], 15);
+    }
+}
+
 async function loadOrdersTab() {
     try {
         const response = await fetch('/api/orders');

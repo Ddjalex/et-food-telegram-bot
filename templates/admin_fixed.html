@@ -138,6 +138,49 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Live Tracking Stats Row -->
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-map-marker-alt fa-2x mb-3"></i>
+                                        <h5 class="card-title">Live Tracking</h5>
+                                        <h3 id="liveTrackingCount">0</h3>
+                                        <small>Drivers sharing location</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="showLiveTrackingMap()">
+                                            <i class="fas fa-map"></i> View Map
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-robot fa-2x mb-3"></i>
+                                        <h5 class="card-title">Delivery Bot</h5>
+                                        <h3 id="deliveryBotStatus">Offline</h3>
+                                        <small>Automated delivery system</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="assignDeliveryBot()">
+                                            <i class="fas fa-rocket"></i> Deploy Bot
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); color: white; border: none; border-radius: 15px;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-route fa-2x mb-3"></i>
+                                        <h5 class="card-title">Active Deliveries</h5>
+                                        <h3 id="activeDeliveries">0</h3>
+                                        <small>Orders out for delivery</small>
+                                        <button class="btn btn-light btn-sm mt-2" onclick="trackAllDeliveries()">
+                                            <i class="fas fa-search"></i> Track All
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Orders Tab -->
