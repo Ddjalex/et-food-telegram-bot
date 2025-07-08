@@ -72,10 +72,6 @@ async function loadMenuItems() {
     try {
         const response = await fetch('/api/menu');
         menuItems = await response.json();
-<<<<<<< HEAD
-=======
-
->>>>>>> 6dd25ab (Initial commit from Replit)
         displayMenuItems();
     } catch (error) {
         console.error('Error loading menu:', error);
@@ -135,11 +131,6 @@ function updateQuantity(itemId, change) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 6dd25ab (Initial commit from Replit)
     const existingItemIndex = selectedItems.findIndex(i => i.id === itemId);
     
     if (existingItemIndex >= 0) {
