@@ -2015,7 +2015,7 @@
                 // Get user ID from Telegram WebApp
                 const userId = currentUser.id || 'demo_user';
                 
-                const response = await fetch(`/api/user/${userId}/orders`);
+                const response = await fetch(`/api/orders/user/${userId}`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to fetch orders');
