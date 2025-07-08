@@ -147,18 +147,22 @@ def handle_driver_callback(callback_query):
         elif callback_data == 'contact_support':
             send_driver_message(chat_id, "📞 *Support Contact*\n\nET-FOOD Support\nPhone: +251-911-123-456\nEmail: support@et-food.com\n\nContact us for any assistance!")
             
+<<<<<<< HEAD
         elif callback_data == 'request_location':
             send_location_request(chat_id)
             
         elif callback_data == 'enable_live_location':
             send_live_location_instructions(chat_id)
             
+=======
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
         # Answer callback query
         answer_callback_query(callback_query['id'], "Action processed!")
         
     except Exception as e:
         logger.error(f"Error handling driver callback: {e}")
 
+<<<<<<< HEAD
 def send_location_request(chat_id):
     """Send location request message to driver"""
     message = "📍 *Location Sharing Required*\n\n"
@@ -212,6 +216,8 @@ def send_live_location_instructions(chat_id):
     
     send_driver_message(chat_id, message, keyboard=keyboard)
 
+=======
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
 def handle_order_acceptance(driver_chat_id, order_id, message_id):
     """Handle order acceptance by driver"""
     try:
@@ -339,7 +345,11 @@ def handle_driver_location_update(chat_id, location):
             driver.last_location_update = datetime.utcnow()
             db.session.commit()
             
+<<<<<<< HEAD
             send_driver_message(chat_id, "📍 Location updated successfully! Admin can now track your delivery.\n\n⚠️ **Keep sharing your location regularly** to receive order assignments in your area.")
+=======
+            send_driver_message(chat_id, "📍 Location updated successfully! Admin can now track your delivery.")
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
             
     except Exception as e:
         logger.error(f"Error updating driver location: {e}")
@@ -399,6 +409,7 @@ def handle_driver_text_message(chat_id, text):
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
 def send_driver_welcome_message(chat_id):
+<<<<<<< HEAD
     """Send welcome message to driver with mandatory location sharing"""
     message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
     message += f"⚠️ **MANDATORY LOCATION SHARING REQUIRED**\n\n"
@@ -415,11 +426,25 @@ def send_driver_welcome_message(chat_id):
     message += f"• Help you accept/reject orders\n"
     message += f"• Track your location for real-time monitoring\n\n"
     message += f"🎯 Click 'Share Location' below to get started!"
+=======
+    """Send welcome message to driver"""
+    message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+    message += f"👋 Hello! I'm your delivery assignment assistant.\n\n"
+    message += f"📋 Here's what I can do:\n"
+    message += f"• Notify you about new orders\n"
+    message += f"• Show order details and customer info\n"
+    message += f"• Calculate distances and delivery routes\n"
+    message += f"• Help you accept/reject orders\n"
+    message += f"• Track your location for deliveries\n\n"
+    message += f"🎯 To get started, make sure you're registered as a driver in the system and wait for order assignments!\n\n"
+    message += f"Need help? Use /help command."
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
+<<<<<<< HEAD
                     "text": "📍 Share Location (REQUIRED)",
                     "callback_data": "request_location"
                 }
@@ -435,6 +460,17 @@ def send_driver_welcome_message(chat_id):
                     "text": "📱 Open Driver Panel",
                     "web_app": {"url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel"}
                 }
+=======
+                    "text": "📱 Open Driver Panel",
+                    "web_app": {"url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel"}
+                }
+            ],
+            [
+                {
+                    "text": "📞 Contact Support",
+                    "callback_data": "contact_support"
+                }
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
             ]
         ]
     }
@@ -471,6 +507,7 @@ def send_driver_status_message(chat_id):
             for order in active_orders:
                 message += f"• Order #{order.id} - {order.customer_name} ({order.status})\n"
         
+<<<<<<< HEAD
         # Check location sharing status
         from datetime import datetime, timedelta
         message += f"\n📍 **Location Sharing Status:**\n"
@@ -507,6 +544,12 @@ def send_driver_status_message(chat_id):
             }
         
         send_driver_message(chat_id, message, keyboard=keyboard)
+=======
+        if driver.last_location_update:
+            message += f"\n📍 Last Location Update: {driver.last_location_update.strftime('%Y-%m-%d %H:%M')}\n"
+        
+        send_driver_message(chat_id, message)
+>>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
         
     except Exception as e:
         logger.error(f"Error sending driver status: {e}")
