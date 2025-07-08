@@ -180,6 +180,16 @@ def get_user_orders(user_id):
         logger.error(f"Error fetching user orders: {e}")
         return jsonify({'error': 'Failed to fetch user orders'}), 500
 
+@app.route('/api/user-orders/<int:user_id>')
+def get_user_orders_alt(user_id):
+    """Get orders for specific user (alternative endpoint)"""
+    try:
+        orders = Order.query.filter_by(telegram_user_id=user_id).order_by(Order.created_at.desc()).all()
+        return jsonify([order.to_dict() for order in orders])
+    except Exception as e:
+        logger.error(f"Error fetching user orders: {e}")
+        return jsonify({'error': 'Failed to fetch user orders'}), 500
+
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
     """Upload image file"""

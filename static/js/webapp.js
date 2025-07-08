@@ -645,37 +645,33 @@ async function loadOrderHistory() {
             const orderDate = new Date(order.created_at).toLocaleDateString();
             
             historyHTML += `
-                <div class="card mb-2" style="border-radius: 8px; border: 1px solid #374151;">
-                    <div class="card-body p-3" style="background: #1f2937;">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="mb-1 text-white">Order #${order.id}</h6>
-                                <small class="text-muted">${orderDate}</small>
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="order-info">
+                            <div class="order-number">Order #${order.id}</div>
+                            <div class="order-date">${orderDate}</div>
+                        </div>
+                        <div class="order-status-price">
+                            ${statusBadge}
+                            <div class="order-total">ETB ${order.total_amount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-items">
+                        ${order.items.map(item => `
+                            <div class="item-row">
+                                <span>${item.name} x${item.quantity}</span>
+                                <span>ETB ${(item.price * item.quantity).toFixed(2)}</span>
                             </div>
-                            <div class="text-end">
-                                ${statusBadge}
-                                <div class="mt-1">
-                                    <strong class="text-primary">ETB ${order.total_amount.toFixed(2)}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="order-items mb-2">
-                            ${order.items.map(item => `
-                                <div class="d-flex justify-content-between py-1" style="font-size: 13px;">
-                                    <span class="text-light">${item.name} x${item.quantity}</span>
-                                    <span class="text-muted">ETB ${(item.price * item.quantity).toFixed(2)}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <div class="order-actions">
-                            ${order.status === 'pending' ? 
-                                '<button class="order-action-btn btn-cancel" onclick="cancelOrder(' + order.id + ')">Cancel</button>' : ''}
-                            ${order.status !== 'cancelled' && order.status !== 'delivered' ? 
-                                '<button class="order-action-btn btn-track" onclick="trackOrder(' + order.id + ')">Track</button>' : ''}
-                            <button class="order-action-btn btn-reorder" onclick="reorderItems(' + order.id + ')">Reorder</button>
-                        </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="order-actions">
+                        ${order.status === 'pending' ? 
+                            '<button class="order-action-btn btn-cancel" onclick="cancelOrder(' + order.id + ')">Cancel</button>' : ''}
+                        ${order.status !== 'cancelled' && order.status !== 'delivered' ? 
+                            '<button class="order-action-btn btn-track" onclick="trackOrder(' + order.id + ')">Track</button>' : ''}
+                        <button class="order-action-btn btn-reorder" onclick="reorderItems(' + order.id + ')">Reorder</button>
                     </div>
                 </div>
             `;

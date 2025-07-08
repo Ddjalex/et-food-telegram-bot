@@ -898,6 +898,92 @@
 
         .no-orders-icon {
             font-size: 48px;
+        }
+
+        /* Compact Order History Styles */
+        .order-card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            padding: 12px;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .order-info {
+            flex: 1;
+        }
+
+        .order-number {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .order-date {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .order-status-price {
+            text-align: right;
+        }
+
+        .order-total {
+            color: #3b82f6;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .order-items {
+            margin-bottom: 8px;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #e5e7eb;
+            font-size: 12px;
+            padding: 2px 0;
+        }
+
+        .item-row span:first-child {
+            color: #d1d5db;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .item-row span:last-child {
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .order-action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.3s;
+            flex: 1;
+        }
             margin-bottom: 15px;
         }
 
