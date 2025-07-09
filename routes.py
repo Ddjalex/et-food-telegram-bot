@@ -9,6 +9,7 @@ from app import app
 from extensions import db
 from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver
 from bot_minimal import send_order_notification, notify_customer_status_change
+from complete_order_workflow import process_new_order, handle_order_status_change
 import logging
 import math
 import threading
@@ -233,11 +234,8 @@ def create_order():
         db.session.add(order)
         db.session.commit()
         
-        # Send notification to admins
-        send_order_notification(order.id)
-        
-        # Automatically find and notify nearby drivers in background
-        notify_drivers_in_background(order.id)
+        # Process new order through workflow manager
+        process_new_order(order.id)
         
         return jsonify({'message': 'Order created successfully', 'order_id': order.id}), 201
     
@@ -248,7 +246,7 @@ def create_order():
 
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 def update_order_status(order_id):
-    """Update order status"""
+    """Update order status with automatic driver notification"""
     try:
         data = request.get_json()
         new_status = data.get('status')
@@ -262,23 +260,23 @@ def update_order_status(order_id):
         old_status = order.status
         order.status = new_status
         order.updated_at = datetime.utcnow()
+        
         db.session.commit()
         
-        # Notify customer about status change (if bot is configured)
-        try:
-            notify_customer_status_change(order_id, new_status)
-        except Exception as bot_error:
-            print(f"Bot notification failed: {bot_error}")
+        # Handle status change through workflow manager
+        handle_order_status_change(order_id, old_status, new_status)
         
         return jsonify({
+            'success': True,
             'message': f'Order #{order_id} status updated from {old_status} to {new_status}',
             'order_id': order_id,
             'old_status': old_status,
-            'new_status': new_status
+            'new_status': new_status,
+            'driver_notified': order.driver_id is not None if new_status in ['preparing', 'out_for_delivery'] else False
         })
     
     except Exception as e:
-        print(f"Error updating order status: {e}")
+        logger.error(f"Error updating order status: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update order status'}), 500
 

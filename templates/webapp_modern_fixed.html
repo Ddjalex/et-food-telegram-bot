@@ -2104,17 +2104,27 @@
                 orderHistoryBody.innerHTML = '<div style="text-align: center; padding: 20px; color: #9ca3af;">Loading orders...</div>';
                 
                 // Get user ID from Telegram WebApp
-                const userId = currentUser.id || 'demo_user';
+                let userId = 123456789; // Default fallback
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+                } else if (currentUser && currentUser.id && currentUser.id !== 'demo_user') {
+                    userId = currentUser.id;
+                }
+                
+                console.log('Loading order history for user:', userId);
                 
                 const response = await fetch(`/api/orders/user/${userId}`);
                 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch orders');
+                    const errorText = await response.text();
+                    console.error('API Error:', response.status, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const orders = await response.json();
+                console.log('Loaded orders:', orders);
                 
-                if (orders.length === 0) {
+                if (!orders || orders.length === 0) {
                     orderHistoryBody.innerHTML = `
                         <div class="no-orders">
                             <div class="no-orders-icon">🛍️</div>
