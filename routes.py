@@ -45,28 +45,19 @@ def find_and_notify_nearby_drivers(order_id):
             if not order:
                 return
             
-<<<<<<< HEAD
             # Get all active and available drivers with recent location updates (last 10 minutes)
             from datetime import datetime, timedelta
             ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
-            
-=======
-            # Get all active and available drivers
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
             available_drivers = Driver.query.filter_by(
                 is_active=True,
                 is_available=True,
                 is_approved=True
-<<<<<<< HEAD
             ).filter(
                 Driver.telegram_user_id.isnot(None),
                 Driver.last_location_update >= ten_minutes_ago,
                 Driver.current_lat.isnot(None),
                 Driver.current_lng.isnot(None)
             ).all()
-=======
-            ).filter(Driver.telegram_user_id.isnot(None)).all()
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
             
             # Restaurant location (ET-FOOD Kitchen)
             restaurant_lat = 9.145
@@ -79,15 +70,9 @@ def find_and_notify_nearby_drivers(order_id):
             # Calculate distance for each driver and sort by proximity
             drivers_with_distance = []
             for driver in available_drivers:
-<<<<<<< HEAD
                 # Use driver's current location (guaranteed to exist by query filter)
                 driver_lat = driver.current_lat
                 driver_lng = driver.current_lng
-=======
-                # If driver has current location, use it; otherwise use restaurant location
-                driver_lat = driver.current_lat or restaurant_lat
-                driver_lng = driver.current_lng or restaurant_lng
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
                 
                 # Calculate distance from driver to customer
                 distance = calculate_distance(driver_lat, driver_lng, customer_lat, customer_lng)
@@ -131,7 +116,6 @@ def find_and_notify_nearby_drivers(order_id):
                 
                 logger.info(f"Notified {len(nearest_drivers)} drivers about order #{order.id}")
             else:
-<<<<<<< HEAD
                 logger.warning(f"No available drivers with recent location updates found for order #{order.id}")
                 
                 # Send notification to admins about no drivers
@@ -155,9 +139,6 @@ def find_and_notify_nearby_drivers(order_id):
                             logger.error(f"Error sending no-driver alert to admin {admin.telegram_user_id}: {e}")
                 except Exception as e:
                     logger.error(f"Error sending no-driver alerts to admins: {e}")
-=======
-                logger.warning(f"No available drivers found for order #{order.id}")
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
                 
     except Exception as e:
         logger.error(f"Error in find_and_notify_nearby_drivers: {e}")
@@ -1088,7 +1069,6 @@ def clear_previous_orders():
         # Get filter criteria
         clear_delivered = data.get('clear_delivered', True)
         clear_cancelled = data.get('clear_cancelled', True)
-<<<<<<< HEAD
         time_filter = data.get('time_filter', '7_days')  # Default: 7 days
         clear_all = data.get('clear_all', False)  # Clear all regardless of time
         
@@ -1115,16 +1095,6 @@ def clear_previous_orders():
         # Apply time filter if not clearing all
         if date_threshold is not None:
             query = query.filter(Order.created_at < date_threshold)
-=======
-        older_than_days = data.get('older_than_days', 7)  # Default: older than 7 days
-        
-        # Calculate date threshold
-        from datetime import datetime, timedelta
-        date_threshold = datetime.utcnow() - timedelta(days=older_than_days)
-        
-        # Build query for orders to clear
-        query = Order.query.filter(Order.created_at < date_threshold)
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
         
         # Add status filters
         status_filters = []
@@ -1143,16 +1113,10 @@ def clear_previous_orders():
         orders_count = len(orders_to_clear)
         
         if orders_count == 0:
-<<<<<<< HEAD
             time_desc = 'any time' if clear_all else f'older than {time_filter.replace("_", " ")}'
             return jsonify({
                 'success': True,
                 'message': f'No orders found matching the criteria ({time_desc})',
-=======
-            return jsonify({
-                'success': True,
-                'message': 'No orders found matching the criteria',
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
                 'cleared_count': 0
             })
         
@@ -1174,20 +1138,12 @@ def clear_previous_orders():
         db.session.commit()
         
         # Log the clearing operation
-<<<<<<< HEAD
         time_desc = 'from all time' if clear_all else f'older than {time_filter.replace("_", " ")}'
         logger.info(f"Cleared {orders_count} orders {time_desc}: {[o['id'] for o in cleared_orders]}")
         
         return jsonify({
             'success': True,
             'message': f'Successfully cleared {orders_count} orders {time_desc}',
-=======
-        logger.info(f"Cleared {orders_count} previous orders: {[o['id'] for o in cleared_orders]}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Successfully cleared {orders_count} previous orders',
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
             'cleared_count': orders_count,
             'cleared_orders': cleared_orders
         })
@@ -1197,7 +1153,6 @@ def clear_previous_orders():
         db.session.rollback()
         return jsonify({'error': 'Failed to clear previous orders'}), 500
 
-<<<<<<< HEAD
 @app.route('/api/admin/orders/<int:order_id>/delete', methods=['DELETE'])
 def delete_single_order(order_id):
     """Delete a single order by ID"""
@@ -1229,6 +1184,3 @@ def delete_single_order(order_id):
         logger.error(f"Error deleting order #{order_id}: {e}")
         db.session.rollback()
         return jsonify({'error': f'Failed to delete order #{order_id}'}), 500
-
-=======
->>>>>>> 8611b9ea4616cb4851f0b48c3c11297c40c1d7f0
