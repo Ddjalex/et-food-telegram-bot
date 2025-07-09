@@ -1047,9 +1047,7 @@
             const name = prompt('Driver Name:');
             const phone = prompt('Phone Number:');
             const vehicle = prompt('Vehicle Type (motorcycle/car/bicycle):', 'motorcycle');
-            const license = prompt('License Document URL (optional):');
-            const id_doc = prompt('ID Document URL (optional):');
-            const vehicle_doc = prompt('Vehicle Document URL (optional):');
+            const telegramId = prompt('Telegram ID (optional):');
             
             if (name && phone) {
                 fetch('/api/drivers', {
@@ -1059,16 +1057,21 @@
                         name: name,
                         phone_number: phone,
                         vehicle_type: vehicle,
-                        license_document: license,
-                        id_document: id_doc,
-                        vehicle_document: vehicle_doc
+                        telegram_user_id: telegramId ? parseInt(telegramId) : null
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        alert('Driver added successfully!');
                         loadDrivers();
+                    } else {
+                        alert('Error adding driver: ' + data.error);
                     }
+                })
+                .catch(error => {
+                    console.error('Error adding driver:', error);
+                    alert('Error adding driver');
                 });
             }
         }
@@ -1076,32 +1079,49 @@
         function approveDriver(driverId) {
             if (confirm('Approve this driver application?')) {
                 fetch(`/api/drivers/${driverId}/approve`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({admin_id: 383870190})
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         alert(data.message);
                         loadDrivers();
+                    } else {
+                        alert('Error approving driver: ' + data.message);
                     }
+                })
+                .catch(error => {
+                    console.error('Error approving driver:', error);
+                    alert('Error approving driver');
                 });
             }
         }
 
         function rejectDriver(driverId) {
-            const reason = prompt('Reason for rejection:');
+            const reason = prompt('Reason for rejection:', 'Application does not meet requirements');
             if (reason) {
                 fetch(`/api/drivers/${driverId}/reject`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({reason: reason})
+                    body: JSON.stringify({
+                        reason: reason,
+                        admin_id: 383870190
+                    })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         alert(data.message);
                         loadDrivers();
+                    } else {
+                        alert('Error rejecting driver: ' + data.message);
                     }
+                })
+                .catch(error => {
+                    console.error('Error rejecting driver:', error);
+                    alert('Error rejecting driver');
                 });
             }
         }
