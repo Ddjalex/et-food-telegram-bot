@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .nav-link {
+            color: white !important;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4><i class="fas fa-utensils"></i> ET-FOOD</h4>
+                        <small>Admin Panel</small>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard" data-tab="dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#orders" data-tab="orders">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#menu" data-tab="menu">
+                                <i class="fas fa-utensils"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#categories" data-tab="categories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#drivers" data-tab="drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Admin Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h5>Total Customers</h5>
+                                    <h3 id="totalCustomers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-utensils fa-2x text-success mb-2"></i>
+                                    <h5>Menu Items</h5>
+                                    <h3 id="totalMenuItems">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle fa-2x text-info mb-2"></i>
+                                    <h5>Completed Orders</h5>
+                                    <h3 id="completedOrders">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-motorcycle fa-2x text-warning mb-2"></i>
+                                    <h5>Active Drivers</h5>
+                                    <h3 id="activeDrivers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Tab -->
+                <div id="orders-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Orders Management</h3>
+                            <select id="statusFilter" class="form-select w-auto">
+                                <option value="">All Orders</option>
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="preparing">Preparing</option>
+                                <option value="out_for_delivery">Out for Delivery</option>
+                                <option value="delivered">Delivered</option>
+                            </select>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody">
+                                    <!-- Orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Tab -->
+                <div id="menu-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Menu Management</h3>
+                            <button class="btn btn-primary" onclick="addMenuItem()">
+                                <i class="fas fa-plus"></i> Add Menu Item
+                            </button>
+                        </div>
+                        <div class="row" id="menuItemsGrid">
+                            <!-- Menu items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Tab -->
+                <div id="categories-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Categories Management</h3>
+                            <button class="btn btn-primary" onclick="addCategory()">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                        <div class="row" id="categoriesGrid">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drivers Tab -->
+                <div id="drivers-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Drivers Management</h3>
+                            <button class="btn btn-primary" onclick="addDriver()">
+                                <i class="fas fa-plus"></i> Add Driver
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Availability</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driversTableBody">
+                                    <!-- Drivers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.js"></script>
+    <script src="/static/js/admin-enhanced.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Show target tab
+                document.getElementById(targetTab + '-tab').classList.add('active');
+                
+                // Update nav links
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // Load tab content
+                loadTabContent(targetTab);
+            });
+        });
+
+        function loadTabContent(tab) {
+            switch(tab) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'orders':
+                    loadOrdersTab();
+                    break;
+                case 'menu':
+                    loadMenuItems();
+                    break;
+                case 'categories':
+                    loadCategories();
+                    break;
+                case 'drivers':
+                    loadDrivers();
+                    break;
+            }
+        }
+
+        // Load orders tab
+        function loadOrdersTab() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    data.orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>${order.items.length} items</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                    Confirm
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                    Preparing
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')">
+                                    Out for Delivery
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                    Delivered
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'confirmed': return 'info';
+                case 'preparing': return 'primary';
+                case 'out_for_delivery': return 'dark';
+                case 'delivered': return 'success';
+                default: return 'secondary';
+            }
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadOrdersTab();
+                } else {
+                    alert('Error updating order status');
+                }
+            })
+            .catch(error => console.error('Error updating order status:', error));
+        }
+
+        // Load menu items
+        function loadMenuItems() {
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(items => {
+                    const grid = document.getElementById('menuItemsGrid');
+                    grid.innerHTML = '';
+
+                    items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-4 mb-3';
+                        card.innerHTML = `
+                            <div class="card">
+                                <img src="${item.image_url}" class="card-img-top" alt="${item.name}" style="height: 200px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h5 class="card-title">${item.name}</h5>
+                                    <p class="card-text">${item.description}</p>
+                                    <p class="card-text"><strong>ETB ${item.price.toFixed(2)}</strong></p>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge ${item.available ? 'bg-success' : 'bg-danger'}">
+                                            ${item.available ? 'Available' : 'Unavailable'}
+                                        </span>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => console.error('Error loading menu items:', error));
+        }
+
+        // Load categories
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const grid = document.getElementById('categoriesGrid');
+                    grid.innerHTML = '';
+                    
+                    categories.forEach(category => {
+                        const categoryCard = document.createElement('div');
+                        categoryCard.className = 'col-md-3 mb-3';
+                        categoryCard.innerHTML = `
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div style="font-size: 2rem;">${category.icon}</div>
+                                    <h5 class="card-title">${category.name}</h5>
+                                    <p class="card-text">${category.description}</p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(categoryCard);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        // Load drivers
+        function loadDrivers() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const tbody = document.getElementById('driversTableBody');
+                    tbody.innerHTML = '';
+                    
+                    drivers.forEach(driver => {
+                        const row = document.createElement('tr');
+                        const approvalBadge = driver.approval_status === 'approved' ? 
+                            '<span class="badge bg-success">Approved</span>' :
+                            driver.approval_status === 'rejected' ? 
+                            '<span class="badge bg-danger">Rejected</span>' :
+                            '<span class="badge bg-warning">Pending</span>';
+                            
+                        row.innerHTML = `
+                            <td>${driver.name}</td>
+                            <td>${driver.phone_number}</td>
+                            <td><span class="badge bg-secondary">${driver.vehicle_type}</span></td>
+                            <td>${approvalBadge}</td>
+                            <td>
+                                <span class="badge ${driver.is_available ? 'bg-success' : 'bg-warning'}">
+                                    ${driver.is_available ? 'Available' : 'Busy'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    ${driver.approval_status === 'pending' ? `
+                                        <button class="btn btn-sm btn-outline-success" onclick="approveDriver(${driver.id})" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="rejectDriver(${driver.id})" title="Reject">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})" title="View Documents">
+                                        <i class="fas fa-file-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading drivers:', error));
+        }
+
+        // Driver management functions
+        function addDriver() {
+            const name = prompt('Driver Name:');
+            const phone = prompt('Phone Number:');
+            const vehicle = prompt('Vehicle Type (motorcycle/car/bicycle):', 'motorcycle');
+            
+            if (name && phone) {
+                fetch('/api/drivers', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        phone_number: phone,
+                        vehicle_type: vehicle
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Driver added successfully!');
+                        loadDrivers();
+                    } else {
+                        alert('Error adding driver: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding driver:', error);
+                    alert('Error adding driver');
+                });
+            }
+        }
+
+        function approveDriver(driverId) {
+            if (confirm('Approve this driver application?')) {
+                fetch(`/api/drivers/${driverId}/approve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({admin_id: 383870191})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        loadDrivers();
+                    } else {
+                        alert('Error approving driver: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error approving driver:', error);
+                    alert('Error approving driver');
+                });
+            }
+        }
+
+        function rejectDriver(driverId) {
+            const reason = prompt('Reason for rejection:', 'Application does not meet requirements');
+            if (reason) {
+                fetch(`/api/drivers/${driverId}/reject`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        reason: reason,
+                        admin_id: 383870191
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        loadDrivers();
+                    } else {
+                        alert('Error rejecting driver: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting driver:', error);
+                    alert('Error rejecting driver');
+                });
+            }
+        }
+
+        function viewDriverDocuments(driverId) {
+            alert('Driver documents feature coming soon!');
+        }
+
+        // Category management functions
+        function addCategory() {
+            const name = prompt('Category Name:');
+            const description = prompt('Description:') || '';
+            const icon = prompt('Emoji Icon:', '🍽️');
+            
+            if (name) {
+                fetch('/api/categories', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, description, icon})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Category added successfully!');
+                        loadCategories();
+                    } else {
+                        alert('Failed to add category: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding category:', error);
+                    alert('Error adding category');
+                });
+            }
+        }
+
+        function editCategory(categoryId) {
+            // Simple implementation - can be enhanced with modal
+            const name = prompt('New category name:');
+            if (name) {
+                fetch(`/api/categories/${categoryId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadCategories();
+                    }
+                });
+            }
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Delete this category?')) {
+                fetch(`/api/categories/${categoryId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) loadCategories();
+                    });
+            }
+        }
+
+        // Menu item management functions
+        function addMenuItem() {
+            alert('Add menu item feature coming soon!');
+        }
+
+        function editMenuItem(itemId) {
+            alert('Edit menu item feature coming soon!');
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Delete this menu item?')) {
+                fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadMenuItems();
+                        }
+                    });
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadTabContent('dashboard');
+        });
+
+        // Add CSS for tab content
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

@@ -523,6 +523,12 @@
     <script src="/static/js/admin-enhanced.js"></script>
     <script>
         // Additional admin functionality
+        
+        // Show order details modal
+        function showOrderDetails(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
                     const modalBody = document.getElementById('orderDetailsBody');
                     modalBody.innerHTML = `
                         <div class="row">
@@ -619,15 +625,25 @@
         // Display pagination
         function displayPagination(totalPages, currentPage) {
             const pagination = document.getElementById('ordersPagination');
-            pagination.innerHTML = '';
+            if (pagination) {
+                pagination.innerHTML = '';
 
-            for (let i = 1; i <= totalPages; i++) {
-                const li = document.createElement('li');
-                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                li.innerHTML = `<a class="page-link" href="#" onclick="loadOrders(${i}, '${currentFilter}')">${i}</a>`;
-                pagination.appendChild(li);
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#" onclick="loadOrders(${i}, '${currentFilter}')">${i}</a>`;
+                    pagination.appendChild(li);
+                }
             }
         }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize admin dashboard
+            if (typeof initializeDashboard === 'function') {
+                initializeDashboard();
+            }
+        });
 
         // Update analytics
         function updateAnalytics(orders) {
@@ -1232,6 +1248,55 @@
                     const availableDrivers = drivers.filter(d => d.is_available);
                     if (availableDrivers.length === 0) {
                         alert('No available drivers at the moment.');
+                        return;
+                    }
+                    
+                    // Create driver selection options
+                    const driverOptions = availableDrivers.map(driver => 
+                        `<option value="${driver.id}">${driver.name} (${driver.vehicle_type})</option>`
+                    ).join('');
+                    
+                    const driverSelect = document.createElement('select');
+                    driverSelect.className = 'form-select';
+                    driverSelect.innerHTML = '<option value="">Select a driver...</option>' + driverOptions;
+                    
+                    // Show selection modal
+                    const modal = document.createElement('div');
+                    modal.className = 'modal fade';
+                    modal.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Assign Driver to Order #${orderId}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label">Select Driver:</label>
+                                    <div id="driverSelectContainer"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmDriverAssignment(${orderId})">Assign</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    document.getElementById('driverSelectContainer').appendChild(driverSelect);
+                    
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                    
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        document.body.removeChild(modal);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading drivers:', error);
+                    alert('Error loading drivers');
+                });
+        }
                         return;
                     }
                     
