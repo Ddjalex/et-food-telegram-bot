@@ -550,6 +550,75 @@ def handle_driver_contact_share(chat_id, contact):
     try:
         from models import Driver
         from extensions import db
+        from app import app
+        
+        with app.app_context():
+            phone_number = contact['phone_number']
+            first_name = contact.get('first_name', '')
+            
+            # Try to find existing driver by phone number (match last 10 digits)
+            clean_phone = phone_number.replace('+', '').replace(' ', '').replace('-', '')
+            driver = Driver.query.filter(
+                Driver.phone_number.like(f'%{clean_phone[-10:]}%')
+            ).first()
+            
+            if driver:
+                # Link existing driver to this Telegram account
+                driver.telegram_user_id = chat_id
+                db.session.commit()
+                
+                # Send welcome message with driver info
+                message = f"✅ *Welcome back, {driver.name}!*\n\n"
+                message += f"📱 Your Telegram account has been linked to your driver profile.\n\n"
+                message += f"🚗 Vehicle Type: {driver.vehicle_type or 'Not specified'}\n"
+                if driver.is_approved:
+                    message += f"✅ Status: Approved and Active\n"
+                else:
+                    message += f"⏳ Status: Pending approval\n"
+                
+                message += f"\n🎯 You can now receive order notifications!\n"
+                message += f"📍 Please share your location to start receiving orders."
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📍 Share Location",
+                                "callback_data": "request_location"
+                            }
+                        ],
+                        [
+                            {
+                                "text": "📊 View Status",
+                                "callback_data": "driver_status"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(chat_id, message, keyboard=keyboard)
+                
+                # Send notification to admin about successful linking
+                notify_admin_driver_link(driver.name, phone_number, chat_id)
+                
+            else:
+                # No existing driver found - start registration process
+                notify_admin_new_driver_attempt(chat_id, phone_number, first_name)
+                
+                message = f"👋 Hello {first_name}!\n\n"
+                message += f"📱 Phone: {phone_number}\n"
+                message += f"🚫 No driver profile found for this number.\n\n"
+                message += f"🎯 Your registration request has been sent to admin.\n"
+                message += f"⏳ Please wait for approval to start receiving orders.\n\n"
+                message += f"📞 Contact admin if you have questions."
+                
+                send_driver_message(chat_id, message)
+                
+    except Exception as e:
+        logger.error(f"Error handling driver contact share: {e}")
+        send_driver_message(chat_id, "❌ Error processing contact. Please try again or contact admin.")
+        from models import Driver
+        from extensions import db
         from main import app
         
         with app.app_context():
@@ -643,6 +712,29 @@ def notify_admin_new_driver_attempt(chat_id, phone_number, first_name):
                 
     except Exception as e:
         logger.error(f"Error notifying admin about new driver: {e}")
+
+def notify_admin_driver_link(driver_name, phone_number, telegram_id):
+    """Notify admin about successful driver Telegram account linking"""
+    try:
+        from models import AdminUser
+        from app import app
+        from bot_minimal import send_message_to_admin
+        
+        with app.app_context():
+            message = f"✅ *Driver Account Linked Successfully*\n\n"
+            message += f"👤 Driver: {driver_name}\n"
+            message += f"📱 Phone: {phone_number}\n"
+            message += f"🆔 Telegram ID: {telegram_id}\n\n"
+            message += f"🎯 Driver can now receive order notifications automatically.\n"
+            message += f"📍 Waiting for location sharing to enable order assignments."
+            
+            # Send to all active admins
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            for admin in admins:
+                send_message_to_admin(admin.telegram_user_id, message)
+            
+    except Exception as e:
+        logger.error(f"Error notifying admin about driver link: {e}")
 
 def handle_driver_location_update(chat_id, location):
     """Handle driver location update"""
