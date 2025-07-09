@@ -517,6 +517,11 @@ def create_driver():
         db.session.add(driver)
         db.session.commit()
         
+        # Send welcome notification via driver bot if telegram_user_id is provided
+        if driver.telegram_user_id:
+            from driver_bot import send_driver_registration_notification
+            send_driver_registration_notification(driver.telegram_user_id, driver.name, driver.phone_number)
+        
         return jsonify({'success': True, 'driver_id': driver.id})
     except Exception as e:
         logger.error(f"Error creating driver: {e}")

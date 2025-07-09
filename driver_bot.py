@@ -969,3 +969,40 @@ def handle_pickup_complete(chat_id, order_id):
     except Exception as e:
         logger.error(f"Error handling pickup complete: {e}")
         send_driver_message(chat_id, "❌ Error updating pickup status")
+def send_driver_registration_notification(chat_id, driver_name, phone_number):
+    """Send notification to driver about successful registration"""
+    message = f"🎉 *Registration Successful!*\n\n"
+    message += f"✅ You have been successfully registered as a driver for ET-FOOD!\n\n"
+    message += f"👤 **Driver Details:**\n"
+    message += f"📛 Name: {driver_name}\n"
+    message += f"📞 Phone: {phone_number}\n\n"
+    message += f"🚀 **Next Steps:**\n"
+    message += f"1️⃣ Share your location to start receiving orders\n"
+    message += f"2️⃣ Keep your status as \"Available\" when ready to deliver\n"
+    message += f"3️⃣ Use /status to check your current status\n"
+    message += f"4️⃣ Use /orders to view assigned orders\n\n"
+    message += f"📍 **Location Sharing Required:**\n"
+    message += f"• Share your location to receive nearby orders\n"
+    message += f"• Location updates are needed every 10 minutes\n"
+    message += f"• This helps us assign you the closest deliveries\n\n"
+    message += f"💰 Start earning by sharing your location now!"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📍 Share My Location",
+                    "callback_data": "request_location"
+                }
+            ],
+            [
+                {
+                    "text": "📊 Check Status",
+                    "callback_data": "driver_status"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
