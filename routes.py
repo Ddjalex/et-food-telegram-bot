@@ -108,14 +108,6 @@ def api_driver_registration():
         if existing_driver:
             return jsonify({'success': False, 'message': 'Driver already registered'})
         
-        # Create new driver
-        driver = Driver(
-            name=name,
-            phone_number=phone_number,
-            telegram_user_id=telegram_id,
-            vehicle_type=vehicle_type,
-            is_active=True,
-            is_available=True,
         # Create new driver with required fields
         driver = Driver(
             name=name or "Driver Registration",
@@ -593,7 +585,6 @@ def unassign_driver_orders(driver_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Failed to unassign orders'}), 500
 
->>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
 @app.route('/api/telegram-user-photo/<int:user_id>')
 def get_telegram_user_photo(user_id):
     """Get Telegram user profile photo"""
