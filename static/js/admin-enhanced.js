@@ -12,6 +12,7 @@ let dashboardData = {
 function initializeDashboard() {
     loadDashboardData();
     loadOrdersTab();
+    loadDriversTab();
     setupCharts();
     updateDateTime();
     setInterval(updateDateTime, 60000);
@@ -935,6 +936,150 @@ document.addEventListener('DOMContentLoaded', function() {
         loadOrdersTab();
     }, 5 * 60 * 1000);
 });
+// Load Drivers Tab
+async function loadDriversTab() {
+    try {
+        const response = await fetch('/api/drivers');
+        const drivers = await response.json();
+        
+        const tbody = document.getElementById('driversTable');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        if (drivers.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        No drivers found. Click "Add Driver Employee" to add drivers.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Update driver statistics
+        let totalDrivers = drivers.length;
+        let activeDrivers = drivers.filter(d => d.is_active).length;
+        let availableDrivers = drivers.filter(d => d.is_available && d.is_active).length;
+        let busyDrivers = drivers.filter(d => !d.is_available && d.is_active).length;
+        
+        document.getElementById('totalDrivers').textContent = totalDrivers;
+        document.getElementById('activeDrivers').textContent = activeDrivers;
+        document.getElementById('availableDrivers').textContent = availableDrivers;
+        document.getElementById('busyDrivers').textContent = busyDrivers;
+        
+        drivers.forEach(driver => {
+            const row = document.createElement('tr');
+            
+            // Status badges
+            const statusBadge = driver.is_active ? 
+                '<span class="badge bg-success">Active</span>' : 
+                '<span class="badge bg-danger">Inactive</span>';
+            
+            const availabilityBadge = driver.is_available ? 
+                '<span class="badge bg-success">Available</span>' : 
+                '<span class="badge bg-warning">Busy</span>';
+            
+            // Last location status
+            let locationStatus = 'No location';
+            if (driver.current_location) {
+                const lastUpdate = new Date(driver.current_location.last_update);
+                const now = new Date();
+                const diffMinutes = (now - lastUpdate) / (1000 * 60);
+                
+                if (diffMinutes < 10) {
+                    locationStatus = `<span class="badge bg-success">Recent (${Math.round(diffMinutes)}m ago)</span>`;
+                } else {
+                    locationStatus = `<span class="badge bg-warning">Outdated (${Math.round(diffMinutes)}m ago)</span>`;
+                }
+            }
+            
+            row.innerHTML = `
+                <td>
+                    <div class="fw-bold">${driver.name}</div>
+                    <div class="text-muted small">ID: ${driver.id}</div>
+                </td>
+                <td>${driver.phone_number}</td>
+                <td>
+                    <span class="badge bg-info">${driver.vehicle_type}</span>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${availabilityBadge}</td>
+                <td>
+                    <span class="badge bg-primary">0</span>
+                </td>
+                <td>${locationStatus}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewDriverDetails(${driver.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="editDriver(${driver.id})" title="Edit Driver">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${driver.current_location ? 
+                            `<button class="btn btn-outline-success" onclick="viewDriverLocation(${driver.current_location.lat}, ${driver.current_location.lng})" title="View Location">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </button>` : 
+                            `<button class="btn btn-outline-secondary" onclick="requestDriverLocation(${driver.id})" title="Request Location">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </button>`
+                        }
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Error loading drivers:', error);
+        const tbody = document.getElementById('driversTable');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-danger">
+                        Error loading drivers. Please try again.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Driver Management Functions
+function viewDriverDetails(driverId) {
+    alert(`Viewing details for driver ID: ${driverId}`);
+}
+
+function editDriver(driverId) {
+    alert(`Editing driver ID: ${driverId}`);
+}
+
+function viewDriverLocation(lat, lng) {
+    window.open(`https://maps.google.com/maps?q=${lat},${lng}`, '_blank');
+}
+
+function requestDriverLocation(driverId) {
+    fetch(`/api/drivers/${driverId}/request-location`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Location request sent to driver!');
+            } else {
+                alert('Failed to send location request.');
+            }
+        })
+        .catch(error => {
+            console.error('Error requesting location:', error);
+            alert('Error requesting location.');
+        });
+}
+
+function refreshDriverStatus() {
+    loadDriversTab();
+}
+
 // New Dashboard Functions
 function loadCustomerData() {
     alert(`Total customers: ${dashboardData.totalCustomers}\n\nCustomer data loaded successfully!`);
