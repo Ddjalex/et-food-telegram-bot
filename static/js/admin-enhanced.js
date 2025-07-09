@@ -29,9 +29,8 @@ async function loadDashboardData() {
         const ordersResponse = await fetch('/api/orders');
         const ordersData = await ordersResponse.json();
         
-        // Load drivers data
-        const driversResponse = await fetch('/api/drivers');
-        const driversData = await driversResponse.json();
+        // Skip drivers data (removed functionality)
+        const driversData = [];
         
         // Load menu data
         const menuResponse = await fetch('/api/menu');
@@ -56,7 +55,7 @@ function processDashboardData(orders, drivers, menuItems, customersCount) {
     dashboardData.totalOrders = orders.length;
     dashboardData.totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
     dashboardData.pendingOrders = orders.filter(order => order.status === 'pending').length;
-    dashboardData.activeDrivers = drivers.filter(driver => driver.is_active && driver.is_available).length;
+    dashboardData.activeDrivers = 0; // Driver functionality removed
     dashboardData.completedOrders = orders.filter(order => order.status === 'delivered').length;
     dashboardData.totalCustomers = customersCount;
     dashboardData.totalMenuItems = menuItems.length;

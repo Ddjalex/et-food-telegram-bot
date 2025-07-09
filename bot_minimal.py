@@ -233,38 +233,7 @@ def request_driver_location(driver_id):
     except Exception as e:
         logger.error(f"Error requesting driver location: {e}")
 
-def handle_driver_location(chat_id, location, driver_id):
-    """Handle location sharing from driver"""
-    try:
-        from extensions import db
-        from models import Driver, AdminUser
-        from datetime import datetime
-        
-        driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
-        if not driver:
-            return
-            
-        # Update driver location
-        driver.current_lat = location['latitude']
-        driver.current_lng = location['longitude']
-        driver.last_location_update = datetime.utcnow()
-        db.session.commit()
-        
-        # Notify admin
-        admins = AdminUser.query.filter_by(is_active=True).all()
-        message = f"📍 *Driver Location Update*\n\n"
-        message += f"Driver: {driver.name}\n"
-        message += f"Location: {location['latitude']:.6f}, {location['longitude']:.6f}\n"
-        message += f"Time: {datetime.utcnow().strftime('%H:%M:%S')}"
-        
-        for admin in admins:
-            send_message(admin.telegram_user_id, message, parse_mode="Markdown")
-            
-        # Confirm to driver
-        send_message(chat_id, "✅ Location shared with admin successfully!")
-        
-    except Exception as e:
-        logger.error(f"Error handling driver location: {e}")
+# Driver location handling moved to driver_bot.py
 
 def send_message_to_admin(admin_telegram_id, message):
     """Send message to specific admin"""
@@ -365,13 +334,6 @@ def handle_message(message):
     # Handle location sharing
     if 'location' in message:
         handle_location_share(chat_id, message['location'], user_id)
-        # Check if it's from a driver
-        from models import Driver
-        driver = Driver.query.filter_by(telegram_user_id=user_id).first()
-        if driver:
-            handle_driver_location(chat_id, message['location'], user_id)
-        else:
-            handle_location_share(chat_id, message['location'], user_id)
         return
 
     if text == "/start":
