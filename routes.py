@@ -1103,3 +1103,160 @@ def delete_single_order(order_id):
         logger.error(f"Error deleting order #{order_id}: {e}")
         db.session.rollback()
         return jsonify({'error': f'Failed to delete order #{order_id}'}), 500
+
+# Driver Status and Availability Management Endpoints for Admin Dashboard
+@app.route('/api/drivers/<int:driver_id>/status', methods=['PUT'])
+def update_driver_status(driver_id):
+    """Update driver active/inactive status"""
+    try:
+        data = request.get_json()
+        is_active = data.get('is_active')
+        
+        if is_active is None:
+            return jsonify({'error': 'is_active field is required'}), 400
+        
+        driver = Driver.query.get_or_404(driver_id)
+        driver.is_active = is_active
+        
+        # If driver is set to inactive, also set as unavailable
+        if not is_active:
+            driver.is_available = False
+        
+        db.session.commit()
+        
+        # Notify driver via driver bot if telegram ID available
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                status_msg = f"📊 *Status Update*\n\nYour account is now {'ACTIVE' if is_active else 'INACTIVE'}"
+                if not is_active:
+                    status_msg += "\n\nYou will not receive order notifications while inactive."
+                send_driver_message(driver.telegram_user_id, status_msg)
+            except Exception as e:
+                logger.error(f"Error notifying driver about status change: {e}")
+        
+        return jsonify({
+            'success': True,
+            'driver_id': driver_id,
+            'is_active': is_active,
+            'is_available': driver.is_available
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating driver status: {e}")
+        return jsonify({'error': 'Failed to update driver status'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/availability', methods=['PUT'])
+def update_driver_availability(driver_id):
+    """Toggle driver availability (available/busy)"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        # Toggle availability
+        driver.is_available = not driver.is_available
+        
+        # Driver must be active to be available
+        if driver.is_available and not driver.is_active:
+            driver.is_active = True
+        
+        db.session.commit()
+        
+        # Notify driver via driver bot if telegram ID available
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                status_msg = f"📊 *Availability Update*\n\nYou are now {'AVAILABLE' if driver.is_available else 'BUSY'}"
+                if driver.is_available:
+                    status_msg += "\n\nYou will receive new order notifications."
+                else:
+                    status_msg += "\n\nYou will not receive new order notifications until available."
+                send_driver_message(driver.telegram_user_id, status_msg)
+            except Exception as e:
+                logger.error(f"Error notifying driver about availability change: {e}")
+        
+        return jsonify({
+            'success': True,
+            'driver_id': driver_id,
+            'is_available': driver.is_available,
+            'is_active': driver.is_active
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating driver availability: {e}")
+        return jsonify({'error': 'Failed to update driver availability'}), 500
+
+@app.route('/api/drivers/welcome-notification', methods=['POST'])
+def send_welcome_notification():
+    """Send welcome notification to new driver"""
+    try:
+        data = request.get_json()
+        telegram_user_id = data.get('telegram_user_id')
+        driver_name = data.get('driver_name')
+        
+        if not telegram_user_id or not driver_name:
+            return jsonify({'error': 'telegram_user_id and driver_name are required'}), 400
+        
+        from driver_bot import send_driver_message
+        
+        welcome_message = f"""
+🎉 *Welcome to ET-FOOD Driver System!*
+
+Hello {driver_name}! You have been added as a delivery driver.
+
+📋 *Your Registration:*
+• Name: {driver_name}
+• Status: Active
+• Role: Delivery Driver
+
+🚀 *Next Steps:*
+1. Share your live location for order assignments
+2. Accept delivery orders when they arrive
+3. Use /help for commands and support
+
+📱 *Important Commands:*
+• /status - Check your current status
+• /location - Share your location
+• /help - Get help and support
+
+Welcome to the team! 🏍️
+"""
+        
+        send_driver_message(telegram_user_id, welcome_message)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Welcome notification sent successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending welcome notification: {e}")
+        return jsonify({'error': 'Failed to send welcome notification'}), 500
+
+@app.route('/api/drivers/notify-status-change', methods=['POST'])
+def notify_status_change():
+    """Notify driver about status change via admin action"""
+    try:
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        status = data.get('status')
+        
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if driver.telegram_user_id:
+            from driver_bot import send_driver_message
+            
+            status_messages = {
+                'activated': '✅ Your account has been activated by admin.',
+                'deactivated': '❌ Your account has been deactivated by admin.',
+                'available': '🟢 You are now available for deliveries.',
+                'busy': '🔴 You are now marked as busy.'
+            }
+            
+            message = f"📊 *Status Update*\n\n{status_messages.get(status, 'Your status has been updated.')}"
+            send_driver_message(driver.telegram_user_id, message)
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error notifying driver about status change: {e}")
+        return jsonify({'error': 'Failed to notify driver'}), 500
