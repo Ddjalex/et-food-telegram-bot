@@ -33,8 +33,15 @@ async function loadDashboardData() {
         const driversResponse = await fetch('/api/drivers');
         const driversData = await driversResponse.json();
         
+        // Load menu data
+        const menuResponse = await fetch('/api/menu');
+        const menuData = await menuResponse.json();
+        
+        // Load customers data (count unique telegram user IDs from orders)
+        const customersCount = [...new Set(ordersData.orders?.map(order => order.telegram_user_id) || [])].length;
+        
         // Process data
-        processDashboardData(ordersData.orders || [], driversData || []);
+        processDashboardData(ordersData.orders || [], driversData || [], menuData || [], customersCount);
         updateDashboardStats();
         updateCharts();
         updateRecentOrders();
@@ -45,14 +52,14 @@ async function loadDashboardData() {
 }
 
 // Process Dashboard Data
-function processDashboardData(orders, drivers) {
+function processDashboardData(orders, drivers, menuItems, customersCount) {
     dashboardData.totalOrders = orders.length;
     dashboardData.totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
-    dashboardData.liveTrackingDrivers = drivers.filter(driver => driver.current_location && driver.current_location.lat).length;
-    dashboardData.activeDeliveries = orders.filter(order => order.status === 'out_for_delivery').length;
-    dashboardData.deliveryBotActive = drivers.some(driver => driver.name === 'Delivery Bot' && !driver.is_available);
     dashboardData.pendingOrders = orders.filter(order => order.status === 'pending').length;
     dashboardData.activeDrivers = drivers.filter(driver => driver.is_active && driver.is_available).length;
+    dashboardData.completedOrders = orders.filter(order => order.status === 'delivered').length;
+    dashboardData.totalCustomers = customersCount;
+    dashboardData.totalMenuItems = menuItems.length;
     dashboardData.recentOrders = orders.slice(0, 5); // Last 5 orders
 }
 
@@ -63,15 +70,15 @@ function updateDashboardStats() {
     document.getElementById('pendingOrders').textContent = dashboardData.pendingOrders;
     document.getElementById('activeDrivers').textContent = dashboardData.activeDrivers;
     
-    // Update live tracking stats
-    if (document.getElementById('liveTrackingCount')) {
-        document.getElementById('liveTrackingCount').textContent = dashboardData.liveTrackingDrivers || 0;
+    // Update new dashboard stats
+    if (document.getElementById('totalCustomers')) {
+        document.getElementById('totalCustomers').textContent = dashboardData.totalCustomers || 0;
     }
-    if (document.getElementById('activeDeliveries')) {
-        document.getElementById('activeDeliveries').textContent = dashboardData.activeDeliveries || 0;
+    if (document.getElementById('totalMenuItems')) {
+        document.getElementById('totalMenuItems').textContent = dashboardData.totalMenuItems || 0;
     }
-    if (document.getElementById('deliveryBotStatus')) {
-        document.getElementById('deliveryBotStatus').textContent = dashboardData.deliveryBotActive ? 'Active' : 'Offline';
+    if (document.getElementById('completedOrders')) {
+        document.getElementById('completedOrders').textContent = dashboardData.completedOrders || 0;
     }
 }
 
@@ -928,3 +935,28 @@ document.addEventListener('DOMContentLoaded', function() {
         loadOrdersTab();
     }, 5 * 60 * 1000);
 });
+// New Dashboard Functions
+function loadCustomerData() {
+    alert(`Total customers: ${dashboardData.totalCustomers}\n\nCustomer data loaded successfully!`);
+}
+
+function showMenuTab() {
+    // Switch to menu tab
+    const menuTab = document.querySelector("a[href=\"#menu\"]");
+    if (menuTab) {
+        menuTab.click();
+    }
+}
+
+function showCompletedOrders() {
+    // Switch to orders tab
+    const ordersTab = document.querySelector("a[href=\"#orders\"]");
+    if (ordersTab) {
+        ordersTab.click();
+        // Filter completed orders after a short delay
+        setTimeout(() => {
+            loadOrders("delivered");
+        }, 100);
+    }
+}
+
