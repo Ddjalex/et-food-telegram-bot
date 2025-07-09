@@ -29,8 +29,9 @@ async function loadDashboardData() {
         const ordersResponse = await fetch('/api/orders');
         const ordersData = await ordersResponse.json();
         
-        // Skip drivers data (removed functionality)
-        const driversData = [];
+        // Load drivers data
+        const driversResponse = await fetch('/api/drivers');
+        const driversData = driversResponse.ok ? await driversResponse.json() : [];
         
         // Load menu data
         const menuResponse = await fetch('/api/menu');
@@ -55,11 +56,19 @@ function processDashboardData(orders, drivers, menuItems, customersCount) {
     dashboardData.totalOrders = orders.length;
     dashboardData.totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
     dashboardData.pendingOrders = orders.filter(order => order.status === 'pending').length;
-    dashboardData.activeDrivers = 0; // Driver functionality removed
+    dashboardData.activeDrivers = drivers.filter(driver => driver.is_active).length;
     dashboardData.completedOrders = orders.filter(order => order.status === 'delivered').length;
     dashboardData.totalCustomers = customersCount;
     dashboardData.totalMenuItems = menuItems.length;
     dashboardData.recentOrders = orders.slice(0, 5); // Last 5 orders
+    
+    // Driver statistics
+    dashboardData.totalDrivers = drivers.length;
+    dashboardData.onlineDrivers = drivers.filter(driver => driver.is_active).length;
+    dashboardData.offlineDrivers = drivers.filter(driver => !driver.is_active).length;
+    dashboardData.availableDrivers = drivers.filter(driver => driver.is_available).length;
+    dashboardData.busyDrivers = drivers.filter(driver => !driver.is_available).length;
+    dashboardData.pendingDrivers = drivers.filter(driver => driver.approval_status === 'pending').length;
 }
 
 // Update Dashboard Stats
@@ -78,6 +87,26 @@ function updateDashboardStats() {
     }
     if (document.getElementById('completedOrders')) {
         document.getElementById('completedOrders').textContent = dashboardData.completedOrders || 0;
+    }
+    
+    // Update driver statistics
+    if (document.getElementById('totalDrivers')) {
+        document.getElementById('totalDrivers').textContent = dashboardData.totalDrivers || 0;
+    }
+    if (document.getElementById('onlineDrivers')) {
+        document.getElementById('onlineDrivers').textContent = dashboardData.onlineDrivers || 0;
+    }
+    if (document.getElementById('offlineDrivers')) {
+        document.getElementById('offlineDrivers').textContent = dashboardData.offlineDrivers || 0;
+    }
+    if (document.getElementById('availableDrivers')) {
+        document.getElementById('availableDrivers').textContent = dashboardData.availableDrivers || 0;
+    }
+    if (document.getElementById('busyDrivers')) {
+        document.getElementById('busyDrivers').textContent = dashboardData.busyDrivers || 0;
+    }
+    if (document.getElementById('pendingDrivers')) {
+        document.getElementById('pendingDrivers').textContent = dashboardData.pendingDrivers || 0;
     }
 }
 
@@ -925,6 +954,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ordersTab.addEventListener('shown.bs.tab', loadOrdersTab);
     }
     
+    // Load drivers when drivers tab is shown
+    const driversTab = document.querySelector('[href="#drivers"]');
+    if (driversTab) {
+        driversTab.addEventListener('shown.bs.tab', loadDriversTab);
+    }
+    
     // Load orders immediately when page loads
     loadOrdersTab();
     
@@ -959,5 +994,244 @@ function showCompletedOrders() {
             loadOrders("delivered");
         }, 100);
     }
+}
+
+// Load Drivers Tab
+async function loadDriversTab() {
+    try {
+        const response = await fetch('/api/drivers');
+        const drivers = await response.json();
+        populateDriversTable(drivers);
+    } catch (error) {
+        console.error('Error loading drivers:', error);
+    }
+}
+
+// Populate Drivers Table
+function populateDriversTable(drivers) {
+    const tbody = document.getElementById('driversTable');
+    tbody.innerHTML = '';
+    
+    drivers.forEach(driver => {
+        const row = document.createElement('tr');
+        const statusClass = driver.is_active ? 'success' : 'danger';
+        const statusText = driver.is_active ? 'Active' : 'Inactive';
+        const availabilityClass = driver.is_available ? 'primary' : 'warning';
+        const availabilityText = driver.is_available ? 'Available' : 'Busy';
+        
+        row.innerHTML = `
+            <td>${driver.id}</td>
+            <td>${driver.name}</td>
+            <td>${driver.phone_number}</td>
+            <td>${driver.vehicle_type}</td>
+            <td>
+                <span class="badge bg-${statusClass}">${statusText}</span>
+                <span class="badge bg-${availabilityClass}">${availabilityText}</span>
+            </td>
+            <td>
+                ${driver.current_lat && driver.current_lng ? 
+                    `<a href="https://www.google.com/maps?q=${driver.current_lat},${driver.current_lng}" target="_blank" class="btn btn-sm btn-info">
+                        <i class="fas fa-map-marker-alt"></i> View Location
+                    </a>` : 
+                    '<span class="text-muted">No location</span>'
+                }
+            </td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-${driver.is_active ? 'danger' : 'success'}" 
+                            onclick="toggleDriverStatus(${driver.id}, ${!driver.is_active})">
+                        <i class="fas fa-${driver.is_active ? 'pause' : 'play'}"></i>
+                        ${driver.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="requestDriverLocation(${driver.id})">
+                        <i class="fas fa-location-arrow"></i> Request Location
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="removeDriver(${driver.id})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Show Add Driver Modal
+function showAddDriverModal() {
+    const modalHTML = `
+        <div class="modal fade" id="addDriverModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Driver Employee</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addDriverForm">
+                            <div class="mb-3">
+                                <label for="driverName" class="form-label">Driver Name</label>
+                                <input type="text" class="form-control" id="driverName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="driverPhone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="driverPhone" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="driverTelegramId" class="form-label">Telegram ID</label>
+                                <input type="text" class="form-control" id="driverTelegramId">
+                            </div>
+                            <div class="mb-3">
+                                <label for="driverVehicle" class="form-label">Vehicle Type</label>
+                                <select class="form-control" id="driverVehicle" required>
+                                    <option value="motorcycle">Motorcycle</option>
+                                    <option value="car">Car</option>
+                                    <option value="bicycle">Bicycle</option>
+                                    <option value="scooter">Scooter</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoApprove" checked>
+                                    <label class="form-check-label" for="autoApprove">
+                                        Auto-approve driver (skip manual approval)
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="addDriver()">Add Driver</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('addDriverModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById('addDriverModal'));
+    modal.show();
+}
+
+// Add Driver
+async function addDriver() {
+    const name = document.getElementById('driverName').value;
+    const phone = document.getElementById('driverPhone').value;
+    const telegramId = document.getElementById('driverTelegramId').value;
+    const vehicle = document.getElementById('driverVehicle').value;
+    const autoApprove = document.getElementById('autoApprove').checked;
+    
+    if (!name || !phone || !vehicle) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/drivers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                phone_number: phone,
+                telegram_user_id: telegramId,
+                vehicle_type: vehicle,
+                auto_approve: autoApprove
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('Driver added successfully!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addDriverModal'));
+            modal.hide();
+            loadDriversTab();
+            loadDashboardData();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error adding driver:', error);
+        alert('Error adding driver. Please try again.');
+    }
+}
+
+// Toggle Driver Status
+async function toggleDriverStatus(driverId, newStatus) {
+    try {
+        const response = await fetch(`/api/drivers/${driverId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ is_active: newStatus })
+        });
+        
+        if (response.ok) {
+            loadDriversTab();
+            loadDashboardData();
+        } else {
+            alert('Error toggling driver status');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error toggling driver status');
+    }
+}
+
+// Request Driver Location
+async function requestDriverLocation(driverId) {
+    try {
+        const response = await fetch(`/api/drivers/${driverId}/request-location`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('Location request sent to driver');
+        } else {
+            alert('Error requesting location');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error requesting location');
+    }
+}
+
+// Remove Driver
+async function removeDriver(driverId) {
+    if (!confirm('Are you sure you want to remove this driver?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/drivers/${driverId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('Driver removed successfully');
+            loadDriversTab();
+            loadDashboardData();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error removing driver');
+    }
+}
+
+// Refresh Driver Data
+function refreshDriverData() {
+    loadDriversTab();
+    loadDashboardData();
 }
 

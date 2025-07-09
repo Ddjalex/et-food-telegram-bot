@@ -85,8 +85,11 @@
                                 <i class="fas fa-tags"></i> Categories
                             </a>
                         </li>
-
-
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
@@ -264,7 +267,105 @@
                         </div>
                     </div>
 
-                    <!-- Driver Management removed - functionality restricted to admin-only access via driver bot -->
+                    <!-- Drivers Tab -->
+                    <div class="tab-pane fade" id="drivers">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Driver Management</h2>
+                            <div>
+                                <button class="btn btn-success me-2" onclick="showAddDriverModal()">
+                                    <i class="fas fa-plus"></i> Add Driver Employee
+                                </button>
+                                <button class="btn btn-primary me-2" onclick="refreshDriverData()">
+                                    <i class="fas fa-sync"></i> Refresh Data
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Enhanced Driver Statistics Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-2">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalDrivers">0</h3>
+                                        <p class="mb-0">Total Drivers</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-circle fa-2x mb-3 text-success"></i>
+                                        <h3 class="mb-1" id="onlineDrivers">0</h3>
+                                        <p class="mb-0">Online Now</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-circle fa-2x mb-3 text-secondary"></i>
+                                        <h3 class="mb-1" id="offlineDrivers">0</h3>
+                                        <p class="mb-0">Offline</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #17a2b8 0%, #6610f2 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-motorcycle fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="availableDrivers">0</h3>
+                                        <p class="mb-0">Available</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-shipping-fast fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="busyDrivers">0</h3>
+                                        <p class="mb-0">On Delivery</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="pendingDrivers">0</h3>
+                                        <p class="mb-0">Pending</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Driver Management Table -->
+                        <div class="card table-container">
+                            <div class="card-header">
+                                <h5 class="mb-0">Driver Management</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Phone</th>
+                                                <th>Vehicle</th>
+                                                <th>Status</th>
+                                                <th>Location</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="driversTable">
+                                            <!-- Driver data will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </main>
