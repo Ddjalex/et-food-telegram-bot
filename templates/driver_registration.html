@@ -197,9 +197,12 @@
                     <!-- Step 2: Document Upload -->
                     <div class="step-content" id="content2">
                         <h5 class="text-center mb-3">Upload Documents</h5>
-                        <div class="mb-3">
+                        
+                        <!-- Driver License Section (Car/Motorcycle only) -->
+                        <div class="mb-3" id="licenseSection">
                             <label class="form-label">
                                 <i class="fas fa-id-card"></i> Driver License (Front & Back)
+                                <span class="text-danger">*</span>
                             </label>
                             <div class="document-upload" onclick="document.getElementById('licenseFront').click()">
                                 <i class="fas fa-upload upload-icon"></i>
@@ -214,9 +217,12 @@
                                 <img id="licenseBackPreview" class="preview-image" style="display: none;">
                             </div>
                         </div>
+                        
+                        <!-- Government ID Section (Always required) -->
                         <div class="mb-3">
                             <label class="form-label">
                                 <i class="fas fa-id-badge"></i> Government ID (Front & Back)
+                                <span class="text-danger">*</span>
                             </label>
                             <div class="document-upload" onclick="document.getElementById('idFront').click()">
                                 <i class="fas fa-upload upload-icon"></i>
@@ -247,6 +253,7 @@
                         <div class="mb-3" id="vehicleDocuments">
                             <label class="form-label">
                                 <i class="fas fa-file-alt"></i> Vehicle Registration
+                                <span class="text-danger" id="vehicleRegRequired">*</span>
                             </label>
                             <div class="document-upload" onclick="document.getElementById('vehicleReg').click()">
                                 <i class="fas fa-upload upload-icon"></i>
@@ -254,6 +261,12 @@
                                 <input type="file" id="vehicleReg" accept="image/*" style="display: none;">
                                 <img id="vehicleRegPreview" class="preview-image" style="display: none;">
                             </div>
+                        </div>
+                        
+                        <!-- Information message based on vehicle type -->
+                        <div class="alert alert-info" id="vehicleInfo" style="display: none;">
+                            <i class="fas fa-info-circle"></i>
+                            <span id="vehicleInfoText"></span>
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-secondary w-50" onclick="prevStep()">
@@ -323,6 +336,30 @@
             }
         }
 
+        function updateDocumentRequirements() {
+            const licenseSection = document.getElementById('licenseSection');
+            const vehicleDocuments = document.getElementById('vehicleDocuments');
+            const vehicleRegRequired = document.getElementById('vehicleRegRequired');
+            const vehicleInfo = document.getElementById('vehicleInfo');
+            const vehicleInfoText = document.getElementById('vehicleInfoText');
+            
+            if (selectedVehicle === 'bicycle') {
+                // For bicycle: Hide driver license, make vehicle registration optional
+                licenseSection.style.display = 'none';
+                vehicleRegRequired.style.display = 'none';
+                vehicleInfo.style.display = 'block';
+                vehicleInfoText.textContent = 'For bicycle delivery, only Government ID is required. Vehicle registration is optional.';
+                vehicleInfo.className = 'alert alert-success';
+            } else if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
+                // For car/motorcycle: Show all documents as required
+                licenseSection.style.display = 'block';
+                vehicleRegRequired.style.display = 'inline';
+                vehicleInfo.style.display = 'block';
+                vehicleInfoText.textContent = 'For car/motorcycle delivery, both Driver License and Vehicle Registration are required.';
+                vehicleInfo.className = 'alert alert-info';
+            }
+        }
+
         function nextStep() {
             if (currentStep === 1) {
                 // Validate step 1
@@ -333,16 +370,35 @@
                     alert('Please fill in all required fields and select a vehicle type.');
                     return;
                 }
+                
+                // Update document requirements based on vehicle type
+                updateDocumentRequirements();
             }
             
             if (currentStep === 2) {
-                // Validate step 2
-                const requiredDocs = ['licenseFront', 'licenseBack', 'idFront', 'idBack'];
+                // Validate step 2 based on vehicle type
+                let requiredDocs = ['idFront', 'idBack']; // Always required
+                
+                // Add license requirements for car and motorcycle
+                if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
+                    requiredDocs.push('licenseFront', 'licenseBack');
+                }
+                
                 const missingDocs = requiredDocs.filter(doc => !uploadedFiles[doc]);
                 
                 if (missingDocs.length > 0) {
                     alert('Please upload all required documents before proceeding.');
                     return;
+                }
+            }
+            
+            if (currentStep === 3) {
+                // Validate step 3 based on vehicle type
+                if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
+                    if (!uploadedFiles['vehicleReg']) {
+                        alert('Please upload vehicle registration for car/motorcycle.');
+                        return;
+                    }
                 }
             }
 
@@ -381,7 +437,14 @@
                 return;
             }
 
-            const requiredDocs = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg'];
+            // Determine required documents based on vehicle type
+            let requiredDocs = ['idFront', 'idBack']; // Always required
+            
+            if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
+                requiredDocs.push('licenseFront', 'licenseBack', 'vehicleReg');
+            }
+            // For bicycle, vehicle registration is optional
+            
             const missingDocs = requiredDocs.filter(doc => !uploadedFiles[doc]);
             
             if (missingDocs.length > 0) {
