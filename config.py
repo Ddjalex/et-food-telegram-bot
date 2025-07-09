@@ -3,6 +3,7 @@ import os
 class Config:
     # Telegram Bot Configuration
     BOT_TOKEN = os.environ.get('BOT_TOKEN', 'your_bot_token_here')
+    DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN', 'your_driver_bot_token_here')
     WEBHOOK_URL = os.environ.get('WEBHOOK_URL', f'https://{os.environ.get("REPLIT_DEV_DOMAIN", "localhost")}')
     
     # Admin Configuration

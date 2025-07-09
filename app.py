@@ -76,9 +76,16 @@ with app.app_context():
     # Now safe to import routes
     from routes import *
 
-    # Init bot (after routes are loaded)
+    # Init bots (after routes are loaded)
     from bot_minimal import init_bot
     init_bot(app)
+    
+    # Init driver bot
+    try:
+        from driver_bot import init_driver_bot
+        init_driver_bot(app)
+    except Exception as e:
+        logging.warning(f"Driver bot initialization failed: {e}")
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
