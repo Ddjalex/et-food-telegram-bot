@@ -440,7 +440,6 @@ def send_driver_welcome_message(chat_id):
                     "callback_data": "contact_support"
                 }
             ]
-            ]
         ]
     }
     
