@@ -160,6 +160,9 @@ def handle_driver_callback(callback_query):
             order_id = callback_data.split('_')[2]
             handle_pickup_complete(chat_id, order_id)
             
+        elif callback_data == 'driver_status':
+            send_driver_status_message(chat_id)
+            
         # Answer callback query
         answer_callback_query(callback_query['id'], "Action processed!")
         
@@ -332,6 +335,105 @@ def answer_callback_query(callback_query_id, text):
     except Exception as e:
         logger.error(f"Error answering callback query: {e}")
 
+def handle_driver_contact_share(chat_id, contact):
+    """Handle driver contact sharing and automatic registration"""
+    try:
+        from models import Driver
+        from extensions import db
+        from main import app
+        
+        with app.app_context():
+            phone_number = contact['phone_number']
+            
+            # Clean phone number (remove +, spaces, etc.)
+            clean_phone = phone_number.replace('+', '').replace(' ', '').replace('-', '')
+            
+            # Try to find existing driver by phone number
+            driver = Driver.query.filter(
+                Driver.phone_number.like(f'%{clean_phone[-10:]}%')  # Match last 10 digits
+            ).first()
+            
+            if driver:
+                # Update existing driver with Telegram ID
+                driver.telegram_user_id = chat_id
+                db.session.commit()
+                
+                message = f"✅ *Account Linked Successfully!*\n\n"
+                message += f"👤 Name: {driver.name}\n"
+                message += f"📞 Phone: {driver.phone_number}\n"
+                message += f"🚗 Vehicle: {driver.vehicle_type}\n"
+                message += f"🎯 Status: {'Approved' if driver.is_approved else 'Pending Approval'}\n\n"
+                message += f"Your Telegram account is now linked to your driver profile!\n\n"
+                message += f"📍 **Next Step:** Share your location to start receiving order assignments."
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📍 Share Location Now",
+                                "callback_data": "request_location"
+                            }
+                        ],
+                        [
+                            {
+                                "text": "📊 View Driver Status",
+                                "callback_data": "driver_status"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(chat_id, message, keyboard=keyboard)
+                
+            else:
+                # Driver not found, notify admin about new driver registration attempt
+                message = f"❌ *Driver Profile Not Found*\n\n"
+                message += f"📞 Phone: {phone_number}\n\n"
+                message += f"Your phone number is not registered in our driver system.\n\n"
+                message += f"📝 **To become a driver:**\n"
+                message += f"1. Contact restaurant admin to register your profile\n"
+                message += f"2. Provide your phone number: {phone_number}\n"
+                message += f"3. Wait for admin approval\n"
+                message += f"4. Return here to link your account\n\n"
+                message += f"📞 Contact admin for driver registration."
+                
+                send_driver_message(chat_id, message)
+                
+                # Notify admin about new registration attempt
+                notify_admin_new_driver_attempt(chat_id, phone_number, contact.get('first_name', ''))
+                
+    except Exception as e:
+        logger.error(f"Error handling driver contact: {e}")
+        send_driver_message(chat_id, "❌ Error processing contact. Please try again later.")
+
+def notify_admin_new_driver_attempt(chat_id, phone_number, first_name):
+    """Notify admin about new driver registration attempt"""
+    try:
+        from models import AdminUser
+        from main import app
+        from bot_minimal import send_message_to_admin
+        
+        with app.app_context():
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            
+            message = f"👤 *New Driver Registration Attempt*\n\n"
+            message += f"📞 Phone: {phone_number}\n"
+            message += f"👤 Name: {first_name}\n"
+            message += f"🆔 Telegram ID: {chat_id}\n\n"
+            message += f"This user tried to register with the driver bot but was not found in the system.\n\n"
+            message += f"To register this driver:\n"
+            message += f"1. Go to Admin Dashboard → Drivers\n"
+            message += f"2. Click 'Add Driver Employee'\n"
+            message += f"3. Enter details with phone: {phone_number}\n"
+            message += f"4. Use Telegram ID: {chat_id}\n"
+            message += f"5. Driver will be automatically notified"
+            
+            for admin in admins:
+                send_message_to_admin(admin.telegram_user_id, message)
+                
+    except Exception as e:
+        logger.error(f"Error notifying admin about new driver: {e}")
+
 def handle_driver_location_update(chat_id, location):
     """Handle driver location update"""
     try:
@@ -375,6 +477,8 @@ def setup_driver_webhook(flask_app):
                     
                     if 'location' in message:
                         handle_driver_location_update(chat_id, message['location'])
+                    elif 'contact' in message:
+                        handle_driver_contact_share(chat_id, message['contact'])
                     elif 'text' in message:
                         handle_driver_text_message(chat_id, message['text'])
                         
@@ -393,7 +497,8 @@ def setup_driver_webhook(flask_app):
 def handle_driver_text_message(chat_id, text):
     """Handle text messages from drivers"""
     if text == '/start':
-        send_driver_welcome_message(chat_id)
+        # Check if driver exists, if not, request contact sharing
+        check_driver_registration_and_welcome(chat_id)
     elif text == '/help':
         send_driver_help_message(chat_id)
     elif text == '/status':
@@ -412,9 +517,60 @@ def handle_driver_text_message(chat_id, text):
     else:
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
-def send_driver_welcome_message(chat_id):
-    """Send welcome message to driver with mandatory location sharing"""
+def check_driver_registration_and_welcome(chat_id):
+    """Check if driver is registered and send appropriate welcome message"""
+    try:
+        from models import Driver
+        from main import app
+        
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if not driver:
+                # Driver not found, request contact sharing for automatic registration
+                send_driver_contact_request(chat_id)
+            else:
+                # Driver exists, send welcome message
+                send_driver_welcome_message(chat_id, driver)
+                
+    except Exception as e:
+        logger.error(f"Error checking driver registration: {e}")
+        send_driver_message(chat_id, "❌ Error checking registration. Please try again later.")
+
+def send_driver_contact_request(chat_id):
+    """Request contact sharing for automatic driver registration"""
     message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+    message += f"To get started, I need to verify your identity and link your Telegram account to your driver profile.\n\n"
+    message += f"📞 **Please share your phone number** so I can:\n"
+    message += f"✅ Find your driver profile in our system\n"
+    message += f"✅ Automatically update your Telegram ID\n"
+    message += f"✅ Activate your driver account\n\n"
+    message += f"🔒 Your phone number will be used only for account verification and order notifications.\n\n"
+    message += f"👇 Click the button below to share your contact:"
+    
+    keyboard = {
+        "keyboard": [
+            [
+                {
+                    "text": "📞 Share Phone Number",
+                    "request_contact": True
+                }
+            ]
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
+def send_driver_welcome_message(chat_id, driver=None):
+    """Send welcome message to driver with mandatory location sharing"""
+    if driver:
+        message = f"🚚 *Welcome back, {driver.name}!*\n\n"
+        message += f"✅ Your driver account is active.\n\n"
+    else:
+        message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+    
     message += f"⚠️ **MANDATORY LOCATION SHARING REQUIRED**\n\n"
     message += f"To receive order assignments, you MUST:\n"
     message += f"✅ Share your current location\n"
