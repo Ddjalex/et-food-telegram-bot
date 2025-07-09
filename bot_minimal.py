@@ -695,8 +695,10 @@ def init_bot(flask_app):
                 logger.info(f"Webhook received: {update}")
 
                 if update and 'message' in update:
+                    logger.info(f"Processing message: {update['message']}")
                     handle_message(update['message'])
                 elif update and 'callback_query' in update:
+                    logger.info(f"Processing callback query: {update['callback_query']}")
                     handle_callback_query(update['callback_query'])
 
                 return jsonify({'status': 'ok'})
