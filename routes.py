@@ -38,110 +38,24 @@ def calculate_distance(lat1, lng1, lat2, lng2):
     return R * c
 
 def find_and_notify_nearby_drivers(order_id):
-    """Find available drivers and notify them about new order"""
+    """BeUdelivery-style driver notification system"""
     try:
-        with app.app_context():
-            order = Order.query.get(order_id)
-            if not order:
-                return
+        # Import the enhanced driver integration system
+        from driver_integration_system import driver_system
+        
+        # Use the BeUdelivery-like notification system
+        success = driver_system.notify_new_order(order_id)
+        
+        if success:
+            logger.info(f"✅ Successfully notified drivers about order #{order_id}")
+        else:
+            logger.warning(f"⚠️ No drivers notified for order #{order_id}")
             
-            # Get all active and available drivers with recent location updates (last 10 minutes)
-            from datetime import datetime, timedelta
-            ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
-            available_drivers = Driver.query.filter_by(
-                is_active=True,
-                is_available=True,
-                is_approved=True
-            ).filter(
-                Driver.telegram_user_id.isnot(None),
-                Driver.last_location_update >= ten_minutes_ago,
-                Driver.current_lat.isnot(None),
-                Driver.current_lng.isnot(None)
-            ).all()
-            
-            # Restaurant location (ET-FOOD Kitchen)
-            restaurant_lat = 9.145
-            restaurant_lng = 40.489658
-            
-            # Customer location
-            customer_lat = order.location_lat or 9.165
-            customer_lng = order.location_lng or 40.510
-            
-            # Calculate distance for each driver and sort by proximity
-            drivers_with_distance = []
-            for driver in available_drivers:
-                # Use driver's current location (guaranteed to exist by query filter)
-                driver_lat = driver.current_lat
-                driver_lng = driver.current_lng
-                
-                # Calculate distance from driver to customer
-                distance = calculate_distance(driver_lat, driver_lng, customer_lat, customer_lng)
-                drivers_with_distance.append((driver, distance))
-            
-            # Sort by distance (nearest first)
-            drivers_with_distance.sort(key=lambda x: x[1])
-            
-            # Take the nearest 3 drivers and notify them
-            nearest_drivers = drivers_with_distance[:3]
-            
-            if nearest_drivers:
-                # Prepare order data
-                order_data = {
-                    'id': order.id,
-                    'customer_name': order.customer_name,
-                    'customer_phone': order.customer_phone,
-                    'customer_address': order.customer_address,
-                    'total_amount': order.total_amount,
-                    'payment_method': order.payment_method,
-                    'location_lat': order.location_lat,
-                    'location_lng': order.location_lng,
-                    'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else 'Just now',
-                    'items': order.items
-                }
-                
-                # Notify each nearby driver
-                from driver_bot import notify_driver_assignment_via_driver_bot
-                
-                for driver, distance in nearest_drivers:
-                    logger.info(f"Notifying driver {driver.name} (ID: {driver.telegram_user_id}) about order #{order.id}, distance: {distance:.1f}km")
-                    
-                    # Add distance to order data
-                    order_data['distance'] = distance
-                    
-                    # Send notification using driver bot
-                    notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
-                    
-                    # Small delay between notifications to avoid spam
-                    time.sleep(0.5)
-                
-                logger.info(f"Notified {len(nearest_drivers)} drivers about order #{order.id}")
-            else:
-                logger.warning(f"No available drivers with recent location updates found for order #{order.id}")
-                
-                # Send notification to admins about no drivers
-                from bot_minimal import send_message_to_admin
-                admin_message = f"⚠️ **No Available Drivers**\n\n"
-                admin_message += f"Order #{order.id} could not be assigned to any drivers.\n\n"
-                admin_message += f"**Reason:** No drivers with recent location updates (last 10 minutes)\n\n"
-                admin_message += f"**Customer:** {order.customer_name}\n"
-                admin_message += f"**Phone:** {order.customer_phone}\n"
-                admin_message += f"**Total:** {order.total_amount} ETB\n\n"
-                admin_message += f"**Action Required:** Ask drivers to share their location using the driver bot."
-                
-                # Send to all active admins
-                try:
-                    from models import AdminUser
-                    admins = AdminUser.query.filter_by(is_active=True).all()
-                    for admin in admins:
-                        try:
-                            send_message_to_admin(admin.telegram_user_id, admin_message)
-                        except Exception as e:
-                            logger.error(f"Error sending no-driver alert to admin {admin.telegram_user_id}: {e}")
-                except Exception as e:
-                    logger.error(f"Error sending no-driver alerts to admins: {e}")
+        return success
                 
     except Exception as e:
         logger.error(f"Error in find_and_notify_nearby_drivers: {e}")
+        return False
 
 def notify_drivers_in_background(order_id):
     """Run driver notification in background thread"""

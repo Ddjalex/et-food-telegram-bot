@@ -152,6 +152,14 @@ def handle_driver_callback(callback_query):
             
         elif callback_data == 'enable_live_location':
             send_live_location_instructions(chat_id)
+            
+        elif callback_data.startswith('share_location_'):
+            send_location_request(chat_id)
+            
+        elif callback_data.startswith('pickup_complete_'):
+            order_id = callback_data.split('_')[2]
+            handle_pickup_complete(chat_id, order_id)
+            
         # Answer callback query
         answer_callback_query(callback_query['id'], "Action processed!")
         
@@ -746,3 +754,62 @@ def notify_driver_assignment_via_driver_bot(driver_telegram_id, order_data):
         notify_driver_order_assignment(driver_telegram_id, order_data)
     else:
         logger.warning(f"Driver bot notification failed - Token: {bool(DRIVER_BOT_TOKEN)}, Telegram ID: {driver_telegram_id}")
+
+def handle_pickup_complete(chat_id, order_id):
+    """Handle pickup completion notification"""
+    try:
+        from models import Order
+        from extensions import db
+        from main import app
+        
+        with app.app_context():
+            order = Order.query.get(order_id)
+            if not order:
+                send_driver_message(chat_id, "❌ Order not found")
+                return
+            
+            # Update order status
+            order.status = 'out_for_delivery'
+            db.session.commit()
+            
+            # Send confirmation to driver
+            message = f"✅ *Pickup Confirmed!*\n\n"
+            message += f"📋 Order #{order_id}\n"
+            message += f"👤 Customer: {order.customer_name}\n"
+            message += f"📞 Phone: {order.customer_phone}\n"
+            message += f"🏠 Address: {order.customer_address}\n\n"
+            message += f"🚚 Status updated to 'Out for Delivery'\n"
+            message += f"📍 Keep sharing your location for customer tracking"
+            
+            delivery_keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📍 Share Location",
+                            "callback_data": f"share_location_{order_id}"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "✅ Delivered",
+                            "callback_data": f"delivery_complete_{order_id}"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, delivery_keyboard)
+            
+            # Notify customer
+            from bot_minimal import send_message
+            customer_message = f"🚚 *Your order is on the way!*\n\n"
+            customer_message += f"📋 Order #{order_id}\n"
+            customer_message += f"✅ Status: Out for Delivery\n"
+            customer_message += f"⏱️ Estimated delivery: 15-25 minutes\n\n"
+            customer_message += f"Your driver is heading to your location now!"
+            
+            send_message(order.telegram_user_id, customer_message)
+            
+    except Exception as e:
+        logger.error(f"Error handling pickup complete: {e}")
+        send_driver_message(chat_id, "❌ Error updating pickup status")
