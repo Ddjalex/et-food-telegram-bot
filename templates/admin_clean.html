@@ -455,6 +455,9 @@
                                     <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})" title="View Documents">
                                         <i class="fas fa-file-alt"></i>
                                     </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})" title="Delete Driver">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </td>
                         `;
@@ -547,7 +550,136 @@
         }
 
         function viewDriverDocuments(driverId) {
-            alert('Driver documents feature coming soon!');
+            fetch(`/api/drivers/${driverId}/documents`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const docs = data.documents;
+                        let documentsHtml = `
+                            <h6>Documents for ${docs.driver_name}</h6>
+                            <div class="row">
+                        `;
+                        
+                        // License documents
+                        if (docs.license_front || docs.license_back || docs.license_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-id-card fa-2x mb-2 text-primary"></i>
+                                            <h6>License</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.license_front ? `<a href="${docs.license_front}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">Front</a>` : ''}
+                                                ${docs.license_back ? `<a href="${docs.license_back}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">Back</a>` : ''}
+                                                ${docs.license_document ? `<a href="${docs.license_document}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // ID documents
+                        if (docs.id_front || docs.id_back || docs.id_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-address-card fa-2x mb-2 text-success"></i>
+                                            <h6>ID Document</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.id_front ? `<a href="${docs.id_front}" target="_blank" class="btn btn-sm btn-outline-success mb-1">Front</a>` : ''}
+                                                ${docs.id_back ? `<a href="${docs.id_back}" target="_blank" class="btn btn-sm btn-outline-success mb-1">Back</a>` : ''}
+                                                ${docs.id_document ? `<a href="${docs.id_document}" target="_blank" class="btn btn-sm btn-outline-success mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Vehicle documents
+                        if (docs.vehicle_registration || docs.vehicle_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-car fa-2x mb-2 text-warning"></i>
+                                            <h6>Vehicle Registration</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.vehicle_registration ? `<a href="${docs.vehicle_registration}" target="_blank" class="btn btn-sm btn-outline-warning mb-1">View</a>` : ''}
+                                                ${docs.vehicle_document ? `<a href="${docs.vehicle_document}" target="_blank" class="btn btn-sm btn-outline-warning mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        documentsHtml += '</div>';
+                        
+                        if (!docs.license_front && !docs.license_back && !docs.license_document && 
+                            !docs.id_front && !docs.id_back && !docs.id_document && 
+                            !docs.vehicle_registration && !docs.vehicle_document) {
+                            documentsHtml += '<p class="text-muted">No documents uploaded yet.</p>';
+                        }
+                        
+                        // Show documents in a modal
+                        const modal = document.createElement('div');
+                        modal.className = 'modal fade';
+                        modal.innerHTML = `
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Driver Documents</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        ${documentsHtml}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        document.body.appendChild(modal);
+                        const bsModal = new bootstrap.Modal(modal);
+                        bsModal.show();
+                        
+                        modal.addEventListener('hidden.bs.modal', () => {
+                            document.body.removeChild(modal);
+                        });
+                    } else {
+                        alert('Failed to load driver documents: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading driver documents:', error);
+                    alert('Error loading driver documents');
+                });
+        }
+
+        function deleteDriver(driverId) {
+            if (confirm('Are you sure you want to delete this driver? This action cannot be undone and will unassign any active orders.')) {
+                fetch(`/api/drivers/${driverId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message + (data.unassigned_orders > 0 ? `\n${data.unassigned_orders} orders were unassigned.` : ''));
+                        loadDrivers();
+                    } else {
+                        alert('Error deleting driver: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting driver:', error);
+                    alert('Error deleting driver');
+                });
+            }
         }
 
         // Category management functions

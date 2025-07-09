@@ -1973,4 +1973,86 @@ def get_driver_statistics():
         logger.error(f"Error fetching driver statistics: {e}")
         return jsonify({'error': 'Failed to fetch driver statistics'}), 500
 
+@app.route('/api/drivers/<int:driver_id>/documents', methods=['GET'])
+def get_driver_documents(driver_id):
+    """Get driver documents"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        documents = {
+            'driver_id': driver.id,
+            'driver_name': driver.name,
+            'license_document': driver.license_document,
+            'id_document': driver.id_document,
+            'vehicle_document': driver.vehicle_document,
+            'license_front': None,
+            'license_back': None,
+            'id_front': None,
+            'id_back': None,
+            'vehicle_registration': None
+        }
+        
+        # Check for specific document types in static/driver_documents folder
+        import os
+        from pathlib import Path
+        
+        driver_docs_folder = Path('static/driver_documents')
+        if driver_docs_folder.exists():
+            for file in driver_docs_folder.iterdir():
+                if file.is_file() and str(driver.telegram_user_id) in file.name:
+                    filename = file.name.lower()
+                    if 'license' in filename:
+                        if 'front' in filename:
+                            documents['license_front'] = f'/static/driver_documents/{file.name}'
+                        elif 'back' in filename:
+                            documents['license_back'] = f'/static/driver_documents/{file.name}'
+                        else:
+                            documents['license_document'] = f'/static/driver_documents/{file.name}'
+                    elif 'id' in filename:
+                        if 'front' in filename:
+                            documents['id_front'] = f'/static/driver_documents/{file.name}'
+                        elif 'back' in filename:
+                            documents['id_back'] = f'/static/driver_documents/{file.name}'
+                        else:
+                            documents['id_document'] = f'/static/driver_documents/{file.name}'
+                    elif 'vehicle' in filename or 'reg' in filename:
+                        documents['vehicle_registration'] = f'/static/driver_documents/{file.name}'
+        
+        return jsonify({
+            'success': True,
+            'documents': documents
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver documents: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/drivers/<int:driver_id>', methods=['DELETE'])
+def delete_driver(driver_id):
+    """Delete a driver"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        # First, unassign any active orders
+        active_orders = Order.query.filter_by(driver_id=driver_id).filter(
+            Order.status.in_(['confirmed', 'preparing', 'out_for_delivery'])
+        ).all()
+        
+        for order in active_orders:
+            order.driver_id = None
+            order.status = 'confirmed'  # Reset to confirmed so admin can reassign
+            
+        # Delete the driver
+        db.session.delete(driver)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Driver {driver.name} deleted successfully',
+            'unassigned_orders': len(active_orders)
+        })
+    except Exception as e:
+        logger.error(f"Error deleting driver: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
