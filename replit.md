@@ -186,6 +186,10 @@ ET-FOOD is a Telegram-based food delivery application that combines a Python Fla
 
 - July 09, 2025. **CHECKOUT FIXES COMPLETED**: Fixed three critical checkout issues: (1) Removed automatic phone number auto-fill - users now always enter phone manually for better control, (2) Fixed duplicate "Place Order" button by hiding modal button when Telegram WebApp main button is available, (3) Fixed order history API endpoint from `/api/orders/user/${userId}` to `/api/user-orders/${userId}` to resolve "Error loading orders" issue. Added order cancellation functionality for pending/confirmed/preparing orders. Customer name auto-fill from Telegram preserved, live location sharing feature maintained.
 
+- July 09, 2025. **PHONE NUMBER AUTO-FILL FROM BOT CONTACT**: Implemented phone number auto-fill using contact information saved from bot registration. Created `/api/user-profile/{user_id}` endpoint to fetch contact data from UserProfile table, modified checkout process to load saved phone number from database instead of Telegram WebApp API, made showOrderForm async to properly wait for user profile data, and enhanced user experience with automatic phone number population from contact shared during bot start flow.
+
+- July 09, 2025. **COMPACT ORDER HISTORY INTERFACE**: Redesigned order history modal to take up significantly less space while maintaining functionality. Reduced modal width from 500px to 400px, decreased padding throughout (header: 20px→12px, body: 20px→12px, items: 15px→10px), made fonts smaller (titles: 18px→16px, details: 14px→11px, buttons: 12px→10px), implemented item text truncation with ellipsis for long order lists, condensed date display to show only date without time, and optimized spacing between elements for mobile viewing. Order history now has a more compact, space-efficient design perfect for mobile WebApp interface.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
