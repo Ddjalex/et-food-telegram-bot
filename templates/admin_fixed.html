@@ -1207,12 +1207,9 @@
                                     <button class="btn btn-outline-secondary" onclick="requestDriverLocation(${driver.id})" title="Request Location Update">
                                         <i class="fas fa-map-marked-alt"></i>
                                     </button>
-<<<<<<< HEAD
-=======
                                     <button class="btn btn-outline-danger" onclick="removeDriver(${driver.id}, '${driver.name}')" title="Remove Driver Employee">
                                         <i class="fas fa-trash"></i>
                                     </button>
->>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
                                 </div>
                             </td>
                         `;
@@ -1903,8 +1900,6 @@
             alert('Driver data refreshed!');
         }
 
-<<<<<<< HEAD
-=======
         function removeDriver(driverId, driverName) {
             if (confirm(`Are you sure you want to remove driver "${driverName}"?\n\nThis action cannot be undone and will:\n• Remove the driver from the system\n• Unassign any active orders\n• Notify the driver via Telegram\n\nClick OK to proceed:`)) {
                 // First check if driver has active orders and offer to unassign them
@@ -1970,8 +1965,6 @@
                 });
             }
         }
-
->>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             initializeDashboard();
