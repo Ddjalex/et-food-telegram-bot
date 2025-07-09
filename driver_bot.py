@@ -163,6 +163,23 @@ def handle_driver_callback(callback_query):
         elif callback_data == 'driver_status':
             send_driver_status_message(chat_id)
             
+        elif callback_data == 'start_registration':
+            from driver_registration import start_driver_registration
+            start_driver_registration(chat_id)
+            
+        elif callback_data == 'share_contact_for_registration':
+            from driver_registration import send_contact_request_for_registration
+            send_contact_request_for_registration(chat_id)
+            
+        elif callback_data == 'toggle_status':
+            toggle_driver_availability(chat_id)
+            
+        elif callback_data == 'view_earnings':
+            send_driver_earnings(chat_id)
+            
+        elif callback_data == 'view_orders':
+            send_driver_orders(chat_id)
+            
         # Answer callback query
         answer_callback_query(callback_query['id'], "Action processed!")
         
@@ -335,6 +352,45 @@ def answer_callback_query(callback_query_id, text):
     except Exception as e:
         logger.error(f"Error answering callback query: {e}")
 
+def handle_driver_contact_registration_flow(chat_id, contact, user_data):
+    """Handle contact sharing for either new registration or existing driver linking"""
+    try:
+        from models import Driver
+        from extensions import db
+        from main import app
+        
+        with app.app_context():
+            phone_number = contact['phone_number']
+            
+            # Check if this is for new registration (specific context)
+            # For now, we'll handle both cases in the same flow
+            existing_driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if existing_driver:
+                # Driver already linked
+                send_driver_welcome_message(chat_id, existing_driver)
+                return
+            
+            # Try to find driver by phone number
+            clean_phone = phone_number.replace('+', '').replace(' ', '').replace('-', '')
+            driver = Driver.query.filter(
+                Driver.phone_number.like(f'%{clean_phone[-10:]}%')
+            ).first()
+            
+            if driver:
+                # Link existing driver
+                driver.telegram_user_id = chat_id
+                db.session.commit()
+                send_driver_welcome_message(chat_id, driver)
+            else:
+                # New driver registration flow
+                from driver_registration import handle_driver_contact_registration
+                handle_driver_contact_registration(chat_id, contact, user_data)
+                
+    except Exception as e:
+        logger.error(f"Error in contact registration flow: {e}")
+        send_driver_message(chat_id, "❌ Error processing contact. Please try again.")
+
 def handle_driver_contact_share(chat_id, contact):
     """Handle driver contact sharing and automatic registration"""
     try:
@@ -478,7 +534,9 @@ def setup_driver_webhook(flask_app):
                     if 'location' in message:
                         handle_driver_location_update(chat_id, message['location'])
                     elif 'contact' in message:
-                        handle_driver_contact_share(chat_id, message['contact'])
+                        # Check if this is for registration or existing driver linking
+                        user_data = message.get('from', {})
+                        handle_driver_contact_registration_flow(chat_id, message['contact'], user_data)
                     elif 'text' in message:
                         handle_driver_text_message(chat_id, message['text'])
                         
@@ -565,69 +623,99 @@ def send_driver_contact_request(chat_id):
 
 def send_driver_welcome_message(chat_id, driver=None):
     """Enhanced driver welcome message with registration flow"""
-    if driver and driver.is_approved:
+    if driver and driver.approval_status == 'approved':
         # Approved driver welcome
         message = f"🚚 *Welcome back, {driver.name}!*\n\n"
         message += f"✅ *Status: APPROVED DRIVER*\n"
         message += f"📞 Phone: {driver.phone_number}\n"
         message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
-        message += f"📍 **STEP 1: Share your live location**\n"
-        message += f"• Required to receive delivery requests\n"
-        message += f"• Location updates every 30 seconds\n"
-        message += f"• Orders assigned to nearest drivers\n\n"
-        message += f"🔄 **STEP 2: Set availability status**\n"
-        message += f"• Toggle online/offline for order assignments\n"
-        message += f"• Change available/busy status\n\n"
-        message += f"📱 **Commands:** /status • /orders • /location • /toggle • /earnings"
+        message += f"📱 Use the buttons below to manage your driver account:"
         
         keyboard = {
-            "keyboard": [
-                [{"text": "📍 Share Live Location", "request_location": True}],
-                [{"text": "🟢 Go Online"}, {"text": "🔴 Go Offline"}],
-                [{"text": "📋 My Orders"}, {"text": "💰 Earnings"}],
-                [{"text": "ℹ️ Status"}, {"text": "❓ Help"}]
-            ],
-            "resize_keyboard": True
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📋 View Orders",
+                        "web_app": {"url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={chat_id}"}
+                    }
+                ],
+                [
+                    {
+                        "text": "📍 Share Location",
+                        "callback_data": "request_location"
+                    },
+                    {
+                        "text": "🔄 Toggle Status",
+                        "callback_data": "toggle_status"
+                    }
+                ],
+                [
+                    {
+                        "text": "📊 View Earnings",
+                        "callback_data": "view_earnings"
+                    },
+                    {
+                        "text": "📞 Contact Support",
+                        "callback_data": "contact_support"
+                    }
+                ]
+            ]
         }
-    elif driver and not driver.is_approved:
+    elif driver and driver.approval_status == 'pending':
         # Pending approval
-        message = f"🚚 *Registration Status: PENDING*\n\n"
+        message = f"⏳ *Registration Under Review*\n\n"
         message += f"📝 Driver: {driver.name}\n"
         message += f"📞 Phone: {driver.phone_number}\n"
         message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
-        message += f"⏳ Your registration is under admin review\n"
-        message += f"📄 Please ensure all documents are uploaded\n"
-        message += f"🔔 You'll be notified when approved"
+        message += f"📋 Your registration is being reviewed by our admin team.\n"
+        message += f"⏰ Please wait for approval. You'll receive a notification once approved.\n\n"
+        message += f"📞 Contact support if you have any questions."
         
         keyboard = {
-            "keyboard": [
-                [{"text": "ℹ️ Check Status"}, {"text": "📞 Contact Admin"}]
-            ],
-            "resize_keyboard": True
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📞 Contact Support",
+                        "callback_data": "contact_support"
+                    }
+                ]
+            ]
+        }
+    elif driver and driver.approval_status == 'rejected':
+        # Rejected driver
+        message = f"❌ *Registration Rejected*\n\n"
+        message += f"Unfortunately, your driver registration was not approved.\n"
+        message += f"Reason: {driver.rejection_reason or 'Not specified'}\n\n"
+        message += f"📱 You can register again with corrected information:"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "🔄 Register Again",
+                        "callback_data": "start_registration"
+                    }
+                ]
+            ]
         }
     else:
         # New driver registration
-        message = f"🚚 *ET-FOOD Driver Registration*\n\n"
-        message += f"Welcome! To become a delivery driver:\n\n"
-        message += f"📋 **REGISTRATION STEPS:**\n"
-        message += f"1️⃣ Share your contact number\n"
-        message += f"2️⃣ Complete driver profile\n"
-        message += f"3️⃣ Upload required documents\n"
-        message += f"4️⃣ Wait for admin approval\n"
-        message += f"5️⃣ Start receiving orders!\n\n"
-        message += f"📄 **Required Documents:**\n"
-        message += f"• Valid Driver's License\n"
-        message += f"• Government ID Card\n"
-        message += f"• Vehicle Registration\n\n"
-        message += f"💼 **Benefits:** Flexible hours • Real-time orders • GPS support • Earnings tracking\n\n"
-        message += f"👇 **Start by sharing your contact:**"
+        message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+        message += f"🔹 Join our delivery team and start earning!\n"
+        message += f"🔹 Fast registration process\n"
+        message += f"🔹 Flexible working hours\n"
+        message += f"🔹 Competitive earnings\n\n"
+        message += f"📱 Ready to become a driver? Start your registration:"
         
         keyboard = {
-            "keyboard": [
-                [{"text": "📞 Share Contact & Register", "request_contact": True}],
-                [{"text": "❓ FAQ"}, {"text": "📞 Contact Support"}]
-            ],
-            "resize_keyboard": True
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "🚀 Driver Registration",
+                        "callback_data": "start_registration"
+                    }
+                ]
+            ]
         }
     
     send_driver_message(chat_id, message, keyboard=keyboard)

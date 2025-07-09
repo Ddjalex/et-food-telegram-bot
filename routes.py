@@ -83,6 +83,80 @@ def admin():
     """Admin dashboard"""
     return render_template('admin_fixed.html')
 
+@app.route('/driver-registration')
+def driver_registration():
+    """Driver registration page"""
+    return render_template('driver_registration.html')
+
+@app.route('/api/driver-registration', methods=['POST'])
+def api_driver_registration():
+    """API endpoint for driver registration"""
+    try:
+        telegram_id = request.form.get('telegram_id')
+        name = request.form.get('name')
+        phone_number = request.form.get('phone_number')
+        vehicle_type = request.form.get('vehicle_type')
+        
+        # Check if driver already exists
+        existing_driver = Driver.query.filter_by(telegram_user_id=telegram_id).first()
+        if existing_driver:
+            return jsonify({'success': False, 'message': 'Driver already registered'})
+        
+        # Create new driver
+        driver = Driver(
+            name=name,
+            phone_number=phone_number,
+            telegram_user_id=telegram_id,
+            vehicle_type=vehicle_type,
+            is_active=True,
+            is_available=True,
+            approval_status='pending'
+        )
+        
+        # Handle file uploads
+        upload_folder = os.path.join('static', 'driver_documents')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        document_fields = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg']
+        for field in document_fields:
+            if field in request.files:
+                file = request.files[field]
+                if file and file.filename:
+                    filename = secure_filename(f"{telegram_id}_{field}_{file.filename}")
+                    file_path = os.path.join(upload_folder, filename)
+                    file.save(file_path)
+                    
+                    # Store document path in driver model
+                    if field.startswith('license'):
+                        driver.license_document = file_path
+                    elif field.startswith('id'):
+                        driver.id_document = file_path
+                    elif field.startswith('vehicle'):
+                        driver.vehicle_document = file_path
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Send pending registration message
+        from driver_registration import send_driver_registration_pending, notify_admin_driver_registration
+        send_driver_registration_pending(telegram_id, name)
+        
+        # Notify admin
+        notify_admin_driver_registration({
+            'name': name,
+            'phone_number': phone_number,
+            'vehicle_type': vehicle_type,
+            'documents_uploaded': True
+        })
+        
+        return jsonify({'success': True, 'message': 'Registration submitted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error in driver registration: {e}")
+        return jsonify({'success': False, 'message': 'Registration failed'}), 500
+
+
+
 @app.route('/api/menu')
 def get_menu():
     """Get menu items"""
