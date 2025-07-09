@@ -262,6 +262,14 @@ def handle_driver_location(chat_id, location, driver_id):
     except Exception as e:
         logger.error(f"Error handling driver location: {e}")
 
+def send_message_to_admin(admin_telegram_id, message):
+    """Send message to specific admin"""
+    try:
+        send_message(admin_telegram_id, message, parse_mode="Markdown")
+        logger.info(f"Message sent to admin {admin_telegram_id}")
+    except Exception as e:
+        logger.error(f"Error sending message to admin {admin_telegram_id}: {e}")
+
 def send_order_notification(order_id):
     """Send order notification to admins"""
     try:
