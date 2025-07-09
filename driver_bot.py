@@ -390,6 +390,14 @@ def handle_driver_text_message(chat_id, text):
         send_driver_help_message(chat_id)
     elif text == '/status':
         send_driver_status_message(chat_id)
+    elif text == '/location':
+        send_location_request(chat_id)
+    elif text == '/orders':
+        send_driver_orders(chat_id)
+    elif text == '/toggle':
+        toggle_driver_availability(chat_id)
+    elif text == '/earnings':
+        send_driver_earnings(chat_id)
     elif text == '/test':
         # Test command to verify bot is working
         send_driver_message(chat_id, "✅ Driver bot is working correctly!\n\nThis is a test message to verify the connection.")
@@ -513,7 +521,184 @@ def send_driver_status_message(chat_id):
         send_driver_message(chat_id, message, keyboard=keyboard)
         
     except Exception as e:
-        logger.error(f"Error sending driver status: {e}")
+        logger.error(f"Error getting driver status: {e}")
+        send_driver_message(chat_id, "❌ Error retrieving status. Please try again later.")
+
+def send_driver_help_message(chat_id):
+    """Send help message to driver"""
+    message = """🚚 *Driver Bot Help*
+
+Available commands:
+• /start - Welcome message and setup
+• /status - Check your driver status
+• /location - Share your current location
+• /orders - View your active orders
+• /toggle - Toggle availability on/off
+• /earnings - View your earnings summary
+• /help - Show this help message
+
+I'll automatically notify you about new delivery assignments. When you get an order notification, you can:
+• Use the WebApp to view full order details
+• Quick accept or reject using buttons
+• Share your location for tracking
+
+Stay online and ready for deliveries! 🚀"""
+    
+    send_driver_message(chat_id, message)
+
+def send_driver_orders(chat_id):
+    """Send driver's current orders"""
+    try:
+        from models import Driver, Order
+        from main import app
+        
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            if not driver:
+                send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin.")
+                return
+            
+            active_orders = Order.query.filter_by(driver_id=driver.id).filter(
+                Order.status.in_(['confirmed', 'preparing', 'out_for_delivery'])
+            ).all()
+            
+            if not active_orders:
+                send_driver_message(chat_id, "📋 No active orders at the moment.\n\nYou'll be notified when new orders are available!")
+                return
+            
+            message = f"📋 *Your Active Orders ({len(active_orders)})*\n\n"
+            
+            for order in active_orders:
+                status_emoji = {
+                    'confirmed': '✅',
+                    'preparing': '👨‍🍳',
+                    'out_for_delivery': '🚚'
+                }.get(order.status, '📦')
+                
+                message += f"{status_emoji} *Order #{order.id}*\n"
+                message += f"👤 {order.customer_name}\n"
+                message += f"📞 {order.customer_phone}\n"
+                message += f"📍 {order.customer_address}\n"
+                message += f"💰 {order.total_amount:.2f} ETB\n"
+                message += f"📦 Status: {order.status.replace('_', ' ').title()}\n"
+                message += "─────────────────\n"
+            
+            # Add WebApp button for full order management
+            webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={driver.id}"
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📱 Open Driver Panel",
+                            "web_app": {"url": webapp_url}
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
+            
+    except Exception as e:
+        logger.error(f"Error getting driver orders: {e}")
+        send_driver_message(chat_id, "❌ Error retrieving orders. Please try again later.")
+
+def toggle_driver_availability(chat_id):
+    """Toggle driver availability status"""
+    try:
+        from models import Driver
+        from extensions import db
+        from main import app
+        
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            if not driver:
+                send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin.")
+                return
+            
+            # Toggle availability
+            driver.is_available = not driver.is_available
+            db.session.commit()
+            
+            status = "🟢 AVAILABLE" if driver.is_available else "🔴 UNAVAILABLE"
+            action = "receive" if driver.is_available else "NOT receive"
+            
+            message = f"✅ Status updated!\n\n📊 *Current Status:* {status}\n\n"
+            message += f"You will {action} new order notifications."
+            
+            if driver.is_available:
+                message += "\n\n📍 *Important:* Make sure to share your location regularly for accurate order assignments!"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📍 Share Location Now",
+                                "callback_data": "driver_location_share"
+                            }
+                        ]
+                    ]
+                }
+                send_driver_message(chat_id, message, keyboard=keyboard)
+            else:
+                send_driver_message(chat_id, message)
+                
+    except Exception as e:
+        logger.error(f"Error toggling driver availability: {e}")
+        send_driver_message(chat_id, "❌ Error updating status. Please try again later.")
+
+def send_driver_earnings(chat_id):
+    """Send driver earnings summary"""
+    try:
+        from models import Driver, Order
+        from main import app
+        from datetime import datetime, timedelta
+        
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            if not driver:
+                send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin.")
+                return
+            
+            # Calculate earnings for different periods
+            today = datetime.utcnow().date()
+            week_ago = today - timedelta(days=7)
+            month_ago = today - timedelta(days=30)
+            
+            # Get completed orders
+            completed_orders = Order.query.filter_by(
+                driver_id=driver.id,
+                status='delivered'
+            ).all()
+            
+            # Calculate earnings (assuming 10% commission per order)
+            today_orders = [o for o in completed_orders if o.created_at.date() == today]
+            week_orders = [o for o in completed_orders if o.created_at.date() >= week_ago]
+            month_orders = [o for o in completed_orders if o.created_at.date() >= month_ago]
+            
+            today_earnings = sum(o.total_amount * 0.1 for o in today_orders)
+            week_earnings = sum(o.total_amount * 0.1 for o in week_orders)
+            month_earnings = sum(o.total_amount * 0.1 for o in month_orders)
+            total_earnings = sum(o.total_amount * 0.1 for o in completed_orders)
+            
+            message = f"💰 *Earnings Summary*\n\n"
+            message += f"📅 *Today:* {today_earnings:.2f} ETB ({len(today_orders)} orders)\n"
+            message += f"📈 *This Week:* {week_earnings:.2f} ETB ({len(week_orders)} orders)\n"
+            message += f"📊 *This Month:* {month_earnings:.2f} ETB ({len(month_orders)} orders)\n"
+            message += f"🎯 *Total:* {total_earnings:.2f} ETB ({len(completed_orders)} orders)\n\n"
+            message += f"💼 *Average per order:* {(total_earnings/len(completed_orders)):.2f} ETB" if completed_orders else "💼 *Average per order:* 0 ETB"
+            
+            # Add performance stats
+            if completed_orders:
+                message += f"\n\n📊 *Performance Stats:*\n"
+                message += f"✅ Completed: {len(completed_orders)} orders\n"
+                message += f"🚚 Vehicle: {driver.vehicle_type.title()}\n"
+                message += f"⭐ Status: {'Available' if driver.is_available else 'Unavailable'}"
+            
+            send_driver_message(chat_id, message)
+            
+    except Exception as e:
+        logger.error(f"Error getting driver earnings: {e}")
+        send_driver_message(chat_id, "❌ Error retrieving earnings. Please try again later.")
         send_driver_message(chat_id, "❌ Error retrieving status information.")
 
 def send_driver_help_message(chat_id):
