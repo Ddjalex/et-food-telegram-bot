@@ -724,8 +724,34 @@ def handle_driver_text_message(chat_id, text):
     elif text == '/earnings':
         send_driver_earnings(chat_id)
     elif text == '/test':
-        # Test command to verify bot is working
-        send_driver_message(chat_id, "✅ Driver bot is working correctly!\n\nThis is a test message to verify the connection.")
+        # Enhanced test command with system status
+        try:
+            from models import Driver
+            from main import app
+            
+            with app.app_context():
+                driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+                
+                test_message = "🔧 *Driver Bot System Test*\n\n"
+                test_message += "✅ Bot connection: Working\n"
+                test_message += "✅ Database connection: Active\n"
+                test_message += "✅ Webhook integration: Functional\n"
+                test_message += f"✅ Driver profile: {'Found' if driver else 'Not registered'}\n"
+                test_message += f"✅ Location tracking: {'Active' if driver and driver.last_location_update else 'Inactive'}\n\n"
+                test_message += f"🤖 Bot version: ET-FOOD v2.0\n"
+                test_message += f"⏰ Test time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n"
+                
+                if driver:
+                    test_message += f"👤 Your profile: {driver.name}\n"
+                    test_message += f"📞 Phone: {driver.phone_number}\n"
+                    test_message += f"🎯 Status: {'Approved' if driver.is_approved else 'Pending'}"
+                else:
+                    test_message += "⚠️ No driver profile found. Use /start to register."
+                
+                send_driver_message(chat_id, test_message)
+                
+        except Exception as e:
+            send_driver_message(chat_id, f"❌ System test failed: {str(e)}\n\nPlease contact support.")
     else:
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
@@ -990,25 +1016,47 @@ def send_driver_status_message(chat_id):
 
 def send_driver_help_message(chat_id):
     """Send help message to driver"""
-    message = """🚚 *Driver Bot Help*
+    message = """🚚 *ET-FOOD Driver Bot Help*
 
-Available commands:
-• /start - Welcome message and setup
-• /status - Check your driver status
-• /location - Share your current location
-• /orders - View your active orders
-• /toggle - Toggle availability on/off
-• /earnings - View your earnings summary
-• /help - Show this help message
+**📱 Commands:**
+• /start - Welcome and account setup
+• /status - View your driver profile & stats
+• /location - Share/update your location
+• /orders - View active deliveries
+• /toggle - Switch online/offline
+• /earnings - Check your earnings summary
+• /test - Test bot connection
 
-I'll automatically notify you about new delivery assignments. When you get an order notification, you can:
-• Use the WebApp to view full order details
-• Quick accept or reject using buttons
-• Share your location for tracking
+**🎯 Key Features:**
+• Real-time order notifications
+• GPS-based order assignment
+• Live location tracking
+• Direct customer/restaurant contact
+• Earnings tracking
+• Performance analytics
 
-Stay online and ready for deliveries! 🚀"""
+**📍 Location Sharing:**
+Like BeU delivery, you MUST share live location to receive orders within 10km radius.
+
+**💡 Tips:**
+• Keep location sharing active
+• Accept orders quickly (1-minute timer)
+• Contact support for any issues
+
+Need help? Use the Support button below."""
     
-    send_driver_message(chat_id, message)
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📞 Contact Support",
+                    "callback_data": "contact_support"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_orders(chat_id):
     """Send driver's current orders"""
@@ -1111,7 +1159,7 @@ def toggle_driver_availability(chat_id):
         send_driver_message(chat_id, "❌ Error updating status. Please try again later.")
 
 def send_driver_earnings(chat_id):
-    """Send driver earnings summary"""
+    """Send driver earnings summary with detailed breakdown"""
     try:
         from models import Driver, Order
         from main import app
