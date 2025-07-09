@@ -67,7 +67,7 @@ def notify_drivers_in_background(order_id):
 @app.route('/')
 def index():
     """Main page"""
-    return render_template('webapp_fixed_checkout.html')
+    return render_template('webapp_modern_fixed.html')
 
 @app.route('/test')
 def test():
@@ -77,7 +77,7 @@ def test():
 @app.route('/webapp')
 def webapp():
     """Telegram WebApp page"""
-    return render_template('webapp_fixed_checkout.html')
+    return render_template('webapp_modern_fixed.html')
 
 @app.route('/admin')
 def admin():

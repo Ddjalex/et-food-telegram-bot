@@ -1492,7 +1492,7 @@
                         </div>
                         
                         <div class="checkout-actions">
-                            <button onclick="placeOrder()" class="place-order-btn">
+                            <button onclick="placeOrder()" class="place-order-btn" id="modalPlaceOrderBtn" style="display: ${window.Telegram && window.Telegram.WebApp ? 'none' : 'block'}">
                                 Place Order - ${Math.round(orderData.total_amount)} ETB
                             </button>
                         </div>
@@ -2113,7 +2113,7 @@
                 
                 console.log('Loading order history for user:', userId);
                 
-                const response = await fetch(`/api/orders/user/${userId}`);
+                const response = await fetch(`/api/user-orders/${userId}`);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
