@@ -285,9 +285,9 @@
                             </div>
                         </div>
 
-                        <!-- Driver Statistics Cards -->
+                        <!-- Enhanced Driver Statistics Cards -->
                         <div class="row mb-4">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="card stat-card h-100">
                                     <div class="card-body text-center">
                                         <i class="fas fa-users fa-2x mb-3"></i>
@@ -296,25 +296,34 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="card text-white h-100" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
                                     <div class="card-body text-center">
-                                        <i class="fas fa-check-circle fa-2x mb-3"></i>
-                                        <h3 class="mb-1" id="activeDrivers">0</h3>
-                                        <p class="mb-0">Active Drivers</p>
+                                        <i class="fas fa-circle fa-2x mb-3 text-success"></i>
+                                        <h3 class="mb-1" id="onlineDrivers">0</h3>
+                                        <p class="mb-0">Online Now</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-circle fa-2x mb-3 text-secondary"></i>
+                                        <h3 class="mb-1" id="offlineDrivers">0</h3>
+                                        <p class="mb-0">Offline</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
                                 <div class="card text-white h-100" style="background: linear-gradient(135deg, #17a2b8 0%, #6610f2 100%);">
                                     <div class="card-body text-center">
                                         <i class="fas fa-motorcycle fa-2x mb-3"></i>
                                         <h3 class="mb-1" id="availableDrivers">0</h3>
-                                        <p class="mb-0">Available Now</p>
+                                        <p class="mb-0">Available</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="card text-white h-100" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);">
                                     <div class="card-body text-center">
                                         <i class="fas fa-shipping-fast fa-2x mb-3"></i>
@@ -323,47 +332,126 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Driver Management Table -->
-                        <div class="table-container">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Name</th>
-                                            <th>Phone</th>
-                                            <th>Vehicle</th>
-                                            <th>Status</th>
-                                            <th>Availability</th>
-                                            <th>Location</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="driversTable">
-                                        <!-- Driver data will be loaded here -->
-                                    </tbody>
-                                </table>
+                            <div class="col-md-2">
+                                <div class="card text-white h-100" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="pendingDrivers">0</h3>
+                                        <p class="mb-0">Pending</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Live Tracking Section -->
-                        <div class="mt-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5><i class="fas fa-map-marked-alt"></i> Live Driver Tracking</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="liveTrackingMap" style="height: 400px; width: 100%;"></div>
-                                    <div class="mt-3">
-                                        <div class="row" id="driversList">
+                        <!-- Driver Documentation & Registration Tab Navigation -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <ul class="nav nav-tabs card-header-tabs" id="driverTabs" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="driver-overview-tab" data-bs-toggle="tab" href="#driver-overview" role="tab">
+                                            <i class="fas fa-tachometer-alt"></i> Overview
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="driver-registration-tab" data-bs-toggle="tab" href="#driver-registration" role="tab">
+                                            <i class="fas fa-user-plus"></i> New Registrations
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="driver-documentation-tab" data-bs-toggle="tab" href="#driver-documentation" role="tab">
+                                            <i class="fas fa-file-alt"></i> Documentation
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="driver-tracking-tab" data-bs-toggle="tab" href="#driver-tracking" role="tab">
+                                            <i class="fas fa-map-marker-alt"></i> Live Tracking
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="driver-orders-tab" data-bs-toggle="tab" href="#driver-orders" role="tab">
+                                            <i class="fas fa-clipboard-list"></i> Active Orders
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-body">
+                                <div class="tab-content" id="driverTabContent">
+
+                                    <!-- 1. Driver Overview Tab -->
+                                    <div class="tab-pane fade show active" id="driver-overview" role="tabpanel">
+                                        <h5 class="mb-3"><i class="fas fa-tachometer-alt"></i> Driver Management Overview</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>ID</th>
+                                                        <th>Name</th>
+                                                        <th>Phone</th>
+                                                        <th>Vehicle</th>
+                                                        <th>Online Status</th>
+                                                        <th>Availability</th>
+                                                        <th>Location</th>
+                                                        <th>Current Order</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="driversTable">
+                                                    <!-- Driver data will be loaded here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. New Driver Registrations Tab -->
+                                    <div class="tab-pane fade" id="driver-registration" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5><i class="fas fa-user-plus"></i> New Driver Registrations</h5>
+                                            <button class="btn btn-success" onclick="showAddDriverModal()">
+                                                <i class="fas fa-plus"></i> Add Driver Employee
+                                            </button>
+                                        </div>
+                                        <div class="row" id="newRegistrationsGrid">
+                                            <!-- New registrations will be loaded here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. Driver Documentation Tab -->
+                                    <div class="tab-pane fade" id="driver-documentation" role="tabpanel">
+                                        <h5 class="mb-3"><i class="fas fa-file-alt"></i> Driver Documentation & Verification</h5>
+                                        <div class="row" id="driverDocumentationGrid">
+                                            <!-- Driver documentation will be loaded here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Live Tracking Tab -->
+                                    <div class="tab-pane fade" id="driver-tracking" role="tabpanel">
+                                        <h5 class="mb-3"><i class="fas fa-map-marker-alt"></i> Live Driver Tracking</h5>
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <div class="card">
+                                                    <div class="card-body">
+                                                        <div id="liveTrackingMap" style="height: 500px; width: 100%;"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row" id="liveDriverCards">
                                             <!-- Live driver cards will be displayed here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- 5. Active Orders Tab -->
+                                    <div class="tab-pane fade" id="driver-orders" role="tabpanel">
+                                        <h5 class="mb-3"><i class="fas fa-clipboard-list"></i> Driver Order Assignments</h5>
+                                        <div class="row" id="driverOrdersGrid">
+                                            <!-- Driver orders will be loaded here -->
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+
                     </div>
 
                 </div>
@@ -990,31 +1078,40 @@
                 .catch(error => console.error('Error loading categories:', error));
         }
 
-        // Driver Management Functions
+        // Enhanced Driver Management Functions for 5 Requirements
         function loadDriversTab() {
-            loadDriverStatistics();
-            loadDriversTable();
-            initializeLiveTrackingMap();
+            loadEnhancedDriverStatistics();
+            loadDriverOverview();
+            loadNewRegistrations();
+            loadDriverDocumentation();
+            loadLiveTracking();
+            loadDriverOrders();
         }
 
-        function loadDriverStatistics() {
+        function loadEnhancedDriverStatistics() {
             fetch('/api/drivers')
                 .then(response => response.json())
                 .then(drivers => {
                     const totalDrivers = drivers.length;
-                    const activeDrivers = drivers.filter(d => d.is_active).length;
+                    const onlineDrivers = drivers.filter(d => d.is_active && d.last_location_update && 
+                        new Date() - new Date(d.last_location_update) < 600000).length; // 10 minutes
+                    const offlineDrivers = totalDrivers - onlineDrivers;
                     const availableDrivers = drivers.filter(d => d.is_available && d.is_active).length;
                     const busyDrivers = drivers.filter(d => !d.is_available && d.is_active).length;
+                    const pendingDrivers = drivers.filter(d => !d.is_approved).length;
 
                     document.getElementById('totalDrivers').textContent = totalDrivers;
-                    document.getElementById('activeDrivers').textContent = activeDrivers;
+                    document.getElementById('onlineDrivers').textContent = onlineDrivers;
+                    document.getElementById('offlineDrivers').textContent = offlineDrivers;
                     document.getElementById('availableDrivers').textContent = availableDrivers;
                     document.getElementById('busyDrivers').textContent = busyDrivers;
+                    document.getElementById('pendingDrivers').textContent = pendingDrivers;
                 })
                 .catch(error => console.error('Error loading driver statistics:', error));
         }
 
-        function loadDriversTable() {
+        // 1. Driver Overview Function (Enhanced Table)
+        function loadDriverOverview() {
             fetch('/api/drivers')
                 .then(response => response.json())
                 .then(drivers => {
@@ -1024,9 +1121,13 @@
                     drivers.forEach(driver => {
                         const row = document.createElement('tr');
                         
-                        const statusBadge = driver.is_active 
-                            ? '<span class="badge bg-success">Active</span>'
-                            : '<span class="badge bg-secondary">Inactive</span>';
+                        // Enhanced online status detection
+                        const isOnline = driver.is_active && driver.last_location_update && 
+                            new Date() - new Date(driver.last_location_update) < 600000; // 10 minutes
+                        
+                        const onlineStatusBadge = isOnline 
+                            ? '<span class="badge bg-success"><i class="fas fa-circle"></i> Online</span>'
+                            : '<span class="badge bg-secondary"><i class="fas fa-circle"></i> Offline</span>';
                         
                         const availabilityBadge = driver.is_available 
                             ? '<span class="badge bg-primary">Available</span>'
@@ -1039,24 +1140,33 @@
                         const hasLocation = driver.current_lat && driver.current_lng;
                         const locationButton = hasLocation 
                             ? `<button class="btn btn-sm btn-outline-success" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')" title="View Location">
-                                <i class="fas fa-map-marker-alt"></i>
+                                <i class="fas fa-map-marker-alt"></i> View
                                </button>`
                             : '<span class="text-muted">No location</span>';
 
+                        // Get current order info
+                        const currentOrderInfo = `<button class="btn btn-sm btn-outline-info" onclick="viewDriverOrders(${driver.id})" title="View Orders">
+                            <i class="fas fa-clipboard-list"></i> Orders
+                        </button>`;
+
                         row.innerHTML = `
                             <td>#${driver.id}</td>
-                            <td>${driver.name}</td>
+                            <td>
+                                <strong>${driver.name}</strong>
+                                ${driver.is_approved ? '' : '<br><small class="text-warning">Pending Approval</small>'}
+                            </td>
                             <td>${driver.phone_number}</td>
                             <td><i class="fas fa-${driver.vehicle_type === 'motorcycle' ? 'motorcycle' : 'car'}"></i> ${driver.vehicle_type}</td>
-                            <td>${statusBadge}</td>
+                            <td>${onlineStatusBadge}</td>
                             <td>${availabilityBadge}</td>
                             <td>
                                 ${locationButton}
                                 <small class="d-block text-muted">Updated: ${locationUpdate}</small>
                             </td>
+                            <td>${currentOrderInfo}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="toggleDriverStatus(${driver.id}, '${driver.is_active ? 'inactive' : 'active'}')" title="Toggle Active/Inactive">
+                                    <button class="btn btn-outline-primary" onclick="toggleDriverStatus(${driver.id}, '${driver.is_active ? 'inactive' : 'active'}')" title="Toggle Online/Offline">
                                         <i class="fas fa-${driver.is_active ? 'pause' : 'play'}"></i>
                                     </button>
                                     <button class="btn btn-outline-info" onclick="toggleDriverAvailability(${driver.id})" title="Toggle Available/Busy">
@@ -1071,7 +1181,307 @@
                         tbody.appendChild(row);
                     });
                 })
-                .catch(error => console.error('Error loading drivers table:', error));
+                .catch(error => console.error('Error loading driver overview:', error));
+        }
+
+        // 2. New Driver Registrations Function
+        function loadNewRegistrations() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const grid = document.getElementById('newRegistrationsGrid');
+                    grid.innerHTML = '';
+
+                    // Filter for pending/new registrations
+                    const newDrivers = drivers.filter(d => !d.is_approved || 
+                        new Date() - new Date(d.created_at) < 86400000); // Last 24 hours
+
+                    if (newDrivers.length === 0) {
+                        grid.innerHTML = `
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    No new driver registrations in the last 24 hours.
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    newDrivers.forEach(driver => {
+                        const registrationCard = document.createElement('div');
+                        registrationCard.className = 'col-md-6 mb-3';
+                        registrationCard.innerHTML = `
+                            <div class="card h-100 ${!driver.is_approved ? 'border-warning' : 'border-success'}">
+                                <div class="card-header ${!driver.is_approved ? 'bg-warning' : 'bg-success'} text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-user-plus"></i> ${driver.name}
+                                        ${!driver.is_approved ? '<span class="badge bg-light text-dark float-end">Pending</span>' : '<span class="badge bg-light text-dark float-end">Approved</span>'}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>Phone:</strong> ${driver.phone_number}<br>
+                                        <strong>Vehicle:</strong> ${driver.vehicle_type}<br>
+                                        <strong>Telegram ID:</strong> ${driver.telegram_user_id || 'Not linked'}<br>
+                                        <strong>Registered:</strong> ${new Date(driver.created_at).toLocaleString()}
+                                    </p>
+                                    ${!driver.is_approved ? `
+                                        <div class="btn-group">
+                                            <button class="btn btn-success btn-sm" onclick="approveDriver(${driver.id})">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="rejectDriver(${driver.id})">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>
+                                    ` : `
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Approved</span>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(registrationCard);
+                    });
+                })
+                .catch(error => console.error('Error loading new registrations:', error));
+        }
+
+        // 3. Driver Documentation Function
+        function loadDriverDocumentation() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const grid = document.getElementById('driverDocumentationGrid');
+                    grid.innerHTML = '';
+
+                    drivers.forEach(driver => {
+                        const docCard = document.createElement('div');
+                        docCard.className = 'col-md-6 mb-3';
+                        docCard.innerHTML = `
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-id-card"></i> ${driver.name}
+                                        ${driver.is_approved ? '<span class="badge bg-success float-end">Verified</span>' : '<span class="badge bg-warning float-end">Pending</span>'}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>Registration Date:</strong> ${new Date(driver.created_at).toLocaleDateString()}<br>
+                                        <strong>Phone:</strong> ${driver.phone_number}<br>
+                                        <strong>Vehicle Type:</strong> ${driver.vehicle_type}<br>
+                                        <strong>Telegram ID:</strong> ${driver.telegram_user_id || 'Not linked'}
+                                    </p>
+                                    
+                                    <div class="mb-3">
+                                        <h6>Documentation Status:</h6>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <div class="document-status ${driver.license_document ? 'text-success' : 'text-muted'}">
+                                                    <i class="fas fa-id-card fa-2x"></i>
+                                                    <p class="small">License</p>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="document-status ${driver.id_document ? 'text-success' : 'text-muted'}">
+                                                    <i class="fas fa-address-card fa-2x"></i>
+                                                    <p class="small">ID Card</p>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="document-status ${driver.vehicle_document ? 'text-success' : 'text-muted'}">
+                                                    <i class="fas fa-car fa-2x"></i>
+                                                    <p class="small">Vehicle</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" onclick="viewDriverDocuments(${driver.id})">
+                                            <i class="fas fa-eye"></i> View Docs
+                                        </button>
+                                        ${!driver.is_approved ? `
+                                            <button class="btn btn-sm btn-success" onclick="approveDriver(${driver.id})">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(docCard);
+                    });
+                })
+                .catch(error => console.error('Error loading driver documentation:', error));
+        }
+
+        // 4. Live Tracking Function
+        function loadLiveTracking() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const cardsContainer = document.getElementById('liveDriverCards');
+                    cardsContainer.innerHTML = '';
+
+                    // Filter for drivers with current location
+                    const trackableDrivers = drivers.filter(d => d.current_lat && d.current_lng && d.is_active);
+
+                    if (trackableDrivers.length === 0) {
+                        cardsContainer.innerHTML = `
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    No drivers are currently sharing their location.
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    trackableDrivers.forEach(driver => {
+                        const isOnline = new Date() - new Date(driver.last_location_update) < 600000; // 10 minutes
+                        const trackingCard = document.createElement('div');
+                        trackingCard.className = 'col-md-4 mb-3';
+                        trackingCard.innerHTML = `
+                            <div class="card h-100 ${isOnline ? 'border-success' : 'border-warning'}">
+                                <div class="card-header ${isOnline ? 'bg-success' : 'bg-warning'} text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-${isOnline ? 'circle text-success' : 'circle text-warning'}"></i>
+                                        ${driver.name}
+                                        <span class="badge bg-light text-dark float-end">${driver.vehicle_type}</span>
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>Status:</strong> ${driver.is_available ? 'Available' : 'Busy'}<br>
+                                        <strong>Last Update:</strong> ${new Date(driver.last_location_update).toLocaleTimeString()}<br>
+                                        <strong>Location:</strong> ${driver.current_lat.toFixed(4)}, ${driver.current_lng.toFixed(4)}
+                                    </p>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" onclick="focusDriverOnMap(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                                            <i class="fas fa-crosshairs"></i> Focus
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="requestDriverLocation(${driver.id})">
+                                            <i class="fas fa-sync"></i> Update
+                                        </button>
+                                        <button class="btn btn-sm btn-info" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                                            <i class="fas fa-external-link-alt"></i> Maps
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        cardsContainer.appendChild(trackingCard);
+                    });
+
+                    // Initialize the map for this tab
+                    initializeLiveTrackingMapForTab();
+                })
+                .catch(error => console.error('Error loading live tracking:', error));
+        }
+
+        // 5. Driver Orders Function
+        function loadDriverOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const ordersGrid = document.getElementById('driverOrdersGrid');
+                    ordersGrid.innerHTML = '';
+
+                    // Filter for orders with assigned drivers
+                    const driverOrders = data.orders.filter(order => order.driver_id && order.status !== 'delivered' && order.status !== 'cancelled');
+
+                    if (driverOrders.length === 0) {
+                        ordersGrid.innerHTML = `
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    No active orders assigned to drivers.
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Get driver data
+                    fetch('/api/drivers')
+                        .then(response => response.json())
+                        .then(drivers => {
+                            const driverMap = {};
+                            drivers.forEach(d => driverMap[d.id] = d);
+
+                            driverOrders.forEach(order => {
+                                const driver = driverMap[order.driver_id];
+                                if (!driver) return;
+
+                                const orderCard = document.createElement('div');
+                                orderCard.className = 'col-md-6 mb-3';
+                                orderCard.innerHTML = `
+                                    <div class="card h-100">
+                                        <div class="card-header">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-receipt"></i> Order #${order.id}
+                                                </h6>
+                                                <span class="badge bg-${order.status === 'confirmed' ? 'warning' : order.status === 'preparing' ? 'info' : 'primary'}">
+                                                    ${order.status.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <h6>Driver Info:</h6>
+                                                    <p class="small">
+                                                        <strong>${driver.name}</strong><br>
+                                                        <i class="fas fa-phone"></i> ${driver.phone_number}<br>
+                                                        <i class="fas fa-${driver.vehicle_type === 'motorcycle' ? 'motorcycle' : 'car'}"></i> ${driver.vehicle_type}
+                                                    </p>
+                                                </div>
+                                                <div class="col-6">
+                                                    <h6>Order Info:</h6>
+                                                    <p class="small">
+                                                        <strong>Customer:</strong> ${order.customer_name}<br>
+                                                        <strong>Total:</strong> ${order.total_amount} ETB<br>
+                                                        <strong>Payment:</strong> ${order.payment_method}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <strong>Delivery Address:</strong><br>
+                                                <small class="text-muted">${order.customer_address}</small>
+                                            </div>
+                                            
+                                            <div class="btn-group">
+                                                ${driver.current_lat && driver.current_lng ? `
+                                                    <button class="btn btn-sm btn-success" onclick="viewDeliveryRoute(${driver.current_lat}, ${driver.current_lng}, ${order.location_lat || 0}, ${order.location_lng || 0})">
+                                                        <i class="fas fa-route"></i> Route
+                                                    </button>
+                                                ` : ''}
+                                                <button class="btn btn-sm btn-primary" onclick="viewOrderDetails(${order.id})">
+                                                    <i class="fas fa-eye"></i> Details
+                                                </button>
+                                                <button class="btn btn-sm btn-info" onclick="callDriver('${driver.phone_number}')">
+                                                    <i class="fas fa-phone"></i> Call
+                                                </button>
+                                            </div>
+                                            
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock"></i> Accepted: ${new Date(order.created_at).toLocaleString()}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                ordersGrid.appendChild(orderCard);
+                            });
+                        });
+                })
+                .catch(error => console.error('Error loading driver orders:', error));
         }
 
         function showAddDriverModal() {
