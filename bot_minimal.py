@@ -20,7 +20,15 @@ def send_message(chat_id, text, keyboard=None, parse_mode=None):
     response = requests.post(url, json=data)
     result = response.json()
     if not result.get("ok"):
+<<<<<<< HEAD
         logger.error(f"Failed to send message: {result}")
+=======
+        # Handle "chat not found" errors gracefully
+        if result.get('error_code') == 400 and 'chat not found' in result.get('description', '').lower():
+            logger.warning(f"Chat {chat_id} not found - user has not started the bot yet")
+        else:
+            logger.error(f"Failed to send message: {result}")
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
 
 def notify_driver_assignment(driver_id, order_id):
     """Notify driver about order assignment"""
@@ -268,7 +276,15 @@ def send_message_to_admin(admin_telegram_id, message):
         send_message(admin_telegram_id, message, parse_mode="Markdown")
         logger.info(f"Message sent to admin {admin_telegram_id}")
     except Exception as e:
+<<<<<<< HEAD
         logger.error(f"Error sending message to admin {admin_telegram_id}: {e}")
+=======
+        # Handle "chat not found" gracefully
+        if "chat not found" in str(e).lower():
+            logger.warning(f"Admin {admin_telegram_id} has not started the bot yet - message not sent")
+        else:
+            logger.error(f"Error sending message to admin {admin_telegram_id}: {e}")
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
 
 def send_order_notification(order_id):
     """Send order notification to admins"""

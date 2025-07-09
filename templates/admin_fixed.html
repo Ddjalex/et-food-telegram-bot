@@ -1207,6 +1207,12 @@
                                     <button class="btn btn-outline-secondary" onclick="requestDriverLocation(${driver.id})" title="Request Location Update">
                                         <i class="fas fa-map-marked-alt"></i>
                                     </button>
+<<<<<<< HEAD
+=======
+                                    <button class="btn btn-outline-danger" onclick="removeDriver(${driver.id}, '${driver.name}')" title="Remove Driver Employee">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
                                 </div>
                             </td>
                         `;
@@ -1897,6 +1903,75 @@
             alert('Driver data refreshed!');
         }
 
+<<<<<<< HEAD
+=======
+        function removeDriver(driverId, driverName) {
+            if (confirm(`Are you sure you want to remove driver "${driverName}"?\n\nThis action cannot be undone and will:\n• Remove the driver from the system\n• Unassign any active orders\n• Notify the driver via Telegram\n\nClick OK to proceed:`)) {
+                // First check if driver has active orders and offer to unassign them
+                fetch(`/api/drivers/${driverId}/remove`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`✅ ${data.message}`);
+                        // Refresh the drivers list
+                        loadDriversTab();
+                    } else {
+                        // If removal failed due to active orders, offer to unassign and retry
+                        if (data.message && data.message.includes('active orders')) {
+                            if (confirm(`${data.message}\n\nWould you like to unassign the orders and try again?`)) {
+                                // Call unassign orders endpoint first
+                                fetch(`/api/drivers/${driverId}/unassign-orders`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(unassignData => {
+                                    if (unassignData.success) {
+                                        // Now try to remove driver again
+                                        return fetch(`/api/drivers/${driverId}/remove`, {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            }
+                                        });
+                                    } else {
+                                        throw new Error('Failed to unassign orders');
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(removeData => {
+                                    if (removeData.success) {
+                                        alert(`✅ ${removeData.message}`);
+                                        loadDriversTab();
+                                    } else {
+                                        alert(`❌ Failed to remove driver: ${removeData.message}`);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error during unassign and remove:', error);
+                                    alert('Error processing request: ' + error.message);
+                                });
+                            }
+                        } else {
+                            alert(`❌ Failed to remove driver: ${data.message}`);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing driver:', error);
+                    alert('Error removing driver: ' + error.message);
+                });
+            }
+        }
+
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             initializeDashboard();

@@ -116,6 +116,15 @@ def api_driver_registration():
             vehicle_type=vehicle_type,
             is_active=True,
             is_available=True,
+        # Create new driver with required fields
+        driver = Driver(
+            name=name or "Driver Registration",
+            phone_number=phone_number or "+251900000000", 
+            telegram_user_id=int(telegram_id) if telegram_id else None,
+            vehicle_type=vehicle_type or "motorcycle",
+            is_active=True,
+            is_available=False,  # Not available until approved
+            is_approved=False,
             approval_status='pending'
         )
         
@@ -266,6 +275,12 @@ def update_order_status(order_id):
         # Handle status change through workflow manager
         handle_order_status_change(order_id, old_status, new_status)
         
+        # If order is confirmed, automatically find nearby drivers
+        if new_status == 'confirmed' and old_status == 'pending':
+            from complete_order_workflow import OrderWorkflowManager
+            manager = OrderWorkflowManager()
+            manager.find_nearby_drivers(order_id)
+        
         return jsonify({
             'success': True,
             'message': f'Order #{order_id} status updated from {old_status} to {new_status}',
@@ -403,6 +418,182 @@ def delete_menu_item(item_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to delete menu item'}), 500
 
+# Driver Management API Endpoints
+@app.route('/api/drivers/pending')
+def get_pending_drivers():
+    """Get pending drivers for admin approval"""
+    try:
+        pending_drivers = Driver.query.filter_by(approval_status='pending').all()
+        return jsonify([{
+            'id': driver.id,
+            'name': driver.name,
+            'phone_number': driver.phone_number,
+            'telegram_user_id': driver.telegram_user_id,
+            'vehicle_type': driver.vehicle_type,
+            'created_at': driver.created_at.isoformat() if driver.created_at else None,
+            'license_document': driver.license_document,
+            'id_document': driver.id_document,
+            'vehicle_document': driver.vehicle_document
+        } for driver in pending_drivers])
+    except Exception as e:
+        logger.error(f"Error fetching pending drivers: {e}")
+        return jsonify({'error': 'Failed to fetch pending drivers'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/approve', methods=['POST'])
+def approve_driver_api(driver_id):
+    """Approve a pending driver"""
+    try:
+        from admin_approval_system import approve_driver
+        data = request.get_json()
+        admin_id = data.get('admin_id', 383870190)  # Default admin ID
+        
+        success, message = approve_driver(driver_id, admin_id)
+        
+        if success:
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        logger.error(f"Error approving driver: {e}")
+        return jsonify({'success': False, 'message': 'Failed to approve driver'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/reject', methods=['POST'])
+def reject_driver_api(driver_id):
+    """Reject a pending driver"""
+    try:
+        from admin_approval_system import reject_driver
+        data = request.get_json()
+        admin_id = data.get('admin_id', 383870190)  # Default admin ID
+        reason = data.get('reason', 'Application does not meet requirements')
+        
+        success, message = reject_driver(driver_id, admin_id, reason)
+        
+        if success:
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        logger.error(f"Error rejecting driver: {e}")
+        return jsonify({'success': False, 'message': 'Failed to reject driver'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/remove', methods=['DELETE'])
+def remove_driver_api(driver_id):
+    """Remove a driver employee"""
+    try:
+        driver = Driver.query.get(driver_id)
+        
+        if not driver:
+            return jsonify({'success': False, 'message': 'Driver not found'}), 404
+            
+        driver_name = driver.name
+        driver_telegram_id = driver.telegram_user_id
+        
+        # Check if driver has active orders
+        active_orders = Order.query.filter_by(driver_id=driver_id, status='assigned').count()
+        if active_orders > 0:
+            return jsonify({
+                'success': False, 
+                'message': f'Cannot remove driver with {active_orders} active orders. Please reassign orders first.'
+            }), 400
+        
+        # Remove driver from database
+        db.session.delete(driver)
+        db.session.commit()
+        
+        # Send notification to driver if they have started the bot
+        if driver_telegram_id:
+            try:
+                from driver_bot import send_driver_message
+                message = f"📋 *Account Status Update*\n\n"
+                message += f"Your driver account has been removed from ET-FOOD delivery system.\n\n"
+                message += f"If you believe this is an error, please contact support.\n"
+                message += f"Thank you for your service with ET-FOOD."
+                
+                send_driver_message(driver_telegram_id, message)
+            except Exception as e:
+                logger.warning(f"Could not notify removed driver {driver_telegram_id}: {e}")
+        
+        # Log the removal
+        logger.info(f"Driver {driver_name} (ID: {driver_id}) removed by admin")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Driver {driver_name} has been removed successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error removing driver: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Failed to remove driver'}), 500
+
+@app.route('/api/drivers')
+def get_all_drivers():
+    """Get all drivers for admin management"""
+    try:
+        drivers = Driver.query.all()
+        return jsonify([{
+            'id': driver.id,
+            'name': driver.name,
+            'phone_number': driver.phone_number,
+            'telegram_user_id': driver.telegram_user_id,
+            'vehicle_type': driver.vehicle_type,
+            'is_active': driver.is_active,
+            'is_available': driver.is_available,
+            'is_approved': driver.is_approved,
+            'approval_status': driver.approval_status,
+            'current_lat': driver.current_lat,
+            'current_lng': driver.current_lng,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+            'created_at': driver.created_at.isoformat() if driver.created_at else None
+        } for driver in drivers])
+    except Exception as e:
+        logger.error(f"Error fetching all drivers: {e}")
+        return jsonify({'error': 'Failed to fetch drivers'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/unassign-orders', methods=['POST'])
+def unassign_driver_orders(driver_id):
+    """Unassign all active orders from a driver"""
+    try:
+        driver = Driver.query.get(driver_id)
+        
+        if not driver:
+            return jsonify({'success': False, 'message': 'Driver not found'}), 404
+            
+        # Find all assigned orders for this driver
+        assigned_orders = Order.query.filter_by(driver_id=driver_id, status='assigned').all()
+        
+        unassigned_count = 0
+        for order in assigned_orders:
+            order.driver_id = None
+            order.status = 'confirmed'  # Reset to confirmed status
+            unassigned_count += 1
+            
+            # Notify customer about order reassignment
+            try:
+                from bot_minimal import notify_customer_status_change
+                notify_customer_status_change(order.id, 'confirmed')
+            except Exception as e:
+                logger.warning(f"Could not notify customer about order reassignment: {e}")
+        
+        # Make driver unavailable
+        driver.is_available = False
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully unassigned {unassigned_count} orders from {driver.name}',
+            'unassigned_orders': unassigned_count
+        })
+        
+    except Exception as e:
+        logger.error(f"Error unassigning driver orders: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Failed to unassign orders'}), 500
+
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
 @app.route('/api/telegram-user-photo/<int:user_id>')
 def get_telegram_user_photo(user_id):
     """Get Telegram user profile photo"""

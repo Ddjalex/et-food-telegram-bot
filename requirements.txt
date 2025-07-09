@@ -68,3 +68,11 @@ flask
 flask-sqlalchemy
 gunicorn
 psycopg2-binary
+<<<<<<< HEAD
+=======
+email_validator
+flask
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
+>>>>>>> fcbce75 (Reinitialized Git and pushed latest Replit update)
