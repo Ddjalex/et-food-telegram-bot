@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Enhanced Driver Panel</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        .driver-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        .driver-header {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        
+        .driver-header h1 {
+            font-size: 22px;
+            margin: 0 0 10px 0;
+            color: #ffffff;
+        }
+        
+        .driver-subtitle {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .status-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .status-online {
+            color: #4caf50;
+        }
+        
+        .status-offline {
+            color: #f44336;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin: 0 10px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4caf50;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .location-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .location-active {
+            border-color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .location-inactive {
+            border-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .order-notification {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #ff6b35;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 53, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .order-id {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .countdown-timer {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .countdown-critical {
+            background: rgba(244, 67, 54, 0.8);
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        .restaurant-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .restaurant-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .restaurant-icon {
+            width: 40px;
+            height: 40px;
+            background: #ff6b35;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .restaurant-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .restaurant-address {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .distance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .distance-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        
+        .distance-label {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .customer-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            color: #ffffff;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
+            margin-left: 10px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-accept {
+            flex: 1;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-reject {
+            flex: 1;
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+        
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-reject:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+        }
+        
+        .call-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-call {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-call:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 50px 20px;
+            color: #e0e0e0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .no-orders i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #999;
+        }
+        
+        .earnings-summary {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .earnings-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .earnings-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4caf50;
+            margin-bottom: 5px;
+        }
+        
+        .earnings-label {
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .earnings-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .loading i {
+            font-size: 48px;
+            color: #4fc3f7;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .share-location-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+            margin-bottom: 15px;
+        }
+        
+        .share-location-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="driver-container">
+        <div class="driver-header">
+            <h1><i class="fas fa-truck"></i> Driver Panel</h1>
+            <div class="driver-subtitle">BeU Delivery Style - ET-FOOD</div>
+        </div>
+        
+        <!-- Status Toggle -->
+        <div class="status-toggle">
+            <div class="status-display">
+                <span id="statusText" class="status-offline">OFFLINE</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <span style="margin-right: 10px;">Offline</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="statusToggle">
+                    <span class="slider"></span>
+                </label>
+                <span style="margin-left: 10px;">Online</span>
+            </div>
+        </div>
+        
+        <!-- Location Status -->
+        <div id="locationStatus" class="location-status location-inactive">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span id="locationText">Location: INACTIVE</span>
+                </div>
+                <button class="share-location-btn" onclick="requestLocation()">
+                    <i class="fas fa-location-arrow"></i> Share Location
+                </button>
+            </div>
+        </div>
+        
+        <!-- Earnings Summary -->
+        <div class="earnings-summary">
+            <div class="earnings-header">
+                <div class="earnings-amount">0.00 ETB</div>
+                <div class="earnings-label">Today's Earnings</div>
+            </div>
+            <div class="earnings-stats">
+                <div class="stat-item">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Orders</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">0%</div>
+                    <div class="stat-label">Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Loading orders...</p>
+        </div>
+        
+        <!-- Order Notification -->
+        <div id="orderNotification" class="order-notification" style="display: none;">
+            <div class="order-header">
+                <div class="order-id">Order #<span id="orderId">0</span></div>
+                <div class="countdown-timer" id="countdownTimer">1:00</div>
+            </div>
+            
+            <div class="restaurant-info">
+                <div class="restaurant-header">
+                    <div class="restaurant-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div>
+                        <div class="restaurant-name">ET-FOOD Kitchen</div>
+                        <div class="restaurant-address">Addis Ababa, Ethiopia</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="distance-card">
+                <div class="distance-value" id="orderDistance">0.0 km</div>
+                <div class="distance-label">Distance to Customer</div>
+            </div>
+            
+            <div class="customer-info">
+                <div class="info-row">
+                    <span class="info-label">👤 Customer:</span>
+                    <span class="info-value" id="customerName">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">📞 Phone:</span>
+                    <span class="info-value" id="customerPhone">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💰 Amount:</span>
+                    <span class="info-value" id="orderAmount">0.00 ETB</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">💳 Payment:</span>
+                    <span class="info-value" id="paymentMethod">-</span>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-accept" onclick="acceptOrder()">
+                    <i class="fas fa-check"></i> ACCEPT
+                </button>
+                <button class="btn-reject" onclick="rejectOrder()">
+                    <i class="fas fa-times"></i> REJECT
+                </button>
+            </div>
+            
+            <div class="call-buttons">
+                <button class="btn-call" onclick="callRestaurant()">
+                    <i class="fas fa-phone"></i> Call Restaurant
+                </button>
+                <button class="btn-call" onclick="callCustomer()">
+                    <i class="fas fa-phone"></i> Call Customer
+                </button>
+            </div>
+        </div>
+        
+        <!-- No Orders -->
+        <div id="noOrders" class="no-orders" style="display: none;">
+            <i class="fas fa-clock"></i>
+            <h3>Waiting for Orders</h3>
+            <p>You're online and ready to receive deliveries!</p>
+            <p>Make sure your location is shared for nearby orders.</p>
+        </div>
+        
+        <!-- Messages -->
+        <div id="successMessage" class="success-message" style="display: none;"></div>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Set theme
+        document.body.style.background = tg.themeParams.bg_color || '#667eea';
+        
+        // Global variables
+        let currentOrderId = null;
+        let countdownInterval = null;
+        let driverId = null;
+        let isOnline = false;
+        let locationActive = false;
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderIdParam = urlParams.get('order_id');
+        driverId = urlParams.get('driver_id') || tg.initDataUnsafe?.user?.id;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDriverPanel();
+            checkDriverStatus();
+            
+            // Status toggle event
+            document.getElementById('statusToggle').addEventListener('change', function() {
+                toggleDriverStatus();
+            });
+            
+            // Auto-refresh every 30 seconds
+            setInterval(checkForNewOrders, 30000);
+        });
+        
+        async function initializeDriverPanel() {
+            try {
+                // Load driver info
+                if (driverId) {
+                    const response = await fetch(`/api/drivers/telegram/${driverId}`);
+                    if (response.ok) {
+                        const driver = await response.json();
+                        updateDriverInfo(driver);
+                    }
+                }
+                
+                // Load specific order if provided
+                if (orderIdParam) {
+                    loadOrderDetails(orderIdParam);
+                } else {
+                    checkForNewOrders();
+                }
+                
+            } catch (error) {
+                console.error('Error initializing driver panel:', error);
+                showError('Failed to initialize driver panel');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        async function checkDriverStatus() {
+            try {
+                if (!driverId) return;
+                
+                const response = await fetch(`/api/drivers/telegram/${driverId}/status`);
+                if (response.ok) {
+                    const status = await response.json();
+                    updateDriverStatus(status);
+                }
+            } catch (error) {
+                console.error('Error checking driver status:', error);
+            }
+        }
+        
+        function updateDriverInfo(driver) {
+            // Update status toggle
+            isOnline = driver.is_available;
+            document.getElementById('statusToggle').checked = isOnline;
+            updateStatusDisplay();
+            
+            // Update location status
+            const now = new Date();
+            const lastUpdate = new Date(driver.last_location_update);
+            const timeDiff = (now - lastUpdate) / 1000; // seconds
+            
+            locationActive = timeDiff < 600; // Less than 10 minutes
+            updateLocationStatus();
+        }
+        
+        function updateStatusDisplay() {
+            const statusText = document.getElementById('statusText');
+            if (isOnline) {
+                statusText.textContent = 'ONLINE';
+                statusText.className = 'status-online';
+            } else {
+                statusText.textContent = 'OFFLINE';
+                statusText.className = 'status-offline';
+            }
+        }
+        
+        function updateLocationStatus() {
+            const locationStatus = document.getElementById('locationStatus');
+            const locationText = document.getElementById('locationText');
+            
+            if (locationActive) {
+                locationStatus.className = 'location-status location-active';
+                locationText.textContent = 'Location: ACTIVE';
+            } else {
+                locationStatus.className = 'location-status location-inactive';
+                locationText.textContent = 'Location: INACTIVE';
+            }
+        }
+        
+        async function toggleDriverStatus() {
+            try {
+                const newStatus = document.getElementById('statusToggle').checked;
+                
+                const response = await fetch(`/api/drivers/telegram/${driverId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_available: newStatus })
+                });
+                
+                if (response.ok) {
+                    isOnline = newStatus;
+                    updateStatusDisplay();
+                    showSuccess(newStatus ? 'You are now ONLINE' : 'You are now OFFLINE');
+                } else {
+                    throw new Error('Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error toggling status:', error);
+                showError('Failed to update status');
+                // Revert toggle
+                document.getElementById('statusToggle').checked = isOnline;
+            }
+        }
+        
+        async function requestLocation() {
+            try {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            const { latitude, longitude } = position.coords;
+                            
+                            // Send location to server
+                            const response = await fetch(`/api/drivers/telegram/${driverId}/location`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    lat: latitude,
+                                    lng: longitude
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                locationActive = true;
+                                updateLocationStatus();
+                                showSuccess('Location shared successfully');
+                            } else {
+                                throw new Error('Failed to share location');
+                            }
+                        },
+                        (error) => {
+                            console.error('Geolocation error:', error);
+                            showError('Unable to get location. Please enable location access.');
+                        }
+                    );
+                } else {
+                    showError('Geolocation not supported by this browser');
+                }
+            } catch (error) {
+                console.error('Error requesting location:', error);
+                showError('Failed to share location');
+            }
+        }
+        
+        async function checkForNewOrders() {
+            try {
+                if (!driverId || !isOnline || !locationActive) return;
+                
+                const response = await fetch(`/api/drivers/telegram/${driverId}/orders`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.orders && data.orders.length > 0) {
+                        const pendingOrder = data.orders.find(order => order.status === 'pending');
+                        if (pendingOrder) {
+                            showOrderNotification(pendingOrder);
+                        } else {
+                            showNoOrders();
+                        }
+                    } else {
+                        showNoOrders();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for orders:', error);
+            }
+        }
+        
+        function showOrderNotification(order) {
+            currentOrderId = order.id;
+            
+            // Update order details
+            document.getElementById('orderId').textContent = order.id;
+            document.getElementById('customerName').textContent = order.customer_name;
+            document.getElementById('customerPhone').textContent = order.customer_phone;
+            document.getElementById('orderAmount').textContent = order.total_amount.toFixed(2) + ' ETB';
+            document.getElementById('paymentMethod').textContent = order.payment_method;
+            
+            // Calculate distance
+            const distance = calculateDistance(9.145, 40.489658, order.location_lat || 9.165, order.location_lng || 40.510);
+            document.getElementById('orderDistance').textContent = distance.toFixed(1) + ' km';
+            
+            // Show order notification
+            document.getElementById('orderNotification').style.display = 'block';
+            document.getElementById('noOrders').style.display = 'none';
+            
+            // Start countdown
+            startCountdown(60); // 1 minute
+        }
+        
+        function showNoOrders() {
+            document.getElementById('orderNotification').style.display = 'none';
+            document.getElementById('noOrders').style.display = 'block';
+        }
+        
+        function startCountdown(seconds) {
+            let timeLeft = seconds;
+            const timerElement = document.getElementById('countdownTimer');
+            
+            countdownInterval = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                timerElement.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 15) {
+                    timerElement.classList.add('countdown-critical');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    hideOrderNotification();
+                    showError('Order timed out - reassigned to another driver');
+                }
+                
+                timeLeft--;
+            }, 1000);
+        }
+        
+        function hideOrderNotification() {
+            document.getElementById('orderNotification').style.display = 'none';
+            document.getElementById('noOrders').style.display = 'block';
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            currentOrderId = null;
+        }
+        
+        async function acceptOrder() {
+            if (!currentOrderId) return;
+            
+            try {
+                const response = await fetch(`/api/orders/${currentOrderId}/accept`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        driver_telegram_id: driverId
+                    })
+                });
+                
+                if (response.ok) {
+                    showSuccess('Order accepted successfully!');
+                    hideOrderNotification();
+                    
+                    // Notify via Telegram
+                    if (tg.showAlert) {
+                        tg.showAlert('Order accepted! You will receive pickup instructions.');
+                    }
+                } else {
+                    throw new Error('Failed to accept order');
+                }
+            } catch (error) {
+                console.error('Error accepting order:', error);
+                showError('Failed to accept order');
+            }
+        }
+        
+        async function rejectOrder() {
+            if (!currentOrderId) return;
+            
+            try {
+                const response = await fetch(`/api/orders/${currentOrderId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        driver_telegram_id: driverId
+                    })
+                });
+                
+                if (response.ok) {
+                    showSuccess('Order rejected - looking for another driver');
+                    hideOrderNotification();
+                } else {
+                    throw new Error('Failed to reject order');
+                }
+            } catch (error) {
+                console.error('Error rejecting order:', error);
+                showError('Failed to reject order');
+            }
+        }
+        
+        function callRestaurant() {
+            if (tg.showAlert) {
+                tg.showAlert('Restaurant: ET-FOOD Kitchen\nPhone: +251-911-123-456');
+            }
+        }
+        
+        function callCustomer() {
+            const customerPhone = document.getElementById('customerPhone').textContent;
+            const customerName = document.getElementById('customerName').textContent;
+            
+            if (tg.showAlert) {
+                tg.showAlert(`Customer: ${customerName}\nPhone: ${customerPhone}`);
+            }
+        }
+        
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function showSuccess(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            setTimeout(() => {
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+        
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

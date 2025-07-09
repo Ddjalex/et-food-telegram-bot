@@ -2,7 +2,7 @@ import os
 import json
 import csv
 from io import StringIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import render_template, request, jsonify, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from app import app
@@ -87,6 +87,11 @@ def admin():
 def driver_registration():
     """Driver registration page"""
     return render_template('driver_registration.html')
+
+@app.route('/enhanced-driver-panel')
+def enhanced_driver_panel():
+    """Enhanced driver panel with BeU delivery style"""
+    return render_template('enhanced_driver_panel.html')
 
 @app.route('/api/driver-registration', methods=['POST'])
 def api_driver_registration():
@@ -546,6 +551,272 @@ def delete_category(category_id):
         logger.error(f"Error deleting category: {e}")
         return jsonify({'error': 'Failed to delete category'}), 500
 
+# Enhanced Driver Management APIs for BeU delivery style
+@app.route('/api/drivers/telegram/<int:telegram_user_id>', methods=['GET'])
+def get_driver_by_telegram_id(telegram_user_id):
+    """Get driver by Telegram user ID"""
+    try:
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        return jsonify({
+            'id': driver.id,
+            'name': driver.name,
+            'phone_number': driver.phone_number,
+            'telegram_user_id': driver.telegram_user_id,
+            'vehicle_type': driver.vehicle_type,
+            'is_active': driver.is_active,
+            'is_available': driver.is_available,
+            'is_approved': driver.is_approved,
+            'approval_status': driver.approval_status,
+            'current_lat': driver.current_lat,
+            'current_lng': driver.current_lng,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+            'created_at': driver.created_at.isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver: {e}")
+        return jsonify({'error': 'Failed to fetch driver'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/status', methods=['GET'])
+def get_driver_status(telegram_user_id):
+    """Get driver status"""
+    try:
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        # Get active orders count
+        active_orders = Order.query.filter_by(driver_id=driver.id).filter(
+            Order.status.in_(['confirmed', 'preparing', 'out_for_delivery'])
+        ).count()
+        
+        # Check location freshness
+        location_active = False
+        if driver.last_location_update:
+            time_diff = (datetime.utcnow() - driver.last_location_update).total_seconds()
+            location_active = time_diff < 600  # Less than 10 minutes
+        
+        return jsonify({
+            'driver_id': driver.id,
+            'name': driver.name,
+            'is_active': driver.is_active,
+            'is_available': driver.is_available,
+            'is_approved': driver.is_approved,
+            'location_active': location_active,
+            'active_orders_count': active_orders,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver status: {e}")
+        return jsonify({'error': 'Failed to fetch driver status'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/toggle', methods=['POST'])
+def toggle_driver_availability(telegram_user_id):
+    """Toggle driver online/offline status"""
+    try:
+        data = request.get_json()
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        # Update availability
+        driver.is_available = data.get('is_available', not driver.is_available)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'is_available': driver.is_available,
+            'message': f"Driver is now {'ONLINE' if driver.is_available else 'OFFLINE'}"
+        })
+    except Exception as e:
+        logger.error(f"Error toggling driver availability: {e}")
+        return jsonify({'error': 'Failed to toggle availability'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/location', methods=['POST'])
+def update_driver_location(telegram_user_id):
+    """Update driver location"""
+    try:
+        data = request.get_json()
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        # Update location
+        driver.current_lat = data.get('lat')
+        driver.current_lng = data.get('lng')
+        driver.last_location_update = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Location updated successfully',
+            'location': {
+                'lat': driver.current_lat,
+                'lng': driver.current_lng,
+                'updated_at': driver.last_location_update.isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error updating driver location: {e}")
+        return jsonify({'error': 'Failed to update location'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/orders', methods=['GET'])
+def get_driver_orders(telegram_user_id):
+    """Get driver's orders"""
+    try:
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        # Get active orders
+        active_orders = Order.query.filter_by(driver_id=driver.id).filter(
+            Order.status.in_(['pending', 'confirmed', 'preparing', 'out_for_delivery'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in active_orders:
+            orders_data.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'customer_address': order.customer_address,
+                'total_amount': order.total_amount,
+                'payment_method': order.payment_method,
+                'status': order.status,
+                'location_lat': order.location_lat,
+                'location_lng': order.location_lng,
+                'items': order.items,
+                'created_at': order.created_at.isoformat(),
+                'estimated_delivery_time': order.estimated_delivery_time.isoformat() if order.estimated_delivery_time else None
+            })
+        
+        return jsonify({
+            'driver_id': driver.id,
+            'orders': orders_data,
+            'total_orders': len(orders_data)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver orders: {e}")
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/orders/<int:order_id>/accept', methods=['POST'])
+def accept_order(order_id):
+    """Accept order by driver"""
+    try:
+        data = request.get_json()
+        driver_telegram_id = data.get('driver_telegram_id')
+        
+        if not driver_telegram_id:
+            return jsonify({'error': 'Driver Telegram ID required'}), 400
+        
+        # Find driver
+        driver = Driver.query.filter_by(telegram_user_id=driver_telegram_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        # Get order
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Check if order is still pending
+        if order.status != 'pending':
+            return jsonify({'error': 'Order is no longer available'}), 400
+        
+        # Assign order to driver
+        order.driver_id = driver.id
+        order.status = 'confirmed'
+        order.estimated_delivery_time = datetime.utcnow() + timedelta(minutes=30)
+        db.session.commit()
+        
+        # Remove from pending orders in driver bot
+        from driver_bot import pending_orders, order_timers
+        pending_orders.pop(order_id, None)
+        if order_id in order_timers:
+            order_timers.pop(order_id, None)
+        
+        # Notify customer
+        notify_customer_status_change(order_id, 'confirmed')
+        
+        # Send notification to driver bot
+        from driver_bot import send_driver_message
+        message = f"✅ *Order Accepted!*\n\n"
+        message += f"📋 Order #{order_id}\n"
+        message += f"👤 Customer: {order.customer_name}\n"
+        message += f"📞 Phone: {order.customer_phone}\n"
+        message += f"📍 Address: {order.customer_address}\n\n"
+        message += f"🏪 **Next Steps:**\n"
+        message += f"1️⃣ Go to ET-FOOD Kitchen for pickup\n"
+        message += f"2️⃣ Call restaurant: +251-911-123-456\n"
+        message += f"3️⃣ Confirm pickup when ready\n\n"
+        message += f"💰 Delivery Amount: {order.total_amount:.2f} ETB"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "✅ Confirm Pickup",
+                        "callback_data": f"pickup_complete_{order_id}"
+                    }
+                ],
+                [
+                    {
+                        "text": "📞 Call Restaurant",
+                        "callback_data": f"call_restaurant_{order_id}"
+                    },
+                    {
+                        "text": "📞 Call Customer",
+                        "callback_data": f"call_customer_{order_id}"
+                    }
+                ]
+            ]
+        }
+        
+        send_driver_message(driver_telegram_id, message, keyboard)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order accepted successfully',
+            'order_id': order_id,
+            'driver_id': driver.id
+        })
+    except Exception as e:
+        logger.error(f"Error accepting order: {e}")
+        return jsonify({'error': 'Failed to accept order'}), 500
+
+@app.route('/api/orders/<int:order_id>/reject', methods=['POST'])
+def reject_order(order_id):
+    """Reject order by driver"""
+    try:
+        data = request.get_json()
+        driver_telegram_id = data.get('driver_telegram_id')
+        
+        if not driver_telegram_id:
+            return jsonify({'error': 'Driver Telegram ID required'}), 400
+        
+        # Remove from pending orders and reassign
+        from driver_bot import pending_orders, order_timers, reassign_order_to_next_driver
+        
+        if order_id in pending_orders:
+            pending_orders.pop(order_id, None)
+        if order_id in order_timers:
+            order_timers.pop(order_id, None)
+        
+        # Reassign to next driver
+        reassign_order_to_next_driver(order_id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order rejected and reassigned to another driver'
+        })
+    except Exception as e:
+        logger.error(f"Error rejecting order: {e}")
+        return jsonify({'error': 'Failed to reject order'}), 500
+
 # Drivers Management
 @app.route('/api/drivers', methods=['GET'])
 def get_drivers():
@@ -665,40 +936,7 @@ def driver_panel():
     """Driver panel WebApp page"""
     return render_template('driver_panel.html')
 
-@app.route('/api/drivers/<int:driver_id>/orders')
-def get_driver_orders(driver_id):
-    """Get orders assigned to specific driver"""
-    try:
-        orders = Order.query.filter_by(driver_id=driver_id).filter(
-            Order.status.in_(['pending', 'accepted', 'confirmed', 'preparing', 'out_for_delivery'])
-        ).all()
-        
-        return jsonify({
-            'orders': [order.to_dict() for order in orders]
-        })
-    except Exception as e:
-        logger.error(f"Error fetching driver orders: {e}")
-        return jsonify({'error': 'Failed to fetch orders'}), 500
 
-@app.route('/api/drivers/telegram/<int:telegram_user_id>/orders')
-def get_driver_orders_by_telegram(telegram_user_id):
-    """Get orders assigned to driver by telegram user ID"""
-    try:
-        # Find driver by telegram user ID
-        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
-        if not driver:
-            return jsonify({'orders': []})
-        
-        orders = Order.query.filter_by(driver_id=driver.id).filter(
-            Order.status.in_(['pending', 'accepted', 'confirmed', 'preparing', 'out_for_delivery'])
-        ).all()
-        
-        return jsonify({
-            'orders': [order.to_dict() for order in orders]
-        })
-    except Exception as e:
-        logger.error(f"Error fetching driver orders by telegram ID: {e}")
-        return jsonify({'error': 'Failed to fetch orders'}), 500
 
 @app.route('/api/driver/accept-order', methods=['POST'])
 def driver_accept_order():

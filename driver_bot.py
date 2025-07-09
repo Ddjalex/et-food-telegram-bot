@@ -1,13 +1,15 @@
 """
-Driver Bot - Telegram bot for delivery drivers
-Handles order assignments, acceptance/rejection, and provides mini web interface
+Enhanced Driver Bot - BeU Delivery Style
+Handles live location sharing, order assignments, and automated driver dispatch
 """
 
 import os
 import logging
 import requests
 import json
-from datetime import datetime
+import threading
+import time
+from datetime import datetime, timedelta
 from flask import request, jsonify
 from config import Config
 
@@ -18,6 +20,10 @@ logger = logging.getLogger(__name__)
 # Driver Bot Configuration
 DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN')
 DRIVER_WEBHOOK_URL = f"{os.environ.get('REPLIT_DEV_DOMAIN', 'localhost')}/driver-webhook"
+
+# Order timeout tracking
+pending_orders = {}
+order_timers = {}
 
 def send_driver_message(chat_id, text, keyboard=None, parse_mode=None):
     """Send a message to Telegram using driver bot"""
@@ -114,6 +120,154 @@ def calculate_distance(coord1, coord2):
     r = 6371  # Earth's radius in kilometers
     
     return c * r
+
+def start_order_timer(order_id, driver_telegram_id):
+    """Start 1-minute countdown timer for order acceptance"""
+    def timeout_handler():
+        time.sleep(60)  # 1 minute countdown
+        
+        # Check if order is still pending
+        if order_id in pending_orders:
+            logger.info(f"Order {order_id} timed out for driver {driver_telegram_id}")
+            
+            # Remove from pending orders
+            pending_orders.pop(order_id, None)
+            order_timers.pop(order_id, None)
+            
+            # Send timeout message to driver
+            send_driver_message(driver_telegram_id, f"⏰ *Order Timeout*\n\nOrder #{order_id} has been automatically reassigned to another driver due to no response within 1 minute.")
+            
+            # Reassign order to next available driver
+            reassign_order_to_next_driver(order_id)
+    
+    # Start timer thread
+    timer_thread = threading.Thread(target=timeout_handler)
+    timer_thread.daemon = True
+    timer_thread.start()
+    
+    # Store timer reference
+    order_timers[order_id] = timer_thread
+
+def reassign_order_to_next_driver(order_id):
+    """Reassign order to next available driver"""
+    try:
+        from models import Order, Driver
+        from extensions import db
+        
+        order = Order.query.get(order_id)
+        if not order or order.status != 'pending':
+            return
+            
+        # Find next available driver
+        available_drivers = Driver.query.filter_by(
+            is_active=True,
+            is_available=True,
+            is_approved=True
+        ).filter(
+            Driver.current_lat.isnot(None),
+            Driver.current_lng.isnot(None),
+            Driver.last_location_update > datetime.utcnow() - timedelta(minutes=10)
+        ).all()
+        
+        if available_drivers:
+            # Calculate distances and find nearest driver
+            restaurant_coords = (9.145, 40.489658)
+            nearest_driver = None
+            min_distance = float('inf')
+            
+            for driver in available_drivers:
+                if driver.telegram_user_id in [d_id for d_id in pending_orders.values()]:
+                    continue  # Skip drivers with pending orders
+                    
+                distance = calculate_distance(
+                    restaurant_coords,
+                    (driver.current_lat, driver.current_lng)
+                )
+                
+                if distance < min_distance and distance <= 10:  # Within 10km
+                    min_distance = distance
+                    nearest_driver = driver
+            
+            if nearest_driver:
+                # Notify next driver
+                notify_driver_with_countdown(nearest_driver.telegram_user_id, order_id)
+                logger.info(f"Order {order_id} reassigned to driver {nearest_driver.telegram_user_id}")
+            else:
+                # No more drivers available
+                send_admin_no_drivers_notification(order_id)
+                
+    except Exception as e:
+        logger.error(f"Error reassigning order {order_id}: {e}")
+
+def notify_driver_with_countdown(driver_telegram_id, order_id):
+    """Notify driver with countdown timer"""
+    try:
+        from models import Order
+        
+        order = Order.query.get(order_id)
+        if not order:
+            return
+            
+        # Add to pending orders
+        pending_orders[order_id] = driver_telegram_id
+        
+        # Calculate distance
+        restaurant_coords = (9.145, 40.489658)
+        customer_coords = (order.location_lat or 9.165, order.location_lng or 40.510)
+        distance = calculate_distance(restaurant_coords, customer_coords)
+        
+        message = f"🚚 *NEW DELIVERY REQUEST*\n\n"
+        message += f"📋 Order #{order_id}\n"
+        message += f"🏪 Restaurant: ET-FOOD Kitchen\n"
+        message += f"📍 Distance to Customer: {distance:.1f} km\n\n"
+        message += f"👤 Customer: {order.customer_name}\n"
+        message += f"📞 Phone: {order.customer_phone}\n"
+        message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
+        message += f"💳 Payment: {order.payment_method}\n\n"
+        message += f"⏰ *You have 1 minute to respond*\n"
+        message += f"🏃‍♂️ First to accept gets the order!"
+        
+        # Create WebApp URL
+        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?order_id={order_id}&driver_id={driver_telegram_id}"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📱 Open Driver Panel",
+                        "web_app": {"url": webapp_url}
+                    }
+                ],
+                [
+                    {
+                        "text": "✅ ACCEPT ORDER",
+                        "callback_data": f"driver_accept_{order_id}"
+                    },
+                    {
+                        "text": "❌ REJECT",
+                        "callback_data": f"driver_reject_{order_id}"
+                    }
+                ],
+                [
+                    {
+                        "text": "📞 Call Restaurant",
+                        "callback_data": f"call_restaurant_{order_id}"
+                    },
+                    {
+                        "text": "📞 Call Customer",
+                        "callback_data": f"call_customer_{order_id}"
+                    }
+                ]
+            ]
+        }
+        
+        send_driver_message(driver_telegram_id, message, keyboard)
+        
+        # Start 1-minute countdown
+        start_order_timer(order_id, driver_telegram_id)
+        
+    except Exception as e:
+        logger.error(f"Error notifying driver {driver_telegram_id}: {e}")
 
 def handle_driver_callback(callback_query):
     """Handle driver bot callback queries"""
@@ -622,45 +776,88 @@ def send_driver_contact_request(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_welcome_message(chat_id, driver=None):
-    """Enhanced driver welcome message with registration flow"""
+    """Enhanced BeU delivery-style driver welcome message with live location requirement"""
     if driver and driver.approval_status == 'approved':
-        # Approved driver welcome
+        # Check location sharing status
+        from datetime import datetime, timedelta
+        location_active = False
+        if driver.last_location_update:
+            time_diff = datetime.utcnow() - driver.last_location_update
+            location_active = time_diff.total_seconds() < 600  # Less than 10 minutes
+        
+        # Approved driver welcome with mandatory location sharing
         message = f"🚚 *Welcome back, {driver.name}!*\n\n"
         message += f"✅ *Status: APPROVED DRIVER*\n"
         message += f"📞 Phone: {driver.phone_number}\n"
         message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
-        message += f"📱 Use the buttons below to manage your driver account:"
         
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "📋 View Orders",
-                        "web_app": {"url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={chat_id}"}
-                    }
-                ],
-                [
-                    {
-                        "text": "📍 Share Location",
-                        "callback_data": "request_location"
-                    },
-                    {
-                        "text": "🔄 Toggle Status",
-                        "callback_data": "toggle_status"
-                    }
-                ],
-                [
-                    {
-                        "text": "📊 View Earnings",
-                        "callback_data": "view_earnings"
-                    },
-                    {
-                        "text": "📞 Contact Support",
-                        "callback_data": "contact_support"
-                    }
+        # Location sharing status
+        if location_active:
+            message += f"📍 **Location Status: ACTIVE** ✅\n"
+            message += f"🟢 You can receive order assignments\n\n"
+        else:
+            message += f"📍 **Location Status: INACTIVE** ❌\n"
+            message += f"🔴 You MUST share live location to receive orders\n\n"
+            message += f"⚠️ **IMPORTANT**: Like BeU delivery system, you must share your live location to receive nearby orders!\n\n"
+        
+        # Create WebApp URL for driver panel
+        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={chat_id}"
+        
+        if location_active:
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📱 Open Driver Panel",
+                            "web_app": {"url": webapp_url}
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🔄 Toggle Online/Offline",
+                            "callback_data": "toggle_status"
+                        },
+                        {
+                            "text": "📊 View Status",
+                            "callback_data": "driver_status"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Update Location",
+                            "callback_data": "request_location"
+                        },
+                        {
+                            "text": "📞 Support",
+                            "callback_data": "contact_support"
+                        }
+                    ]
                 ]
-            ]
-        }
+            }
+        else:
+            # Force location sharing first
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📍 SHARE LIVE LOCATION (Required)",
+                            "callback_data": "request_location"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🔄 Enable Live Location",
+                            "callback_data": "enable_live_location"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📞 Contact Support",
+                            "callback_data": "contact_support"
+                        }
+                    ]
+                ]
+            }
     elif driver and driver.approval_status == 'pending':
         # Pending approval
         message = f"⏳ *Registration Under Review*\n\n"
