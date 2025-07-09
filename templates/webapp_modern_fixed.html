@@ -1366,7 +1366,7 @@
         }
 
         // Show order form
-        function showOrderForm() {
+        async function showOrderForm() {
             // Create order data
             const orderItems = [];
             let totalAmount = 0;
@@ -1387,18 +1387,34 @@
                 }
             });
 
-            // Get user data from Telegram
-            let userData = {};
+            // Get user data from Telegram and database
+            let userData = {
+                telegram_user_id: 'demo_user',
+                customer_name: '',
+                customer_phone: ''
+            };
+            
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user) {
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
                 userData = {
                     telegram_user_id: user.id,
                     customer_name: `${user.first_name} ${user.last_name || ''}`.trim(),
-                    customer_phone: '', // Always empty - users will type their phone number
+                    customer_phone: ''
                 };
+                
+                // Fetch user profile from database to get contact information saved from bot
+                try {
+                    const response = await fetch(`/api/user-profile/${user.id}`);
+                    const profile = await response.json();
+                    if (profile.success && profile.phone_number) {
+                        userData.customer_phone = profile.phone_number;
+                    }
+                } catch (error) {
+                    console.log('Could not fetch user profile:', error);
+                }
             }
 
-            // Show checkout modal
+            // Show checkout modal with complete user data
             showCheckoutModal({
                 ...userData,
                 items: orderItems,

@@ -317,6 +317,30 @@ def get_user_orders_alt(user_id):
         logger.error(f"Error fetching user orders: {e}")
         return jsonify({'error': 'Failed to fetch user orders'}), 500
 
+@app.route('/api/user-profile/<int:user_id>')
+def get_user_profile(user_id):
+    """Get user profile information including contact data from bot registration"""
+    try:
+        from models import UserProfile
+        user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
+        
+        if user_profile:
+            return jsonify({
+                'success': True,
+                'first_name': user_profile.first_name or '',
+                'phone_number': user_profile.phone_number or '',
+                'location_lat': user_profile.location_lat,
+                'location_lng': user_profile.location_lng
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'User profile not found'
+            })
+    except Exception as e:
+        logger.error(f"Error fetching user profile: {e}")
+        return jsonify({'error': 'Failed to fetch user profile'}), 500
+
 @app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
 def cancel_order(order_id):
     """Cancel an order - allows cancellation for pending, confirmed, and preparing orders"""
