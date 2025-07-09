@@ -67,7 +67,7 @@ def notify_drivers_in_background(order_id):
 @app.route('/')
 def index():
     """Main page"""
-    return render_template('webapp_modern_fixed.html')
+    return render_template('webapp_fixed_checkout.html')
 
 @app.route('/test')
 def test():
@@ -77,7 +77,7 @@ def test():
 @app.route('/webapp')
 def webapp():
     """Telegram WebApp page"""
-    return render_template('webapp_modern_fixed.html')
+    return render_template('webapp_fixed_checkout.html')
 
 @app.route('/admin')
 def admin():
@@ -316,6 +316,62 @@ def get_user_orders_alt(user_id):
     except Exception as e:
         logger.error(f"Error fetching user orders: {e}")
         return jsonify({'error': 'Failed to fetch user orders'}), 500
+
+@app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
+def cancel_order(order_id):
+    """Cancel an order - allows cancellation for pending, confirmed, and preparing orders"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Check if order can be cancelled
+        cancellable_statuses = ['pending', 'confirmed', 'preparing']
+        if order.status not in cancellable_statuses:
+            return jsonify({
+                'error': f'Order cannot be cancelled. Current status: {order.status}. Only orders with status {", ".join(cancellable_statuses)} can be cancelled.'
+            }), 400
+        
+        # Update order status to cancelled
+        old_status = order.status
+        order.status = 'cancelled'
+        order.updated_at = datetime.utcnow()
+        
+        # If order was assigned to a driver, unassign it
+        if order.driver_id:
+            order.driver_id = None
+        
+        db.session.commit()
+        
+        # Notify customer about cancellation
+        try:
+            from bot_minimal import notify_customer_status_change
+            notify_customer_status_change(order_id, 'cancelled')
+        except Exception as e:
+            logger.error(f"Error notifying customer about cancellation: {e}")
+        
+        # Notify driver if order was assigned
+        if old_status in ['confirmed', 'preparing']:
+            try:
+                from driver_bot import send_driver_message
+                if order.driver_id:
+                    send_driver_message(
+                        order.driver_id,
+                        f"⚠️ Order #{order_id} has been cancelled by the customer."
+                    )
+            except Exception as e:
+                logger.error(f"Error notifying driver about cancellation: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order #{order_id} has been cancelled successfully',
+            'order_id': order_id,
+            'old_status': old_status,
+            'new_status': 'cancelled'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error cancelling order: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to cancel order'}), 500
 
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
