@@ -564,56 +564,71 @@ def send_driver_contact_request(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_welcome_message(chat_id, driver=None):
-    """Send welcome message to driver with mandatory location sharing"""
-    if driver:
+    """Enhanced driver welcome message with registration flow"""
+    if driver and driver.is_approved:
+        # Approved driver welcome
         message = f"🚚 *Welcome back, {driver.name}!*\n\n"
-        message += f"✅ Your driver account is active.\n\n"
+        message += f"✅ *Status: APPROVED DRIVER*\n"
+        message += f"📞 Phone: {driver.phone_number}\n"
+        message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
+        message += f"📍 **STEP 1: Share your live location**\n"
+        message += f"• Required to receive delivery requests\n"
+        message += f"• Location updates every 30 seconds\n"
+        message += f"• Orders assigned to nearest drivers\n\n"
+        message += f"🔄 **STEP 2: Set availability status**\n"
+        message += f"• Toggle online/offline for order assignments\n"
+        message += f"• Change available/busy status\n\n"
+        message += f"📱 **Commands:** /status • /orders • /location • /toggle • /earnings"
+        
+        keyboard = {
+            "keyboard": [
+                [{"text": "📍 Share Live Location", "request_location": True}],
+                [{"text": "🟢 Go Online"}, {"text": "🔴 Go Offline"}],
+                [{"text": "📋 My Orders"}, {"text": "💰 Earnings"}],
+                [{"text": "ℹ️ Status"}, {"text": "❓ Help"}]
+            ],
+            "resize_keyboard": True
+        }
+    elif driver and not driver.is_approved:
+        # Pending approval
+        message = f"🚚 *Registration Status: PENDING*\n\n"
+        message += f"📝 Driver: {driver.name}\n"
+        message += f"📞 Phone: {driver.phone_number}\n"
+        message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
+        message += f"⏳ Your registration is under admin review\n"
+        message += f"📄 Please ensure all documents are uploaded\n"
+        message += f"🔔 You'll be notified when approved"
+        
+        keyboard = {
+            "keyboard": [
+                [{"text": "ℹ️ Check Status"}, {"text": "📞 Contact Admin"}]
+            ],
+            "resize_keyboard": True
+        }
     else:
-        message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
-    
-    message += f"⚠️ **MANDATORY LOCATION SHARING REQUIRED**\n\n"
-    message += f"To receive order assignments, you MUST:\n"
-    message += f"✅ Share your current location\n"
-    message += f"✅ Keep live location sharing ON\n"
-    message += f"✅ Update location every 5 minutes\n\n"
-    message += f"📍 **PLEASE SHARE YOUR LOCATION NOW** to activate your driver account.\n\n"
-    message += f"Without location sharing, you won't receive any order assignments.\n\n"
-    message += f"📋 What I can do:\n"
-    message += f"• Notify you about new orders in your area\n"
-    message += f"• Show order details and customer info\n"
-    message += f"• Calculate distances and delivery routes\n"
-    message += f"• Help you accept/reject orders\n"
-    message += f"• Track your location for real-time monitoring\n\n"
-    message += f"🎯 Click 'Share Location' below to get started!"
-    
-    keyboard = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "📍 Share Location (REQUIRED)",
-                    "callback_data": "request_location"
-                }
+        # New driver registration
+        message = f"🚚 *ET-FOOD Driver Registration*\n\n"
+        message += f"Welcome! To become a delivery driver:\n\n"
+        message += f"📋 **REGISTRATION STEPS:**\n"
+        message += f"1️⃣ Share your contact number\n"
+        message += f"2️⃣ Complete driver profile\n"
+        message += f"3️⃣ Upload required documents\n"
+        message += f"4️⃣ Wait for admin approval\n"
+        message += f"5️⃣ Start receiving orders!\n\n"
+        message += f"📄 **Required Documents:**\n"
+        message += f"• Valid Driver's License\n"
+        message += f"• Government ID Card\n"
+        message += f"• Vehicle Registration\n\n"
+        message += f"💼 **Benefits:** Flexible hours • Real-time orders • GPS support • Earnings tracking\n\n"
+        message += f"👇 **Start by sharing your contact:**"
+        
+        keyboard = {
+            "keyboard": [
+                [{"text": "📞 Share Contact & Register", "request_contact": True}],
+                [{"text": "❓ FAQ"}, {"text": "📞 Contact Support"}]
             ],
-            [
-                {
-                    "text": "🔄 Enable Live Location",
-                    "callback_data": "enable_live_location"
-                }
-            ],
-            [
-                {
-                    "text": "📱 Open Driver Panel",
-                    "web_app": {"url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel"}
-                }
-            ],
-            [
-                {
-                    "text": "📞 Contact Support",
-                    "callback_data": "contact_support"
-                }
-            ]
-        ]
-    }
+            "resize_keyboard": True
+        }
     
     send_driver_message(chat_id, message, keyboard=keyboard)
 

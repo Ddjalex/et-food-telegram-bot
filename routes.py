@@ -475,14 +475,17 @@ def delete_category(category_id):
 # Drivers Management
 @app.route('/api/drivers', methods=['GET'])
 def get_drivers():
-    """Get all drivers"""
+    """Get all drivers with enhanced information for admin panel"""
     try:
-        drivers = Driver.query.filter_by(is_active=True).all()
+        # Get all drivers (not just active ones) for comprehensive admin view
+        drivers = Driver.query.all()
         return jsonify([{
             'id': driver.id,
             'name': driver.name,
             'phone_number': driver.phone_number,
+            'telegram_user_id': driver.telegram_user_id,
             'vehicle_type': driver.vehicle_type,
+            'is_active': driver.is_active,
             'is_available': driver.is_available,
             'is_approved': driver.is_approved,
             'approval_status': driver.approval_status,
@@ -490,6 +493,11 @@ def get_drivers():
             'id_document': driver.id_document,
             'vehicle_document': driver.vehicle_document,
             'rejection_reason': driver.rejection_reason,
+            'current_lat': driver.current_lat,
+            'current_lng': driver.current_lng,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+            'created_at': driver.created_at.isoformat(),
+            'updated_at': driver.updated_at.isoformat() if driver.updated_at else None,
             'current_location': {
                 'lat': driver.current_lat,
                 'lng': driver.current_lng,
@@ -1260,3 +1268,217 @@ def notify_status_change():
     except Exception as e:
         logger.error(f"Error notifying driver about status change: {e}")
         return jsonify({'error': 'Failed to notify driver'}), 500
+
+# Enhanced Driver Management API Endpoints
+
+@app.route('/api/drivers/<int:driver_id>', methods=['GET'])
+def get_driver_details(driver_id):
+    """Get specific driver details for document viewing and management"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        return jsonify({
+            'id': driver.id,
+            'name': driver.name,
+            'phone_number': driver.phone_number,
+            'telegram_user_id': driver.telegram_user_id,
+            'vehicle_type': driver.vehicle_type,
+            'is_active': driver.is_active,
+            'is_available': driver.is_available,
+            'is_approved': driver.is_approved,
+            'approval_status': driver.approval_status,
+            'license_document': driver.license_document,
+            'id_document': driver.id_document,
+            'vehicle_document': driver.vehicle_document,
+            'rejection_reason': driver.rejection_reason,
+            'current_lat': driver.current_lat,
+            'current_lng': driver.current_lng,
+            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+            'created_at': driver.created_at.isoformat(),
+            'updated_at': driver.updated_at.isoformat() if driver.updated_at else None
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver details: {e}")
+        return jsonify({'error': 'Failed to fetch driver details'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/approve', methods=['POST'])
+def approve_driver(driver_id):
+    """Approve driver application and send notification"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        driver.is_approved = True
+        driver.approval_status = 'approved'
+        driver.approved_at = datetime.utcnow()
+        driver.is_active = True  # Activate driver when approved
+        driver.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Send approval notification via driver bot
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                approval_message = f"""
+🎉 *DRIVER APPLICATION APPROVED!*
+
+Congratulations {driver.name}! Your application has been approved.
+
+✅ *Account Status: ACTIVE*
+🚚 *You can now receive delivery orders*
+
+📍 *Next Steps:*
+1. Share your live location to receive orders
+2. Keep your availability status updated
+3. Accept orders promptly when assigned
+
+📱 *Quick Commands:*
+• /status - Check your status
+• /location - Share location
+• /orders - View active orders
+• /toggle - Change availability
+
+Welcome to the ET-FOOD delivery team! 🏍️
+"""
+                send_driver_message(driver.telegram_user_id, approval_message)
+            except Exception as e:
+                logger.error(f"Failed to send approval notification: {e}")
+        
+        return jsonify({'success': True, 'message': 'Driver approved successfully'})
+    except Exception as e:
+        logger.error(f"Error approving driver: {e}")
+        return jsonify({'error': 'Failed to approve driver'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/reject', methods=['POST'])
+def reject_driver_application(driver_id):
+    """Reject driver application with reason"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        data = request.get_json()
+        
+        driver.is_approved = False
+        driver.approval_status = 'rejected'
+        driver.rejection_reason = data.get('reason', 'Application rejected by admin')
+        driver.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Send rejection notification via driver bot
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                rejection_message = f"""
+❌ *Application Status Update*
+
+Your driver application has been rejected.
+
+*Reason:* {driver.rejection_reason}
+
+📞 *Next Steps:*
+• Contact support for clarification
+• Address the issues mentioned
+• Reapply when requirements are met
+
+Contact admin for more information.
+"""
+                send_driver_message(driver.telegram_user_id, rejection_message)
+            except Exception as e:
+                logger.error(f"Failed to send rejection notification: {e}")
+        
+        return jsonify({'success': True, 'message': 'Driver application rejected'})
+    except Exception as e:
+        logger.error(f"Error rejecting driver: {e}")
+        return jsonify({'error': 'Failed to reject driver'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/orders', methods=['GET'])
+def get_driver_active_orders(driver_id):
+    """Get active orders assigned to specific driver"""
+    try:
+        orders = Order.query.filter_by(driver_id=driver_id).filter(
+            Order.status.in_(['confirmed', 'preparing', 'out_for_delivery'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        return jsonify([{
+            'id': order.id,
+            'customer_name': order.customer_name,
+            'customer_phone': order.customer_phone,
+            'customer_address': order.customer_address,
+            'total_amount': order.total_amount,
+            'payment_method': order.payment_method,
+            'status': order.status,
+            'location_lat': order.location_lat,
+            'location_lng': order.location_lng,
+            'delivery_notes': order.delivery_notes,
+            'created_at': order.created_at.isoformat(),
+            'updated_at': order.updated_at.isoformat(),
+            'items': order.items
+        } for order in orders])
+    except Exception as e:
+        logger.error(f"Error fetching driver orders: {e}")
+        return jsonify({'error': 'Failed to fetch driver orders'}), 500
+
+@app.route('/api/drivers/telegram/<int:telegram_user_id>/orders', methods=['GET'])
+def get_driver_orders_by_telegram_id(telegram_user_id):
+    """Get orders for driver by Telegram user ID (for driver panel)"""
+    try:
+        driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        orders = Order.query.filter_by(driver_id=driver.id).filter(
+            Order.status.in_(['confirmed', 'preparing', 'out_for_delivery'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        return jsonify([{
+            'id': order.id,
+            'customer_name': order.customer_name,
+            'customer_phone': order.customer_phone,
+            'customer_address': order.customer_address,
+            'total_amount': order.total_amount,
+            'payment_method': order.payment_method,
+            'status': order.status,
+            'location_lat': order.location_lat,
+            'location_lng': order.location_lng,
+            'delivery_notes': order.delivery_notes,
+            'created_at': order.created_at.isoformat(),
+            'items': order.items
+        } for order in orders])
+    except Exception as e:
+        logger.error(f"Error fetching driver orders by telegram ID: {e}")
+        return jsonify({'error': 'Failed to fetch driver orders'}), 500
+
+@app.route('/api/drivers/statistics', methods=['GET'])
+def get_driver_statistics():
+    """Get comprehensive driver statistics for admin dashboard"""
+    try:
+        total_drivers = Driver.query.count()
+        active_drivers = Driver.query.filter_by(is_active=True).count()
+        approved_drivers = Driver.query.filter_by(is_approved=True).count()
+        pending_drivers = Driver.query.filter_by(is_approved=False, approval_status='pending').count()
+        available_drivers = Driver.query.filter_by(is_active=True, is_available=True).count()
+        busy_drivers = Driver.query.filter_by(is_active=True, is_available=False).count()
+        
+        # Online drivers (with recent location updates within 10 minutes)
+        from datetime import datetime, timedelta
+        ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
+        online_drivers = Driver.query.filter(
+            Driver.is_active == True,
+            Driver.last_location_update >= ten_minutes_ago
+        ).count()
+        
+        offline_drivers = total_drivers - online_drivers
+        
+        return jsonify({
+            'total': total_drivers,
+            'active': active_drivers,
+            'approved': approved_drivers,
+            'pending': pending_drivers,
+            'available': available_drivers,
+            'busy': busy_drivers,
+            'online': online_drivers,
+            'offline': offline_drivers
+        })
+    except Exception as e:
+        logger.error(f"Error fetching driver statistics: {e}")
+        return jsonify({'error': 'Failed to fetch driver statistics'}), 500
+
+

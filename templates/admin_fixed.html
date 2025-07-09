@@ -1089,25 +1089,57 @@
         }
 
         function loadEnhancedDriverStatistics() {
-            fetch('/api/drivers')
+            // Use the enhanced statistics API
+            fetch('/api/drivers/statistics')
                 .then(response => response.json())
-                .then(drivers => {
-                    const totalDrivers = drivers.length;
-                    const onlineDrivers = drivers.filter(d => d.is_active && d.last_location_update && 
-                        new Date() - new Date(d.last_location_update) < 600000).length; // 10 minutes
-                    const offlineDrivers = totalDrivers - onlineDrivers;
-                    const availableDrivers = drivers.filter(d => d.is_available && d.is_active).length;
-                    const busyDrivers = drivers.filter(d => !d.is_available && d.is_active).length;
-                    const pendingDrivers = drivers.filter(d => !d.is_approved).length;
-
-                    document.getElementById('totalDrivers').textContent = totalDrivers;
-                    document.getElementById('onlineDrivers').textContent = onlineDrivers;
-                    document.getElementById('offlineDrivers').textContent = offlineDrivers;
-                    document.getElementById('availableDrivers').textContent = availableDrivers;
-                    document.getElementById('busyDrivers').textContent = busyDrivers;
-                    document.getElementById('pendingDrivers').textContent = pendingDrivers;
+                .then(stats => {
+                    const overview = stats.overview;
+                    
+                    document.getElementById('totalDrivers').textContent = overview.total_drivers;
+                    document.getElementById('onlineDrivers').textContent = overview.online_drivers;
+                    document.getElementById('offlineDrivers').textContent = overview.offline_drivers;
+                    document.getElementById('availableDrivers').textContent = overview.available_drivers;
+                    document.getElementById('busyDrivers').textContent = overview.busy_drivers;
+                    document.getElementById('pendingDrivers').textContent = overview.pending_drivers;
+                    
+                    // Update additional statistics if elements exist
+                    const activeDriversElement = document.getElementById('activeDrivers');
+                    if (activeDriversElement) {
+                        activeDriversElement.textContent = overview.active_drivers;
+                    }
+                    
+                    const newRegistrationsElement = document.getElementById('newRegistrations24h');
+                    if (newRegistrationsElement) {
+                        newRegistrationsElement.textContent = overview.new_registrations_24h;
+                    }
+                    
+                    const activeOrdersElement = document.getElementById('activeDeliveries');
+                    if (activeOrdersElement) {
+                        activeOrdersElement.textContent = stats.active_deliveries.total_active_orders;
+                    }
                 })
-                .catch(error => console.error('Error loading driver statistics:', error));
+                .catch(error => {
+                    console.error('Error loading enhanced driver statistics:', error);
+                    // Fallback to basic drivers API
+                    fetch('/api/drivers')
+                        .then(response => response.json())
+                        .then(drivers => {
+                            const totalDrivers = drivers.length;
+                            const onlineDrivers = drivers.filter(d => d.is_active && d.last_location_update && 
+                                new Date() - new Date(d.last_location_update) < 600000).length;
+                            const offlineDrivers = totalDrivers - onlineDrivers;
+                            const availableDrivers = drivers.filter(d => d.is_available && d.is_active).length;
+                            const busyDrivers = drivers.filter(d => !d.is_available && d.is_active).length;
+                            const pendingDrivers = drivers.filter(d => !d.is_approved).length;
+
+                            document.getElementById('totalDrivers').textContent = totalDrivers;
+                            document.getElementById('onlineDrivers').textContent = onlineDrivers;
+                            document.getElementById('offlineDrivers').textContent = offlineDrivers;
+                            document.getElementById('availableDrivers').textContent = availableDrivers;
+                            document.getElementById('busyDrivers').textContent = busyDrivers;
+                            document.getElementById('pendingDrivers').textContent = pendingDrivers;
+                        });
+                });
         }
 
         // 1. Driver Overview Function (Enhanced Table)
@@ -1657,29 +1689,125 @@
             window.open(mapUrl, '_blank');
         }
 
-        function initializeLiveTrackingMap() {
-            // Initialize map only if the drivers tab is visible
-            if (document.getElementById('drivers').classList.contains('active')) {
-                setTimeout(() => {
-                    const mapElement = document.getElementById('liveTrackingMap');
-                    if (mapElement && !mapElement._leaflet_map) {
-                        const map = L.map('liveTrackingMap').setView([9.145, 40.489658], 12);
-                        
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '© OpenStreetMap contributors'
-                        }).addTo(map);
-                        
-                        loadDriversOnMap(map);
-                        
-                        // Auto-refresh every 30 seconds
-                        setInterval(() => {
-                            if (document.getElementById('drivers').classList.contains('active')) {
-                                loadDriversOnMap(map);
-                            }
-                        }, 30000);
+        // Enhanced map initialization for the Live Tracking tab
+        function initializeLiveTrackingMapForTab() {
+            setTimeout(() => {
+                const mapElement = document.getElementById('liveTrackingMap');
+                if (mapElement && !mapElement._leaflet_map) {
+                    const map = L.map('liveTrackingMap').setView([9.145, 40.489658], 12);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                    
+                    mapElement._leaflet_map = map;
+                    loadDriversOnMap(map);
+                    
+                    // Auto-refresh every 30 seconds
+                    setInterval(() => {
+                        if (document.getElementById('driver-tracking-tab').classList.contains('active')) {
+                            loadDriversOnMap(map);
+                        }
+                    }, 30000);
+                }
+            }, 500);
+        }
+
+        // Helper functions for new features
+        function approveDriver(driverId) {
+            if (confirm('Approve this driver for delivery service?')) {
+                fetch(`/api/drivers/${driverId}/approve`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Driver approved successfully!');
+                        loadDriversTab();
+                    } else {
+                        alert('Failed to approve driver: ' + (data.error || 'Unknown error'));
                     }
-                }, 500);
+                })
+                .catch(error => {
+                    console.error('Error approving driver:', error);
+                    alert('Error approving driver: ' + error.message);
+                });
             }
+        }
+
+        function rejectDriver(driverId) {
+            const reason = prompt('Enter rejection reason:');
+            if (reason) {
+                fetch(`/api/drivers/${driverId}/reject`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({reason: reason})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Driver rejected successfully!');
+                        loadDriversTab();
+                    } else {
+                        alert('Failed to reject driver: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting driver:', error);
+                    alert('Error rejecting driver: ' + error.message);
+                });
+            }
+        }
+
+        function viewDriverDocuments(driverId) {
+            // Open modal to view driver documents
+            alert('Document viewer will be implemented - Driver ID: ' + driverId);
+        }
+
+        function viewDriverOrders(driverId) {
+            // Focus on the driver orders tab and filter by driver
+            document.getElementById('driver-orders-tab').click();
+            setTimeout(() => {
+                // Filter orders for specific driver
+                const orderCards = document.querySelectorAll('#driverOrdersGrid .card');
+                orderCards.forEach(card => {
+                    if (card.innerHTML.includes(`driver-${driverId}`)) {
+                        card.scrollIntoView({behavior: 'smooth'});
+                    }
+                });
+            }, 500);
+        }
+
+        function focusDriverOnMap(lat, lng, driverName) {
+            const mapElement = document.getElementById('liveTrackingMap');
+            if (mapElement && mapElement._leaflet_map) {
+                const map = mapElement._leaflet_map;
+                map.setView([lat, lng], 15);
+                
+                // Add temporary marker
+                const tempMarker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`📍 ${driverName} - Current Location`)
+                    .openPopup();
+                
+                // Remove temp marker after 5 seconds
+                setTimeout(() => {
+                    map.removeLayer(tempMarker);
+                }, 5000);
+            }
+        }
+
+        function viewDeliveryRoute(driverLat, driverLng, customerLat, customerLng) {
+            const routeUrl = `https://www.google.com/maps/dir/${driverLat},${driverLng}/${customerLat},${customerLng}`;
+            window.open(routeUrl, '_blank');
+        }
+
+        function viewOrderDetails(orderId) {
+            // Open order details in new window or modal
+            window.open(`/admin/orders/${orderId}`, '_blank');
+        }
+
+        function callDriver(phoneNumber) {
+            window.open(`tel:${phoneNumber}`);
         }
 
         function loadDriversOnMap(map) {
