@@ -1,0 +1,62 @@
+Beef Burger Normal|400.0|https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&auto=format|burgers|Delicious beef burger with classic toppings
+Beef Burger Special|460.0|https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=300&fit=crop&auto=format|burgers|Special beef burger with premium ingredients
+Chicken Burger Normal|485.0|https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop&auto=format|burgers|Tasty chicken burger with fresh vegetables
+Chicken Burger Special|540.0|/static/uploads/1751965845_Chicken_Burger_Special.jpg|burgers|Premium chicken burger with special sauce
+Beef Shawarama Large|495.0|/static/uploads/1751974703_Beef_Shawarama_Large.jpg|shawarma|Large beef shawarma with traditional spices
+Beef Shawarama Small|275.0|/static/uploads/1751974754_images_22.jpg|shawarma|Small beef shawarma perfect for light meal
+Chicken Shawarama Large|600.0|/static/uploads/1751974821_Chicken-Shawarma-7-728x1094.jpg|shawarma|Large chicken shawarma with fresh vegetables
+Chicken Shawarama Small|430.0|/static/uploads/1751977767_images_52.jpg|shawarma|Small chicken shawarma with authentic taste
+Chicken Wrap|385.0|/static/uploads/1751974872_images_23.jpg|sandwiches & wraps|Chicken wrap with fresh vegetables
+Club Sandwich|385.0|/static/uploads/1751974915_images_24.jpg|sandwiches & wraps|Classic club sandwich with layers of goodness
+Egg Sandwich|175.0|/static/uploads/1751974964_fried-egg-sandwich.webp|egg dishes & toast|Fresh egg sandwich with vegetables
+Tunna Sandwich|330.0|/static/uploads/1751975047_images_25.jpg|sandwiches & wraps|Tuna sandwich with mayo and vegetables
+Tunna Wrap|330.0|/static/uploads/1751975080_images_26.jpg|sandwiches & wraps|Tuna wrap with fresh ingredients
+Vegetable Wrap|220.0|/static/uploads/1751975114_images_27.jpg|sandwiches & wraps|Healthy vegetable wrap with fresh greens
+Ahu Wrap|300.0|/static/uploads/1751975388_images_28.jpg|sandwiches & wraps|Special Ahu wrap with unique flavors
+Chicken Pizza|600.0|https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&auto=format|pizza|Delicious chicken pizza with cheese and vegetables
+Special Pizza|650.0|https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=300&fit=crop&auto=format|pizza|Special pizza with premium toppings
+Vegetable Pizza|400.0|https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=400&h=300&fit=crop&auto=format|pizza|Vegetable pizza with fresh garden vegetables
+Pasta With Chicken|330.0|https://images.unsplash.com/photo-1611270629569-8b357cb88da9?w=400&h=300&fit=crop&auto=format|pasta|Pasta served with tender chicken pieces
+Pasta With Tomato|200.0|/static/uploads/1751975454_images_29.jpg|pasta|Classic pasta with tomato sauce
+Pasta With Tunna|295.0|/static/uploads/1751975519_images_30.jpg|pasta|Pasta with tuna and herbs
+Pasta With Vegetable|265.0|https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=400&h=300&fit=crop&auto=format|pasta|Pasta with mixed vegetables
+Borrito|440.0|https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&h=300&fit=crop&auto=format|borrito|Delicious borrito with meat and vegetables
+Borrito Fasting|385.0|/static/uploads/1751975669_images_31.jpg|borrito|Vegetarian borrito perfect for fasting
+Rice with Chicken|385.0|/static/uploads/1751975725_images_32.jpg|rice dishes|Rice served with seasoned chicken
+Rice with Tomato|240.0|https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop&auto=format|rice dishes|Rice with tomato sauce and herbs
+Rice with Tunna|360.0|https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&h=300&fit=crop&auto=format|rice dishes|Rice with tuna and vegetables
+Rice with Vegetable|280.0|/static/uploads/1751975777_Easy-Mixed-Vegetable-Rice-Sq-Pic.jpg|rice dishes|Rice with mixed vegetables
+Egg Crumble|165.0|/static/uploads/1751975863_images_33.jpg|egg dishes & toast|Scrambled eggs with spices
+Egg Sandwich|175.0|/static/uploads/1751975907_fried-egg-sandwich_1.webp|egg dishes & toast|Fresh egg sandwich with vegetables
+Egg Silse|250.0|/static/uploads/1751975959_Screen-Shot-2015-08-14-at-5.39.07-PM.webp|egg dishes & toast|Ethiopian style egg dish
+Egg With Avocado|180.0|/static/uploads/1751976095_Avocado-Egg-Salad-Sandwich-Recipe-Piping-Pot-Curry.webp|egg dishes & toast|Egg served with fresh avocado
+Omlet|200.0|/static/uploads/1751976139_images_34.jpg|egg dishes & toast|Fluffy omelet with herbs
+French Toast|180.0|/static/uploads/1751976198_ALR-recipe-16895-fluffy-french-toast-hero-01-ddmfs-4x3-7fd61e054f2c4f0f868b7ab0dd8767ae.jpg|egg dishes & toast|Classic French toast with syrup
+Boiled Egg With Avocado|200.0|/static/uploads/1751976242_images_35.jpg|egg dishes & toast|Boiled egg with fresh avocado
+Avocado Toast Normal|200.0|/static/uploads/1751976307_IMG_0282-scaled-1.jpg|egg dishes & toast|Avocado toast with herbs
+Avocado Toast Special|220.0|/static/uploads/1751976345_images_36.jpg|egg dishes & toast|Special avocado toast with premium toppings
+Avocado with Tunna|265.0|/static/uploads/1751976398_images_37.jpg|egg dishes & toast|Avocado with tuna combination
+French Fries|110.0|https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=300&fit=crop&auto=format|fries & pancakes|Crispy golden french fries
+Pan Cake|240.0|https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&auto=format|fries & pancakes|Fluffy pancakes with syrup
+Wafil Kuckis|175.0|/static/uploads/1751976469_images_38.jpg|fries & pancakes|Waffle cookies with sweet topping
+Ahu Wafil|275.0|https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=400&h=300&fit=crop&auto=format|fries & pancakes|Special Ahu waffle with unique flavors
+Ahu Special Breakfast|330.0|/static/uploads/1751976624_vegan-breakfast.jpg|traditional ethiopian breakfast|Special Ethiopian breakfast combination
+Ahu Special Ertib|275.0|/static/uploads/1751976726_images_39.jpg|traditional ethiopian breakfast|Special Ethiopian bread with honey
+Half Half Chechebsa|200.0|/static/uploads/1751976801_images_41.jpg|traditional ethiopian breakfast|Half portion of traditional chechebsa
+Normal Ertib|165.0|/static/uploads/1751976758_images_40.jpg|traditional ethiopian breakfast|Traditional Ethiopian bread
+Normal Fetira|175.0|/static/uploads/1751977075_images_42.jpg|traditional ethiopian breakfast|Traditional Ethiopian fetira
+Normal Foul|185.0|/static/uploads/1751977114_images_45.jpg|traditional ethiopian breakfast|Traditional Ethiopian foul
+Special Chechebsa|240.0|/static/uploads/1751977000_images_44.jpg|traditional ethiopian breakfast|Special version of traditional chechebsa
+Special Ertib|180.0|/static/uploads/1751977044_images_39.jpg|traditional ethiopian breakfast|Special Ethiopian bread with extras
+Special Fetira|240.0|/static/uploads/1751976940_images_43.jpg|traditional ethiopian breakfast|Special Ethiopian fetira with toppings
+Special Foul|200.0|/static/uploads/1751977211_foul-at-no-name-cafe.jpg|traditional ethiopian breakfast|Special Ethiopian foul with extras
+Yefurno Chechebsa|175.0|/static/uploads/1751977272_chechebsa-berbere-kibe-breakfast-ethiopian-food-109485315.webp|traditional ethiopian breakfast|Oven-baked Ethiopian chechebsa
+Yeteff Chechebsa|185.0|/static/uploads/1751977322_teff-chechebsa.jpg|traditional ethiopian breakfast|Spiced Ethiopian chechebsa
+Extra Avocado|30.0|/static/uploads/1751977366_images_46.jpg|extras|Additional avocado topping
+Extra Bread|20.0|/static/uploads/1751977409_images_47.jpg|extras|Additional bread portion
+Extra Catchup|25.0|/static/uploads/1751977444_images_48.jpg|extras|Additional ketchup sauce
+Extra Cheese|40.0|/static/uploads/1751977528_images_49.jpg|extras|Additional cheese topping
+Extra Honey|25.0|/static/uploads/1751977562_Basically-HONEY.webp|extras|Additional honey drizzle
+Extra Kita/Melewa|25.0|/static/uploads/1751977597_maxresdefault_1.jpg|extras|Additional traditional bread
+Extra Mionise|50.0|/static/uploads/1751977628_images_50.jpg|extras|Additional mayonnaise
+Extra Tunna|70.0|/static/uploads/1751977663_images_51.jpg|extras|Additional tuna portion
