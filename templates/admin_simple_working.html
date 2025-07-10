@@ -6,6 +6,7 @@
     <title>ET-FOOD Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         .sidebar {
             min-height: 100vh;
@@ -199,10 +200,52 @@
                 <div id="drivers-tab" class="tab-content">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h3>Drivers Management</h3>
-                        <button class="btn btn-primary" onclick="addDriver()">
-                            <i class="fas fa-plus"></i> Add Driver
-                        </button>
+                        <div>
+                            <button class="btn btn-success me-2" onclick="showLiveTrackingMap()">
+                                <i class="fas fa-map-marker-alt"></i> Live Tracking Map
+                            </button>
+                            <button class="btn btn-primary" onclick="addDriver()">
+                                <i class="fas fa-plus"></i> Add Driver
+                            </button>
+                        </div>
                     </div>
+                    
+                    <!-- Live Driver Status Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-primary">Total Drivers</h5>
+                                    <h3 id="totalDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-success">Online</h5>
+                                    <h3 id="onlineDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-info">Available</h5>
+                                    <h3 id="availableDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-warning">Busy</h5>
+                                    <h3 id="busyDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="table-container">
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -212,15 +255,33 @@
                                         <th>Phone</th>
                                         <th>Vehicle</th>
                                         <th>Status</th>
+                                        <th>Availability</th>
+                                        <th>Location</th>
+                                        <th>Last Update</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="driversTableBody">
                                     <tr>
-                                        <td colspan="5" class="text-center">Loading drivers...</td>
+                                        <td colspan="8" class="text-center">Loading drivers...</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Live Tracking Map Modal -->
+                <div class="modal fade" id="liveTrackingModal" tabindex="-1">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Live Driver Tracking</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="liveTrackingMap" style="height: 500px; width: 100%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,6 +290,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Tab navigation
         document.addEventListener('DOMContentLoaded', function() {
@@ -427,31 +489,76 @@
             fetch('/api/drivers')
                 .then(response => response.json())
                 .then(drivers => {
+                    updateDriverStatistics(drivers);
                     const tbody = document.getElementById('driversTableBody');
                     tbody.innerHTML = '';
                     
                     if (drivers.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No drivers found</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No drivers found</td></tr>';
                         return;
                     }
                     
                     drivers.forEach(driver => {
                         const row = document.createElement('tr');
+                        const statusBadge = driver.is_active ? 
+                            '<span class="badge bg-success">Active</span>' : 
+                            '<span class="badge bg-danger">Inactive</span>';
+                        
+                        const availabilityBadge = driver.is_available ? 
+                            '<span class="badge bg-info">Available</span>' : 
+                            '<span class="badge bg-warning">Busy</span>';
+                        
+                        const locationInfo = driver.current_lat && driver.current_lng ? 
+                            `<button class="btn btn-sm btn-outline-info" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                                <i class="fas fa-map-marker-alt"></i> View
+                            </button>` : 
+                            '<span class="text-muted">No Location</span>';
+                        
+                        const lastUpdate = driver.location_updated_at ? 
+                            new Date(driver.location_updated_at).toLocaleString() : 
+                            'Never';
+                        
                         row.innerHTML = `
                             <td>${driver.name}</td>
                             <td>${driver.phone_number}</td>
                             <td>${driver.vehicle_type}</td>
-                            <td><span class="badge bg-${driver.is_active ? 'success' : 'danger'}">${driver.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>${statusBadge}</td>
+                            <td>${availabilityBadge}</td>
+                            <td>${locationInfo}</td>
+                            <td><small>${lastUpdate}</small></td>
                             <td>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="toggleDriverStatus(${driver.id})" title="Toggle Active/Inactive">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="toggleDriverAvailability(${driver.id})" title="Toggle Available/Busy">
+                                        <i class="fas fa-user-clock"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="requestDriverLocation(${driver.id})" title="Request Location">
+                                        <i class="fas fa-location-arrow"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})" title="Delete Driver">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         `;
                         tbody.appendChild(row);
                     });
                 })
                 .catch(error => console.error('Error loading drivers:', error));
+        }
+
+        function updateDriverStatistics(drivers) {
+            const total = drivers.length;
+            const online = drivers.filter(d => d.is_active).length;
+            const available = drivers.filter(d => d.is_active && d.is_available).length;
+            const busy = drivers.filter(d => d.is_active && !d.is_available).length;
+            
+            document.getElementById('totalDriversCount').textContent = total;
+            document.getElementById('onlineDriversCount').textContent = online;
+            document.getElementById('availableDriversCount').textContent = available;
+            document.getElementById('busyDriversCount').textContent = busy;
         }
 
         // Helper functions
@@ -705,6 +812,167 @@
                     });
             }
         }
+
+        // Live Tracking Functions
+        function showLiveTrackingMap() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const modal = new bootstrap.Modal(document.getElementById('liveTrackingModal'));
+                    modal.show();
+                    
+                    // Initialize map after modal is shown
+                    setTimeout(() => initializeLiveTrackingMap(drivers), 300);
+                })
+                .catch(error => {
+                    console.error('Error loading drivers for map:', error);
+                    alert('Error loading driver locations');
+                });
+        }
+
+        function initializeLiveTrackingMap(drivers) {
+            // Center on Addis Ababa
+            const map = L.map('liveTrackingMap').setView([9.047658, 38.741143], 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add restaurant marker
+            L.marker([9.047658, 38.741143])
+                .addTo(map)
+                .bindPopup('<b>ET-FOOD Restaurant</b><br>Main Location')
+                .openPopup();
+            
+            // Add driver markers
+            drivers.forEach(driver => {
+                if (driver.current_lat && driver.current_lng) {
+                    const icon = L.divIcon({
+                        html: `<div style="background: ${driver.is_available ? '#28a745' : '#ffc107'}; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white;"><i class="fas fa-motorcycle"></i></div>`,
+                        className: 'custom-driver-marker',
+                        iconSize: [30, 30]
+                    });
+                    
+                    L.marker([driver.current_lat, driver.current_lng], {icon})
+                        .addTo(map)
+                        .bindPopup(`
+                            <b>${driver.name}</b><br>
+                            Vehicle: ${driver.vehicle_type}<br>
+                            Status: ${driver.is_active ? 'Active' : 'Inactive'}<br>
+                            Availability: ${driver.is_available ? 'Available' : 'Busy'}<br>
+                            Last Update: ${driver.location_updated_at ? new Date(driver.location_updated_at).toLocaleString() : 'Never'}
+                        `);
+                }
+            });
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                fetch('/api/drivers')
+                    .then(response => response.json())
+                    .then(updatedDrivers => {
+                        // Clear existing markers except restaurant
+                        map.eachLayer(layer => {
+                            if (layer instanceof L.Marker && layer.getPopup() && !layer.getPopup().getContent().includes('ET-FOOD Restaurant')) {
+                                map.removeLayer(layer);
+                            }
+                        });
+                        
+                        // Re-add driver markers with updated positions
+                        updatedDrivers.forEach(driver => {
+                            if (driver.current_lat && driver.current_lng) {
+                                const icon = L.divIcon({
+                                    html: `<div style="background: ${driver.is_available ? '#28a745' : '#ffc107'}; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid white;"><i class="fas fa-motorcycle"></i></div>`,
+                                    className: 'custom-driver-marker',
+                                    iconSize: [30, 30]
+                                });
+                                
+                                L.marker([driver.current_lat, driver.current_lng], {icon})
+                                    .addTo(map)
+                                    .bindPopup(`
+                                        <b>${driver.name}</b><br>
+                                        Vehicle: ${driver.vehicle_type}<br>
+                                        Status: ${driver.is_active ? 'Active' : 'Inactive'}<br>
+                                        Availability: ${driver.is_available ? 'Available' : 'Busy'}<br>
+                                        Last Update: ${driver.location_updated_at ? new Date(driver.location_updated_at).toLocaleString() : 'Never'}
+                                    `);
+                            }
+                        });
+                    })
+                    .catch(error => console.error('Error updating map:', error));
+            }, 30000);
+        }
+
+        function viewDriverLocation(lat, lng, driverName) {
+            const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+            window.open(googleMapsUrl, '_blank');
+        }
+
+        function toggleDriverStatus(driverId) {
+            fetch(`/api/drivers/${driverId}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadDrivers(); // Refresh the table
+                    alert('Driver status updated successfully!');
+                } else {
+                    alert('Error updating driver status: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling driver status:', error);
+                alert('Error updating driver status');
+            });
+        }
+
+        function toggleDriverAvailability(driverId) {
+            fetch(`/api/drivers/${driverId}/availability`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadDrivers(); // Refresh the table
+                    alert('Driver availability updated successfully!');
+                } else {
+                    alert('Error updating driver availability: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling driver availability:', error);
+                alert('Error updating driver availability');
+            });
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Location request sent to driver successfully!');
+                    setTimeout(() => loadDrivers(), 5000); // Refresh after 5 seconds
+                } else {
+                    alert('Error requesting driver location: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting driver location:', error);
+                alert('Error requesting driver location');
+            });
+        }
+
+        // Auto-refresh drivers table every 30 seconds when on drivers tab
+        setInterval(() => {
+            if (document.getElementById('drivers-tab').classList.contains('active')) {
+                loadDrivers();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
