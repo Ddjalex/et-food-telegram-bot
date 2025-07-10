@@ -900,35 +900,105 @@ def handle_delivery_complete(chat_id, order_id):
             
             send_driver_message(chat_id, message, keyboard=keyboard)
             
-            # Notify customer
-            customer_message = f"🎉 *Order Delivered Successfully!*\n\n"
-            customer_message += f"📋 Order #{order_id}\n"
-            customer_message += f"🚗 Driver: {driver.name}\n"
-            customer_message += f"✅ Your order has been delivered!\n\n"
-            customer_message += f"⏰ Delivery time: {delivery_duration}\n"
-            customer_message += f"💰 Total paid: {order.total_amount:.2f} ETB\n\n"
-            customer_message += f"🌟 Thank you for choosing ET-FOOD!\n"
-            customer_message += f"📝 We'd love your feedback on the service."
+            # Notify customer with detailed delivery confirmation
+            customer_message = f"🎉 *Your Order Has Been Delivered Successfully!*\n\n"
+            customer_message += f"📋 **Order #{order_id}**\n"
+            customer_message += f"🚗 **Driver:** {driver.name}\n"
+            customer_message += f"✅ **Status:** Delivered\n"
+            customer_message += f"💰 **Total:** {order.total_amount:.2f} ETB\n"
+            customer_message += f"💳 **Payment:** {order.payment_method}\n"
+            if delivery_duration:
+                customer_message += f"⏰ **Delivery Time:** {delivery_duration}\n"
+            customer_message += f"🕐 **Completed At:** {order.delivery_time.strftime('%I:%M %p')}\n\n"
+            customer_message += f"🌟 **Thank you for choosing ET-FOOD!**\n"
+            customer_message += f"📝 We'd love to hear your feedback about this order.\n"
+            customer_message += f"⭐ Rate your experience and help us improve our service!"
             
-            send_message(order.telegram_user_id, customer_message)
+            # Add customer feedback buttons
+            customer_keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "⭐⭐⭐⭐⭐ Excellent",
+                            "callback_data": f"rate_order_{order_id}_5"
+                        },
+                        {
+                            "text": "⭐⭐⭐⭐ Good",
+                            "callback_data": f"rate_order_{order_id}_4"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "⭐⭐⭐ Average",
+                            "callback_data": f"rate_order_{order_id}_3"
+                        },
+                        {
+                            "text": "⭐⭐ Poor",
+                            "callback_data": f"rate_order_{order_id}_2"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📝 Leave Feedback",
+                            "callback_data": f"feedback_{order_id}"
+                        }
+                    ]
+                ]
+            }
             
-            # Notify admin
-            admin_message = f"✅ *Delivery Completed*\n\n"
-            admin_message += f"📋 Order #{order_id}\n"
-            admin_message += f"🚗 Driver: {driver.name}\n"
-            admin_message += f"👤 Customer: {order.customer_name}\n"
-            admin_message += f"📞 Phone: {order.customer_phone}\n"
-            admin_message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
-            admin_message += f"📍 Status: Delivered\n\n"
-            admin_message += f"⏰ Delivery Time: {delivery_duration}\n"
-            admin_message += f"🎯 Driver is now available for new orders"
+            send_message(order.telegram_user_id, customer_message, keyboard=customer_keyboard)
+            
+            # Notify admin with comprehensive delivery report
+            admin_message = f"✅ **DELIVERY COMPLETED SUCCESSFULLY**\n\n"
+            admin_message += f"📋 **Order Details:**\n"
+            admin_message += f"• Order ID: #{order_id}\n"
+            admin_message += f"• Customer: {order.customer_name}\n"
+            admin_message += f"• Phone: {order.customer_phone}\n"
+            admin_message += f"• Address: {order.customer_address}\n"
+            admin_message += f"• Total: {order.total_amount:.2f} ETB\n"
+            admin_message += f"• Payment: {order.payment_method}\n\n"
+            admin_message += f"🚗 **Driver Information:**\n"
+            admin_message += f"• Driver: {driver.name}\n"
+            admin_message += f"• Phone: {driver.phone_number}\n"
+            admin_message += f"• Vehicle: {driver.vehicle_type}\n\n"
+            admin_message += f"⏰ **Delivery Timeline:**\n"
+            admin_message += f"• Order placed: {order.created_at.strftime('%I:%M %p')}\n"
+            if order.pickup_time:
+                admin_message += f"• Pickup completed: {order.pickup_time.strftime('%I:%M %p')}\n"
+            admin_message += f"• Delivery completed: {order.delivery_time.strftime('%I:%M %p')}\n"
+            if delivery_duration:
+                admin_message += f"• Delivery duration: {delivery_duration}\n\n"
+            admin_message += f"🎉 **Order delivered successfully!**\n"
+            admin_message += f"📊 Driver is now available for new assignments."
+            
+            # Add admin action buttons
+            admin_keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📊 View Order Details",
+                            "callback_data": f"view_order_{order_id}"
+                        },
+                        {
+                            "text": "📈 Daily Report",
+                            "callback_data": "daily_report"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🚗 Driver Status",
+                            "callback_data": f"driver_status_{driver.id}"
+                        }
+                    ]
+                ]
+            }
             
             from models import AdminUser
             admins = AdminUser.query.filter_by(is_active=True).all()
             for admin in admins:
-                send_message_to_admin(admin.telegram_user_id, admin_message)
+                send_message_to_admin(admin.telegram_user_id, admin_message, keyboard=admin_keyboard)
             
-            logger.info(f"Delivery completed for Order {order_id} by driver {driver.name}")
+            logger.info(f"Order {order_id} delivered successfully by driver {driver.name} - All notifications sent")
             return True
             
     except Exception as e:
