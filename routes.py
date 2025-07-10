@@ -492,6 +492,104 @@ def cancel_order(order_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to cancel order'}), 500
 
+@app.route('/api/orders/<int:order_id>/delete', methods=['DELETE'])
+def delete_order(order_id):
+    """Delete a specific order permanently"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Store order details for logging
+        order_info = f"Order #{order.id} - {order.customer_name}"
+        
+        db.session.delete(order)
+        db.session.commit()
+        
+        logger.info(f"Order deleted: {order_info}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order #{order_id} deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting order {order_id}: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete order'}), 500
+
+@app.route('/api/orders/clear', methods=['DELETE'])
+def clear_orders():
+    """Clear orders by date range"""
+    try:
+        data = request.get_json()
+        clear_type = data.get('type', 'all')  # all, day, week, month, year
+        reference_date = data.get('date')  # ISO date string
+        
+        if reference_date:
+            ref_date = datetime.fromisoformat(reference_date.replace('Z', '+00:00'))
+        else:
+            ref_date = datetime.utcnow()
+        
+        # Calculate date range based on clear_type
+        if clear_type == 'day':
+            start_date = ref_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date + timedelta(days=1)
+        elif clear_type == 'week':
+            # Get start of week (Monday)
+            days_since_monday = ref_date.weekday()
+            start_date = (ref_date - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date + timedelta(weeks=1)
+        elif clear_type == 'month':
+            start_date = ref_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if ref_date.month == 12:
+                end_date = start_date.replace(year=ref_date.year + 1, month=1)
+            else:
+                end_date = start_date.replace(month=ref_date.month + 1)
+        elif clear_type == 'year':
+            start_date = ref_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date.replace(year=ref_date.year + 1)
+        else:  # 'all'
+            start_date = datetime(1970, 1, 1)
+            end_date = datetime.utcnow() + timedelta(days=1)
+        
+        # Find orders in the date range
+        orders_to_delete = Order.query.filter(
+            Order.created_at >= start_date,
+            Order.created_at < end_date
+        ).all()
+        
+        count = len(orders_to_delete)
+        
+        if count == 0:
+            return jsonify({
+                'success': True,
+                'message': f'No orders found in the specified {clear_type} range',
+                'deleted_count': 0
+            })
+        
+        # Delete the orders
+        for order in orders_to_delete:
+            db.session.delete(order)
+        
+        db.session.commit()
+        
+        logger.info(f"Bulk deleted {count} orders from {clear_type} range: {start_date} to {end_date}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully deleted {count} orders from {clear_type} range',
+            'deleted_count': count,
+            'date_range': {
+                'start': start_date.isoformat(),
+                'end': end_date.isoformat(),
+                'type': clear_type
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error clearing orders: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to clear orders'}), 500
+
 @app.route('/api/drivers/live-locations')
 def get_drivers_live_locations():
     """Get all drivers with their live locations and status"""

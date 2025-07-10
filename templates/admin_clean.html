@@ -137,14 +137,37 @@
                     <div class="table-container">
                         <div class="d-flex justify-content-between mb-3">
                             <h3>Orders Management</h3>
-                            <select id="statusFilter" class="form-select w-auto">
-                                <option value="">All Orders</option>
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="preparing">Preparing</option>
-                                <option value="out_for_delivery">Out for Delivery</option>
-                                <option value="delivered">Delivered</option>
-                            </select>
+                            <div class="d-flex gap-2">
+                                <select id="statusFilter" class="form-select">
+                                    <option value="">All Orders</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="preparing">Preparing</option>
+                                    <option value="out_for_delivery">Out for Delivery</option>
+                                    <option value="delivered">Delivered</option>
+                                </select>
+                                <button class="btn btn-danger dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Clear Orders">
+                                    <i class="fas fa-trash"></i> Clear Orders
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('day')">
+                                        <i class="fas fa-calendar-day"></i> Clear Today's Orders
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('week')">
+                                        <i class="fas fa-calendar-week"></i> Clear This Week
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('month')">
+                                        <i class="fas fa-calendar-alt"></i> Clear This Month
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('year')">
+                                        <i class="fas fa-calendar"></i> Clear This Year
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="clearOrders('all')">
+                                        <i class="fas fa-exclamation-triangle"></i> Clear All Orders
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -612,6 +635,106 @@
                     });
                 })
                 .catch(error => console.error('Error loading menu items:', error));
+        }
+
+        // Load orders
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    No orders found
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+                    
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        const statusBadge = getStatusBadge(order.status);
+                        
+                        // Parse items from JSON string if needed
+                        let items = [];
+                        try {
+                            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        } catch (e) {
+                            console.error('Error parsing items for order', order.id, e);
+                            items = [];
+                        }
+                        
+                        const itemsList = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                        const truncatedItems = itemsList.length > 50 ? itemsList.substring(0, 50) + '...' : itemsList;
+                        
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td title="${itemsList}">${truncatedItems}</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>${statusBadge}</td>
+                            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="manuallyAssignDriver(${order.id})" title="Assign Driver">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'pending')">
+                                            <i class="fas fa-clock text-warning me-2"></i>Pending
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                            <i class="fas fa-check text-success me-2"></i>Confirmed
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                            <i class="fas fa-fire text-info me-2"></i>Preparing
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')">
+                                            <i class="fas fa-truck text-primary me-2"></i>Out for Delivery
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                            <i class="fas fa-check-circle text-success me-2"></i>Delivered
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus(${order.id}, 'cancelled')">
+                                            <i class="fas fa-times text-danger me-2"></i>Cancel
+                                        </a></li>
+                                    </ul>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})" title="Delete Order">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        }
+
+        // Helper function to get status badge
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'confirmed': '<span class="badge bg-success">Confirmed</span>',
+                'preparing': '<span class="badge bg-info">Preparing</span>',
+                'out_for_delivery': '<span class="badge bg-primary">Out for Delivery</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
         }
 
         // Load categories
@@ -1364,6 +1487,264 @@
                             loadMenuItems();
                         }
                     });
+            }
+        }
+
+        // Order management functions
+        function deleteOrder(orderId) {
+            if (confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+                fetch(`/api/orders/${orderId}/delete`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order deleted successfully!');
+                        loadOrders();
+                    } else {
+                        alert('Error deleting order: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting order:', error);
+                    alert('Error deleting order');
+                });
+            }
+        }
+
+        function clearOrders(type) {
+            let confirmMessage;
+            let typeLabel;
+            
+            switch(type) {
+                case 'day':
+                    confirmMessage = 'Are you sure you want to delete all orders from today?';
+                    typeLabel = 'today\'s orders';
+                    break;
+                case 'week':
+                    confirmMessage = 'Are you sure you want to delete all orders from this week?';
+                    typeLabel = 'this week\'s orders';
+                    break;
+                case 'month':
+                    confirmMessage = 'Are you sure you want to delete all orders from this month?';
+                    typeLabel = 'this month\'s orders';
+                    break;
+                case 'year':
+                    confirmMessage = 'Are you sure you want to delete all orders from this year?';
+                    typeLabel = 'this year\'s orders';
+                    break;
+                case 'all':
+                    confirmMessage = 'WARNING: This will delete ALL orders permanently!\n\nAre you absolutely sure?';
+                    typeLabel = 'all orders';
+                    break;
+                default:
+                    return;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // Show loading state
+                const originalBtn = event.target.closest('.btn');
+                const originalText = originalBtn.innerHTML;
+                originalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                originalBtn.disabled = true;
+                
+                fetch('/api/orders/clear', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        date: new Date().toISOString()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully deleted ${data.deleted_count} orders from ${typeLabel}`);
+                        loadOrders();
+                    } else {
+                        alert('Error clearing orders: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing orders:', error);
+                    alert('Error clearing orders');
+                })
+                .finally(() => {
+                    // Restore button state
+                    originalBtn.innerHTML = originalText;
+                    originalBtn.disabled = false;
+                });
+            }
+        }
+
+        // Tab navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tab = this.getAttribute('data-tab');
+                loadTabContent(tab);
+            });
+        });
+
+        function loadTabContent(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Load content based on tab
+            if (tabName === 'dashboard') {
+                loadDashboardData();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'menu') {
+                loadMenuItems();
+            } else if (tabName === 'categories') {
+                loadCategories();
+            } else if (tabName === 'drivers') {
+                loadDrivers();
+                startDriversAutoRefresh();
+            } else {
+                stopDriversAutoRefresh();
+            }
+        }
+
+        // Missing order management functions
+        function viewOrderDetails(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    if (order.error) {
+                        alert('Error loading order details: ' + order.error);
+                        return;
+                    }
+                    
+                    // Parse items
+                    let items = [];
+                    try {
+                        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                    } catch (e) {
+                        console.error('Error parsing items:', e);
+                        items = [];
+                    }
+                    
+                    const itemsList = items.map(item => `• ${item.name} (x${item.quantity}) - ETB ${(item.price * item.quantity).toFixed(2)}`).join('\n');
+                    
+                    const orderDetails = `
+ORDER #${order.id} DETAILS
+
+Customer: ${order.customer_name}
+Phone: ${order.customer_phone}
+Email: ${order.customer_email || 'N/A'}
+Address: ${order.customer_address}
+
+Items:
+${itemsList}
+
+Total: ETB ${order.total_amount.toFixed(2)}
+Payment: ${order.payment_method}
+Status: ${order.status}
+
+Transaction ID: ${order.transaction_id || 'N/A'}
+
+Created: ${new Date(order.created_at).toLocaleString()}
+Updated: ${new Date(order.updated_at).toLocaleString()}
+                    `;
+                    
+                    alert(orderDetails);
+                })
+                .catch(error => {
+                    console.error('Error loading order details:', error);
+                    alert('Error loading order details');
+                });
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            if (confirm(`Change order status to "${newStatus}"?`)) {
+                fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status: newStatus})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order status updated successfully!');
+                        loadOrders();
+                    } else {
+                        alert('Error updating order status: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating order status:', error);
+                    alert('Error updating order status');
+                });
+            }
+        }
+
+        async function manuallyAssignDriver(orderId) {
+            try {
+                const response = await fetch('/api/orders/' + orderId + '/available-drivers');
+                const drivers = await response.json();
+                
+                const availableDrivers = drivers.filter(driver => 
+                    driver.is_active && driver.is_available && driver.is_approved
+                );
+                
+                if (availableDrivers.length === 0) {
+                    alert('No available drivers found. Please ensure drivers are active and available.');
+                    return;
+                }
+                
+                // Simple driver selection for now
+                const driverNames = availableDrivers.map((driver, index) => 
+                    `${index + 1}. ${driver.name} (${driver.vehicle_type}) - ${driver.phone_number}`
+                ).join('\n');
+                
+                const selection = prompt(`Select driver (enter number):\n\n${driverNames}`);
+                
+                if (selection) {
+                    const driverIndex = parseInt(selection) - 1;
+                    if (driverIndex >= 0 && driverIndex < availableDrivers.length) {
+                        const selectedDriver = availableDrivers[driverIndex];
+                        
+                        fetch(`/api/orders/${orderId}/manual-assign-driver`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({driver_id: selectedDriver.id})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(`Driver ${selectedDriver.name} successfully assigned to Order #${orderId}`);
+                                loadOrders();
+                            } else {
+                                alert(`Error assigning driver: ${data.message}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error assigning driver:', error);
+                            alert('Error assigning driver');
+                        });
+                    } else {
+                        alert('Invalid selection');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error loading drivers:', error);
+                alert('Error loading available drivers');
             }
         }
 
