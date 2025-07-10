@@ -362,7 +362,7 @@ def update_order_status(order_id):
                 
                 def find_drivers_with_context():
                     """Function to run driver search with Flask app context"""
-                    with current_app.app_context():
+                    with app.app_context():
                         workflow_manager.find_nearby_drivers(order_id)
                 
                 # Start driver search in background to avoid blocking the response
