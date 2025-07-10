@@ -1310,8 +1310,21 @@ def setup_driver_webhook(flask_app):
                 logger.error(f"Error processing driver webhook: {e}")
                 return jsonify({'error': str(e)}), 500
         
-        # Set webhook
-        set_driver_webhook()
+        # Set webhook with delay to allow host resolution
+        import threading
+        import time
+        
+        def delayed_webhook_setup():
+            """Set up webhook after a delay to ensure host resolution"""
+            time.sleep(3)  # Wait 3 seconds for host to be ready
+            success = set_driver_webhook()
+            if not success:
+                logger.warning("Driver webhook setup failed, but continuing with application startup")
+        
+        # Start webhook setup in background thread
+        webhook_thread = threading.Thread(target=delayed_webhook_setup)
+        webhook_thread.daemon = True
+        webhook_thread.start()
 
 def handle_driver_text_message(chat_id, text):
     """Handle text messages from drivers"""
@@ -1952,8 +1965,21 @@ def send_driver_help_message_old(chat_id):
     send_driver_help_message(chat_id)
 
 def set_driver_webhook():
-    """Set webhook for driver bot"""
-    webhook_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-webhook"
+    """Set webhook for driver bot with retry mechanism"""
+    import time
+    
+    # Get webhook URL with fallback support
+    replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    
+    if replit_domain:
+        webhook_url = f"https://{replit_domain}/driver-webhook"
+    elif render_url:
+        webhook_url = f"{render_url}/driver-webhook"
+    else:
+        logger.error("No webhook domain available (REPLIT_DEV_DOMAIN or RENDER_EXTERNAL_URL)")
+        return False
+    
     url = f"https://api.telegram.org/bot{DRIVER_BOT_TOKEN}/setWebhook"
     
     data = {
@@ -1961,14 +1987,33 @@ def set_driver_webhook():
         'allowed_updates': ['message', 'callback_query']
     }
     
-    try:
-        response = requests.post(url, data=data)
-        if response.status_code == 200:
-            logger.info(f"Driver bot webhook set successfully: {webhook_url}")
-        else:
-            logger.error(f"Failed to set driver webhook: {response.text}")
-    except Exception as e:
-        logger.error(f"Error setting driver webhook: {e}")
+    # Add delay and retry mechanism for host resolution
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # Add delay before webhook setup to allow host resolution
+            if attempt > 0:
+                logger.info(f"Retrying driver webhook setup (attempt {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+            
+            response = requests.post(url, data=data, timeout=10)
+            if response.status_code == 200:
+                logger.info(f"Driver bot webhook set successfully: {webhook_url}")
+                return True
+            else:
+                logger.warning(f"Failed to set driver webhook (attempt {attempt + 1}): {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Network error setting driver webhook (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                logger.error(f"Failed to set driver webhook after {max_retries} attempts: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error setting driver webhook: {e}")
+            break
+    
+    return False
 
 # Integration function for main system
 def handle_manual_phone_input(chat_id, phone_text):
