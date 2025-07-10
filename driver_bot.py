@@ -1317,6 +1317,14 @@ def setup_driver_webhook(flask_app):
         def delayed_webhook_setup():
             """Set up webhook after a delay to ensure host resolution"""
             time.sleep(3)  # Wait 3 seconds for host to be ready
+            
+            # Check if we're in production (Render) environment
+            if os.environ.get('RENDER_EXTERNAL_URL'):
+                # Production environment - webhook should already be set
+                logger.info("Production environment detected - webhook handled by production setup")
+                return
+            
+            # Development environment - attempt to set webhook
             success = set_driver_webhook()
             if not success:
                 logger.warning("Driver webhook setup failed, but continuing with application startup")
@@ -1469,8 +1477,16 @@ def send_driver_welcome_message(chat_id, driver=None):
             message += f"🔴 You MUST share live location to receive orders\n\n"
             message += f"⚠️ **IMPORTANT**: Like BeU delivery system, you must share your live location to receive nearby orders!\n\n"
         
-        # Create WebApp URL for driver panel
-        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={chat_id}"
+        # Create WebApp URL for driver panel with environment detection
+        render_url = os.environ.get('RENDER_EXTERNAL_URL')
+        replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
+        
+        if render_url:
+            webapp_url = f"{render_url}/driver-panel?driver_id={chat_id}"
+        elif replit_domain:
+            webapp_url = f"https://{replit_domain}/driver-panel?driver_id={chat_id}"
+        else:
+            webapp_url = f"https://et-food-telegram-bot.onrender.com/driver-panel?driver_id={chat_id}"
         
         if location_active:
             keyboard = {
