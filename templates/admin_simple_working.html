@@ -89,7 +89,7 @@
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Admin Dashboard</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="location.reload(true)">
                             <i class="fas fa-sync"></i> Refresh
                         </button>
                     </div>
@@ -305,6 +305,9 @@
                     showTab(tab);
                 });
             });
+            
+            // Force refresh on page load to clear cache
+            console.log('Admin dashboard loaded - version 2.0');
         });
 
         function showTab(tabName) {
@@ -380,6 +383,7 @@
                     }
                     
                     orders.forEach(order => {
+                        console.log('Processing order:', order.id, 'Status:', order.status); // Debug log
                         const row = document.createElement('tr');
                         let items = [];
                         try {
@@ -407,7 +411,14 @@
                                         <button class="btn btn-sm btn-outline-success" onclick="confirmOrder(${order.id})" title="Confirm Order">
                                             <i class="fas fa-check"></i> Confirm
                                         </button>
-                                    ` : ''}
+                                    ` : `
+                                        <button class="btn btn-sm btn-outline-warning" onclick="assignDriver(${order.id})" title="Assign Driver">
+                                            <i class="fas fa-user-plus"></i> Assign
+                                        </button>
+                                    `}
+                                    <button class="btn btn-sm btn-outline-info" onclick="alert('Order Status: ' + '${order.status}' + ' | ID: ' + ${order.id})" title="Debug Status">
+                                        <i class="fas fa-bug"></i> Debug
+                                    </button>
                                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -1040,6 +1051,26 @@
             .catch(error => {
                 console.error('Error updating order status:', error);
                 alert('Error updating order status');
+            });
+        }
+
+        function assignDriver(orderId) {
+            fetch(`/api/orders/${orderId}/find-nearby-drivers`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Nearby drivers have been notified!');
+                    loadOrders(); // Refresh the orders table
+                } else {
+                    alert('Error finding nearby drivers: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error assigning driver:', error);
+                alert('Error assigning driver');
             });
         }
 
