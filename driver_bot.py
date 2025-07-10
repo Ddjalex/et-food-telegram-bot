@@ -1427,8 +1427,7 @@ def send_driver_registration_notification(chat_id, driver_name, phone_number):
     message += f"🚀 **Next Steps:**\n"
     message += f"1️⃣ Share your location to start receiving orders\n"
     message += f"2️⃣ Keep your status as \"Available\" when ready to deliver\n"
-    message += f"3️⃣ Use /status to check your current status\n"
-    message += f"4️⃣ Use /orders to view assigned orders\n\n"
+    message += f"3️⃣ Use buttons below to manage your driver account\n\n"
     message += f"📍 **Location Sharing Required:**\n"
     message += f"• Share your location to receive nearby orders\n"
     message += f"• Location updates are needed every 10 minutes\n"
@@ -1447,6 +1446,20 @@ def send_driver_registration_notification(chat_id, driver_name, phone_number):
                 {
                     "text": "📊 Check Status",
                     "callback_data": "driver_status"
+                },
+                {
+                    "text": "📱 View Orders",
+                    "callback_data": "driver_orders"
+                }
+            ],
+            [
+                {
+                    "text": "🔄 Toggle Availability",
+                    "callback_data": "toggle_availability"
+                },
+                {
+                    "text": "💰 View Earnings",
+                    "callback_data": "driver_earnings"
                 }
             ]
         ]

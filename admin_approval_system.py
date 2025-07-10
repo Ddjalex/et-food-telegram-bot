@@ -22,10 +22,11 @@ def approve_driver(driver_id, admin_telegram_id):
         if driver.approval_status != 'pending':
             return False, f"Driver is already {driver.approval_status}"
             
-        # Update driver status
+        # Update driver status - set as AVAILABLE after approval
         driver.approval_status = 'approved'
         driver.is_approved = True
-        driver.is_available = True
+        driver.is_available = True  # Set as AVAILABLE
+        driver.is_active = True     # Set as ACTIVE
         driver.approved_by = admin_telegram_id
         driver.approved_at = db.func.now()
         
@@ -73,12 +74,9 @@ def send_driver_approval_notification(chat_id, driver_name):
     message = f"🎉 *Congratulations {driver_name}!*\n\n"
     message += f"✅ Your driver registration has been **APPROVED**!\n\n"
     message += f"🚗 You are now an official ET-FOOD delivery driver.\n"
+    message += f"📍 Make sure to share your location to receive delivery requests.\n"
     message += f"💰 You can start earning money right away!\n\n"
-    message += f"📍 **IMPORTANT - Location Sharing Required:**\n"
-    message += f"To receive delivery requests, you must share your live location.\n"
-    message += f"This helps us assign orders to the nearest available drivers.\n\n"
-    message += f"🎯 **Ready to start delivering?**\n"
-    message += f"👇 **Use the buttons below to get started:**"
+    message += f"🎯 **Ready to start delivering? Share your location now!**"
     
     keyboard = {
         "inline_keyboard": [
