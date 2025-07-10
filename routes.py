@@ -235,8 +235,9 @@ def create_order():
         db.session.add(order)
         db.session.commit()
         
-        # Process new order through workflow manager
-        process_new_order(order.id)
+        # Send real-time notification to admin
+        from real_time_admin_system import notify_admin_new_order
+        notify_admin_new_order(order.id)
         
         return jsonify({'message': 'Order created successfully', 'order_id': order.id}), 201
     

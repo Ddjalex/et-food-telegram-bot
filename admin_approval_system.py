@@ -69,35 +69,38 @@ def reject_driver(driver_id, admin_telegram_id, reason="Application does not mee
         return True, f"Driver {driver.name} rejected"
 
 def send_driver_approval_notification(chat_id, driver_name):
-    """Send driver approval notification"""
+    """Send driver approval notification with mandatory location sharing"""
     message = f"🎉 *Congratulations {driver_name}!*\n\n"
     message += f"✅ Your driver registration has been **APPROVED**!\n\n"
     message += f"🚗 You are now an official ET-FOOD delivery driver.\n"
-    message += f"📍 Make sure to share your location to receive delivery requests.\n"
     message += f"💰 You can start earning money right away!\n\n"
+    message += f"📍 **IMPORTANT - Location Sharing Required:**\n"
+    message += f"To receive delivery requests, you must share your live location.\n"
+    message += f"This helps us assign orders to the nearest available drivers.\n\n"
     message += f"📱 **Driver Commands:**\n"
     message += f"• /status - Check your status\n"
     message += f"• /toggle - Toggle availability\n"
     message += f"• /orders - View your orders\n"
     message += f"• /earnings - Check earnings\n\n"
-    message += f"🎯 **Ready to start delivering?**"
+    message += f"🎯 **Ready to start delivering?**\n"
+    message += f"👇 **First, share your location below:**"
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
-                    "text": "📍 Share Location",
-                    "callback_data": "driver_share_location"
-                },
-                {
-                    "text": "📊 My Status", 
-                    "callback_data": "driver_status"
+                    "text": "📍 Share Live Location (Required)",
+                    "callback_data": "driver_share_location_required"
                 }
             ],
             [
                 {
-                    "text": "💰 Start Earning",
-                    "callback_data": "driver_toggle_available"
+                    "text": "📊 My Status", 
+                    "callback_data": "driver_status"
+                },
+                {
+                    "text": "❓ Help",
+                    "callback_data": "driver_help"
                 }
             ]
         ]

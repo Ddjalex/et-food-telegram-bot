@@ -401,65 +401,42 @@ def send_live_location_instructions(chat_id):
     
     send_driver_message(chat_id, message, keyboard=keyboard)
 def handle_order_acceptance(driver_chat_id, order_id, message_id):
-    """Handle order acceptance by driver"""
+    """Handle order acceptance by driver and send complete customer information"""
     try:
         from models import Order, Driver
         from extensions import db
+        from enhanced_order_flow import handle_driver_order_acceptance
         
         # Find driver by telegram ID
         driver = Driver.query.filter_by(telegram_user_id=driver_chat_id).first()
         if not driver:
             send_driver_message(driver_chat_id, "❌ Driver not found in system. Please contact admin.")
-            return
+            return False
             
         # Update order status
         order = Order.query.get(order_id)
         if not order:
             send_driver_message(driver_chat_id, "❌ Order not found.")
-            return
+            return False
             
-        order.driver_id = driver.id
-        order.status = 'accepted'
-        driver.is_available = False
-        db.session.commit()
+        # Check if order is still available for assignment
+        if order.status != 'confirmed':
+            send_driver_message(driver_chat_id, f"❌ Order #{order_id} is no longer available (Status: {order.status})")
+            return False
+            
+        # Handle complete order acceptance with full customer information
+        result = handle_driver_order_acceptance(driver_chat_id, order_id)
         
-        # Send confirmation
-        message = f"✅ *Order Accepted*\n\n"
-        message += f"📋 Order #{order_id} has been accepted!\n"
-        message += f"🎯 Please proceed to ET-FOOD Kitchen to collect the order.\n\n"
-        message += f"📍 Restaurant: ET-FOOD Kitchen\n"
-        message += f"📞 Restaurant Phone: +251-911-123-456\n\n"
-        message += f"🚚 Remember to share your live location for tracking."
-        
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "📍 Share Live Location",
-                        "callback_data": f"driver_location_{order_id}"
-                    }
-                ],
-                [
-                    {
-                        "text": "📞 Call Restaurant",
-                        "callback_data": f"call_restaurant_{order_id}"
-                    },
-                    {
-                        "text": "📞 Call Customer", 
-                        "callback_data": f"call_customer_{order_id}"
-                    }
-                ]
-            ]
-        }
-        
-        send_driver_message(driver_chat_id, message, keyboard=keyboard)
-        
-        # Notify customer about acceptance
-        from bot_minimal import notify_customer_status_change
-        notify_customer_status_change(order_id, 'accepted')
+        if result:
+            logger.info(f"Order {order_id} accepted by driver {driver.name} with complete information sent")
+            return True
+        else:
+            send_driver_message(driver_chat_id, "❌ Failed to accept order. Please try again.")
+            return False
         
     except Exception as e:
         logger.error(f"Error handling order acceptance: {e}")
+        return False
 
 def handle_order_rejection(driver_chat_id, order_id, message_id):
     """Handle order rejection by driver"""
