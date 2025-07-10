@@ -744,6 +744,120 @@ def get_categories():
         logger.error(f"Error fetching categories: {e}")
         return jsonify({'error': 'Failed to fetch categories'}), 500
 
+@app.route('/api/orders/<int:order_id>/assign-driver', methods=['PUT'])
+def assign_driver_to_order(order_id):
+    """Manually assign a driver to an order"""
+    try:
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        
+        if not driver_id:
+            return jsonify({'success': False, 'message': 'Driver ID is required'}), 400
+        
+        # Get order and driver
+        order = Order.query.get_or_404(order_id)
+        driver = Driver.query.get_or_404(driver_id)
+        
+        # Check if driver is available
+        if not driver.is_active or not driver.is_available or not driver.is_approved:
+            return jsonify({
+                'success': False, 
+                'message': 'Driver is not available for assignment'
+            }), 400
+        
+        # Check if order is in correct status
+        if order.status not in ['pending', 'confirmed']:
+            return jsonify({
+                'success': False, 
+                'message': f'Order status "{order.status}" cannot be assigned to driver'
+            }), 400
+        
+        # Assign driver
+        order.driver_id = driver_id
+        order.status = 'preparing'  # Update status to preparing
+        order.updated_at = datetime.utcnow()
+        
+        # Make driver unavailable
+        driver.is_available = False
+        
+        db.session.commit()
+        
+        # Notify driver about assignment
+        try:
+            from driver_bot import send_driver_message
+            message = f"🚚 *ORDER ASSIGNED TO YOU*\n\n"
+            message += f"📋 Order #{order.id}\n"
+            message += f"👤 Customer: {order.customer_name}\n"
+            message += f"📞 Phone: {order.customer_phone}\n"
+            message += f"🏠 Address: {order.customer_address}\n"
+            message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
+            message += f"💳 Payment: {order.payment_method}\n\n"
+            message += f"*Please proceed to restaurant for pickup*"
+            
+            send_driver_message(driver.telegram_user_id, message)
+        except Exception as e:
+            logger.warning(f"Could not notify driver about assignment: {e}")
+        
+        # Notify customer about driver assignment
+        try:
+            from bot_minimal import notify_customer_status_change
+            notify_customer_status_change(order_id, 'preparing')
+        except Exception as e:
+            logger.warning(f"Could not notify customer about assignment: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Driver {driver.name} assigned to Order #{order_id}',
+            'driver_name': driver.name,
+            'driver_phone': driver.phone_number
+        })
+        
+    except Exception as e:
+        logger.error(f"Error assigning driver to order: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Failed to assign driver'}), 500
+
+@app.route('/api/orders/<int:order_id>/find-nearby-drivers', methods=['POST'])
+def find_nearby_drivers_for_order(order_id):
+    """Find and notify nearby drivers for an order"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Check if order is in correct status
+        if order.status not in ['pending', 'confirmed']:
+            return jsonify({
+                'success': False, 
+                'message': f'Order status "{order.status}" cannot be processed for driver assignment'
+            }), 400
+        
+        # Use the existing nearby driver system
+        from complete_order_workflow import OrderWorkflowManager
+        manager = OrderWorkflowManager()
+        
+        # Update order status to confirmed if pending
+        if order.status == 'pending':
+            order.status = 'confirmed'
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+        
+        # Find nearby drivers
+        success = manager.find_nearby_drivers(order_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Nearby drivers found and notified for Order #{order_id}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No nearby drivers available within 10km radius'
+            })
+        
+    except Exception as e:
+        logger.error(f"Error finding nearby drivers for order: {e}")
+        return jsonify({'success': False, 'message': 'Failed to find nearby drivers'}), 500
+
 @app.route('/api/categories', methods=['POST'])
 def create_category():
     """Create new category"""
@@ -1140,44 +1254,7 @@ def create_driver():
         logger.error(f"Error creating driver: {e}")
         return jsonify({'error': 'Failed to create driver'}), 500
 
-@app.route('/api/drivers/<int:driver_id>/assign/<int:order_id>', methods=['POST'])
-def assign_driver_to_order(driver_id, order_id):
-    """Assign driver to order"""
-    try:
-        driver = Driver.query.get_or_404(driver_id)
-        order = Order.query.get_or_404(order_id)
-        
-        if not driver.is_available:
-            return jsonify({'error': 'Driver is not available'}), 400
-        
-        order.driver_id = driver_id
-        order.status = 'out_for_delivery'
-        driver.is_available = False
-        
-        db.session.commit()
-        
-        # Notify customer about driver assignment
-        notify_customer_status_change(order_id, 'out_for_delivery')
-        
-        # Notify driver about assignment using driver bot
-        if driver.telegram_user_id:
-            from driver_bot import notify_driver_assignment_via_driver_bot
-            order_data = {
-                'id': order.id,
-                'customer_name': order.customer_name,
-                'customer_phone': order.customer_phone,
-                'customer_address': order.customer_address,
-                'total_amount': order.total_amount,
-                'location_lat': order.location_lat,
-                'location_lng': order.location_lng,
-                'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S') if order.created_at else 'Just now'
-            }
-            notify_driver_assignment_via_driver_bot(driver.telegram_user_id, order_data)
-        
-        return jsonify({'success': True, 'message': f'Driver {driver.name} assigned to order #{order_id}'})
-    except Exception as e:
-        logger.error(f"Error assigning driver: {e}")
-        return jsonify({'error': 'Failed to assign driver'}), 500
+# Duplicate route removed - using /api/orders/<int:order_id>/assign-driver instead
 
 @app.route('/api/drivers/<int:driver_id>/request-location', methods=['POST'])
 def request_driver_location_api(driver_id):

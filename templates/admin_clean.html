@@ -294,18 +294,32 @@
                             <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                             <td>${new Date(order.created_at).toLocaleDateString()}</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="updateOrderStatus(${order.id}, 'confirmed')">
-                                    Confirm
-                                </button>
-                                <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'preparing')">
-                                    Preparing
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')">
-                                    Out for Delivery
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="updateOrderStatus(${order.id}, 'delivered')">
-                                    Delivered
-                                </button>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="updateOrderStatus(${order.id}, 'confirmed')" 
+                                            ${order.status !== 'pending' ? 'disabled' : ''}>
+                                        Confirm
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'preparing')" 
+                                            ${order.status !== 'confirmed' ? 'disabled' : ''}>
+                                        Preparing
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')" 
+                                            ${order.status !== 'preparing' ? 'disabled' : ''}>
+                                        Out for Delivery
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="updateOrderStatus(${order.id}, 'delivered')" 
+                                            ${order.status !== 'out_for_delivery' ? 'disabled' : ''}>
+                                        Delivered
+                                    </button>
+                                </div>
+                                <div class="mt-2">
+                                    ${order.driver_id ? 
+                                        `<small class="text-success">Driver assigned</small>` : 
+                                        `<button class="btn btn-sm btn-secondary" onclick="assignDriver(${order.id})">
+                                            <i class="fas fa-motorcycle"></i> Assign Driver
+                                        </button>`
+                                    }
+                                </div>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -335,11 +349,145 @@
             .then(data => {
                 if (data.success) {
                     loadOrdersTab();
+                    alert(`Order #${orderId} updated to ${newStatus}`);
                 } else {
                     alert('Error updating order status');
                 }
             })
             .catch(error => console.error('Error updating order status:', error));
+        }
+
+        async function assignDriver(orderId) {
+            try {
+                // Get available drivers
+                const response = await fetch('/api/drivers');
+                const drivers = await response.json();
+                
+                const availableDrivers = drivers.filter(driver => 
+                    driver.is_active && driver.is_available && driver.is_approved
+                );
+                
+                if (availableDrivers.length === 0) {
+                    alert('No available drivers found. Please ensure drivers are active and available.');
+                    return;
+                }
+                
+                // Create driver selection modal
+                const modalHtml = `
+                    <div class="modal fade" id="driverAssignModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Assign Driver to Order #${orderId}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Driver:</label>
+                                        <select class="form-select" id="driverSelect">
+                                            <option value="">-- Select Driver --</option>
+                                            ${availableDrivers.map(driver => `
+                                                <option value="${driver.id}">
+                                                    ${driver.name} (${driver.vehicle_type}) - ${driver.phone_number}
+                                                </option>
+                                            `).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <strong>Automatic Assignment:</strong> You can also use "Find Nearby Drivers" to automatically assign based on location.
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-warning" onclick="findNearbyDrivers(${orderId})">
+                                        <i class="fas fa-search"></i> Find Nearby Drivers
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmDriverAssignment(${orderId})">
+                                        <i class="fas fa-check"></i> Assign Driver
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('driverAssignModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('driverAssignModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error loading drivers:', error);
+                alert('Error loading available drivers');
+            }
+        }
+
+        function confirmDriverAssignment(orderId) {
+            const driverId = document.getElementById('driverSelect').value;
+            
+            if (!driverId) {
+                alert('Please select a driver');
+                return;
+            }
+            
+            fetch(`/api/orders/${orderId}/assign-driver`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({driver_id: parseInt(driverId)})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('driverAssignModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrdersTab();
+                    
+                    alert(`Driver successfully assigned to Order #${orderId}`);
+                } else {
+                    alert(`Error assigning driver: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error assigning driver:', error);
+                alert('Error assigning driver');
+            });
+        }
+
+        function findNearbyDrivers(orderId) {
+            fetch(`/api/orders/${orderId}/find-nearby-drivers`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('driverAssignModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrdersTab();
+                    
+                    alert(`${data.message}. Drivers have been notified!`);
+                } else {
+                    alert(`Error finding nearby drivers: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error finding nearby drivers:', error);
+                alert('Error finding nearby drivers');
+            });
         }
 
         // Load menu items
