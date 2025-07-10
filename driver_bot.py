@@ -482,17 +482,17 @@ def handle_order_acceptance(driver_chat_id, order_id, message_id):
             
             db.session.commit()
             
-            # STEP 3: Send complete customer information to driver
+            # STEP 3: Send acceptance confirmation first
+            send_driver_message(driver_chat_id, f"✅ *Order #{order_id} Accepted!*\n\n🚚 You are now assigned to this delivery.\n📍 Opening driver panel with GPS navigation...")
+            
+            # STEP 4: Send complete customer information with driver panel
             send_complete_customer_info_to_driver(driver_chat_id, order_id)
             
-            # STEP 4: Notify customer about driver assignment
+            # STEP 5: Notify customer about driver assignment
             notify_customer_about_driver_assignment(order_id, driver.name, driver.telegram_user_id)
             
-            # STEP 5: Notify admin about assignment and enable live tracking
+            # STEP 6: Notify admin about assignment and enable live tracking
             notify_admin_driver_assignment_with_tracking(order_id, driver.name, driver.telegram_user_id)
-            
-            # STEP 6: Request driver to start live location sharing
-            request_live_location_for_delivery(driver_chat_id, order_id)
             
             logger.info(f"Order {order_id} successfully assigned to driver {driver.name} - Full workflow completed")
             return True

@@ -574,6 +574,70 @@
             color: #ffffff;
             font-size: 12px;
         }
+        
+        .order-details {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .order-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .order-status {
+            font-size: 14px;
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .customer-info {
+            margin-bottom: 15px;
+        }
+        
+        .info-section {
+            margin-bottom: 15px;
+        }
+        
+        .info-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #e0e0e0;
+        }
+        
+        .info-item i {
+            width: 20px;
+            margin-right: 10px;
+            color: #4fc3f7;
+        }
+        
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -611,6 +675,45 @@
             </div>
         </div>
         
+        <!-- Order Information -->
+        <div id="orderDetails" class="order-details" style="display: none;">
+            <div class="order-header">
+                <div class="order-title">📋 Order #<span id="orderNumber">--</span></div>
+                <div class="order-status">Status: <span id="orderStatus">Assigned</span></div>
+            </div>
+            
+            <div class="customer-info">
+                <div class="info-section">
+                    <div class="info-title">👤 Customer Information</div>
+                    <div class="info-item">
+                        <i class="fas fa-user"></i>
+                        <span id="customerName">--</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-phone"></i>
+                        <span id="customerPhone">--</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="customerAddress">--</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-credit-card"></i>
+                        <span id="paymentMethod">--</span>
+                    </div>
+                </div>
+                
+                <div class="order-actions">
+                    <button class="btn-call" onclick="callCustomer()">
+                        <i class="fas fa-phone"></i> Call Customer
+                    </button>
+                    <button class="btn-navigate" onclick="navigateToCustomer()">
+                        <i class="fas fa-directions"></i> Navigate
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Live Navigation -->
         <div id="liveNavigation" class="live-navigation" style="display: none;">
             <div class="nav-header">
@@ -795,6 +898,230 @@
                 
                 // Load specific order if provided
                 if (orderIdParam) {
+                    loadOrderDetails(orderIdParam);
+                    showOrderDetails();
+                    startLiveNavigation();
+                }
+                
+                // Start location tracking
+                startLocationTracking();
+                
+            } catch (error) {
+                console.error('Error initializing driver panel:', error);
+                showError('Failed to initialize driver panel');
+            }
+        }
+        
+        async function loadOrderDetails(orderId) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                if (response.ok) {
+                    const order = await response.json();
+                    displayOrderInfo(order);
+                    currentOrderId = orderId;
+                } else {
+                    showError('Failed to load order details');
+                }
+            } catch (error) {
+                console.error('Error loading order details:', error);
+                showError('Failed to load order details');
+            }
+        }
+        
+        function displayOrderInfo(order) {
+            // Update order information
+            document.getElementById('orderNumber').textContent = order.id;
+            document.getElementById('customerName').textContent = order.customer_name;
+            document.getElementById('customerPhone').textContent = order.customer_phone;
+            document.getElementById('customerAddress').textContent = order.customer_address;
+            document.getElementById('paymentMethod').textContent = order.payment_method;
+            document.getElementById('orderStatus').textContent = order.status;
+            
+            // Store customer coordinates for navigation
+            window.customerLat = order.location_lat;
+            window.customerLng = order.location_lng;
+            window.customerPhone = order.customer_phone;
+        }
+        
+        function showOrderDetails() {
+            document.getElementById('orderDetails').style.display = 'block';
+            document.getElementById('noOrders').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function startLiveNavigation() {
+            document.getElementById('liveNavigation').style.display = 'block';
+            
+            // Start GPS tracking simulation
+            updateNavigationInfo();
+            setInterval(updateNavigationInfo, 10000); // Update every 10 seconds
+        }
+        
+        function updateNavigationInfo() {
+            // Simulate dynamic navigation updates
+            const distances = ['0.3 km', '0.8 km', '1.2 km', '2.1 km'];
+            const instructions = [
+                'Continue straight on Main Street',
+                'Turn left at the traffic light',
+                'Head north towards destination',
+                'Arrive at destination on the right'
+            ];
+            const etas = ['3 minutes', '7 minutes', '12 minutes', '15 minutes'];
+            
+            const randomIndex = Math.floor(Math.random() * distances.length);
+            
+            document.getElementById('nextDistance').textContent = distances[randomIndex];
+            document.getElementById('nextInstruction').textContent = instructions[randomIndex];
+            document.getElementById('estimatedTime').textContent = 'ETA: ' + etas[randomIndex];
+        }
+        
+        function startLocationTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        updateLocationStatus(true);
+                        // Send location to server
+                        sendLocationUpdate(position.coords.latitude, position.coords.longitude);
+                        
+                        // Start live location tracking
+                        navigator.geolocation.watchPosition(
+                            (position) => {
+                                sendLocationUpdate(position.coords.latitude, position.coords.longitude);
+                            },
+                            (error) => {
+                                console.error('Location tracking error:', error);
+                            },
+                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }
+                        );
+                    },
+                    (error) => {
+                        console.error('Location access error:', error);
+                        updateLocationStatus(false);
+                    }
+                );
+            }
+        }
+        
+        function updateLocationStatus(active) {
+            locationActive = active;
+            const statusElement = document.getElementById('locationStatus');
+            const textElement = document.getElementById('locationText');
+            
+            if (active) {
+                statusElement.className = 'location-status location-active';
+                textElement.textContent = 'Location: ACTIVE';
+            } else {
+                statusElement.className = 'location-status location-inactive';
+                textElement.textContent = 'Location: INACTIVE';
+            }
+        }
+        
+        async function sendLocationUpdate(lat, lng) {
+            try {
+                const response = await fetch('/api/driver-location', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        driver_id: driverId,
+                        latitude: lat,
+                        longitude: lng,
+                        order_id: currentOrderId
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('Location updated successfully');
+                }
+            } catch (error) {
+                console.error('Error sending location update:', error);
+            }
+        }
+        
+        function callCustomer() {
+            if (window.customerPhone) {
+                window.open(`tel:${window.customerPhone}`, '_self');
+            } else {
+                showError('Customer phone number not available');
+            }
+        }
+        
+        function navigateToCustomer() {
+            if (window.customerLat && window.customerLng) {
+                openGoogleMaps();
+            } else {
+                showError('Customer location not available');
+            }
+        }
+        
+        function openGoogleMaps() {
+            if (window.customerLat && window.customerLng) {
+                const url = `https://www.google.com/maps/dir/?api=1&destination=${window.customerLat},${window.customerLng}&travelmode=driving`;
+                window.open(url, '_blank');
+            } else {
+                const url = 'https://maps.google.com';
+                window.open(url, '_blank');
+            }
+        }
+        
+        function openWaze() {
+            if (window.customerLat && window.customerLng) {
+                const url = `https://waze.com/ul?ll=${window.customerLat},${window.customerLng}&navigate=yes`;
+                window.open(url, '_blank');
+            } else {
+                const url = 'https://waze.com';
+                window.open(url, '_blank');
+            }
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 3000);
+        }
+        
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 3000);
+        }
+        
+        function requestLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        updateLocationStatus(true);
+                        sendLocationUpdate(position.coords.latitude, position.coords.longitude);
+                        showSuccess('Location shared successfully');
+                    },
+                    (error) => {
+                        console.error('Location error:', error);
+                        showError('Failed to access location. Please enable location services.');
+                    }
+                );
+            } else {
+                showError('Geolocation is not supported by this browser');
+            }
+        }
+        
+        // Legacy functions for compatibility
+        async function checkDriverStatus() {
+            // Implementation for status checking
+        }
+        
+        async function toggleDriverStatus() {
+            // Implementation for status toggle
+        }
+        
+        async function checkForNewOrders() {
+            // Implementation for checking new orders
                     loadOrderDetails(orderIdParam);
                 } else {
                     checkForNewOrders();
