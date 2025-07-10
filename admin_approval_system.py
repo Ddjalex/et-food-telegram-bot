@@ -77,29 +77,40 @@ def send_driver_approval_notification(chat_id, driver_name):
     message += f"📍 **IMPORTANT - Location Sharing Required:**\n"
     message += f"To receive delivery requests, you must share your live location.\n"
     message += f"This helps us assign orders to the nearest available drivers.\n\n"
-    message += f"📱 **Driver Commands:**\n"
-    message += f"• /status - Check your status\n"
-    message += f"• /toggle - Toggle availability\n"
-    message += f"• /orders - View your orders\n"
-    message += f"• /earnings - Check earnings\n\n"
     message += f"🎯 **Ready to start delivering?**\n"
-    message += f"👇 **First, share your location below:**"
+    message += f"👇 **Use the buttons below to get started:**"
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
                     "text": "📍 Share Live Location (Required)",
-                    "callback_data": "driver_share_location_required"
+                    "callback_data": "request_location"
                 }
             ],
             [
                 {
-                    "text": "📊 My Status", 
+                    "text": "📊 Check Status", 
                     "callback_data": "driver_status"
                 },
                 {
-                    "text": "❓ Help",
+                    "text": "📱 View Orders",
+                    "callback_data": "driver_orders"
+                }
+            ],
+            [
+                {
+                    "text": "🔄 Toggle Availability",
+                    "callback_data": "toggle_availability"
+                },
+                {
+                    "text": "💰 View Earnings",
+                    "callback_data": "driver_earnings"
+                }
+            ],
+            [
+                {
+                    "text": "❓ Help & Support",
                     "callback_data": "driver_help"
                 }
             ]

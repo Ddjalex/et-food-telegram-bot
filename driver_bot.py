@@ -301,13 +301,31 @@ def handle_driver_callback(callback_query):
             
         elif callback_data.startswith('call_customer_'):
             order_id = callback_data.split('_')[2]
-            from models import Order
-            order = Order.query.get(order_id)
-            if order:
-                send_driver_message(chat_id, f"📞 *Customer Contact*\n\nCustomer: {order.customer_name}\nPhone: {order.customer_phone}\n\nPlease call to coordinate delivery.")
+            try:
+                from models import Order
+                order = Order.query.get(order_id)
+                if order:
+                    send_driver_message(chat_id, f"📞 *Customer Contact*\n\nName: {order.customer_name}\nPhone: {order.customer_phone}\n\nPlease call to coordinate delivery.")
+                else:
+                    send_driver_message(chat_id, "❌ Order not found.")
+            except Exception as e:
+                send_driver_message(chat_id, "❌ Error retrieving customer contact.")
                 
-        elif callback_data == 'contact_support':
-            send_driver_message(chat_id, "📞 *Support Contact*\n\nET-FOOD Support\nPhone: +251-911-123-456\nEmail: support@et-food.com\n\nContact us for any assistance!")
+        # New inline button handlers
+        elif callback_data == 'driver_status':
+            send_driver_status_message(chat_id)
+            
+        elif callback_data == 'driver_orders':
+            send_driver_orders(chat_id)
+            
+        elif callback_data == 'toggle_availability':
+            toggle_driver_availability(chat_id)
+            
+        elif callback_data == 'driver_earnings':
+            send_driver_earnings(chat_id)
+            
+        elif callback_data == 'driver_help':
+            send_driver_help_message(chat_id)
             
         elif callback_data == 'request_location':
             send_location_request(chat_id)
@@ -315,15 +333,15 @@ def handle_driver_callback(callback_query):
         elif callback_data == 'enable_live_location':
             send_live_location_instructions(chat_id)
             
+        elif callback_data == 'contact_support':
+            send_driver_message(chat_id, "📞 *ET-FOOD Support*\n\nFor assistance, please contact:\n📧 Email: support@etfood.com\n📞 Phone: +251-911-123-456\n\nOur team is available 24/7 to help you!")
+            
         elif callback_data.startswith('share_location_'):
             send_location_request(chat_id)
             
         elif callback_data.startswith('pickup_complete_'):
             order_id = callback_data.split('_')[2]
             handle_pickup_complete(chat_id, order_id)
-            
-        elif callback_data == 'driver_status':
-            send_driver_status_message(chat_id)
             
         elif callback_data == 'start_registration':
             from driver_registration import start_driver_registration
@@ -998,25 +1016,37 @@ def send_driver_status_message(chat_id):
             message += f"❌ No location shared\n"
             message += f"🔴 **You won't receive orders - please share location**\n"
         
-        # Add location sharing buttons if location is outdated or missing
-        keyboard = None
-        if not driver.last_location_update or (datetime.utcnow() - driver.last_location_update).total_seconds() >= 600:
-            keyboard = {
-                "inline_keyboard": [
-                    [
-                        {
-                            "text": "📍 Share Location Now",
-                            "callback_data": "request_location"
-                        }
-                    ],
-                    [
-                        {
-                            "text": "🔄 Enable Live Location",
-                            "callback_data": "enable_live_location"
-                        }
-                    ]
+        # Add action buttons
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📍 Share Location Now",
+                        "callback_data": "request_location"
+                    },
+                    {
+                        "text": "🔄 Toggle Status",
+                        "callback_data": "toggle_availability"
+                    }
+                ],
+                [
+                    {
+                        "text": "📱 View Orders",
+                        "callback_data": "driver_orders"
+                    },
+                    {
+                        "text": "💰 View Earnings",
+                        "callback_data": "driver_earnings"
+                    }
+                ],
+                [
+                    {
+                        "text": "📞 Contact Support",
+                        "callback_data": "contact_support"
+                    }
                 ]
-            }
+            ]
+        }
         
         send_driver_message(chat_id, message, keyboard=keyboard)
         
@@ -1028,35 +1058,62 @@ def send_driver_help_message(chat_id):
     """Send help message to driver"""
     message = """🚚 *ET-FOOD Driver Bot Help*
 
-**📱 Commands:**
-• /start - Welcome and account setup
-• /status - View your driver profile & stats
-• /location - Share/update your location
-• /orders - View active deliveries
-• /toggle - Switch online/offline
-• /earnings - Check your earnings summary
-• /test - Test bot connection
+**📱 Interactive Commands:**
+All commands now have easy-to-use buttons:
+• Status & Profile Information
+• Location Sharing & Updates
+• Active Orders & Deliveries
+• Availability Toggle (Online/Offline)
+• Earnings Summary & Stats
+• Real-time Order Notifications
 
 **🎯 Key Features:**
-• Real-time order notifications
-• GPS-based order assignment
-• Live location tracking
-• Direct customer/restaurant contact
-• Earnings tracking
-• Performance analytics
+• Real-time order notifications with 1-minute timer
+• GPS-based order assignment within 10km radius
+• Live location tracking (like BeU delivery)
+• Direct customer/restaurant contact buttons
+• Comprehensive earnings tracking
+• Performance analytics dashboard
 
-**📍 Location Sharing:**
-Like BeU delivery, you MUST share live location to receive orders within 10km radius.
+**📍 Location Sharing (REQUIRED):**
+Like BeU delivery, you MUST share live location to receive orders. The system finds the 3 nearest available drivers and notifies them instantly.
 
-**💡 Tips:**
-• Keep location sharing active
-• Accept orders quickly (1-minute timer)
+**💡 Pro Tips:**
+• Keep location sharing active during your shift
+• Accept orders quickly (60-second countdown)
+• Use inline buttons for faster navigation
 • Contact support for any issues
+
+**🚀 Getting Started:**
+1. Share your location using the button below
+2. Toggle your status to "Available"
+3. Wait for order notifications
+4. Accept orders and start earning!
 
 Need help? Use the Support button below."""
     
     keyboard = {
         "inline_keyboard": [
+            [
+                {
+                    "text": "📍 Share Location",
+                    "callback_data": "request_location"
+                },
+                {
+                    "text": "📊 Check Status",
+                    "callback_data": "driver_status"
+                }
+            ],
+            [
+                {
+                    "text": "📱 View Orders",
+                    "callback_data": "driver_orders"
+                },
+                {
+                    "text": "🔄 Toggle Status",
+                    "callback_data": "toggle_availability"
+                }
+            ],
             [
                 {
                     "text": "📞 Contact Support",
@@ -1085,7 +1142,30 @@ def send_driver_orders(chat_id):
             ).all()
             
             if not active_orders:
-                send_driver_message(chat_id, "📋 No active orders at the moment.\n\nYou'll be notified when new orders are available!")
+                message = "📋 No active orders at the moment.\n\nYou'll be notified when new orders are available!"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📍 Share Location",
+                                "callback_data": "request_location"
+                            },
+                            {
+                                "text": "🔄 Toggle Status",
+                                "callback_data": "toggle_availability"
+                            }
+                        ],
+                        [
+                            {
+                                "text": "📊 Check Status",
+                                "callback_data": "driver_status"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(chat_id, message, keyboard=keyboard)
                 return
             
             message = f"📋 *Your Active Orders ({len(active_orders)})*\n\n"
@@ -1105,7 +1185,7 @@ def send_driver_orders(chat_id):
                 message += f"📦 Status: {order.status.replace('_', ' ').title()}\n"
                 message += "─────────────────\n"
             
-            # Add WebApp button for full order management
+            # Add action buttons for order management
             webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={driver.id}"
             keyboard = {
                 "inline_keyboard": [
@@ -1113,6 +1193,16 @@ def send_driver_orders(chat_id):
                         {
                             "text": "📱 Open Driver Panel",
                             "web_app": {"url": webapp_url}
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Share Location",
+                            "callback_data": "request_location"
+                        },
+                        {
+                            "text": "📊 Check Status",
+                            "callback_data": "driver_status"
                         }
                     ]
                 ]
