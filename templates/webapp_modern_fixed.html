@@ -312,6 +312,29 @@
         .hidden {
             display: none;
         }
+
+        .place-order-btn {
+            width: 100%;
+            padding: 15px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .place-order-btn:hover {
+            background: #2563eb;
+        }
+
+        .place-order-btn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
         
         /* Profile Modal Styles */
         .profile-modal {
@@ -1520,7 +1543,7 @@
                         </div>
                         
                         <div class="checkout-actions">
-                            <button onclick="placeOrder()" class="place-order-btn" id="modalPlaceOrderBtn" style="display: ${window.Telegram && window.Telegram.WebApp ? 'none' : 'block'}">
+                            <button onclick="placeOrder()" class="place-order-btn" id="modalPlaceOrderBtn">
                                 Place Order - ${Math.round(orderData.total_amount)} ETB
                             </button>
                         </div>
@@ -1532,6 +1555,11 @@
             
             // Store order data for later use
             window.currentOrderData = orderData;
+            
+            // Hide Telegram WebApp main button when checkout modal is open
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.MainButton.hide();
+            }
             
             // Add event listeners for payment method selection
             setTimeout(() => {
@@ -1583,6 +1611,11 @@
             const modal = document.querySelector('.checkout-modal');
             if (modal) {
                 modal.remove();
+            }
+            
+            // Restore main button when modal is closed
+            if (window.Telegram && window.Telegram.WebApp) {
+                updateMainButton();
             }
         }
 
