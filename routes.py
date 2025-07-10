@@ -792,28 +792,63 @@ def upload_image():
 
 @app.route('/api/menu', methods=['POST'])
 def add_menu_item():
-    """Add new menu item"""
+    """Add new menu item with file upload support"""
     try:
-        data = request.get_json()
+        # Handle both JSON and FormData
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData from modal
+            name = request.form.get('name')
+            price = float(request.form.get('price'))
+            description = request.form.get('description', '')
+            category_id = request.form.get('category_id')
+            available = request.form.get('available') == 'true'
+            
+            # Handle image upload
+            image_url = ''
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"{timestamp}_{filename}"
+                    filepath = os.path.join(UPLOAD_FOLDER, filename)
+                    file.save(filepath)
+                    image_url = f"/static/uploads/{filename}"
+        else:
+            # JSON data (legacy support)
+            data = request.get_json()
+            name = data['name']
+            price = float(data['price'])
+            description = data.get('description', '')
+            category_id = data.get('category_id')
+            image_url = data.get('image_url', '')
+            available = data.get('available', True)
+        
+        # Get category name from category_id
+        category_name = 'burgers'  # default
+        if category_id:
+            category = Category.query.get(category_id)
+            if category:
+                category_name = category.name.lower()
         
         item = MenuItem(
-            name=data['name'],
-            price=float(data['price']),
-            description=data.get('description', ''),
-            image_url=data.get('image_url', ''),
-            category=data.get('category', 'burgers'),
-            available=data.get('available', True)
+            name=name,
+            price=price,
+            description=description,
+            image_url=image_url,
+            category=category_name,
+            available=available
         )
         
         db.session.add(item)
         db.session.commit()
         
-        return jsonify({'message': 'Menu item added successfully', 'item_id': item.id}), 201
+        return jsonify({'success': True, 'message': 'Menu item added successfully', 'item_id': item.id}), 201
     
     except Exception as e:
         logger.error(f"Error adding menu item: {e}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to add menu item'}), 500
+        return jsonify({'success': False, 'error': 'Failed to add menu item'}), 500
 
 @app.route('/api/menu/<int:item_id>', methods=['PUT'])
 def update_menu_item(item_id):
@@ -1365,15 +1400,42 @@ def find_nearby_drivers_for_order(order_id):
 
 @app.route('/api/categories', methods=['POST'])
 def create_category():
-    """Create new category"""
+    """Create new category with file upload support"""
     try:
-        data = request.get_json()
+        # Handle both JSON and FormData
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData from modal
+            name = request.form.get('name')
+            description = request.form.get('description', '')
+            icon = request.form.get('icon', '🍽️')
+            sort_order = int(request.form.get('sort_order', 0))
+            
+            # Handle image upload
+            image_url = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"{timestamp}_{filename}"
+                    filepath = os.path.join(UPLOAD_FOLDER, filename)
+                    file.save(filepath)
+                    image_url = f"/static/uploads/{filename}"
+        else:
+            # JSON data (legacy support)
+            data = request.get_json()
+            name = data['name']
+            description = data.get('description', '')
+            icon = data.get('icon', '🍽️')
+            image_url = data.get('image_url')
+            sort_order = data.get('sort_order', 0)
+        
         category = Category(
-            name=data['name'],
-            description=data.get('description', ''),
-            icon=data.get('icon', '🍽️'),
-            image_url=data.get('image_url'),
-            sort_order=data.get('sort_order', 0)
+            name=name,
+            description=description,
+            icon=icon,
+            image_url=image_url,
+            sort_order=sort_order
         )
         db.session.add(category)
         db.session.commit()
@@ -1381,7 +1443,8 @@ def create_category():
         return jsonify({'success': True, 'category_id': category.id})
     except Exception as e:
         logger.error(f"Error creating category: {e}")
-        return jsonify({'error': 'Failed to create category'}), 500
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Failed to create category'}), 500
 
 @app.route('/api/categories/<int:category_id>', methods=['PUT'])
 def update_category(category_id):

@@ -186,6 +186,93 @@
                     </div>
                 </div>
 
+                <!-- Add Menu Item Modal -->
+                <div class="modal fade" id="addMenuModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Menu Item</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addMenuForm" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="menuName" class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="menuName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="menuDescription" rows="3"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuPrice" class="form-label">Price (ETB)</label>
+                                        <input type="number" class="form-control" id="menuPrice" step="0.01" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuCategory" class="form-label">Category</label>
+                                        <select class="form-control" id="menuCategory" required>
+                                            <option value="">Select Category</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="menuImage" class="form-label">Image</label>
+                                        <input type="file" class="form-control" id="menuImage" accept="image/*">
+                                        <small class="form-text text-muted">Upload JPG, PNG, GIF, or WebP image</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="menuAvailable" checked>
+                                            <label class="form-check-label" for="menuAvailable">Available</label>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="submitMenuForm()">Add Menu Item</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Category Modal -->
+                <div class="modal fade" id="addCategoryModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Category</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addCategoryForm" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="categoryName" class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="categoryName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="categoryDescription" rows="2"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryIcon" class="form-label">Icon (Emoji)</label>
+                                        <input type="text" class="form-control" id="categoryIcon" placeholder="🍔">
+                                        <small class="form-text text-muted">Enter an emoji or leave blank for default</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryImage" class="form-label">Image (Optional)</label>
+                                        <input type="file" class="form-control" id="categoryImage" accept="image/*">
+                                        <small class="form-text text-muted">Upload JPG, PNG, GIF, or WebP image</small>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="submitCategoryForm()">Add Category</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Drivers Tab -->
                 <div id="drivers-tab" class="tab-content">
                     <!-- Driver Statistics -->
@@ -891,37 +978,95 @@
                 .catch(error => console.error('Error loading categories:', error));
         }
 
+        // Show add menu modal
+        function showAddMenuModal() {
+            // Load categories for dropdown
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const select = document.getElementById('menuCategory');
+                    select.innerHTML = '<option value="">Select Category</option>';
+                    categories.forEach(cat => {
+                        select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                    });
+                });
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('addMenuModal')).show();
+        }
+
+        // Submit menu form
+        function submitMenuForm() {
+            const formData = new FormData();
+            formData.append('name', document.getElementById('menuName').value);
+            formData.append('description', document.getElementById('menuDescription').value);
+            formData.append('price', document.getElementById('menuPrice').value);
+            formData.append('category_id', document.getElementById('menuCategory').value);
+            formData.append('available', document.getElementById('menuAvailable').checked);
+            
+            const imageFile = document.getElementById('menuImage').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            
+            fetch('/api/menu', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Menu item added successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addMenuModal')).hide();
+                    loadMenuItems();
+                    document.getElementById('addMenuForm').reset();
+                } else {
+                    alert('Error adding menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding menu item:', error);
+                alert('Error adding menu item: ' + error.message);
+            });
+        }
+
         // Show add category modal
         function showAddCategoryModal() {
-            const name = prompt('Category Name:');
-            if (name) {
-                const description = prompt('Category Description (optional):');
-                const icon = prompt('Category Icon (emoji, optional):') || '🍽️';
-                
-                fetch('/api/categories', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: name,
-                        description: description,
-                        icon: icon,
-                        sort_order: 0
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Category added successfully!');
-                        loadCategories();
-                    } else {
-                        alert('Error adding category: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error adding category:', error);
-                    alert('Error adding category: ' + error.message);
-                });
+            new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+        }
+
+        // Submit category form
+        function submitCategoryForm() {
+            const formData = new FormData();
+            formData.append('name', document.getElementById('categoryName').value);
+            formData.append('description', document.getElementById('categoryDescription').value);
+            formData.append('icon', document.getElementById('categoryIcon').value || '🍽️');
+            formData.append('sort_order', 0);
+            
+            const imageFile = document.getElementById('categoryImage').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
             }
+            
+            fetch('/api/categories', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Category added successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+                    loadCategories();
+                    document.getElementById('addCategoryForm').reset();
+                } else {
+                    alert('Error adding category: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding category:', error);
+                alert('Error adding category: ' + error.message);
+            });
         }
 
         // Edit category
