@@ -456,6 +456,124 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
         }
+        
+        .live-navigation {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .nav-icon {
+            width: 40px;
+            height: 40px;
+            background: #ff6b35;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .nav-subtitle {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .direction-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .direction-distance {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4caf50;
+            margin-bottom: 5px;
+        }
+        
+        .direction-instruction {
+            color: #ffffff;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .direction-eta {
+            color: #e0e0e0;
+            font-size: 12px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-navigate {
+            flex: 1;
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-call {
+            flex: 1;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .live-tracking {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .tracking-status {
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .tracking-details {
+            color: #ffffff;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -489,6 +607,39 @@
                 </div>
                 <button class="share-location-btn" onclick="requestLocation()">
                     <i class="fas fa-location-arrow"></i> Share Location
+                </button>
+            </div>
+        </div>
+        
+        <!-- Live Navigation -->
+        <div id="liveNavigation" class="live-navigation" style="display: none;">
+            <div class="nav-header">
+                <div class="nav-icon">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div>
+                    <div class="nav-title">Live Navigation</div>
+                    <div class="nav-subtitle">Real-time GPS directions</div>
+                </div>
+            </div>
+            
+            <div class="direction-info">
+                <div class="direction-distance" id="nextDistance">0.5 km</div>
+                <div class="direction-instruction" id="nextInstruction">Head north on the main road</div>
+                <div class="direction-eta" id="estimatedTime">ETA: 5 minutes</div>
+            </div>
+            
+            <div class="live-tracking">
+                <div class="tracking-status">📍 Live Tracking Active</div>
+                <div class="tracking-details">Your location is being shared with customer and admin</div>
+            </div>
+            
+            <div class="nav-buttons">
+                <button class="btn-navigate" onclick="openGoogleMaps()">
+                    <i class="fas fa-map"></i> Google Maps
+                </button>
+                <button class="btn-navigate" onclick="openWaze()">
+                    <i class="fas fa-navigation"></i> Waze
                 </button>
             </div>
         </div>
@@ -877,12 +1028,23 @@
                 });
                 
                 if (response.ok) {
+                    const orderData = await response.json();
+                    
                     showSuccess('Order accepted successfully!');
                     hideOrderNotification();
                     
+                    // Start live navigation if location data is available
+                    if (orderData.location_lat && orderData.location_lng) {
+                        await startLiveNavigation(
+                            orderData.location_lat, 
+                            orderData.location_lng, 
+                            orderData.customer_name
+                        );
+                    }
+                    
                     // Notify via Telegram
                     if (tg.showAlert) {
-                        tg.showAlert('Order accepted! You will receive pickup instructions.');
+                        tg.showAlert('Order accepted! Live navigation started. You will receive pickup instructions.');
                     }
                 } else {
                     throw new Error('Failed to accept order');
@@ -961,6 +1123,162 @@
             setTimeout(() => {
                 errorEl.style.display = 'none';
             }, 3000);
+        }
+        
+        // GPS Navigation Functions
+        let currentPosition = null;
+        let destinationPosition = null;
+        let navigationActive = false;
+        
+        async function startLiveNavigation(orderLat, orderLng, customerName) {
+            try {
+                destinationPosition = { lat: orderLat, lng: orderLng };
+                
+                // Get current location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            currentPosition = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            
+                            // Show navigation panel
+                            document.getElementById('liveNavigation').style.display = 'block';
+                            navigationActive = true;
+                            
+                            // Update navigation info
+                            updateNavigationInfo();
+                            
+                            // Start live location tracking
+                            startLocationTracking();
+                            
+                            showSuccess('Live navigation started');
+                        },
+                        (error) => {
+                            console.error('Error getting location:', error);
+                            showError('Unable to start navigation - location required');
+                        }
+                    );
+                } else {
+                    showError('GPS not supported on this device');
+                }
+            } catch (error) {
+                console.error('Error starting navigation:', error);
+                showError('Failed to start navigation');
+            }
+        }
+        
+        function updateNavigationInfo() {
+            if (!currentPosition || !destinationPosition) return;
+            
+            const distance = calculateDistance(
+                currentPosition.lat, currentPosition.lng,
+                destinationPosition.lat, destinationPosition.lng
+            );
+            
+            const estimatedTime = Math.round(distance * 3); // ~3 minutes per km
+            
+            document.getElementById('nextDistance').textContent = `${distance.toFixed(1)} km`;
+            document.getElementById('nextInstruction').textContent = getDirectionInstruction(distance);
+            document.getElementById('estimatedTime').textContent = `ETA: ${estimatedTime} min`;
+        }
+        
+        function getDirectionInstruction(distance) {
+            if (distance < 0.1) {
+                return 'You have arrived at your destination';
+            } else if (distance < 0.5) {
+                return 'Approaching destination - prepare for delivery';
+            } else if (distance < 1) {
+                return 'Continue to destination - less than 1 km remaining';
+            } else {
+                return 'Continue towards customer location';
+            }
+        }
+        
+        function startLocationTracking() {
+            if (!navigationActive) return;
+            
+            // Update location every 30 seconds
+            setInterval(() => {
+                if (navigator.geolocation && navigationActive) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            currentPosition = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            
+                            // Update navigation info
+                            updateNavigationInfo();
+                            
+                            // Send location update to server
+                            sendLocationUpdate();
+                        },
+                        (error) => {
+                            console.error('Location tracking error:', error);
+                        }
+                    );
+                }
+            }, 30000); // 30 seconds
+        }
+        
+        async function sendLocationUpdate() {
+            if (!currentPosition || !driverId) return;
+            
+            try {
+                await fetch(`/api/drivers/telegram/${driverId}/location`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lat: currentPosition.lat,
+                        lng: currentPosition.lng,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (error) {
+                console.error('Error sending location update:', error);
+            }
+        }
+        
+        function openGoogleMaps() {
+            if (!destinationPosition) {
+                showError('No destination set');
+                return;
+            }
+            
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationPosition.lat},${destinationPosition.lng}`;
+            
+            if (tg.openLink) {
+                tg.openLink(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+        
+        function openWaze() {
+            if (!destinationPosition) {
+                showError('No destination set');
+                return;
+            }
+            
+            const url = `https://waze.com/ul?ll=${destinationPosition.lat},${destinationPosition.lng}&navigate=yes`;
+            
+            if (tg.openLink) {
+                tg.openLink(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+        
+        function stopNavigation() {
+            navigationActive = false;
+            document.getElementById('liveNavigation').style.display = 'none';
+            currentPosition = null;
+            destinationPosition = null;
+            showSuccess('Navigation stopped');
         }
     </script>
 </body>

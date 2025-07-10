@@ -568,10 +568,11 @@ def send_complete_customer_info_to_driver(driver_telegram_id, order_id):
             message += f"\n\n"
             
             message += f"📍 **Next Steps:**\n"
-            message += f"1. Share your live location for tracking\n"
-            message += f"2. Contact customer if needed\n"
-            message += f"3. Pick up order from restaurant\n"
-            message += f"4. Deliver to customer address"
+            message += f"1. Open Driver Panel for live GPS navigation\n"
+            message += f"2. Share your live location for tracking\n"
+            message += f"3. Contact customer if needed\n"
+            message += f"4. Pick up order from restaurant\n"
+            message += f"5. Deliver to customer address"
             
             # Add action buttons
             keyboard = {
@@ -600,6 +601,10 @@ def send_complete_customer_info_to_driver(driver_telegram_id, order_id):
                         {
                             "text": "📍 Share Live Location",
                             "callback_data": "request_location"
+                        },
+                        {
+                            "text": "🚗 Driver Panel (Live GPS)",
+                            "url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/enhanced-driver-panel?order_id={order_id}&driver_id={driver_telegram_id}"
                         }
                     ]
                 ]
