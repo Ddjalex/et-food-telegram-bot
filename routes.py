@@ -515,40 +515,199 @@ def get_pending_drivers():
 def approve_driver_api(driver_id):
     """Approve a pending driver"""
     try:
-        from admin_approval_system import approve_driver
-        data = request.get_json()
-        admin_id = data.get('admin_id', 383870190)  # Default admin ID
-        
-        success, message = approve_driver(driver_id, admin_id)
-        
-        if success:
-            return jsonify({'success': True, 'message': message})
-        else:
-            return jsonify({'success': False, 'message': message}), 400
+        driver = Driver.query.get(driver_id)
+        if not driver:
+            return jsonify({'success': False, 'message': 'Driver not found'}), 404
             
+        if driver.approval_status != 'pending':
+            return jsonify({'success': False, 'message': f'Driver is already {driver.approval_status}'}), 400
+            
+        # Update driver status
+        driver.approval_status = 'approved'
+        driver.is_approved = True
+        driver.is_available = True
+        driver.approved_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Send approval notification to driver
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                approval_message = f"""
+🎉 *Congratulations {driver.name}!*
+
+✅ Your driver registration has been **APPROVED**!
+
+🚗 You are now an official ET-FOOD delivery driver.
+📍 Make sure to share your location to receive delivery requests.
+💰 You can start earning money right away!
+
+📱 *Driver Commands:*
+• /status - Check your status
+• /orders - View your orders
+• /location - Share current location
+• /toggle - Toggle availability
+
+🎯 Ready to start delivering? Share your location now!
+"""
+                send_driver_message(driver.telegram_user_id, approval_message)
+            except Exception as e:
+                logger.error(f"Failed to send approval notification: {e}")
+        
+        return jsonify({'success': True, 'message': f'Driver {driver.name} approved successfully'})
+        
     except Exception as e:
         logger.error(f"Error approving driver: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'message': 'Failed to approve driver'}), 500
 
 @app.route('/api/drivers/<int:driver_id>/reject', methods=['POST'])
 def reject_driver_api(driver_id):
     """Reject a pending driver"""
     try:
-        from admin_approval_system import reject_driver
+        driver = Driver.query.get(driver_id)
+        if not driver:
+            return jsonify({'success': False, 'message': 'Driver not found'}), 404
+            
+        if driver.approval_status != 'pending':
+            return jsonify({'success': False, 'message': f'Driver is already {driver.approval_status}'}), 400
+            
         data = request.get_json()
-        admin_id = data.get('admin_id', 383870190)  # Default admin ID
         reason = data.get('reason', 'Application does not meet requirements')
         
-        success, message = reject_driver(driver_id, admin_id, reason)
+        # Update driver status
+        driver.approval_status = 'rejected'
+        driver.is_approved = False
+        driver.is_available = False
+        driver.rejection_reason = reason
+        driver.updated_at = datetime.utcnow()
         
-        if success:
-            return jsonify({'success': True, 'message': message})
-        else:
-            return jsonify({'success': False, 'message': message}), 400
-            
+        db.session.commit()
+        
+        # Send rejection notification to driver
+        if driver.telegram_user_id:
+            try:
+                from driver_bot import send_driver_message
+                rejection_message = f"""
+❌ *Registration Update*
+
+Unfortunately, your driver registration has been declined.
+
+*Reason:* {reason}
+
+📞 If you have questions, please contact our support team.
+🔄 You can reapply after addressing the concerns mentioned above.
+
+Contact admin for more information.
+"""
+                send_driver_message(driver.telegram_user_id, rejection_message)
+            except Exception as e:
+                logger.error(f"Failed to send rejection notification: {e}")
+        
+        return jsonify({'success': True, 'message': f'Driver {driver.name} rejected successfully'})
+        
     except Exception as e:
         logger.error(f"Error rejecting driver: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'message': 'Failed to reject driver'}), 500
+
+@app.route('/api/drivers/add-employee', methods=['POST'])
+def add_driver_employee():
+    """Add a new driver employee with enhanced features"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'phone_number', 'vehicle_type']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        # Format phone number
+        phone_number = data.get('phone_number', '').strip()
+        if not phone_number.startswith('+'):
+            phone_number = '+251' + phone_number.lstrip('+251')
+        
+        # Check if phone number already exists
+        existing_driver = Driver.query.filter_by(phone_number=phone_number).first()
+        if existing_driver:
+            return jsonify({'success': False, 'message': 'Driver with this phone number already exists'}), 400
+        
+        # Check if Telegram ID already exists (if provided)
+        telegram_id = data.get('telegram_user_id')
+        if telegram_id:
+            existing_telegram = Driver.query.filter_by(telegram_user_id=telegram_id).first()
+            if existing_telegram:
+                return jsonify({'success': False, 'message': 'Driver with this Telegram ID already exists'}), 400
+        
+        # Create new driver
+        auto_approve = data.get('auto_approve', False)
+        driver = Driver(
+            name=data['name'],
+            phone_number=phone_number,
+            telegram_user_id=telegram_id if telegram_id else None,
+            vehicle_type=data['vehicle_type'],
+            is_active=True,
+            is_available=auto_approve,
+            is_approved=auto_approve,
+            approval_status='approved' if auto_approve else 'pending',
+            approved_at=datetime.utcnow() if auto_approve else None
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Send welcome message to driver if Telegram ID provided
+        if telegram_id:
+            try:
+                from driver_bot import send_driver_message
+                if auto_approve:
+                    welcome_message = f"""
+🎉 *Welcome to ET-FOOD Delivery Team!*
+
+Hello {driver.name}! You've been added as a delivery driver.
+
+✅ Your account has been automatically approved.
+🚗 Vehicle Type: {driver.vehicle_type}
+📱 Phone: {driver.phone_number}
+
+📱 *Driver Commands:*
+• /status - Check your status
+• /orders - View your orders  
+• /location - Share current location
+• /toggle - Toggle availability
+
+📍 Share your location to start receiving delivery requests!
+"""
+                else:
+                    welcome_message = f"""
+👋 *Welcome to ET-FOOD!*
+
+Hello {driver.name}! You've been added as a driver employee.
+
+📋 Your registration is pending admin approval.
+🚗 Vehicle Type: {driver.vehicle_type}
+📱 Phone: {driver.phone_number}
+
+Please wait for admin approval to start receiving delivery requests.
+"""
+                
+                send_driver_message(telegram_id, welcome_message)
+            except Exception as e:
+                logger.warning(f"Could not send welcome message to driver: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Driver {driver.name} added successfully',
+            'driver_id': driver.id,
+            'auto_approved': auto_approve
+        })
+        
+    except Exception as e:
+        logger.error(f"Error adding driver employee: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Failed to add driver employee'}), 500
 
 @app.route('/api/drivers/<int:driver_id>/remove', methods=['DELETE'])
 def remove_driver_api(driver_id):
@@ -1550,91 +1709,7 @@ def get_live_tracking_data():
         logger.error(f"Error getting live tracking data: {e}")
         return jsonify({'error': 'Failed to get live tracking data'}), 500
 
-@app.route('/api/admin/drivers/add', methods=['POST'])
-def add_driver_employee():
-    """Add new driver employee from admin panel"""
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['name', 'phone_number', 'telegram_user_id', 'vehicle_type']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
-        
-        # Validate telegram_user_id is a valid integer
-        try:
-            telegram_user_id = int(data['telegram_user_id'])
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid Telegram User ID'}), 400
-        
-        # Check if driver with this telegram_user_id already exists
-        existing_driver = Driver.query.filter_by(telegram_user_id=telegram_user_id).first()
-        if existing_driver:
-            return jsonify({'error': 'Driver with this Telegram ID already exists'}), 409
-        
-        # Create new driver
-        new_driver = Driver(
-            name=data['name'].strip(),
-            phone_number=data['phone_number'].strip(),
-            telegram_user_id=telegram_user_id,
-            vehicle_type=data['vehicle_type'],
-            is_active=True,
-            is_available=True,
-            is_approved=data.get('auto_approve', True),
-            approval_status='approved' if data.get('auto_approve', True) else 'pending'
-        )
-        
-        db.session.add(new_driver)
-        db.session.commit()
-        
-        # Send welcome message to driver via driver bot
-        try:
-            from driver_bot import send_driver_message
-            
-            welcome_message = f"""
-🎉 *Welcome to ET-FOOD Driver System!*
 
-Hello {new_driver.name}! You have been added as a delivery driver for ET-FOOD.
-
-📋 *Your Details:*
-• Name: {new_driver.name}
-• Phone: {new_driver.phone_number}
-• Vehicle: {new_driver.vehicle_type.title()}
-• Status: {'Approved' if new_driver.is_approved else 'Pending Approval'}
-
-🚀 *How to Use:*
-• You will receive notifications about new delivery orders
-• Accept orders by clicking the "Accept" button
-• Use the driver panel to manage your orders
-• Share your location when requested
-
-📱 *Commands:*
-• /start - Show main menu
-• /help - Get help and support
-• /status - Check your current status
-
-Welcome to the team! 🏍️
-"""
-            
-            send_driver_message(telegram_user_id, welcome_message)
-            logger.info(f"Welcome message sent to new driver {new_driver.name} (ID: {telegram_user_id})")
-            
-        except Exception as e:
-            logger.error(f"Error sending welcome message to driver: {e}")
-            # Continue without failing the entire operation
-        
-        return jsonify({
-            'success': True,
-            'message': 'Driver added successfully',
-            'driver_id': new_driver.id,
-            'driver_name': new_driver.name
-        })
-        
-    except Exception as e:
-        logger.error(f"Error adding driver employee: {e}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to add driver employee'}), 500
 
 @app.route('/api/admin/orders/clear-previous', methods=['POST'])
 def clear_previous_orders():

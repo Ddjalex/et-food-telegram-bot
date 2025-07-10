@@ -617,34 +617,141 @@
 
         // Driver management functions
         function addDriver() {
-            const name = prompt('Driver Name:');
-            const phone = prompt('Phone Number:');
-            const vehicle = prompt('Vehicle Type (motorcycle/car/bicycle):', 'motorcycle');
+            // Create enhanced modal for adding driver
+            const modalHtml = `
+                <div class="modal fade" id="addDriverModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-user-plus"></i> Add Driver Employee
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addDriverForm">
+                                    <div class="mb-3">
+                                        <label for="driverName" class="form-label">Driver Name *</label>
+                                        <input type="text" class="form-control" id="driverName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverPhone" class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-control" id="driverPhone" 
+                                               placeholder="+251900000000" required>
+                                        <div class="form-text">Format: +251XXXXXXXXX</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverTelegram" class="form-label">Telegram User ID</label>
+                                        <input type="number" class="form-control" id="driverTelegram" 
+                                               placeholder="123456789">
+                                        <div class="form-text">Optional: For automatic notifications</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverVehicle" class="form-label">Vehicle Type *</label>
+                                        <select class="form-select" id="driverVehicle" required>
+                                            <option value="">Select Vehicle Type</option>
+                                            <option value="motorcycle">🏍️ Motorcycle</option>
+                                            <option value="car">🚗 Car</option>
+                                            <option value="bicycle">🚴 Bicycle</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoApprove" checked>
+                                            <label class="form-check-label" for="autoApprove">
+                                                Auto-approve driver (recommended for employees)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>Note:</strong> Driver will receive a welcome message if Telegram ID is provided.
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="submitDriverForm()">
+                                    <i class="fas fa-plus"></i> Add Driver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            if (name && phone) {
-                fetch('/api/drivers', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: name,
-                        phone_number: phone,
-                        vehicle_type: vehicle
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Driver added successfully!');
-                        loadDrivers();
-                    } else {
-                        alert('Error adding driver: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error adding driver:', error);
-                    alert('Error adding driver');
-                });
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addDriverModal');
+            if (existingModal) {
+                existingModal.remove();
             }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addDriverModal'));
+            modal.show();
+        }
+        
+        function submitDriverForm() {
+            const name = document.getElementById('driverName').value.trim();
+            const phone = document.getElementById('driverPhone').value.trim();
+            const telegram = document.getElementById('driverTelegram').value.trim();
+            const vehicle = document.getElementById('driverVehicle').value;
+            const autoApprove = document.getElementById('autoApprove').checked;
+            
+            // Validate required fields
+            if (!name || !phone || !vehicle) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Validate phone format
+            if (!phone.startsWith('+251') && !phone.startsWith('251')) {
+                alert('Phone number must start with +251 or 251');
+                return;
+            }
+            
+            // Prepare data
+            const driverData = {
+                name: name,
+                phone_number: phone,
+                vehicle_type: vehicle,
+                auto_approve: autoApprove
+            };
+            
+            // Add telegram ID if provided
+            if (telegram) {
+                driverData.telegram_user_id = parseInt(telegram);
+            }
+            
+            // Submit form
+            fetch('/api/drivers/add-employee', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(driverData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addDriverModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    alert(data.message + (data.auto_approved ? ' (Auto-approved)' : ' (Pending approval)'));
+                    
+                    // Reload drivers list
+                    loadDrivers();
+                } else {
+                    alert('Error adding driver: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error adding driver:', error);
+                alert('Error adding driver. Please try again.');
+            });
         }
 
         function approveDriver(driverId) {
