@@ -82,7 +82,7 @@ def webapp():
 @app.route('/admin')
 def admin():
     """Admin dashboard"""
-    return render_template('admin_clean.html')
+    return render_template('admin_simple_working.html')
 
 @app.route('/driver-registration')
 def driver_registration():

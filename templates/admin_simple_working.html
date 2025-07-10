@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .nav-link {
+            color: white !important;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4><i class="fas fa-utensils"></i> ET-FOOD</h4>
+                        <small>Admin Panel</small>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-tab="dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="orders">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="menu">
+                                <i class="fas fa-utensils"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="categories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Admin Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h5>Total Customers</h5>
+                                    <h3 id="totalCustomers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-utensils fa-2x text-success mb-2"></i>
+                                    <h5>Menu Items</h5>
+                                    <h3 id="totalMenuItems">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle fa-2x text-warning mb-2"></i>
+                                    <h5>Orders Today</h5>
+                                    <h3 id="ordersToday">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-motorcycle fa-2x text-info mb-2"></i>
+                                    <h5>Active Drivers</h5>
+                                    <h3 id="activeDrivers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Tab -->
+                <div id="orders-tab" class="tab-content">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Orders Management</h3>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">Loading orders...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Tab -->
+                <div id="menu-tab" class="tab-content">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Menu Management</h3>
+                        <button class="btn btn-primary" onclick="addMenuItem()">
+                            <i class="fas fa-plus"></i> Add Menu Item
+                        </button>
+                    </div>
+                    <div class="row" id="menuItemsGrid">
+                        <div class="col-12 text-center">
+                            <p>Loading menu items...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Tab -->
+                <div id="categories-tab" class="tab-content">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Categories Management</h3>
+                        <button class="btn btn-primary" onclick="addCategory()">
+                            <i class="fas fa-plus"></i> Add Category
+                        </button>
+                    </div>
+                    <div class="row" id="categoriesGrid">
+                        <div class="col-12 text-center">
+                            <p>Loading categories...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drivers Tab -->
+                <div id="drivers-tab" class="tab-content">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Drivers Management</h3>
+                        <button class="btn btn-primary" onclick="addDriver()">
+                            <i class="fas fa-plus"></i> Add Driver
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driversTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center">Loading drivers...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Tab navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            loadDashboardData();
+            
+            // Set up navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tab = this.getAttribute('data-tab');
+                    showTab(tab);
+                });
+            });
+        });
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Load content based on tab
+            if (tabName === 'dashboard') {
+                loadDashboardData();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'menu') {
+                loadMenuItems();
+            } else if (tabName === 'categories') {
+                loadCategories();
+            } else if (tabName === 'drivers') {
+                loadDrivers();
+            }
+        }
+
+        function loadDashboardData() {
+            // Load dashboard statistics
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    document.getElementById('ordersToday').textContent = orders.length;
+                    
+                    // Count unique customers
+                    const uniqueCustomers = new Set(orders.map(order => order.telegram_user_id));
+                    document.getElementById('totalCustomers').textContent = uniqueCustomers.size;
+                })
+                .catch(error => console.error('Error loading dashboard data:', error));
+            
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(items => {
+                    document.getElementById('totalMenuItems').textContent = items.length;
+                })
+                .catch(error => console.error('Error loading menu count:', error));
+            
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const activeDrivers = drivers.filter(driver => driver.is_active).length;
+                    document.getElementById('activeDrivers').textContent = activeDrivers;
+                })
+                .catch(error => console.error('Error loading drivers count:', error));
+        }
+
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No orders found</td></tr>';
+                        return;
+                    }
+                    
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        let items = [];
+                        try {
+                            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        } catch (e) {
+                            items = [];
+                        }
+                        
+                        const itemsList = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                        const truncatedItems = itemsList.length > 50 ? itemsList.substring(0, 50) + '...' : itemsList;
+                        
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td title="${itemsList}">${truncatedItems}</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        }
+
+        function loadMenuItems() {
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(items => {
+                    const grid = document.getElementById('menuItemsGrid');
+                    grid.innerHTML = '';
+
+                    items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-4 mb-3';
+                        card.innerHTML = `
+                            <div class="card">
+                                <img src="${item.image_url}" class="card-img-top" alt="${item.name}" style="height: 200px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h5 class="card-title">${item.name}</h5>
+                                    <p class="card-text">${item.description}</p>
+                                    <p class="card-text"><strong>ETB ${item.price.toFixed(2)}</strong></p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge ${item.available ? 'bg-success' : 'bg-danger'}">
+                                            ${item.available ? 'Available' : 'Unavailable'}
+                                        </span>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => console.error('Error loading menu items:', error));
+        }
+
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const grid = document.getElementById('categoriesGrid');
+                    grid.innerHTML = '';
+
+                    categories.forEach(category => {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-3 mb-3';
+                        card.innerHTML = `
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <div style="font-size: 2rem;">${category.icon || '🍽️'}</div>
+                                    <h5 class="card-title">${category.name}</h5>
+                                    <p class="card-text">${category.description || ''}</p>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        function loadDrivers() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const tbody = document.getElementById('driversTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (drivers.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No drivers found</td></tr>';
+                        return;
+                    }
+                    
+                    drivers.forEach(driver => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${driver.name}</td>
+                            <td>${driver.phone_number}</td>
+                            <td>${driver.vehicle_type}</td>
+                            <td><span class="badge bg-${driver.is_active ? 'success' : 'danger'}">${driver.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading drivers:', error));
+        }
+
+        // Helper functions
+        function getStatusColor(status) {
+            const colors = {
+                'pending': 'warning',
+                'confirmed': 'success',
+                'preparing': 'info',
+                'out_for_delivery': 'primary',
+                'delivered': 'success',
+                'cancelled': 'danger'
+            };
+            return colors[status] || 'secondary';
+        }
+
+        // CRUD Functions
+        function addMenuItem() {
+            const name = prompt('Menu Item Name:');
+            const price = prompt('Price (ETB):');
+            const description = prompt('Description:');
+            
+            if (name && price && description) {
+                fetch('/api/menu', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        price: parseFloat(price),
+                        description: description,
+                        category: 'burgers',
+                        image_url: 'https://via.placeholder.com/300x200?text=Menu+Item',
+                        available: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Menu item added successfully!');
+                        loadMenuItems();
+                    } else {
+                        alert('Error adding menu item: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding menu item:', error);
+                    alert('Error adding menu item');
+                });
+            }
+        }
+
+        function editMenuItem(itemId) {
+            fetch(`/api/menu/${itemId}`)
+                .then(response => response.json())
+                .then(item => {
+                    const name = prompt('Menu Item Name:', item.name);
+                    const price = prompt('Price (ETB):', item.price);
+                    const description = prompt('Description:', item.description);
+                    
+                    if (name && price && description) {
+                        fetch(`/api/menu/${itemId}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                name: name,
+                                price: parseFloat(price),
+                                description: description,
+                                available: item.available
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('Menu item updated successfully!');
+                                loadMenuItems();
+                            } else {
+                                alert('Error updating menu item: ' + (data.error || 'Unknown error'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error updating menu item:', error);
+                            alert('Error updating menu item');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading menu item:', error);
+                    alert('Error loading menu item details');
+                });
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Are you sure you want to delete this menu item?')) {
+                fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Menu item deleted successfully!');
+                            loadMenuItems();
+                        } else {
+                            alert('Error deleting menu item: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting menu item:', error);
+                        alert('Error deleting menu item');
+                    });
+            }
+        }
+
+        function addCategory() {
+            const name = prompt('Category Name:');
+            const description = prompt('Description (optional):') || '';
+            const icon = prompt('Emoji Icon:', '🍽️');
+            
+            if (name) {
+                fetch('/api/categories', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, description, icon})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Category added successfully!');
+                        loadCategories();
+                    } else {
+                        alert('Failed to add category: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding category:', error);
+                    alert('Error adding category');
+                });
+            }
+        }
+
+        function editCategory(categoryId) {
+            const name = prompt('New category name:');
+            if (name) {
+                fetch(`/api/categories/${categoryId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadCategories();
+                    }
+                });
+            }
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Delete this category?')) {
+                fetch(`/api/categories/${categoryId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) loadCategories();
+                    });
+            }
+        }
+
+        function addDriver() {
+            const name = prompt('Driver Name:');
+            const phone = prompt('Phone Number:');
+            const vehicle = prompt('Vehicle Type (motorcycle/car/bicycle):', 'motorcycle');
+            
+            if (name && phone) {
+                fetch('/api/drivers/add-employee', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        phone_number: phone,
+                        vehicle_type: vehicle,
+                        auto_approve: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Driver added successfully!');
+                        loadDrivers();
+                    } else {
+                        alert('Error adding driver: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding driver:', error);
+                    alert('Error adding driver');
+                });
+            }
+        }
+
+        function deleteDriver(driverId) {
+            if (confirm('Are you sure you want to delete this driver?')) {
+                fetch(`/api/drivers/${driverId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Driver deleted successfully!');
+                            loadDrivers();
+                        } else {
+                            alert('Error deleting driver: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting driver:', error);
+                        alert('Error deleting driver');
+                    });
+            }
+        }
+
+        function viewOrderDetails(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    let items = [];
+                    try {
+                        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                    } catch (e) {
+                        items = [];
+                    }
+                    
+                    const itemsList = items.map(item => `• ${item.name} (x${item.quantity}) - ETB ${(item.price * item.quantity).toFixed(2)}`).join('\n');
+                    
+                    alert(`Order #${order.id}\n\nCustomer: ${order.customer_name}\nPhone: ${order.customer_phone}\nAddress: ${order.customer_address}\n\nItems:\n${itemsList}\n\nTotal: ETB ${order.total_amount.toFixed(2)}\nPayment: ${order.payment_method}\nStatus: ${order.status}`);
+                })
+                .catch(error => {
+                    console.error('Error loading order details:', error);
+                    alert('Error loading order details');
+                });
+        }
+
+        function deleteOrder(orderId) {
+            if (confirm('Are you sure you want to delete this order?')) {
+                fetch(`/api/orders/${orderId}/delete`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Order deleted successfully!');
+                            loadOrders();
+                        } else {
+                            alert('Error deleting order: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting order:', error);
+                        alert('Error deleting order');
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
