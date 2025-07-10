@@ -106,10 +106,15 @@ def api_driver_registration():
             phone_number = data.get('phone_number')
             vehicle_type = data.get('vehicle_type')
         else:
-            telegram_id = request.form.get('telegram_id')
-            name = request.form.get('name')
-            phone_number = request.form.get('phone_number')
-            vehicle_type = request.form.get('vehicle_type')
+            # Safely handle form data with error catching
+            try:
+                telegram_id = request.form.get('telegram_id')
+                name = request.form.get('name')
+                phone_number = request.form.get('phone_number')
+                vehicle_type = request.form.get('vehicle_type')
+            except Exception as form_error:
+                logger.error(f"Error parsing form data: {form_error}")
+                return jsonify({'success': False, 'message': 'Invalid form data'}), 400
         
         if not all([telegram_id, name, phone_number]):
             return jsonify({'success': False, 'message': 'Missing required fields'}), 400
@@ -131,27 +136,32 @@ def api_driver_registration():
             approval_status='pending'
         )
         
-        # Handle file uploads only if form data
-        if not request.is_json and request.files:
-            upload_folder = os.path.join('static', 'driver_documents')
-            os.makedirs(upload_folder, exist_ok=True)
-            
-            document_fields = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg']
-            for field in document_fields:
-                if field in request.files:
-                    file = request.files[field]
-                    if file and file.filename:
-                        filename = secure_filename(f"{telegram_id}_{field}_{file.filename}")
-                        file_path = os.path.join(upload_folder, filename)
-                        file.save(file_path)
-                        
-                        # Store document path in driver model
-                        if field.startswith('license'):
-                            driver.license_document = file_path
-                        elif field.startswith('id'):
-                            driver.id_document = file_path
-                        elif field.startswith('vehicle'):
-                            driver.vehicle_document = file_path
+        # Handle file uploads only if form data and files exist
+        if not request.is_json:
+            try:
+                if request.files:
+                    upload_folder = os.path.join('static', 'driver_documents')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    document_fields = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg']
+                    for field in document_fields:
+                        if field in request.files:
+                            file = request.files[field]
+                            if file and file.filename:
+                                filename = secure_filename(f"{telegram_id}_{field}_{file.filename}")
+                                file_path = os.path.join(upload_folder, filename)
+                                file.save(file_path)
+                                
+                                # Store document path in driver model
+                                if field.startswith('license'):
+                                    driver.license_document = file_path
+                                elif field.startswith('id'):
+                                    driver.id_document = file_path
+                                elif field.startswith('vehicle'):
+                                    driver.vehicle_document = file_path
+            except Exception as file_error:
+                logger.warning(f"Error handling file uploads: {file_error}")
+                # Continue registration without files
         
         db.session.add(driver)
         db.session.commit()
@@ -177,6 +187,64 @@ def api_driver_registration():
         logger.error(f"Error in driver registration: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Registration failed: {str(e)}'}), 500
+
+@app.route('/api/driver-registration-simple', methods=['POST'])
+def api_driver_registration_simple():
+    """Simple JSON-only driver registration endpoint"""
+    try:
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'JSON data required'}), 400
+            
+        data = request.get_json()
+        
+        telegram_id = data.get('telegram_id')
+        name = data.get('name')
+        phone_number = data.get('phone_number')
+        vehicle_type = data.get('vehicle_type', 'bicycle')
+        
+        if not all([telegram_id, name, phone_number]):
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        # Check if driver already exists
+        existing_driver = Driver.query.filter_by(telegram_user_id=int(telegram_id)).first()
+        if existing_driver:
+            return jsonify({'success': False, 'message': 'Driver already registered'})
+        
+        # Create new driver
+        driver = Driver(
+            name=name,
+            phone_number=phone_number, 
+            telegram_user_id=int(telegram_id),
+            vehicle_type=vehicle_type,
+            is_active=True,
+            is_available=False,
+            is_approved=False,
+            approval_status='pending'
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Send notifications
+        try:
+            from driver_registration import send_driver_registration_pending, notify_admin_driver_registration
+            send_driver_registration_pending(int(telegram_id), name)
+            
+            notify_admin_driver_registration({
+                'name': name,
+                'phone_number': phone_number,
+                'vehicle_type': vehicle_type,
+                'documents_uploaded': False
+            })
+        except Exception as notify_error:
+            logger.error(f"Error sending notifications: {notify_error}")
+        
+        return jsonify({'success': True, 'message': 'Registration submitted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error in simple driver registration: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Registration failed'}), 500
 
 
 
