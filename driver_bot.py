@@ -369,6 +369,10 @@ def handle_driver_callback(callback_query):
             order_id = callback_data.split('_')[2]
             handle_pickup_complete(chat_id, order_id)
             
+        elif callback_data.startswith('delivery_complete_'):
+            order_id = callback_data.split('_')[2]
+            handle_delivery_complete(chat_id, order_id)
+            
         elif callback_data == 'start_registration':
             from driver_registration import start_driver_registration
             start_driver_registration(chat_id)
@@ -445,46 +449,64 @@ def send_live_location_instructions(chat_id):
     
     send_driver_message(chat_id, message, keyboard=keyboard)
 def handle_order_acceptance(driver_chat_id, order_id, message_id):
-    """Handle order acceptance by driver and send complete customer information"""
+    """Handle order acceptance by driver with complete automated workflow"""
     try:
         from models import Order, Driver
-        from extensions import db
-        from enhanced_order_flow import handle_driver_order_acceptance
+        from app import app, db
+        from bot_minimal import send_message
         
-        # Find driver by telegram ID
-        driver = Driver.query.filter_by(telegram_user_id=driver_chat_id).first()
-        if not driver:
-            send_driver_message(driver_chat_id, "❌ Driver not found in system. Please contact admin.")
-            return False
+        with app.app_context():
+            # Find driver by telegram ID
+            driver = Driver.query.filter_by(telegram_user_id=driver_chat_id).first()
+            if not driver:
+                send_driver_message(driver_chat_id, "❌ Driver not found in system. Please contact admin.")
+                return False
+                
+            # Find order
+            order = db.session.get(Order, order_id)
+            if not order:
+                send_driver_message(driver_chat_id, "❌ Order not found.")
+                return False
+                
+            # Check if order is still available for assignment
+            if order.status not in ['confirmed', 'preparing']:
+                send_driver_message(driver_chat_id, f"❌ Order #{order_id} is no longer available (Status: {order.status})")
+                return False
+                
+            # STEP 1: Assign driver to order
+            order.driver_id = driver.id
+            order.status = 'out_for_delivery'
             
-        # Update order status
-        order = Order.query.get(order_id)
-        if not order:
-            send_driver_message(driver_chat_id, "❌ Order not found.")
-            return False
+            # STEP 2: Update driver availability
+            driver.is_available = False
             
-        # Check if order is still available for assignment
-        if order.status != 'confirmed':
-            send_driver_message(driver_chat_id, f"❌ Order #{order_id} is no longer available (Status: {order.status})")
-            return False
+            db.session.commit()
             
-        # Handle complete order acceptance with full customer information
-        result = handle_driver_order_acceptance(driver_chat_id, order_id)
-        
-        if result:
-            logger.info(f"Order {order_id} accepted by driver {driver.name} with complete information sent")
+            # STEP 3: Send complete customer information to driver
+            send_complete_customer_info_to_driver(driver_chat_id, order_id)
+            
+            # STEP 4: Notify customer about driver assignment
+            notify_customer_about_driver_assignment(order_id, driver.name, driver.telegram_user_id)
+            
+            # STEP 5: Notify admin about assignment and enable live tracking
+            notify_admin_driver_assignment_with_tracking(order_id, driver.name, driver.telegram_user_id)
+            
+            # STEP 6: Request driver to start live location sharing
+            request_live_location_for_delivery(driver_chat_id, order_id)
+            
+            logger.info(f"Order {order_id} successfully assigned to driver {driver.name} - Full workflow completed")
             return True
-        else:
-            send_driver_message(driver_chat_id, "❌ Failed to accept order. Please try again.")
-            return False
         
     except Exception as e:
         logger.error(f"Error handling order acceptance: {e}")
         return False
 
 def handle_order_rejection(driver_chat_id, order_id, message_id):
-    """Handle order rejection by driver"""
+    """Handle order rejection by driver and reassign to next available driver"""
     try:
+        from complete_order_workflow import OrderWorkflowManager
+        
+        # Send confirmation to rejecting driver
         message = f"❌ *Order Rejected*\n\n"
         message += f"📋 Order #{order_id} has been rejected.\n"
         message += f"🔄 The order will be reassigned to another driver.\n\n"
@@ -492,10 +514,426 @@ def handle_order_rejection(driver_chat_id, order_id, message_id):
         
         send_driver_message(driver_chat_id, message)
         
-        # TODO: Reassign order to another driver or delivery bot
+        # Automatically reassign to next available driver
+        workflow = OrderWorkflowManager()
+        workflow.reassign_to_next_driver(order_id, exclude_driver_id=driver_chat_id)
+        
+        logger.info(f"Order {order_id} rejected by driver {driver_chat_id} and reassigned")
         
     except Exception as e:
         logger.error(f"Error handling order rejection: {e}")
+
+def send_complete_customer_info_to_driver(driver_telegram_id, order_id):
+    """Send complete customer information to driver"""
+    try:
+        from models import Order
+        from app import app, db
+        import json
+        
+        with app.app_context():
+            order = db.session.get(Order, order_id)
+            if not order:
+                logger.error(f"Order {order_id} not found")
+                return False
+            
+            # Parse order items
+            items_list = []
+            if order.items:
+                try:
+                    items_data = json.loads(order.items) if isinstance(order.items, str) else order.items
+                    for item in items_data:
+                        items_list.append(f"• {item['name']} x{item['quantity']} - {item['price']:.2f} ETB")
+                except:
+                    items_list.append("• Order items (details unavailable)")
+            
+            # Create comprehensive message
+            message = f"🎯 *ORDER ASSIGNMENT CONFIRMED*\n\n"
+            message += f"📋 **Order Details:**\n"
+            message += f"• Order ID: #{order_id}\n"
+            message += f"• Status: ASSIGNED TO YOU\n"
+            message += f"• Time: {order.created_at.strftime('%I:%M %p')}\n"
+            message += f"• Total: {order.total_amount:.2f} ETB\n"
+            message += f"• Payment: {order.payment_method}\n\n"
+            
+            message += f"👤 **Customer Information:**\n"
+            message += f"• Name: {order.customer_name}\n"
+            message += f"• Phone: {order.customer_phone}\n"
+            message += f"• Address: {order.customer_address}\n"
+            if order.location_lat and order.location_lng:
+                message += f"• GPS: {order.location_lat:.6f}, {order.location_lng:.6f}\n"
+            message += f"\n"
+            
+            message += f"🛍️ **Order Items:**\n"
+            message += "\n".join(items_list)
+            message += f"\n\n"
+            
+            message += f"📍 **Next Steps:**\n"
+            message += f"1. Share your live location for tracking\n"
+            message += f"2. Contact customer if needed\n"
+            message += f"3. Pick up order from restaurant\n"
+            message += f"4. Deliver to customer address"
+            
+            # Add action buttons
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📞 Call Customer",
+                            "url": f"tel:{order.customer_phone}"
+                        },
+                        {
+                            "text": "📍 Open Maps",
+                            "url": f"https://maps.google.com/?q={order.location_lat},{order.location_lng}" if order.location_lat else "https://maps.google.com"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "✅ Pickup Complete",
+                            "callback_data": f"pickup_complete_{order_id}"
+                        },
+                        {
+                            "text": "🚚 Delivered",
+                            "callback_data": f"delivery_complete_{order_id}"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Share Live Location",
+                            "callback_data": "request_location"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(driver_telegram_id, message, keyboard=keyboard)
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error sending customer info to driver: {e}")
+        return False
+
+def notify_customer_about_driver_assignment(order_id, driver_name, driver_telegram_id):
+    """Notify customer about driver assignment with tracking info"""
+    try:
+        from models import Order
+        from app import app, db
+        from bot_minimal import send_message
+        
+        with app.app_context():
+            order = db.session.get(Order, order_id)
+            if not order:
+                logger.error(f"Order {order_id} not found")
+                return False
+            
+            message = f"🚚 *Driver Assigned to Your Order!*\n\n"
+            message += f"📋 Order #{order_id}\n"
+            message += f"🚗 Driver: {driver_name}\n"
+            message += f"📱 Driver ID: {driver_telegram_id}\n"
+            message += f"💰 Total: {order.total_amount:.2f} ETB\n\n"
+            message += f"📍 Your driver will share live location for real-time tracking.\n"
+            message += f"📞 You can contact the driver if needed.\n\n"
+            message += f"🕐 Estimated delivery: 15-30 minutes\n"
+            message += f"✅ Order status: Out for delivery"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📍 Track Driver",
+                            "url": f"https://maps.google.com"
+                        },
+                        {
+                            "text": "📞 Call Driver",
+                            "url": f"tg://user?id={driver_telegram_id}"
+                        }
+                    ]
+                ]
+            }
+            
+            send_message(order.telegram_user_id, message, keyboard=keyboard)
+            logger.info(f"Customer {order.customer_name} notified about driver assignment")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error notifying customer about driver assignment: {e}")
+        return False
+
+def notify_admin_driver_assignment_with_tracking(order_id, driver_name, driver_telegram_id):
+    """Notify admin about driver assignment and enable live tracking"""
+    try:
+        from models import AdminUser, Order
+        from app import app, db
+        from bot_minimal import send_message_to_admin
+        
+        with app.app_context():
+            order = db.session.get(Order, order_id)
+            if not order:
+                logger.error(f"Order {order_id} not found")
+                return False
+            
+            # Send to all active admins
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            
+            message = f"✅ *Driver Assignment Successful*\n\n"
+            message += f"📋 **Order #{order_id}**\n"
+            message += f"👤 Customer: {order.customer_name}\n"
+            message += f"📞 Phone: {order.customer_phone}\n"
+            message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+            message += f"🚗 **Assigned Driver:**\n"
+            message += f"• Name: {driver_name}\n"
+            message += f"• Telegram ID: {driver_telegram_id}\n\n"
+            message += f"📍 **Live Tracking Available**\n"
+            message += f"• Driver location will update automatically\n"
+            message += f"• Customer has been notified\n"
+            message += f"• Order status: Out for delivery"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📍 Track Driver Location",
+                            "url": f"https://maps.google.com"
+                        },
+                        {
+                            "text": "📱 Contact Driver",
+                            "url": f"tg://user?id={driver_telegram_id}"
+                        }
+                    ]
+                ]
+            }
+            
+            for admin in admins:
+                send_message_to_admin(admin.telegram_user_id, message, keyboard=keyboard)
+            
+            logger.info(f"Admin notified about driver assignment for Order {order_id}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error notifying admin about driver assignment: {e}")
+        return False
+
+def request_live_location_for_delivery(driver_telegram_id, order_id):
+    """Request driver to start live location sharing for delivery tracking"""
+    try:
+        message = f"📍 *Start Live Location Sharing*\n\n"
+        message += f"🚚 **Order #{order_id} - Delivery in Progress**\n\n"
+        message += f"Please share your live location so:\n"
+        message += f"✅ Customer can track your progress\n"
+        message += f"✅ Admin can monitor delivery\n"
+        message += f"✅ System can provide accurate ETAs\n\n"
+        message += f"🔄 **How to share live location:**\n"
+        message += f"1. Tap the button below\n"
+        message += f"2. Select 'Share Live Location'\n"
+        message += f"3. Choose duration (30 min recommended)\n"
+        message += f"4. Tap 'Send'\n\n"
+        message += f"⚠️ Keep location sharing ON until delivery is complete!"
+        
+        keyboard = {
+            "keyboard": [
+                [
+                    {
+                        "text": "📍 Share Live Location for Delivery",
+                        "request_location": True
+                    }
+                ]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": True
+        }
+        
+        send_driver_message(driver_telegram_id, message, keyboard=keyboard)
+        logger.info(f"Live location request sent to driver for Order {order_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error requesting live location: {e}")
+        return False
+
+def handle_pickup_complete(chat_id, order_id):
+    """Handle pickup completion notification"""
+    try:
+        from models import Order, Driver
+        from app import app, db
+        from bot_minimal import send_message_to_admin, send_message
+        
+        with app.app_context():
+            # Find order and driver
+            order = db.session.get(Order, order_id)
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if not order or not driver:
+                send_driver_message(chat_id, "❌ Order or driver not found.")
+                return False
+            
+            # Update order status
+            order.status = 'out_for_delivery'
+            order.pickup_time = datetime.utcnow()
+            db.session.commit()
+            
+            # Notify driver
+            message = f"✅ *Pickup Confirmed*\n\n"
+            message += f"📋 Order #{order_id} pickup confirmed\n"
+            message += f"🚚 Status: Out for delivery\n"
+            message += f"📍 Now navigate to customer location\n\n"
+            message += f"🎯 **Next Steps:**\n"
+            message += f"• Share your live location for tracking\n"
+            message += f"• Navigate to customer address\n"
+            message += f"• Contact customer if needed\n"
+            message += f"• Complete delivery"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📞 Call Customer",
+                            "url": f"tel:{order.customer_phone}"
+                        },
+                        {
+                            "text": "📍 Navigate",
+                            "url": f"https://maps.google.com/?q={order.location_lat},{order.location_lng}" if order.location_lat else "https://maps.google.com"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Share Live Location",
+                            "callback_data": "request_location"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "✅ Delivered",
+                            "callback_data": f"delivery_complete_{order_id}"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
+            
+            # Notify customer
+            customer_message = f"🚚 *Your Order is Out for Delivery!*\n\n"
+            customer_message += f"📋 Order #{order_id}\n"
+            customer_message += f"🚗 Driver: {driver.name}\n"
+            customer_message += f"📍 Your order has been picked up and is on the way!\n\n"
+            customer_message += f"🕐 Estimated delivery: 10-20 minutes\n"
+            customer_message += f"📞 You can track the driver's location in real-time"
+            
+            send_message(order.telegram_user_id, customer_message)
+            
+            # Notify admin
+            admin_message = f"🚚 *Pickup Complete*\n\n"
+            admin_message += f"📋 Order #{order_id}\n"
+            admin_message += f"🚗 Driver: {driver.name}\n"
+            admin_message += f"👤 Customer: {order.customer_name}\n"
+            admin_message += f"📞 Phone: {order.customer_phone}\n"
+            admin_message += f"📍 Status: Out for delivery\n\n"
+            admin_message += f"⏰ Pickup Time: {order.pickup_time.strftime('%I:%M %p')}"
+            
+            from models import AdminUser
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            for admin in admins:
+                send_message_to_admin(admin.telegram_user_id, admin_message)
+            
+            logger.info(f"Pickup completed for Order {order_id} by driver {driver.name}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error handling pickup completion: {e}")
+        return False
+
+def handle_delivery_complete(chat_id, order_id):
+    """Handle delivery completion"""
+    try:
+        from models import Order, Driver
+        from app import app, db
+        from bot_minimal import send_message_to_admin, send_message
+        
+        with app.app_context():
+            # Find order and driver
+            order = db.session.get(Order, order_id)
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if not order or not driver:
+                send_driver_message(chat_id, "❌ Order or driver not found.")
+                return False
+            
+            # Update order status
+            order.status = 'delivered'
+            order.delivery_time = datetime.utcnow()
+            
+            # Make driver available again
+            driver.is_available = True
+            driver.current_order_id = None
+            
+            db.session.commit()
+            
+            # Calculate delivery time
+            delivery_duration = ""
+            if order.pickup_time:
+                duration = order.delivery_time - order.pickup_time
+                minutes = int(duration.total_seconds() / 60)
+                delivery_duration = f"{minutes} minutes"
+            
+            # Notify driver
+            message = f"🎉 *Delivery Completed Successfully!*\n\n"
+            message += f"📋 Order #{order_id} delivered\n"
+            message += f"✅ Status: Completed\n"
+            message += f"⏰ Delivery time: {delivery_duration}\n"
+            message += f"💰 Payment: {order.payment_method}\n\n"
+            message += f"🎯 **Great job!** You're now available for new orders.\n"
+            message += f"📊 Check your earnings in the driver panel."
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📊 View Earnings",
+                            "callback_data": "driver_earnings"
+                        },
+                        {
+                            "text": "📋 View Orders",
+                            "callback_data": "driver_orders"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
+            
+            # Notify customer
+            customer_message = f"🎉 *Order Delivered Successfully!*\n\n"
+            customer_message += f"📋 Order #{order_id}\n"
+            customer_message += f"🚗 Driver: {driver.name}\n"
+            customer_message += f"✅ Your order has been delivered!\n\n"
+            customer_message += f"⏰ Delivery time: {delivery_duration}\n"
+            customer_message += f"💰 Total paid: {order.total_amount:.2f} ETB\n\n"
+            customer_message += f"🌟 Thank you for choosing ET-FOOD!\n"
+            customer_message += f"📝 We'd love your feedback on the service."
+            
+            send_message(order.telegram_user_id, customer_message)
+            
+            # Notify admin
+            admin_message = f"✅ *Delivery Completed*\n\n"
+            admin_message += f"📋 Order #{order_id}\n"
+            admin_message += f"🚗 Driver: {driver.name}\n"
+            admin_message += f"👤 Customer: {order.customer_name}\n"
+            admin_message += f"📞 Phone: {order.customer_phone}\n"
+            admin_message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
+            admin_message += f"📍 Status: Delivered\n\n"
+            admin_message += f"⏰ Delivery Time: {delivery_duration}\n"
+            admin_message += f"🎯 Driver is now available for new orders"
+            
+            from models import AdminUser
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            for admin in admins:
+                send_message_to_admin(admin.telegram_user_id, admin_message)
+            
+            logger.info(f"Delivery completed for Order {order_id} by driver {driver.name}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error handling delivery completion: {e}")
+        return False
 
 def request_driver_location_sharing(driver_chat_id, order_id):
     """Request driver to share live location"""

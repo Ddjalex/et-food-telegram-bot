@@ -19,7 +19,7 @@ class OrderWorkflowManager:
     """Manages the complete order workflow"""
     
     def __init__(self):
-        self.restaurant_location = (9.145, 40.489658)  # ET-FOOD Kitchen coordinates
+        self.restaurant_location = (9.047658, 38.741143)  # ET-FOOD Kitchen coordinates (Addis Ababa)
         self.max_driver_distance = 10.0  # Maximum distance in km
         
     def calculate_distance(self, lat1, lng1, lat2, lng2):
@@ -50,7 +50,7 @@ class OrderWorkflowManager:
             available_drivers = Driver.query.filter_by(
                 is_active=True,
                 is_available=True,
-                is_approved=True
+                approval_status='approved'
             ).filter(
                 Driver.current_lat.isnot(None),
                 Driver.current_lng.isnot(None),
@@ -63,7 +63,7 @@ class OrderWorkflowManager:
                 available_drivers = Driver.query.filter_by(
                     is_active=True,
                     is_available=True,
-                    is_approved=True
+                    approval_status='approved'
                 ).all()
             
             if not available_drivers:
@@ -170,6 +170,60 @@ class OrderWorkflowManager:
             
         except Exception as e:
             logger.error(f"Error notifying driver {driver.name}: {e}")
+    
+    def reassign_to_next_driver(self, order_id, exclude_driver_id=None):
+        """Reassign order to next available driver when one rejects"""
+        try:
+            order = Order.query.get(order_id)
+            if not order:
+                logger.error(f"Order {order_id} not found for reassignment")
+                return False
+            
+            # Find available drivers excluding the one who rejected
+            available_drivers = Driver.query.filter_by(
+                is_active=True,
+                is_available=True,
+                approval_status='approved'
+            ).filter(
+                Driver.telegram_user_id != exclude_driver_id if exclude_driver_id else True,
+                Driver.current_lat.isnot(None),
+                Driver.current_lng.isnot(None),
+                Driver.last_location_update > datetime.utcnow() - timedelta(minutes=10)
+            ).all()
+            
+            if not available_drivers:
+                logger.warning(f"No available drivers for reassignment of Order {order_id}")
+                self.notify_admin_no_drivers(order)
+                return False
+            
+            # Find the closest available driver
+            driver_distances = []
+            for driver in available_drivers:
+                distance = self.calculate_distance(
+                    self.restaurant_location[0],
+                    self.restaurant_location[1],
+                    driver.current_lat,
+                    driver.current_lng
+                )
+                if distance <= self.max_driver_distance:
+                    driver_distances.append((driver, distance))
+            
+            if not driver_distances:
+                logger.warning(f"No nearby drivers for reassignment of Order {order_id}")
+                self.notify_admin_no_drivers(order)
+                return False
+            
+            # Sort by distance and notify the closest one
+            driver_distances.sort(key=lambda x: x[1])
+            next_driver, distance = driver_distances[0]
+            
+            self.notify_driver_about_order(next_driver, order, distance)
+            logger.info(f"Order {order_id} reassigned to driver {next_driver.name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error reassigning order {order_id}: {e}")
+            return False
 
     def handle_order_status_update(self, order_id, old_status, new_status):
         """Handle order status updates and trigger appropriate notifications"""
