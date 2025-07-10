@@ -800,11 +800,11 @@ def add_menu_item():
             name = request.form.get('name')
             price = float(request.form.get('price'))
             description = request.form.get('description', '')
-            category_id = request.form.get('category_id')
-            available = request.form.get('available') == 'true'
+            category = request.form.get('category')
+            available = request.form.get('available') == 'on' or request.form.get('available') == 'true'
+            image_url = request.form.get('image_url', '')
             
             # Handle image upload
-            image_url = ''
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
@@ -814,29 +814,26 @@ def add_menu_item():
                     filepath = os.path.join(UPLOAD_FOLDER, filename)
                     file.save(filepath)
                     image_url = f"/static/uploads/{filename}"
+            
+            # If no image uploaded and no URL provided, use default
+            if not image_url:
+                image_url = 'https://via.placeholder.com/300x200?text=Menu+Item'
         else:
             # JSON data (legacy support)
             data = request.get_json()
             name = data['name']
             price = float(data['price'])
             description = data.get('description', '')
-            category_id = data.get('category_id')
-            image_url = data.get('image_url', '')
+            category = data.get('category', 'burgers')
+            image_url = data.get('image_url', 'https://via.placeholder.com/300x200?text=Menu+Item')
             available = data.get('available', True)
-        
-        # Get category name from category_id
-        category_name = 'burgers'  # default
-        if category_id:
-            category = Category.query.get(category_id)
-            if category:
-                category_name = category.name.lower()
         
         item = MenuItem(
             name=name,
             price=price,
             description=description,
             image_url=image_url,
-            category=category_name,
+            category=category,
             available=available
         )
         
@@ -850,28 +847,73 @@ def add_menu_item():
         db.session.rollback()
         return jsonify({'success': False, 'error': 'Failed to add menu item'}), 500
 
+@app.route('/api/menu/<int:item_id>', methods=['GET'])
+def get_menu_item(item_id):
+    """Get single menu item"""
+    try:
+        item = MenuItem.query.get_or_404(item_id)
+        return jsonify(item.to_dict())
+    except Exception as e:
+        logger.error(f"Error fetching menu item: {e}")
+        return jsonify({'error': 'Failed to fetch menu item'}), 500
+
 @app.route('/api/menu/<int:item_id>', methods=['PUT'])
 def update_menu_item(item_id):
-    """Update menu item"""
+    """Update menu item with file upload support"""
     try:
-        data = request.get_json()
         item = MenuItem.query.get_or_404(item_id)
         
-        item.name = data.get('name', item.name)
-        item.price = float(data.get('price', item.price))
-        item.description = data.get('description', item.description)
-        item.image_url = data.get('image_url', item.image_url)
-        item.category = data.get('category', item.category)
-        item.available = data.get('available', item.available)
+        # Handle both JSON and FormData
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData from modal
+            name = request.form.get('name')
+            price = float(request.form.get('price'))
+            description = request.form.get('description', '')
+            category = request.form.get('category')
+            available = request.form.get('available') == 'on' or request.form.get('available') == 'true'
+            image_url = request.form.get('image_url', item.image_url)
+            
+            # Handle image upload
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"{timestamp}_{filename}"
+                    filepath = os.path.join(UPLOAD_FOLDER, filename)
+                    file.save(filepath)
+                    image_url = f"/static/uploads/{filename}"
+        else:
+            # JSON data (legacy support)
+            data = request.get_json()
+            name = data.get('name', item.name)
+            price = float(data.get('price', item.price))
+            description = data.get('description', item.description)
+            category = data.get('category', item.category)
+            image_url = data.get('image_url', item.image_url)
+            available = data.get('available', item.available)
+        
+        # Update item fields
+        if name:
+            item.name = name
+        if price:
+            item.price = price
+        if description:
+            item.description = description
+        if category:
+            item.category = category
+        if image_url:
+            item.image_url = image_url
+        item.available = available
         
         db.session.commit()
         
-        return jsonify({'message': 'Menu item updated successfully'})
+        return jsonify({'success': True, 'message': 'Menu item updated successfully'})
     
     except Exception as e:
         logger.error(f"Error updating menu item: {e}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to update menu item'}), 500
+        return jsonify({'success': False, 'error': 'Failed to update menu item'}), 500
 
 @app.route('/api/menu/<int:item_id>', methods=['DELETE'])
 def delete_menu_item(item_id):
@@ -881,12 +923,12 @@ def delete_menu_item(item_id):
         db.session.delete(item)
         db.session.commit()
         
-        return jsonify({'message': 'Menu item deleted successfully'})
+        return jsonify({'success': True, 'message': 'Menu item deleted successfully'})
     
     except Exception as e:
         logger.error(f"Error deleting menu item: {e}")
         db.session.rollback()
-        return jsonify({'error': 'Failed to delete menu item'}), 500
+        return jsonify({'success': False, 'error': 'Failed to delete menu item'}), 500
 
 # Driver Management API Endpoints
 @app.route('/api/drivers/pending')

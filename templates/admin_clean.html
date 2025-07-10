@@ -1478,23 +1478,276 @@
 
         // Menu item management functions
         function addMenuItem() {
-            alert('Add menu item feature coming soon!');
+            showAddMenuModal();
         }
 
         function editMenuItem(itemId) {
-            alert('Edit menu item feature coming soon!');
+            showEditMenuModal(itemId);
         }
 
         function deleteMenuItem(itemId) {
-            if (confirm('Delete this menu item?')) {
+            if (confirm('Are you sure you want to delete this menu item? This action cannot be undone.')) {
                 fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.success || data.message) {
+                            alert('Menu item deleted successfully!');
                             loadMenuItems();
+                        } else {
+                            alert('Error deleting menu item: ' + (data.error || 'Unknown error'));
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting menu item:', error);
+                        alert('Error deleting menu item');
                     });
             }
+        }
+
+        function showAddMenuModal() {
+            // First fetch categories for dropdown
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const modalHtml = `
+                        <div class="modal fade" id="addMenuModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Add New Menu Item</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="addMenuForm" enctype="multipart/form-data">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Name</label>
+                                                        <input type="text" class="form-control" name="name" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Price (ETB)</label>
+                                                        <input type="number" class="form-control" name="price" step="0.01" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Category</label>
+                                                        <select class="form-select" name="category" required>
+                                                            <option value="">Select Category</option>
+                                                            ${categories.map(cat => `<option value="${cat.name.toLowerCase()}">${cat.name}</option>`).join('')}
+                                                        </select>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Available</label>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="available" checked>
+                                                            <label class="form-check-label">Item is available for order</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Description</label>
+                                                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Image</label>
+                                                        <input type="file" class="form-control" name="image" accept="image/*">
+                                                        <div class="form-text">Upload an image or leave empty to use default</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Image URL (Alternative)</label>
+                                                        <input type="url" class="form-control" name="image_url" placeholder="https://example.com/image.jpg">
+                                                        <div class="form-text">Or provide an image URL instead of uploading</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" onclick="submitAddMenuItem()">
+                                            <i class="fas fa-plus"></i> Add Menu Item
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Remove existing modal if any
+                    const existingModal = document.getElementById('addMenuModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+                    
+                    // Add modal to body
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                    alert('Error loading categories');
+                });
+        }
+
+        function showEditMenuModal(itemId) {
+            // Fetch item details and categories
+            Promise.all([
+                fetch(`/api/menu/${itemId}`).then(r => r.json()),
+                fetch('/api/categories').then(r => r.json())
+            ])
+            .then(([item, categories]) => {
+                const modalHtml = `
+                    <div class="modal fade" id="editMenuModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Menu Item</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="editMenuForm" enctype="multipart/form-data">
+                                        <input type="hidden" name="item_id" value="${itemId}">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Name</label>
+                                                    <input type="text" class="form-control" name="name" value="${item.name}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Price (ETB)</label>
+                                                    <input type="number" class="form-control" name="price" step="0.01" value="${item.price}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Category</label>
+                                                    <select class="form-select" name="category" required>
+                                                        ${categories.map(cat => `
+                                                            <option value="${cat.name.toLowerCase()}" ${item.category === cat.name.toLowerCase() ? 'selected' : ''}>
+                                                                ${cat.name}
+                                                            </option>
+                                                        `).join('')}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Available</label>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="available" ${item.available ? 'checked' : ''}>
+                                                        <label class="form-check-label">Item is available for order</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Description</label>
+                                                    <textarea class="form-control" name="description" rows="3" required>${item.description}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Current Image</label>
+                                                    <div class="mb-2">
+                                                        <img src="${item.image_url}" alt="${item.name}" style="max-width: 200px; max-height: 150px; object-fit: cover;" class="img-thumbnail">
+                                                    </div>
+                                                    <input type="file" class="form-control" name="image" accept="image/*">
+                                                    <div class="form-text">Upload new image or leave empty to keep current</div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Image URL (Alternative)</label>
+                                                    <input type="url" class="form-control" name="image_url" value="${item.image_url}" placeholder="https://example.com/image.jpg">
+                                                    <div class="form-text">Or update image URL instead</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitEditMenuItem()">
+                                        <i class="fas fa-save"></i> Update Menu Item
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('editMenuModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('editMenuModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading menu item:', error);
+                alert('Error loading menu item details');
+            });
+        }
+
+        function submitAddMenuItem() {
+            const form = document.getElementById('addMenuForm');
+            const formData = new FormData(form);
+            
+            fetch('/api/menu', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.message) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addMenuModal'));
+                    modal.hide();
+                    
+                    // Reload menu items
+                    loadMenuItems();
+                    
+                    alert('Menu item added successfully!');
+                } else {
+                    alert('Error adding menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding menu item:', error);
+                alert('Error adding menu item');
+            });
+        }
+
+        function submitEditMenuItem() {
+            const form = document.getElementById('editMenuForm');
+            const formData = new FormData(form);
+            const itemId = formData.get('item_id');
+            
+            fetch(`/api/menu/${itemId}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.message) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editMenuModal'));
+                    modal.hide();
+                    
+                    // Reload menu items
+                    loadMenuItems();
+                    
+                    alert('Menu item updated successfully!');
+                } else {
+                    alert('Error updating menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating menu item:', error);
+                alert('Error updating menu item');
+            });
         }
 
         // Order management functions
