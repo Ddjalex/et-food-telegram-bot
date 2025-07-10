@@ -284,6 +284,80 @@ def get_orders():
         logger.error(f"Error fetching orders: {e}")
         return jsonify({'error': 'Failed to fetch orders'}), 500
 
+@app.route('/api/live-drivers')
+def get_live_drivers():
+    """Get drivers with live location data"""
+    try:
+        from live_driver_tracking import LiveDriverTracker
+        tracker = LiveDriverTracker()
+        live_drivers = tracker.get_live_drivers()
+        
+        return jsonify({
+            'success': True,
+            'drivers': live_drivers,
+            'count': len(live_drivers),
+            'last_update': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching live drivers: {e}")
+        return jsonify({'error': 'Failed to fetch live drivers'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/location-request', methods=['POST'])
+def api_request_driver_location(driver_id):
+    """Request location from specific driver"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if not driver.telegram_user_id:
+            return jsonify({'success': False, 'message': 'Driver has no Telegram account linked'}), 400
+        
+        from live_driver_tracking import LiveDriverTracker
+        tracker = LiveDriverTracker()
+        success = tracker.request_location_from_driver(driver.telegram_user_id)
+        
+        if success:
+            return jsonify({
+                'success': True, 
+                'message': f'Location request sent to {driver.name}'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Failed to send location request'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error requesting driver location: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/live-location-request', methods=['POST'])
+def api_request_driver_live_location(driver_id):
+    """Request live location sharing from specific driver"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if not driver.telegram_user_id:
+            return jsonify({'success': False, 'message': 'Driver has no Telegram account linked'}), 400
+        
+        from live_driver_tracking import LiveDriverTracker
+        tracker = LiveDriverTracker()
+        success = tracker.request_live_location_from_driver(driver.telegram_user_id)
+        
+        if success:
+            return jsonify({
+                'success': True, 
+                'message': f'Live location request sent to {driver.name}'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Failed to send live location request'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error requesting driver live location: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
+
 @app.route('/api/orders', methods=['POST'])
 def create_order():
     """Create new order"""
