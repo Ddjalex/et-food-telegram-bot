@@ -373,6 +373,38 @@ def handle_driver_callback(callback_query):
             order_id = callback_data.split('_')[2]
             handle_delivery_complete(chat_id, order_id)
             
+        elif callback_data.startswith('driver_panel_'):
+            order_id = callback_data.split('_')[2]
+            from driver_gps_panel import send_driver_gps_panel
+            send_driver_gps_panel(chat_id, order_id)
+            
+        elif callback_data.startswith('navigate_customer_'):
+            order_id = callback_data.split('_')[2]
+            from driver_gps_panel import handle_navigate_to_customer
+            handle_navigate_to_customer(chat_id, order_id)
+            
+        elif callback_data.startswith('navigate_restaurant'):
+            from driver_gps_panel import handle_navigate_to_restaurant
+            handle_navigate_to_restaurant(chat_id)
+            
+        elif callback_data.startswith('call_customer_'):
+            order_id = callback_data.split('_')[2]
+            from driver_gps_panel import handle_call_customer
+            handle_call_customer(chat_id, order_id)
+            
+        elif callback_data == 'call_restaurant':
+            from driver_gps_panel import handle_call_restaurant
+            handle_call_restaurant(chat_id)
+            
+        elif callback_data.startswith('share_location_'):
+            # Handle location sharing request
+            order_id = callback_data.split('_')[2]
+            send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location (for delivery tracking)")
+            
+        elif callback_data == 'share_location':
+            # Handle general location sharing request
+            send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location")
+            
         elif callback_data == 'start_registration':
             from driver_registration import start_driver_registration
             start_driver_registration(chat_id)
@@ -580,7 +612,7 @@ def send_complete_customer_info_to_driver(driver_telegram_id, order_id):
                     [
                         {
                             "text": "📞 Call Customer",
-                            "url": f"tel:{order.customer_phone}"
+                            "callback_data": f"call_customer_{order_id}"
                         },
                         {
                             "text": "📍 Open Maps",
@@ -603,8 +635,8 @@ def send_complete_customer_info_to_driver(driver_telegram_id, order_id):
                             "callback_data": "request_location"
                         },
                         {
-                            "text": "🚗 Driver Panel (Live GPS)",
-                            "url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/enhanced-driver-panel?order_id={order_id}&driver_id={driver_telegram_id}"
+                            "text": "🗺️ Driver Panel (GPS)",
+                            "callback_data": f"driver_panel_{order_id}"
                         }
                     ]
                 ]
