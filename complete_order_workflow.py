@@ -46,7 +46,7 @@ class OrderWorkflowManager:
                 logger.error(f"Order {order_id} not found")
                 return False
             
-            # Find available drivers with recent location updates
+            # Find available drivers - first check with location data, then fallback to all available drivers
             available_drivers = Driver.query.filter_by(
                 is_active=True,
                 is_available=True,
@@ -57,6 +57,15 @@ class OrderWorkflowManager:
                 Driver.last_location_update > datetime.utcnow() - timedelta(minutes=10)
             ).all()
             
+            # If no drivers with location data, fall back to all available drivers
+            if not available_drivers:
+                logger.info(f"No drivers with location data found, falling back to all available drivers")
+                available_drivers = Driver.query.filter_by(
+                    is_active=True,
+                    is_available=True,
+                    is_approved=True
+                ).all()
+            
             if not available_drivers:
                 logger.warning(f"No available drivers found for order {order_id}")
                 self.notify_admin_no_drivers(order)
@@ -65,18 +74,24 @@ class OrderWorkflowManager:
             # Calculate distances and sort by proximity
             driver_distances = []
             for driver in available_drivers:
-                distance = self.calculate_distance(
-                    self.restaurant_location[0],
-                    self.restaurant_location[1],
-                    driver.current_lat,
-                    driver.current_lng
-                )
-                
-                if distance <= self.max_driver_distance:
-                    driver_distances.append((driver, distance))
+                if driver.current_lat and driver.current_lng:
+                    # Driver has location data - calculate distance
+                    distance = self.calculate_distance(
+                        self.restaurant_location[0],
+                        self.restaurant_location[1],
+                        driver.current_lat,
+                        driver.current_lng
+                    )
+                    
+                    if distance <= self.max_driver_distance:
+                        driver_distances.append((driver, distance))
+                else:
+                    # Driver has no location data - use default distance for notification
+                    logger.info(f"Driver {driver.name} has no location data, using default distance")
+                    driver_distances.append((driver, 5.0))  # Default 5km distance
             
             if not driver_distances:
-                logger.warning(f"No drivers within {self.max_driver_distance}km for order {order_id}")
+                logger.warning(f"No available drivers found for order {order_id}")
                 self.notify_admin_no_drivers(order)
                 return False
             
