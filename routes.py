@@ -699,28 +699,11 @@ def approve_driver_api(driver_id):
         
         db.session.commit()
         
-        # Send approval notification to driver
+        # Send approval notification to driver with inline buttons
         if driver.telegram_user_id:
             try:
-                from driver_bot import send_driver_message
-                approval_message = f"""
-🎉 *Congratulations {driver.name}!*
-
-✅ Your driver registration has been **APPROVED**!
-
-🚗 You are now an official ET-FOOD delivery driver.
-📍 Make sure to share your location to receive delivery requests.
-💰 You can start earning money right away!
-
-📱 *Driver Commands:*
-• /status - Check your status
-• /orders - View your orders
-• /location - Share current location
-• /toggle - Toggle availability
-
-🎯 Ready to start delivering? Share your location now!
-"""
-                send_driver_message(driver.telegram_user_id, approval_message)
+                from admin_approval_system import send_driver_approval_notification
+                send_driver_approval_notification(driver.telegram_user_id, driver.name)
             except Exception as e:
                 logger.error(f"Failed to send approval notification: {e}")
         
@@ -2266,32 +2249,11 @@ def approve_driver(driver_id):
         
         db.session.commit()
         
-        # Send approval notification via driver bot
+        # Send approval notification via driver bot with inline buttons
         if driver.telegram_user_id:
             try:
-                from driver_bot import send_driver_message
-                approval_message = f"""
-🎉 *DRIVER APPLICATION APPROVED!*
-
-Congratulations {driver.name}! Your application has been approved.
-
-✅ *Account Status: ACTIVE*
-🚚 *You can now receive delivery orders*
-
-📍 *Next Steps:*
-1. Share your live location to receive orders
-2. Keep your availability status updated
-3. Accept orders promptly when assigned
-
-📱 *Quick Commands:*
-• /status - Check your status
-• /location - Share location
-• /orders - View active orders
-• /toggle - Change availability
-
-Welcome to the ET-FOOD delivery team! 🏍️
-"""
-                send_driver_message(driver.telegram_user_id, approval_message)
+                from admin_approval_system import send_driver_approval_notification
+                send_driver_approval_notification(driver.telegram_user_id, driver.name)
             except Exception as e:
                 logger.error(f"Failed to send approval notification: {e}")
         
