@@ -192,6 +192,10 @@ ET-FOOD is a Telegram-based food delivery application that combines a Python Fla
 
 - July 09, 2025. **COMPACT ORDER HISTORY INTERFACE**: Redesigned order history modal to take up significantly less space while maintaining functionality. Reduced modal width from 500px to 400px, decreased padding throughout (header: 20px→12px, body: 20px→12px, items: 15px→10px), made fonts smaller (titles: 18px→16px, details: 14px→11px, buttons: 12px→10px), implemented item text truncation with ellipsis for long order lists, condensed date display to show only date without time, and optimized spacing between elements for mobile viewing. Order history now has a more compact, space-efficient design perfect for mobile WebApp interface.
 
+- July 10, 2025. **ADMIN DRIVER ASSIGNMENT SYSTEM ENHANCED**: Fixed admin panel driver assignment functionality with interactive modal system. Added "Assign Driver" button for each order, driver selection modal with available drivers list, manual driver assignment API endpoint, automatic nearby driver search functionality, and proper driver/customer notifications via Telegram bots. System now provides two assignment options: manual driver selection or automatic GPS-based nearby driver notification.
+
+- July 10, 2025. **MENU PRICING & IMAGES RESTORED**: Fixed incorrect menu pricing and restored proper Ethiopian Birr (ETB) prices throughout the system. Menu now displays correct prices: Burgers (100-130 ETB), Shawarma (90-120 ETB), Pizza (180-220 ETB), Pasta (120-140 ETB), Sides (50-80 ETB), Drinks (20-30 ETB). Updated menu categories to include Burgers, Shawarma, Pizza, Pasta, Sides, and Drinks with proper food images from Unsplash. Database migrated from SQLite to PostgreSQL with proper schema and data integrity.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
