@@ -1330,6 +1330,19 @@ def handle_driver_text_message(chat_id, text):
         toggle_driver_availability(chat_id)
     elif text == '/earnings':
         send_driver_earnings(chat_id)
+    elif text == "✍️ Type Phone Number Instead":
+        # iOS-compatible phone number input
+        message = "📱 *Manual Phone Number Entry*\n\n"
+        message += "Please type your phone number in the format: +251912345678\n\n"
+        message += "🔹 Include country code (+251 for Ethiopia)\n"
+        message += "🔹 No spaces or special characters\n"
+        message += "🔹 Example: +251911234567\n\n"
+        message += "Type your phone number now:"
+        
+        send_driver_message(chat_id, message, keyboard={"remove_keyboard": True})
+    elif text.startswith('+251') or text.startswith('251') or text.startswith('09'):
+        # Handle manually typed phone numbers (iOS compatibility)
+        handle_manual_phone_input(chat_id, text)
     elif text == '/test':
         # Enhanced test command with system status
         try:
@@ -1383,7 +1396,7 @@ def check_driver_registration_and_welcome(chat_id):
         send_driver_message(chat_id, "❌ Error checking registration. Please try again later.")
 
 def send_driver_contact_request(chat_id):
-    """Request contact sharing for automatic driver registration"""
+    """Request contact sharing for automatic driver registration - iOS Compatible"""
     message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
     message += f"To get started, I need to verify your identity and link your Telegram account to your driver profile.\n\n"
     message += f"📞 **Please share your phone number** so I can:\n"
@@ -1391,7 +1404,12 @@ def send_driver_contact_request(chat_id):
     message += f"✅ Automatically update your Telegram ID\n"
     message += f"✅ Activate your driver account\n\n"
     message += f"🔒 Your phone number will be used only for account verification and order notifications.\n\n"
-    message += f"👇 Click the button below to share your contact:"
+    
+    # iOS-compatible approach: Multiple options
+    message += f"**Option 1 (Recommended):** Click the button below to share your contact\n"
+    message += f"**Option 2 (iOS Alternative):** Type your phone number in format: +251912345678\n"
+    message += f"**Option 3:** Contact admin for manual registration\n\n"
+    message += f"👇 Try the button first:"
     
     keyboard = {
         "keyboard": [
@@ -1399,6 +1417,11 @@ def send_driver_contact_request(chat_id):
                 {
                     "text": "📞 Share Phone Number",
                     "request_contact": True
+                }
+            ],
+            [
+                {
+                    "text": "✍️ Type Phone Number Instead"
                 }
             ]
         ],
@@ -1948,6 +1971,58 @@ def set_driver_webhook():
         logger.error(f"Error setting driver webhook: {e}")
 
 # Integration function for main system
+def handle_manual_phone_input(chat_id, phone_text):
+    """Handle manually typed phone numbers for iOS compatibility"""
+    try:
+        # Clean and validate phone number
+        clean_phone = phone_text.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        
+        # Handle different formats
+        if clean_phone.startswith('09'):
+            # Ethiopian local format, add country code
+            clean_phone = '+251' + clean_phone[1:]
+        elif clean_phone.startswith('251'):
+            # Missing + sign
+            clean_phone = '+' + clean_phone
+        elif not clean_phone.startswith('+251'):
+            # Invalid format
+            message = "❌ *Invalid Phone Number Format*\n\n"
+            message += "Please use one of these formats:\n"
+            message += "• +251912345678\n"
+            message += "• 251912345678\n"
+            message += "• 0912345678\n\n"
+            message += "Try again:"
+            
+            send_driver_message(chat_id, message)
+            return False
+        
+        # Validate length (Ethiopian numbers are typically 13 characters with +251)
+        if len(clean_phone) != 13:
+            message = "❌ *Invalid Phone Number Length*\n\n"
+            message += f"Your number: {clean_phone}\n"
+            message += "Expected format: +251912345678 (13 digits)\n\n"
+            message += "Please try again:"
+            
+            send_driver_message(chat_id, message)
+            return False
+        
+        # Create mock contact data for processing
+        contact_data = {
+            'phone_number': clean_phone,
+            'first_name': 'Driver',  # Default name, will be updated during registration
+            'last_name': ''
+        }
+        
+        # Process as regular contact sharing
+        handle_driver_contact_share(chat_id, contact_data)
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error handling manual phone input: {e}")
+        send_driver_message(chat_id, "❌ Error processing phone number. Please try again or contact support.")
+        return False
+
 def notify_driver_assignment_via_driver_bot(driver_telegram_id, order_data):
     """Main function to notify driver via driver bot"""
     if DRIVER_BOT_TOKEN and driver_telegram_id:
