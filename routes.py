@@ -1993,6 +1993,65 @@ def notify_status_change():
         logger.error(f"Error notifying driver about status change: {e}")
         return jsonify({'error': 'Failed to notify driver'}), 500
 
+@app.route('/api/test-driver-notification', methods=['POST'])
+def test_driver_notification():
+    """Test notification to specific driver"""
+    try:
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        message = data.get('message', 'Test notification from admin')
+        
+        if not driver_id:
+            return jsonify({'error': 'driver_id is required'}), 400
+        
+        # Get driver from database
+        driver = Driver.query.get(driver_id)
+        if not driver:
+            return jsonify({'error': 'Driver not found'}), 404
+        
+        if not driver.telegram_user_id:
+            return jsonify({'error': 'Driver has no Telegram ID'}), 400
+        
+        # Send test notification
+        from driver_bot import send_driver_message
+        
+        test_message = f"""
+🔔 *Test Notification*
+
+Hello {driver.name}! This is a test message from the admin.
+
+📋 *Your Info:*
+• Name: {driver.name}
+• Phone: {driver.phone_number}
+• Vehicle: {driver.vehicle_type}
+• Status: {'Active' if driver.is_active else 'Inactive'}
+
+{message}
+
+📱 If you can read this, your driver bot is working properly!
+"""
+        
+        success = send_driver_message(driver.telegram_user_id, test_message)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Test notification sent to {driver.name}',
+                'driver_telegram_id': driver.telegram_user_id
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'Failed to send notification to {driver.name}',
+                'reason': 'Driver needs to start @Food_Driver_Bot first',
+                'driver_telegram_id': driver.telegram_user_id,
+                'instructions': f'Tell {driver.name} to start @Food_Driver_Bot on Telegram'
+            })
+        
+    except Exception as e:
+        logger.error(f"Error testing driver notification: {e}")
+        return jsonify({'error': 'Failed to test driver notification'}), 500
+
 # Enhanced Driver Management API Endpoints
 
 @app.route('/api/drivers/<int:driver_id>', methods=['GET'])

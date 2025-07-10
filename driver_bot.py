@@ -42,10 +42,18 @@ def send_driver_message(chat_id, text, keyboard=None, parse_mode=None):
         response = requests.post(url, data=data)
         if response.status_code == 200:
             logger.info(f"Message sent successfully to driver {chat_id}")
+            return True
         else:
-            logger.error(f"Failed to send message: {response.text}")
+            response_data = response.json()
+            if response_data.get('error_code') == 400 and 'chat not found' in response_data.get('description', ''):
+                logger.warning(f"Driver {chat_id} has not started the driver bot yet. They need to start @Food_Driver_Bot first.")
+                return False
+            else:
+                logger.error(f"Failed to send message: {response.text}")
+                return False
     except Exception as e:
         logger.error(f"Error sending message: {e}")
+        return False
 
 def notify_driver_order_assignment(driver_telegram_id, order_data):
     """Notify driver about new order assignment with mini web interface"""
