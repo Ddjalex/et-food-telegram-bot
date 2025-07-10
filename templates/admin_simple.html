@@ -221,7 +221,10 @@
                                         <button class="btn btn-sm btn-outline-secondary" onclick="refreshDriverMap()">
                                             <i class="fas fa-sync"></i> Refresh
                                         </button>
-                                        <button class="btn btn-sm btn-outline-info" onclick="requestAllDriversLocation()">
+                                        <button class="btn btn-sm btn-outline-info" onclick="toggleMapView()">
+                                            <i class="fas fa-satellite"></i> <span id="mapViewToggleText">Satellite</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="requestAllDriversLocation()">
                                             <i class="fas fa-location-arrow"></i> Request All Locations
                                         </button>
                                     </div>
@@ -230,12 +233,24 @@
                                     <div id="driversMap" style="height: 400px; width: 100%;"></div>
                                 </div>
                                 <div class="card-footer">
-                                    <small class="text-muted">
-                                        <i class="fas fa-circle text-success"></i> Available
-                                        <i class="fas fa-circle text-warning ms-3"></i> Busy
-                                        <i class="fas fa-circle text-danger ms-3"></i> Location Outdated
-                                        | Last Update: <span id="mapLastUpdate">Never</span>
-                                    </small>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-circle text-success"></i> Available
+                                            <i class="fas fa-circle text-warning ms-3"></i> Busy
+                                            <i class="fas fa-circle text-danger ms-3"></i> Location Outdated
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> Last Update: <span id="mapLastUpdate">Never</span>
+                                        </small>
+                                    </div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            <i class="fas fa-map" id="currentMapType"></i> 
+                                            <span id="mapTypeText">Street View</span> | 
+                                            <i class="fas fa-utensils text-danger"></i> Restaurant | 
+                                            <i class="fas fa-motorcycle text-primary"></i> Drivers
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -274,6 +289,9 @@
         let driversMap = null;
         let driverMarkers = {};
         let autoRefreshInterval = null;
+        let mapSatelliteView = false;
+        let streetLayer = null;
+        let satelliteLayer = null;
 
         // Tab switching functionality
         document.querySelectorAll('[data-tab]').forEach(tab => {
@@ -295,6 +313,11 @@
                 });
                 this.classList.add('active');
                 
+                // Stop auto-refresh when switching away from drivers tab
+                if (targetTab !== 'drivers') {
+                    stopAutoRefresh();
+                }
+                
                 // Load tab content
                 loadTabContent(targetTab);
             });
@@ -315,6 +338,7 @@
                 case 'drivers':
                     loadDrivers();
                     initializeDriversMap();
+                    startAutoRefresh();
                     break;
             }
         }
@@ -498,21 +522,31 @@
             if (!driversMap) {
                 driversMap = L.map('driversMap').setView([9.0579, 38.7914], 12);
                 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(driversMap);
+                // Create tile layers
+                streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                });
+                
+                satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri, Maxar, Earthstar Geographics',
+                    maxZoom: 19
+                });
+                
+                // Add default street layer
+                streetLayer.addTo(driversMap);
                 
                 // Add restaurant marker
                 const restaurantIcon = L.divIcon({
                     className: 'restaurant-marker',
-                    html: '<i class="fas fa-utensils" style="color: #ff6b6b; font-size: 20px;"></i>',
+                    html: '<div style="background: #ff6b6b; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><i class="fas fa-utensils" style="font-size: 14px;"></i></div>',
                     iconSize: [30, 30],
                     iconAnchor: [15, 15]
                 });
                 
                 L.marker([9.0579, 38.7914], { icon: restaurantIcon })
                     .addTo(driversMap)
-                    .bindPopup('<b>ET-FOOD Restaurant</b><br>Main Location')
+                    .bindPopup('<div class="text-center"><h6><i class="fas fa-utensils"></i> ET-FOOD Restaurant</h6><p class="mb-0">Main Kitchen Location</p><small class="text-muted">9.0579, 38.7914</small></div>')
                     .openPopup();
             }
         }
@@ -596,7 +630,7 @@
             
             return L.divIcon({
                 className: 'driver-marker',
-                html: `<i class="${iconClass}" style="color: ${color}; font-size: 16px;"></i>`,
+                html: `<div style="background: ${color}; color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"><i class="${iconClass}" style="font-size: 12px;"></i></div>`,
                 iconSize: [25, 25],
                 iconAnchor: [12, 12]
             });
@@ -723,9 +757,60 @@
             loadDrivers();
         }
 
+        function toggleMapView() {
+            if (!driversMap || !streetLayer || !satelliteLayer) return;
+            
+            if (mapSatelliteView) {
+                // Switch to street view
+                driversMap.removeLayer(satelliteLayer);
+                driversMap.addLayer(streetLayer);
+                mapSatelliteView = false;
+                document.getElementById('mapViewToggleText').textContent = 'Satellite';
+                document.querySelector('[onclick="toggleMapView()"] i').className = 'fas fa-satellite';
+                document.getElementById('currentMapType').className = 'fas fa-map';
+                document.getElementById('mapTypeText').textContent = 'Street View';
+            } else {
+                // Switch to satellite view
+                driversMap.removeLayer(streetLayer);
+                driversMap.addLayer(satelliteLayer);
+                mapSatelliteView = true;
+                document.getElementById('mapViewToggleText').textContent = 'Street';
+                document.querySelector('[onclick="toggleMapView()"] i').className = 'fas fa-map';
+                document.getElementById('currentMapType').className = 'fas fa-satellite';
+                document.getElementById('mapTypeText').textContent = 'Satellite View';
+            }
+        }
+
+        // Auto-refresh functionality
+        function startAutoRefresh() {
+            // Clear any existing interval
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            // Refresh drivers every 30 seconds
+            autoRefreshInterval = setInterval(() => {
+                if (document.getElementById('drivers-tab').classList.contains('active')) {
+                    loadDrivers();
+                }
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
         // Initialize dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadTabContent('dashboard');
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
         });
     </script>
 </body>
