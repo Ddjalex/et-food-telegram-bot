@@ -75,8 +75,13 @@ def notify_driver_assignment(driver_id, order_id):
                 ]
             }
             
-            # Send to customer
-            send_message(order.telegram_user_id, admin_message, parse_mode="Markdown")
+            # Send simple customer notification (without admin details)
+            customer_message = f"🚚 *Your order is being prepared for delivery!*\n\n"
+            customer_message += f"💰 Total: {order.total_amount:.2f} ETB\n"
+            customer_message += f"📍 Our delivery team will contact you soon with tracking information.\n\n"
+            customer_message += f"Thank you for choosing ET-FOOD! 🍽️"
+            
+            send_message(order.telegram_user_id, customer_message, parse_mode="Markdown")
             
             # Send to admins with monitoring options
             try:
@@ -99,7 +104,8 @@ def notify_driver_assignment(driver_id, order_id):
             except Exception as driver_bot_error:
                 logger.warning(f"Driver bot notification failed, using main bot: {driver_bot_error}")
                 
-                # Fallback to main bot notification
+                # This is driver notification - should NOT go to customer
+                # Send to driver only (this is fallback for driver bot failure)
                 message = f"🚚 *New Delivery Assignment*\n\n"
                 message += f"Order #{order.id}\n"
                 message += f"Customer: {order.customer_name}\n"
@@ -310,11 +316,11 @@ def notify_customer_status_change(order_id, new_status):
             'cancelled': '❌'
         }
 
-        message = f"📦 *Order #{order.id} Update*\n\n"
+        message = f"📦 *Order Update*\n\n"
         message += f"{status_messages.get(new_status, '')}\n\n"
         message += f"Status: {status_emoji.get(new_status)} {new_status.title()}\n"
-        message += f"Total: ${order.total_amount:.2f}\n"
-        message += f"Customer: {order.customer_name}"
+        message += f"Total: {order.total_amount:.2f} ETB\n"
+        message += f"Thank you for choosing ET-FOOD! 🍽️"
 
         send_message(order.telegram_user_id, message, parse_mode='Markdown')
 

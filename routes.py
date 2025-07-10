@@ -352,8 +352,21 @@ def update_order_status(order_id):
         # Handle status change through workflow manager
         handle_order_status_change(order_id, old_status, new_status)
         
-        # Note: Order confirmation no longer triggers automatic driver notifications
-        # Admin must manually assign drivers through the dashboard
+        # Trigger driver notification when admin confirms order
+        if new_status == 'confirmed' and old_status == 'pending':
+            try:
+                from complete_order_workflow import OrderWorkflowManager
+                workflow_manager = OrderWorkflowManager()
+                import threading
+                # Start driver search in background to avoid blocking the response
+                threading.Thread(
+                    target=workflow_manager.find_nearby_drivers,
+                    args=(order_id,),
+                    daemon=True
+                ).start()
+                logger.info(f"Driver search initiated for confirmed order {order_id}")
+            except Exception as e:
+                logger.error(f"Error initiating driver search for order {order_id}: {e}")
         
         return jsonify({
             'success': True,
