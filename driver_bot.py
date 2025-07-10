@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Driver Bot Configuration
 DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN')
-DRIVER_WEBHOOK_URL = f"{os.environ.get('REPLIT_DEV_DOMAIN', 'localhost')}/driver-webhook"
+DRIVER_WEBHOOK_URL = f"https://{os.environ.get('REPLIT_DEV_DOMAIN') or os.environ.get('RENDER_EXTERNAL_URL', 'localhost').replace('https://', '')}/driver-webhook"
 
 # Order timeout tracking
 pending_orders = {}
