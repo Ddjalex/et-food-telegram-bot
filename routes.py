@@ -98,21 +98,32 @@ def enhanced_driver_panel():
 def api_driver_registration():
     """API endpoint for driver registration"""
     try:
-        telegram_id = request.form.get('telegram_id')
-        name = request.form.get('name')
-        phone_number = request.form.get('phone_number')
-        vehicle_type = request.form.get('vehicle_type')
+        # Check if request has JSON data or form data
+        if request.is_json:
+            data = request.get_json()
+            telegram_id = data.get('telegram_id')
+            name = data.get('name')
+            phone_number = data.get('phone_number')
+            vehicle_type = data.get('vehicle_type')
+        else:
+            telegram_id = request.form.get('telegram_id')
+            name = request.form.get('name')
+            phone_number = request.form.get('phone_number')
+            vehicle_type = request.form.get('vehicle_type')
+        
+        if not all([telegram_id, name, phone_number]):
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
         
         # Check if driver already exists
-        existing_driver = Driver.query.filter_by(telegram_user_id=telegram_id).first()
+        existing_driver = Driver.query.filter_by(telegram_user_id=int(telegram_id)).first()
         if existing_driver:
             return jsonify({'success': False, 'message': 'Driver already registered'})
         
         # Create new driver with required fields
         driver = Driver(
-            name=name or "Driver Registration",
-            phone_number=phone_number or "+251900000000", 
-            telegram_user_id=int(telegram_id) if telegram_id else None,
+            name=name,
+            phone_number=phone_number, 
+            telegram_user_id=int(telegram_id),
             vehicle_type=vehicle_type or "motorcycle",
             is_active=True,
             is_available=False,  # Not available until approved
@@ -120,47 +131,52 @@ def api_driver_registration():
             approval_status='pending'
         )
         
-        # Handle file uploads
-        upload_folder = os.path.join('static', 'driver_documents')
-        os.makedirs(upload_folder, exist_ok=True)
-        
-        document_fields = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg']
-        for field in document_fields:
-            if field in request.files:
-                file = request.files[field]
-                if file and file.filename:
-                    filename = secure_filename(f"{telegram_id}_{field}_{file.filename}")
-                    file_path = os.path.join(upload_folder, filename)
-                    file.save(file_path)
-                    
-                    # Store document path in driver model
-                    if field.startswith('license'):
-                        driver.license_document = file_path
-                    elif field.startswith('id'):
-                        driver.id_document = file_path
-                    elif field.startswith('vehicle'):
-                        driver.vehicle_document = file_path
+        # Handle file uploads only if form data
+        if not request.is_json and request.files:
+            upload_folder = os.path.join('static', 'driver_documents')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            document_fields = ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg']
+            for field in document_fields:
+                if field in request.files:
+                    file = request.files[field]
+                    if file and file.filename:
+                        filename = secure_filename(f"{telegram_id}_{field}_{file.filename}")
+                        file_path = os.path.join(upload_folder, filename)
+                        file.save(file_path)
+                        
+                        # Store document path in driver model
+                        if field.startswith('license'):
+                            driver.license_document = file_path
+                        elif field.startswith('id'):
+                            driver.id_document = file_path
+                        elif field.startswith('vehicle'):
+                            driver.vehicle_document = file_path
         
         db.session.add(driver)
         db.session.commit()
         
         # Send pending registration message
-        from driver_registration import send_driver_registration_pending, notify_admin_driver_registration
-        send_driver_registration_pending(telegram_id, name)
-        
-        # Notify admin
-        notify_admin_driver_registration({
-            'name': name,
-            'phone_number': phone_number,
-            'vehicle_type': vehicle_type,
-            'documents_uploaded': True
-        })
+        try:
+            from driver_registration import send_driver_registration_pending, notify_admin_driver_registration
+            send_driver_registration_pending(int(telegram_id), name)
+            
+            # Notify admin
+            notify_admin_driver_registration({
+                'name': name,
+                'phone_number': phone_number,
+                'vehicle_type': vehicle_type,
+                'documents_uploaded': bool(request.files) if not request.is_json else False
+            })
+        except Exception as notify_error:
+            logger.error(f"Error sending notifications: {notify_error}")
         
         return jsonify({'success': True, 'message': 'Registration submitted successfully'})
         
     except Exception as e:
         logger.error(f"Error in driver registration: {e}")
-        return jsonify({'success': False, 'message': 'Registration failed'}), 500
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Registration failed: {str(e)}'}), 500
 
 
 
