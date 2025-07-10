@@ -135,6 +135,29 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Pending Driver Approvals Section -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-clock text-warning"></i> Pending Driver Approvals
+                                        <span class="badge bg-warning text-dark" id="pendingApprovalsBadge">0</span>
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadPendingDrivers()">
+                                        <i class="fas fa-sync"></i> Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body" id="pendingApprovalsContainer">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <p>Loading pending approvals...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Orders Tab -->
@@ -367,6 +390,9 @@
                     document.getElementById('activeDrivers').textContent = activeDrivers;
                 })
                 .catch(error => console.error('Error loading drivers count:', error));
+            
+            // Load pending driver approvals
+            loadPendingDrivers();
         }
 
         function loadOrders() {
@@ -1085,6 +1111,183 @@
         setInterval(() => {
             if (document.getElementById('orders-tab').classList.contains('active')) {
                 loadOrders();
+            }
+        }, 30000);
+
+        // Pending Driver Approval Functions
+        function loadPendingDrivers() {
+            fetch('/api/drivers/pending')
+                .then(response => response.json())
+                .then(drivers => {
+                    const container = document.getElementById('pendingApprovalsContainer');
+                    const badge = document.getElementById('pendingApprovalsBadge');
+                    
+                    badge.textContent = drivers.length;
+                    
+                    if (drivers.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center text-muted">
+                                <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                                <p>No pending driver approvals</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    drivers.forEach(driver => {
+                        const driverCard = document.createElement('div');
+                        driverCard.className = 'row border-bottom pb-3 mb-3';
+                        driverCard.innerHTML = `
+                            <div class="col-md-8">
+                                <h6 class="mb-1"><i class="fas fa-user"></i> ${driver.name}</h6>
+                                <p class="mb-1"><i class="fas fa-phone"></i> ${driver.phone_number}</p>
+                                <p class="mb-1"><i class="fas fa-motorcycle"></i> ${driver.vehicle_type}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i> Applied: ${new Date(driver.created_at).toLocaleDateString()}
+                                </small>
+                                ${driver.telegram_user_id ? `<br><small class="text-success"><i class="fab fa-telegram"></i> Telegram: ${driver.telegram_user_id}</small>` : ''}
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-success btn-sm" onclick="approveDriver(${driver.id}, '${driver.name}')" title="Approve Driver">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectDriver(${driver.id}, '${driver.name}')" title="Reject Driver">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                    ${driver.license_document || driver.id_document || driver.vehicle_document ? `
+                                        <button class="btn btn-info btn-sm" onclick="viewDriverDocuments(${driver.id})" title="View Documents">
+                                            <i class="fas fa-file-alt"></i> Docs
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(driverCard);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading pending drivers:', error);
+                    document.getElementById('pendingApprovalsContainer').innerHTML = `
+                        <div class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>Error loading pending approvals</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function approveDriver(driverId, driverName) {
+            if (confirm(`Approve driver registration for ${driverName}?`)) {
+                fetch(`/api/drivers/${driverId}/approve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Driver ${driverName} approved successfully!`);
+                        loadPendingDrivers(); // Refresh pending approvals
+                        loadDashboardData(); // Refresh dashboard stats
+                    } else {
+                        alert('Error approving driver: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error approving driver:', error);
+                    alert('Error approving driver');
+                });
+            }
+        }
+
+        function rejectDriver(driverId, driverName) {
+            const reason = prompt(`Reason for rejecting ${driverName}:`, 'Application does not meet our requirements');
+            if (reason !== null) {
+                fetch(`/api/drivers/${driverId}/reject`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({reason: reason})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Driver ${driverName} rejected successfully`);
+                        loadPendingDrivers(); // Refresh pending approvals
+                        loadDashboardData(); // Refresh dashboard stats
+                    } else {
+                        alert('Error rejecting driver: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting driver:', error);
+                    alert('Error rejecting driver');
+                });
+            }
+        }
+
+        function viewDriverDocuments(driverId) {
+            fetch(`/api/drivers/${driverId}/documents`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const docs = data.documents;
+                        let docsHtml = '<div class="row">';
+                        
+                        if (docs.license_document) {
+                            docsHtml += `<div class="col-md-4 mb-3">
+                                <h6>Driver License</h6>
+                                <img src="${docs.license_document}" class="img-fluid" style="max-height: 200px;">
+                            </div>`;
+                        }
+                        
+                        if (docs.id_document) {
+                            docsHtml += `<div class="col-md-4 mb-3">
+                                <h6>ID Document</h6>
+                                <img src="${docs.id_document}" class="img-fluid" style="max-height: 200px;">
+                            </div>`;
+                        }
+                        
+                        if (docs.vehicle_document) {
+                            docsHtml += `<div class="col-md-4 mb-3">
+                                <h6>Vehicle Registration</h6>
+                                <img src="${docs.vehicle_document}" class="img-fluid" style="max-height: 200px;">
+                            </div>`;
+                        }
+                        
+                        docsHtml += '</div>';
+                        
+                        // Create and show modal
+                        const modal = new bootstrap.Modal(document.createElement('div'));
+                        modal._element.innerHTML = `
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Driver Documents</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">${docsHtml}</div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(modal._element);
+                        modal.show();
+                        
+                        modal._element.addEventListener('hidden.bs.modal', () => {
+                            document.body.removeChild(modal._element);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading documents:', error);
+                    alert('Error loading driver documents');
+                });
+        }
+
+        // Auto-refresh pending approvals every 30 seconds
+        setInterval(() => {
+            if (document.getElementById('dashboard-tab').classList.contains('active')) {
+                loadPendingDrivers();
             }
         }, 30000);
     </script>

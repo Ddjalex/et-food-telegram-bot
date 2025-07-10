@@ -1035,6 +1035,8 @@ Contact admin for more information.
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Failed to reject driver'}), 500
 
+
+
 @app.route('/api/drivers/add-employee', methods=['POST'])
 def add_driver_employee():
     """Add a new driver employee with enhanced features"""
