@@ -482,6 +482,90 @@ def cancel_order(order_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to cancel order'}), 500
 
+@app.route('/api/drivers/live-locations')
+def get_drivers_live_locations():
+    """Get all drivers with their live locations and status"""
+    try:
+        from datetime import datetime, timedelta
+        
+        drivers = Driver.query.filter_by(is_approved=True).all()
+        drivers_data = []
+        
+        for driver in drivers:
+            # Check if location is recent (within 10 minutes)
+            location_active = False
+            last_update_str = 'Never'
+            
+            if driver.last_location_update:
+                time_diff = datetime.utcnow() - driver.last_location_update
+                location_active = time_diff.total_seconds() < 600  # Less than 10 minutes
+                last_update_str = driver.last_location_update.strftime('%H:%M:%S')
+            
+            # Determine overall status
+            if not driver.is_active:
+                status = 'Offline'
+                status_color = '#6c757d'  # Gray
+            elif not location_active:
+                status = 'Location Outdated'
+                status_color = '#dc3545'  # Red
+            elif not driver.is_available:
+                status = 'Busy'
+                status_color = '#fd7e14'  # Orange
+            else:
+                status = 'Available'
+                status_color = '#198754'  # Green
+            
+            driver_data = {
+                'id': driver.id,
+                'name': driver.name,
+                'phone_number': driver.phone_number,
+                'vehicle_type': driver.vehicle_type,
+                'current_lat': driver.current_lat,
+                'current_lng': driver.current_lng,
+                'is_active': driver.is_active,
+                'is_available': driver.is_available,
+                'last_location_update': last_update_str,
+                'location_active': location_active,
+                'status': status,
+                'status_color': status_color,
+                'telegram_user_id': driver.telegram_user_id
+            }
+            drivers_data.append(driver_data)
+        
+        return jsonify({
+            'success': True,
+            'drivers': drivers_data,
+            'total_drivers': len(drivers_data),
+            'active_drivers': len([d for d in drivers_data if d['status'] == 'Available']),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching drivers live locations: {e}")
+        return jsonify({'error': 'Failed to fetch driver locations'}), 500
+
+@app.route('/api/drivers/<int:driver_id>/request-location', methods=['POST'])
+def request_driver_location(driver_id):
+    """Request driver to share current location"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if not driver.telegram_user_id:
+            return jsonify({'error': 'Driver has no Telegram account linked'}), 400
+        
+        # Send location request via driver bot
+        from driver_bot import send_location_request
+        send_location_request(driver.telegram_user_id)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Location request sent to {driver.name}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error requesting driver location: {e}")
+        return jsonify({'error': 'Failed to request driver location'}), 500
+
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
     """Upload image file"""

@@ -55,6 +55,32 @@ def send_driver_message(chat_id, text, keyboard=None, parse_mode=None):
         logger.error(f"Error sending message: {e}")
         return False
 
+def send_location_request(driver_telegram_id):
+    """Request driver to share their current location"""
+    message = "📍 *Location Update Required*\n\n"
+    message += "Please share your current location for order assignments.\n"
+    message += "We need your live location to find you nearby delivery requests.\n\n"
+    message += "👆 Use the button below to share your location:"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📍 Share Live Location",
+                    "callback_data": "share_live_location"
+                }
+            ],
+            [
+                {
+                    "text": "📱 Driver Status",
+                    "callback_data": "driver_status"
+                }
+            ]
+        ]
+    }
+    
+    return send_driver_message(driver_telegram_id, message, keyboard)
+
 def notify_driver_order_assignment(driver_telegram_id, order_data):
     """Notify driver about new order assignment with mini web interface"""
     try:
