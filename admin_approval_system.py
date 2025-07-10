@@ -74,8 +74,9 @@ def send_driver_approval_notification(chat_id, driver_name):
     message = f"🎉 *Congratulations {driver_name}!*\n\n"
     message += f"✅ Your driver registration has been **APPROVED**!\n\n"
     message += f"🚗 You are now an official ET-FOOD delivery driver.\n"
-    message += f"📍 Make sure to share your location to receive delivery requests.\n"
     message += f"💰 You can start earning money right away!\n\n"
+    message += f"📍 **IMPORTANT: You must share your live location to receive order assignments**\n"
+    message += f"⚡ Click the button below to share your location and start receiving orders!\n\n"
     message += f"🎯 **Ready to start delivering? Share your location now!**"
     
     keyboard = {

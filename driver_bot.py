@@ -394,26 +394,26 @@ def handle_driver_callback(callback_query):
 
 def send_location_request(chat_id):
     """Send location request message to driver"""
-    message = "📍 *Location Sharing Required*\n\n"
-    message += "Please share your current location to:\n"
-    message += "✅ Receive order assignments\n"
-    message += "✅ Enable distance-based matching\n"
-    message += "✅ Allow admin monitoring\n\n"
-    message += "Tap the 'Share Location' button below:"
+    message = "📍 *Location Sharing Required for Order Assignments*\n\n"
+    message += "🚨 **IMPORTANT**: You must share your location to receive delivery orders!\n\n"
+    message += "📍 Location sharing enables:\n"
+    message += "✅ Automatic order notifications in your area\n"
+    message += "✅ Distance-based order matching\n"
+    message += "✅ Real-time delivery tracking\n"
+    message += "✅ Admin monitoring for your safety\n\n"
+    message += "👇 **Tap the button below to share your live location:**"
     
     keyboard = {
-        "reply_markup": {
-            "keyboard": [
-                [
-                    {
-                        "text": "📍 Share My Location",
-                        "request_location": True
-                    }
-                ]
-            ],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
-        }
+        "keyboard": [
+            [
+                {
+                    "text": "📍 Share My Live Location",
+                    "request_location": True
+                }
+            ]
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True
     }
     
     send_driver_message(chat_id, message, keyboard=keyboard)
@@ -702,19 +702,27 @@ def handle_driver_location_update(chat_id, location):
     """Handle driver location update"""
     try:
         from models import Driver
-        from extensions import db
+        from app import db
+        from main import app
         
-        driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
-        if driver:
-            driver.current_lat = location['latitude']
-            driver.current_lng = location['longitude']
-            driver.last_location_update = datetime.utcnow()
-            db.session.commit()
-            
-            send_driver_message(chat_id, "📍 Location updated successfully! Admin can now track your delivery.\n\n⚠️ **Keep sharing your location regularly** to receive order assignments in your area.")
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            if driver:
+                driver.current_lat = location['latitude']
+                driver.current_lng = location['longitude']
+                driver.last_location_update = datetime.utcnow()
+                db.session.commit()
+                
+                logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_lat}, {driver.current_lng}")
+                
+                send_driver_message(chat_id, f"📍 Location updated successfully!\n\n✅ **Admin can now track your delivery**\n📍 GPS: {driver.current_lat:.4f}, {driver.current_lng:.4f}\n⏰ Updated: {driver.last_location_update.strftime('%H:%M:%S')}\n\n⚠️ **Keep sharing your location regularly** to receive order assignments in your area.")
+            else:
+                logger.warning(f"Driver not found for Telegram ID: {chat_id}")
+                send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin or use /start to register.")
             
     except Exception as e:
-        logger.error(f"Error updating driver location: {e}")
+        logger.error(f"Error updating driver location for {chat_id}: {e}")
+        send_driver_message(chat_id, "❌ Failed to update location. Please try again or contact support.")
 
 def init_driver_bot(flask_app):
     """Initialize the driver bot with Flask app context"""
@@ -739,7 +747,9 @@ def setup_driver_webhook(flask_app):
                     message = update['message']
                     chat_id = message['from']['id']
                     
+                    # Handle location updates (both regular and live location)
                     if 'location' in message:
+                        logger.info(f"Received location from driver {chat_id}: {message['location']}")
                         handle_driver_location_update(chat_id, message['location'])
                     elif 'contact' in message:
                         # Check if this is for registration or existing driver linking
