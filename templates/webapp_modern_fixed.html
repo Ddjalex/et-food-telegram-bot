@@ -1471,7 +1471,12 @@
                             <h4>Payment Method</h4>
                             <div class="payment-methods">
                                 <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="telebirr" checked>
+                                    <input type="radio" name="paymentMethod" value="cash_on_delivery" checked>
+                                    <span class="payment-icon">💵</span>
+                                    <span>Cash on Delivery</span>
+                                </label>
+                                <label class="payment-method">
+                                    <input type="radio" name="paymentMethod" value="telebirr">
                                     <span class="payment-icon">💰</span>
                                     <span>TeleBirr</span>
                                 </label>
@@ -1587,7 +1592,13 @@
             const titleElement = document.getElementById('paymentMethodTitle');
             const instructionsElement = document.getElementById('paymentInstructions');
             
-            // All payment methods now require transaction details
+            // Hide payment details for cash on delivery
+            if (paymentMethod === 'cash_on_delivery') {
+                detailsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Show payment details for other methods
             detailsDiv.style.display = 'block';
             
             const paymentInfo = {
@@ -1665,18 +1676,20 @@
                 return;
             }
 
-            // All payment methods now require transaction details
-            const transactionId = document.getElementById('transactionId').value.trim();
-            const transactionImage = document.getElementById('transactionImage').files[0];
-            
-            if (!transactionId) {
-                alert('Please enter the transaction ID for this payment method');
-                return;
-            }
-            
-            if (!transactionImage) {
-                alert('Please upload a screenshot of your payment');
-                return;
+            // Only require transaction details for non-cash payment methods
+            if (paymentMethod !== 'cash_on_delivery') {
+                const transactionId = document.getElementById('transactionId').value.trim();
+                const transactionImage = document.getElementById('transactionImage').files[0];
+                
+                if (!transactionId) {
+                    alert('Please enter the transaction ID for this payment method');
+                    return;
+                }
+                
+                if (!transactionImage) {
+                    alert('Please upload a screenshot of your payment');
+                    return;
+                }
             }
 
             // Get telegram user ID  
@@ -1696,9 +1709,11 @@
                 location_lng: window.currentOrderLocation?.longitude
             };
 
-            // Add payment details for all methods
-            orderData.transaction_id = document.getElementById('transactionId').value.trim();
-            orderData.transaction_image = document.getElementById('transactionImage').files[0];
+            // Add payment details only for non-cash methods
+            if (paymentMethod !== 'cash_on_delivery') {
+                orderData.transaction_id = document.getElementById('transactionId').value.trim();
+                orderData.transaction_image = document.getElementById('transactionImage').files[0];
+            }
 
             await submitOrder(orderData);
         }
@@ -1715,7 +1730,7 @@
                     placeOrderBtn.disabled = true;
                 }
 
-                // Handle file upload if present
+                // Handle file upload if present (only for non-cash payments)
                 if (orderData.transaction_image) {
                     // First upload the image
                     const formData = new FormData();
@@ -1764,11 +1779,12 @@
                     
                     // Show success message
                     const paymentMethodText = {
-                        'birr': 'Birr',
+                        'cash_on_delivery': 'Cash on Delivery',
+                        'telebirr': 'TeleBirr',
                         'cbe_birr': 'CBE Birr',
                         'mpessa': 'M-Pesa',
                         'bank_transfer': 'Bank Transfer'
-                    }[orderData.payment_method] || 'Birr';
+                    }[orderData.payment_method] || 'Cash on Delivery';
                     
                     const successMessage = `Order #${result.order_id} placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\nPayment: ${paymentMethodText}`;
                     
