@@ -358,10 +358,16 @@ def update_order_status(order_id):
                 from complete_order_workflow import OrderWorkflowManager
                 workflow_manager = OrderWorkflowManager()
                 import threading
+                from flask import current_app
+                
+                def find_drivers_with_context():
+                    """Function to run driver search with Flask app context"""
+                    with current_app.app_context():
+                        workflow_manager.find_nearby_drivers(order_id)
+                
                 # Start driver search in background to avoid blocking the response
                 threading.Thread(
-                    target=workflow_manager.find_nearby_drivers,
-                    args=(order_id,),
+                    target=find_drivers_with_context,
                     daemon=True
                 ).start()
                 logger.info(f"Driver search initiated for confirmed order {order_id}")
