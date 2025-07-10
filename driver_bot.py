@@ -1285,7 +1285,7 @@ def toggle_driver_availability(chat_id):
         send_driver_message(chat_id, "❌ Error updating status. Please try again later.")
 
 def send_driver_earnings(chat_id):
-    """Send driver earnings summary with detailed breakdown"""
+    """Send driver earnings summary with detailed breakdown and inline buttons"""
     try:
         from models import Driver, Order
         from main import app
@@ -1332,30 +1332,48 @@ def send_driver_earnings(chat_id):
                 message += f"🚚 Vehicle: {driver.vehicle_type.title()}\n"
                 message += f"⭐ Status: {'Available' if driver.is_available else 'Unavailable'}"
             
-            send_driver_message(chat_id, message)
+            # Add action buttons
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📱 View Orders",
+                            "callback_data": "driver_orders"
+                        },
+                        {
+                            "text": "📊 Check Status",
+                            "callback_data": "driver_status"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🔄 Toggle Availability",
+                            "callback_data": "toggle_availability"
+                        },
+                        {
+                            "text": "📍 Share Location",
+                            "callback_data": "request_location"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📞 Contact Support",
+                            "callback_data": "contact_support"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
             
     except Exception as e:
         logger.error(f"Error getting driver earnings: {e}")
         send_driver_message(chat_id, "❌ Error retrieving earnings. Please try again later.")
-        send_driver_message(chat_id, "❌ Error retrieving status information.")
 
-def send_driver_help_message(chat_id):
-    """Send help message to driver"""
-    message = f"🆘 *Driver Bot Help*\n\n"
-    message += f"*Available Commands:*\n"
-    message += f"• /start - Welcome message\n"
-    message += f"• /help - This help message\n\n"
-    message += f"*How it works:*\n"
-    message += f"1️⃣ You'll receive notifications for new orders\n"
-    message += f"2️⃣ Open the Driver Panel to see full details\n"
-    message += f"3️⃣ Accept or reject the order\n"
-    message += f"4️⃣ Share your location for tracking\n"
-    message += f"5️⃣ Complete the delivery\n\n"
-    message += f"*Need Support?*\n"
-    message += f"📞 Call: +251-911-123-456\n"
-    message += f"📧 Email: support@et-food.com"
-    
-    send_driver_message(chat_id, message)
+def send_driver_help_message_old(chat_id):
+    """Legacy help message - replaced by comprehensive inline button version"""
+    # This function is kept for compatibility but redirects to the new one
+    send_driver_help_message(chat_id)
 
 def set_driver_webhook():
     """Set webhook for driver bot"""
