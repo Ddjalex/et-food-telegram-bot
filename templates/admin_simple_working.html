@@ -399,12 +399,43 @@
                             <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                             <td>${new Date(order.created_at).toLocaleDateString()}</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    ${order.status === 'pending' ? `
+                                        <button class="btn btn-sm btn-outline-success" onclick="confirmOrder(${order.id})" title="Confirm Order">
+                                            <i class="fas fa-check"></i> Confirm
+                                        </button>
+                                    ` : ''}
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'pending')">
+                                            <i class="fas fa-clock text-warning me-2"></i>Pending
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                            <i class="fas fa-check text-success me-2"></i>Confirmed
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                            <i class="fas fa-fire text-info me-2"></i>Preparing
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')">
+                                            <i class="fas fa-truck text-primary me-2"></i>Out for Delivery
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                            <i class="fas fa-check-circle text-success me-2"></i>Delivered
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus(${order.id}, 'cancelled')">
+                                            <i class="fas fa-times text-danger me-2"></i>Cancel
+                                        </a></li>
+                                    </ul>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})" title="Delete Order">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -967,10 +998,62 @@
             });
         }
 
+        // Order management functions
+        function confirmOrder(orderId) {
+            if (confirm('Confirm this order? This will trigger driver notifications.')) {
+                fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status: 'confirmed'})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order confirmed successfully! Drivers have been notified.');
+                        loadOrders(); // Refresh the orders table
+                    } else {
+                        alert('Error confirming order: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error confirming order:', error);
+                    alert('Error confirming order');
+                });
+            }
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Order status updated to ${newStatus}!`);
+                    loadOrders(); // Refresh the orders table
+                } else {
+                    alert('Error updating order status: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating order status:', error);
+                alert('Error updating order status');
+            });
+        }
+
         // Auto-refresh drivers table every 30 seconds when on drivers tab
         setInterval(() => {
             if (document.getElementById('drivers-tab').classList.contains('active')) {
                 loadDrivers();
+            }
+        }, 30000);
+
+        // Auto-refresh orders table every 30 seconds when on orders tab
+        setInterval(() => {
+            if (document.getElementById('orders-tab').classList.contains('active')) {
+                loadOrders();
             }
         }, 30000);
     </script>
