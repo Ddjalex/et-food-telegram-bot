@@ -319,7 +319,7 @@ def create_order():
         db.session.add(order)
         db.session.commit()
         
-        # Send real-time notification to admin
+        # Send real-time notification to admin only (no driver notification)
         from real_time_admin_system import notify_admin_new_order
         notify_admin_new_order(order.id)
         
@@ -352,11 +352,8 @@ def update_order_status(order_id):
         # Handle status change through workflow manager
         handle_order_status_change(order_id, old_status, new_status)
         
-        # If order is confirmed, automatically find nearby drivers
-        if new_status == 'confirmed' and old_status == 'pending':
-            from complete_order_workflow import OrderWorkflowManager
-            manager = OrderWorkflowManager()
-            manager.find_nearby_drivers(order_id)
+        # Note: Order confirmation no longer triggers automatic driver notifications
+        # Admin must manually assign drivers through the dashboard
         
         return jsonify({
             'success': True,
@@ -2476,5 +2473,50 @@ def delete_driver(driver_id):
         logger.error(f"Error deleting driver: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Manual Driver Assignment Endpoints
+@app.route('/api/orders/<int:order_id>/manual-assign-driver', methods=['POST'])
+def manual_assign_driver_to_order(order_id):
+    """Manually assign a specific driver to an order"""
+    try:
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        
+        if not driver_id:
+            return jsonify({'error': 'Driver ID is required'}), 400
+        
+        from manual_driver_assignment import manually_assign_driver
+        
+        # Get admin telegram ID from request (optional)
+        admin_telegram_id = data.get('admin_telegram_id')
+        
+        result = manually_assign_driver(order_id, driver_id, admin_telegram_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+        
+    except Exception as e:
+        logger.error(f"Error manually assigning driver to order {order_id}: {e}")
+        return jsonify({'error': 'Failed to assign driver'}), 500
+
+@app.route('/api/orders/<int:order_id>/available-drivers', methods=['GET'])
+def get_available_drivers_for_order(order_id):
+    """Get list of available drivers for manual assignment"""
+    try:
+        from manual_driver_assignment import get_available_drivers_for_order
+        
+        drivers = get_available_drivers_for_order(order_id)
+        
+        return jsonify({
+            'success': True,
+            'drivers': drivers,
+            'count': len(drivers)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting available drivers for order {order_id}: {e}")
+        return jsonify({'error': 'Failed to get available drivers'}), 500
 
 

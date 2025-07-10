@@ -889,6 +889,9 @@ async function loadOrdersTab() {
                         <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="manuallyAssignDriver(${order.id})" title="Manually Assign Driver">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
                         <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -932,6 +935,201 @@ async function loadOrdersTab() {
             `;
         }
     }
+}
+
+// Manual Driver Assignment Functions
+async function manuallyAssignDriver(orderId) {
+    try {
+        // Get available drivers for this order
+        const driversResponse = await fetch(`/api/orders/${orderId}/available-drivers`);
+        const driversData = await driversResponse.json();
+        
+        if (!driversData.success || driversData.drivers.length === 0) {
+            alert('No available drivers found for this order.');
+            return;
+        }
+        
+        // Show driver selection modal
+        showDriverSelectionModal(orderId, driversData.drivers);
+        
+    } catch (error) {
+        console.error('Error loading available drivers:', error);
+        alert('Failed to load available drivers. Please try again.');
+    }
+}
+
+function showDriverSelectionModal(orderId, drivers) {
+    const modalHtml = `
+        <div class="modal fade" id="driverSelectionModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-plus text-warning me-2"></i>
+                            Manually Assign Driver - Order #${orderId}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-4">Select a driver to assign to this order:</p>
+                        <div class="row">
+                            ${drivers.map(driver => `
+                                <div class="col-md-6 mb-3">
+                                    <div class="card driver-card h-100" style="cursor: pointer;" onclick="selectDriver(${driver.id}, '${driver.name}')">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="card-title mb-1">${driver.name}</h6>
+                                                    <p class="card-text text-muted small mb-1">
+                                                        <i class="fas fa-phone me-1"></i>${driver.phone_number}
+                                                    </p>
+                                                    <p class="card-text text-muted small mb-1">
+                                                        <i class="fas fa-motorcycle me-1"></i>${driver.vehicle_type}
+                                                    </p>
+                                                    ${driver.distance ? `
+                                                        <p class="card-text text-muted small mb-1">
+                                                            <i class="fas fa-map-marker-alt me-1"></i>${driver.distance.toFixed(1)} km away
+                                                        </p>
+                                                    ` : ''}
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge ${driver.is_available ? 'bg-success' : 'bg-warning'}">
+                                                        ${driver.is_available ? 'Available' : 'Busy'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="findNearbyDrivers(${orderId})">
+                            <i class="fas fa-search me-2"></i>Find Nearby Drivers
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('driverSelectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add click effects for driver cards
+    document.querySelectorAll('.driver-card').forEach(card => {
+        card.addEventListener('mouseover', function() {
+            this.style.transform = 'scale(1.02)';
+            this.style.transition = 'transform 0.2s';
+        });
+        card.addEventListener('mouseout', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('driverSelectionModal'));
+    modal.show();
+    
+    // Clean up when modal is hidden
+    document.getElementById('driverSelectionModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
+}
+
+async function selectDriver(driverId, driverName) {
+    const orderId = getCurrentOrderId();
+    
+    if (!orderId) {
+        alert('Error: Order ID not found');
+        return;
+    }
+    
+    const confirmation = confirm(`Assign driver "${driverName}" to order #${orderId}?`);
+    if (!confirmation) return;
+    
+    try {
+        const response = await fetch(`/api/orders/${orderId}/manual-assign-driver`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                driver_id: driverId,
+                admin_telegram_id: null // Optional: could be set if admin has telegram ID
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Driver "${driverName}" successfully assigned to order #${orderId}`);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('driverSelectionModal'));
+            if (modal) modal.hide();
+            
+            // Refresh data
+            loadDashboardData();
+            loadOrdersTab();
+        } else {
+            alert(`Failed to assign driver: ${result.message || 'Unknown error'}`);
+        }
+        
+    } catch (error) {
+        console.error('Error assigning driver:', error);
+        alert('Failed to assign driver. Please try again.');
+    }
+}
+
+async function findNearbyDrivers(orderId) {
+    try {
+        const response = await fetch(`/api/orders/${orderId}/find-nearby-drivers`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`Nearby drivers notified for order #${orderId}`);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('driverSelectionModal'));
+            if (modal) modal.hide();
+            
+            // Refresh data
+            loadDashboardData();
+            loadOrdersTab();
+        } else {
+            alert(`Failed to notify drivers: ${result.message || 'No nearby drivers found'}`);
+        }
+        
+    } catch (error) {
+        console.error('Error finding nearby drivers:', error);
+        alert('Failed to find nearby drivers. Please try again.');
+    }
+}
+
+function getCurrentOrderId() {
+    const modal = document.getElementById('driverSelectionModal');
+    if (!modal) return null;
+    
+    const title = modal.querySelector('.modal-title');
+    if (!title) return null;
+    
+    const match = title.textContent.match(/Order #(\d+)/);
+    return match ? parseInt(match[1]) : null;
 }
 
 // Initialize when DOM is loaded
