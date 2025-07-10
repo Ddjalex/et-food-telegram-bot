@@ -493,7 +493,7 @@
                     
                     // Show success message
                     if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.showAlert(`Order #${result.order_id} placed successfully! Total: $${orderData.total_amount.toFixed(2)}`);
+                        window.Telegram.WebApp.showAlert(`Order placed successfully! Total: ${orderData.total_amount.toFixed(2)} ETB`);
                         window.Telegram.WebApp.close();
                     }
                 } else {

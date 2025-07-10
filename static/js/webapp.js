@@ -329,7 +329,7 @@ async function submitOrder() {
                 window.Telegram.WebApp.showAlert('Order placed successfully! You will receive a confirmation message shortly.');
                 window.Telegram.WebApp.close();
             } else {
-                alert('Order placed successfully! Order ID: ' + result.order_id);
+                alert('Order placed successfully!');
                 // Reset form
                 form.reset();
                 selectedItems = [];
@@ -564,7 +564,7 @@ async function placeOrder() {
                 window.Telegram.WebApp.showAlert('Order placed successfully! You will receive a confirmation message shortly.');
                 window.Telegram.WebApp.close();
             } else {
-                alert('Order placed successfully! Order ID: ' + result.order_id);
+                alert('Order placed successfully!');
                 // Reset cart
                 selectedItems = [];
                 updateCartDisplay();
@@ -648,7 +648,7 @@ async function loadOrderHistory() {
                 <div class="order-card">
                     <div class="order-header">
                         <div class="order-info">
-                            <div class="order-number">Order #${order.id}</div>
+                            <div class="order-number">Order Details</div>
                             <div class="order-date">${orderDate}</div>
                         </div>
                         <div class="order-status-price">

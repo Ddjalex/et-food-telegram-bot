@@ -626,9 +626,7 @@ def notify_customer_about_driver_assignment(order_id, driver_name, driver_telegr
                 return False
             
             message = f"🚚 *Driver Assigned to Your Order!*\n\n"
-            message += f"📋 Order #{order_id}\n"
             message += f"🚗 Driver: {driver_name}\n"
-            message += f"📱 Driver ID: {driver_telegram_id}\n"
             message += f"💰 Total: {order.total_amount:.2f} ETB\n\n"
             message += f"📍 Your driver will share live location for real-time tracking.\n"
             message += f"📞 You can contact the driver if needed.\n\n"

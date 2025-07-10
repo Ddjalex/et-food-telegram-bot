@@ -1819,7 +1819,7 @@
                         'bank_transfer': 'Bank Transfer'
                     }[orderData.payment_method] || 'Cash on Delivery';
                     
-                    const successMessage = `Order #${result.order_id} placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\nPayment: ${paymentMethodText}`;
+                    const successMessage = `Order placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\nPayment: ${paymentMethodText}`;
                     
                     // Use simple alert for compatibility with all Telegram WebApp versions
                     alert(successMessage);
@@ -2211,7 +2211,7 @@
                 orderHistoryBody.innerHTML = orders.map(order => `
                     <div class="order-item">
                         <div class="order-header">
-                            <div class="order-id">Order #${order.id}</div>
+                            <div class="order-id">Order Details</div>
                             <div class="order-status status-${order.status}">${getStatusText(order.status)}</div>
                         </div>
                         <div class="order-details">
@@ -2302,7 +2302,7 @@
                 const response = await fetch(`/api/orders/${orderId}`);
                 if (response.ok) {
                     const order = await response.json();
-                    alert(`Order #${orderId} Status: ${getStatusText(order.status)}\nEstimated delivery: ${order.estimated_delivery_time || 'Not available'}`);
+                    alert(`Order Status: ${getStatusText(order.status)}\nEstimated delivery: ${order.estimated_delivery_time || 'Not available'}`);
                 } else {
                     alert('Failed to track order');
                 }
