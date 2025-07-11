@@ -312,132 +312,143 @@ def notify_driver_with_countdown(driver_telegram_id, order_id):
 def handle_driver_callback(callback_query):
     """Handle driver bot callback queries"""
     try:
-        callback_data = callback_query.get('data', '')
-        chat_id = callback_query['from']['id']
-        message_id = callback_query['message']['message_id']
+        # Use the enhanced callback handler system
+        from enhanced_driver_callback_handler import handle_driver_callback as enhanced_handler
+        enhanced_handler(callback_query)
         
-        if callback_data.startswith('driver_accept_'):
-            order_id = callback_data.split('_')[2]
-            handle_order_acceptance(chat_id, order_id, message_id)
+    except Exception as e:
+        logger.error(f"Error in enhanced callback handler: {e}")
+        # Fallback to basic callback handling
+        try:
+            callback_data = callback_query.get('data', '')
+            chat_id = callback_query['from']['id']
+            message_id = callback_query['message']['message_id']
             
-        elif callback_data.startswith('driver_reject_'):
-            order_id = callback_data.split('_')[2]
-            handle_order_rejection(chat_id, order_id, message_id)
-            
-        elif callback_data.startswith('driver_location_'):
-            order_id = callback_data.split('_')[2]
-            request_driver_location_sharing(chat_id, order_id)
-            
-        elif callback_data.startswith('call_restaurant_'):
-            send_driver_message(chat_id, "📞 *Restaurant Contact*\n\nET-FOOD Kitchen\nPhone: +251-911-123-456\n\nPlease call to coordinate order pickup.")
-            
-        elif callback_data.startswith('call_customer_'):
-            order_id = callback_data.split('_')[2]
-            try:
-                from models import Order
-                order = Order.query.get(order_id)
-                if order:
-                    send_driver_message(chat_id, f"📞 *Customer Contact*\n\nName: {order.customer_name}\nPhone: {order.customer_phone}\n\nPlease call to coordinate delivery.")
-                else:
-                    send_driver_message(chat_id, "❌ Order not found.")
-            except Exception as e:
-                send_driver_message(chat_id, "❌ Error retrieving customer contact.")
+            if callback_data.startswith('driver_accept_'):
+                order_id = callback_data.split('_')[2]
+                handle_order_acceptance(chat_id, order_id, message_id)
                 
-        # New inline button handlers
-        elif callback_data == 'driver_status':
-            send_driver_status_message(chat_id)
+            elif callback_data.startswith('driver_reject_'):
+                order_id = callback_data.split('_')[2]
+                handle_order_rejection(chat_id, order_id, message_id)
+                
+            elif callback_data.startswith('driver_location_'):
+                order_id = callback_data.split('_')[2]
+                request_driver_location_sharing(chat_id, order_id)
+                
+            elif callback_data.startswith('call_restaurant_'):
+                send_driver_message(chat_id, "📞 *Restaurant Contact*\n\nET-FOOD Kitchen\nPhone: +251-911-123-456\n\nPlease call to coordinate order pickup.")
+                
+            elif callback_data.startswith('call_customer_'):
+                order_id = callback_data.split('_')[2]
+                try:
+                    from models import Order
+                    order = Order.query.get(order_id)
+                    if order:
+                        send_driver_message(chat_id, f"📞 *Customer Contact*\n\nName: {order.customer_name}\nPhone: {order.customer_phone}\n\nPlease call to coordinate delivery.")
+                    else:
+                        send_driver_message(chat_id, "❌ Order not found.")
+                except Exception as e:
+                    send_driver_message(chat_id, "❌ Error retrieving customer contact.")
+                    
+            # New inline button handlers
+            elif callback_data == 'driver_status':
+                send_driver_status_message(chat_id)
+                
+            elif callback_data == 'driver_orders':
+                send_driver_orders(chat_id)
+                
+            elif callback_data == 'toggle_availability':
+                toggle_driver_availability(chat_id)
+                
+            elif callback_data == 'driver_earnings':
+                send_driver_earnings(chat_id)
+                
+            elif callback_data == 'driver_help':
+                send_driver_help_message(chat_id)
+                
+            elif callback_data == 'request_location':
+                send_location_request(chat_id)
+                
+            elif callback_data == 'enable_live_location':
+                send_live_location_instructions(chat_id)
+                
+            elif callback_data == 'contact_support':
+                send_driver_message(chat_id, "📞 *ET-FOOD Support*\n\nFor assistance, please contact:\n📧 Email: support@etfood.com\n📞 Phone: +251-911-123-456\n\nOur team is available 24/7 to help you!")
+                
+            elif callback_data.startswith('share_location_'):
+                send_location_request(chat_id)
+                
+            elif callback_data.startswith('pickup_complete_'):
+                order_id = callback_data.split('_')[2]
+                handle_pickup_complete(chat_id, order_id)
+                
+            elif callback_data.startswith('delivery_complete_'):
+                order_id = callback_data.split('_')[2]
+                handle_delivery_complete(chat_id, order_id)
+                
+            elif callback_data.startswith('driver_panel_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import send_driver_gps_panel
+                send_driver_gps_panel(chat_id, order_id)
+                
+            elif callback_data.startswith('navigate_customer_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import handle_navigate_to_customer
+                handle_navigate_to_customer(chat_id, order_id)
+                
+            elif callback_data.startswith('navigate_restaurant'):
+                from driver_gps_panel import handle_navigate_to_restaurant
+                handle_navigate_to_restaurant(chat_id)
+                
+            elif callback_data.startswith('call_customer_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import handle_call_customer
+                handle_call_customer(chat_id, order_id)
+                
+            elif callback_data == 'call_restaurant':
+                from driver_gps_panel import handle_call_restaurant
+                handle_call_restaurant(chat_id)
+                
+            elif callback_data.startswith('share_location_'):
+                # Handle location sharing request
+                order_id = callback_data.split('_')[2]
+                send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location (for delivery tracking)")
+                
+            elif callback_data == 'share_location':
+                # Handle general location sharing request
+                send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location")
+                
+            elif callback_data == 'start_registration':
+                handle_start_registration(chat_id)
+                
+            elif callback_data == 'link_account':
+                handle_link_account(chat_id)
+                
+            elif callback_data == 'share_contact_for_registration':
+                send_driver_contact_request(chat_id)
+                
+            elif callback_data == 'type_phone_number':
+                send_driver_message(chat_id, "📱 *Manual Phone Number Entry*\n\nPlease type your phone number in the format: +251912345678\n\n🔹 Include country code (+251 for Ethiopia)\n🔹 No spaces or special characters\n🔹 Example: +251911234567\n\nType your phone number now:")
+                
+            elif callback_data == 'back_to_registration':
+                send_driver_registration_options(chat_id)
+                
+            elif callback_data == 'toggle_status':
+                toggle_driver_availability(chat_id)
+                
+            elif callback_data == 'view_earnings':
+                send_driver_earnings(chat_id)
+                
+            elif callback_data == 'view_orders':
+                send_driver_orders(chat_id)
+                
+            # Answer callback query
+            answer_callback_query(callback_query['id'], "Action processed!")
             
-        elif callback_data == 'driver_orders':
-            send_driver_orders(chat_id)
+        except Exception as inner_e:
+            logger.error(f"Error in fallback callback handler: {inner_e}")
             
-        elif callback_data == 'toggle_availability':
-            toggle_driver_availability(chat_id)
-            
-        elif callback_data == 'driver_earnings':
-            send_driver_earnings(chat_id)
-            
-        elif callback_data == 'driver_help':
-            send_driver_help_message(chat_id)
-            
-        elif callback_data == 'request_location':
-            send_location_request(chat_id)
-            
-        elif callback_data == 'enable_live_location':
-            send_live_location_instructions(chat_id)
-            
-        elif callback_data == 'contact_support':
-            send_driver_message(chat_id, "📞 *ET-FOOD Support*\n\nFor assistance, please contact:\n📧 Email: support@etfood.com\n📞 Phone: +251-911-123-456\n\nOur team is available 24/7 to help you!")
-            
-        elif callback_data.startswith('share_location_'):
-            send_location_request(chat_id)
-            
-        elif callback_data.startswith('pickup_complete_'):
-            order_id = callback_data.split('_')[2]
-            handle_pickup_complete(chat_id, order_id)
-            
-        elif callback_data.startswith('delivery_complete_'):
-            order_id = callback_data.split('_')[2]
-            handle_delivery_complete(chat_id, order_id)
-            
-        elif callback_data.startswith('driver_panel_'):
-            order_id = callback_data.split('_')[2]
-            from driver_gps_panel import send_driver_gps_panel
-            send_driver_gps_panel(chat_id, order_id)
-            
-        elif callback_data.startswith('navigate_customer_'):
-            order_id = callback_data.split('_')[2]
-            from driver_gps_panel import handle_navigate_to_customer
-            handle_navigate_to_customer(chat_id, order_id)
-            
-        elif callback_data.startswith('navigate_restaurant'):
-            from driver_gps_panel import handle_navigate_to_restaurant
-            handle_navigate_to_restaurant(chat_id)
-            
-        elif callback_data.startswith('call_customer_'):
-            order_id = callback_data.split('_')[2]
-            from driver_gps_panel import handle_call_customer
-            handle_call_customer(chat_id, order_id)
-            
-        elif callback_data == 'call_restaurant':
-            from driver_gps_panel import handle_call_restaurant
-            handle_call_restaurant(chat_id)
-            
-        elif callback_data.startswith('share_location_'):
-            # Handle location sharing request
-            order_id = callback_data.split('_')[2]
-            send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location (for delivery tracking)")
-            
-        elif callback_data == 'share_location':
-            # Handle general location sharing request
-            send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location")
-            
-        elif callback_data == 'start_registration':
-            handle_start_registration(chat_id)
-            
-        elif callback_data == 'link_account':
-            handle_link_account(chat_id)
-            
-        elif callback_data == 'share_contact_for_registration':
-            send_driver_contact_request(chat_id)
-            
-        elif callback_data == 'type_phone_number':
-            send_driver_message(chat_id, "📱 *Manual Phone Number Entry*\n\nPlease type your phone number in the format: +251912345678\n\n🔹 Include country code (+251 for Ethiopia)\n🔹 No spaces or special characters\n🔹 Example: +251911234567\n\nType your phone number now:")
-            
-        elif callback_data == 'back_to_registration':
-            send_driver_registration_options(chat_id)
-            
-        elif callback_data == 'toggle_status':
-            toggle_driver_availability(chat_id)
-            
-        elif callback_data == 'view_earnings':
-            send_driver_earnings(chat_id)
-            
-        elif callback_data == 'view_orders':
-            send_driver_orders(chat_id)
-            
-        # Answer callback query
-        answer_callback_query(callback_query['id'], "Action processed!")
-        
     except Exception as e:
         logger.error(f"Error handling driver callback: {e}")
 
@@ -1430,8 +1441,10 @@ def check_driver_registration_and_welcome(chat_id):
     try:
         from models import Driver
         from app import app
+        from extensions import db
         
         with app.app_context():
+            # First check if driver is already linked to this Telegram ID
             driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
             
             if driver and driver.is_approved:
@@ -1441,8 +1454,19 @@ def check_driver_registration_and_welcome(chat_id):
                 # Driver exists but not approved
                 send_pending_approval_message(chat_id, driver)
             else:
-                # Not registered - send registration options
-                send_driver_registration_options(chat_id)
+                # Check if there are any approved drivers without telegram_user_id
+                # This handles the case where admin approved a driver but they haven't linked their account
+                unlinked_approved_drivers = Driver.query.filter(
+                    Driver.is_approved == True,
+                    Driver.telegram_user_id.is_(None)
+                ).all()
+                
+                if unlinked_approved_drivers:
+                    # There are approved drivers without Telegram ID - offer linking
+                    send_driver_contact_request(chat_id)
+                else:
+                    # No approved drivers without Telegram ID - send registration options
+                    send_driver_registration_options(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
