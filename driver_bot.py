@@ -1482,21 +1482,33 @@ def send_driver_contact_request(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_registration_options(chat_id):
-    """Send simple driver registration message"""
+    """Send driver registration options with inline buttons for mini web app"""
     message = f"🚗 *Welcome to ET-FOOD Driver Bot*\n\n"
-    message += f"To become a driver, please contact the restaurant admin.\n\n"
-    message += f"📞 **Contact admin for driver registration**\n"
-    message += f"📍 **You must be approved by admin first**\n"
-    message += f"⚡ **Once approved, you'll get access to delivery orders**\n\n"
-    message += f"**Current Status:** Not registered\n"
-    message += f"**Next Step:** Contact admin for approval"
+    message += f"Join our delivery team! Choose an option below:\n\n"
+    message += f"📝 **New drivers:** Complete registration form\n"
+    message += f"🔗 **Existing drivers:** Link your account\n\n"
+    message += f"📋 **Registration includes:**\n"
+    message += f"• Personal information\n"
+    message += f"• Document upload (ID, License, Vehicle)\n"
+    message += f"• Admin approval process\n"
+    message += f"• Real-time delivery system access"
+    
+    # Get base URL for mini web app
+    from url_utils import get_base_url
+    base_url = get_base_url()
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
-                    "text": "📞 Contact Admin",
-                    "callback_data": "contact_admin"
+                    "text": "📝 Register as New Driver",
+                    "web_app": {"url": f"{base_url}/driver-registration"}
+                }
+            ],
+            [
+                {
+                    "text": "🔗 Link Existing Account",
+                    "callback_data": "link_account"
                 }
             ]
         ]

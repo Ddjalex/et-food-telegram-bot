@@ -90,17 +90,28 @@ class Driver(db.Model):
     name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
     telegram_user_id = db.Column(db.BigInteger, unique=True)
+    email = db.Column(db.String(120))  # Driver email address
     vehicle_type = db.Column(db.String(50))  # motorcycle, car, bicycle
+    experience = db.Column(db.Text)  # Driver experience description
     is_active = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     is_approved = db.Column(db.Boolean, default=False)  # Admin approval status
     approval_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    
+    # Document storage fields - updated to match registration system
     license_document = db.Column(db.String(500))  # License document URL
+    license_front_url = db.Column(db.String(500))  # License front URL
+    license_back_url = db.Column(db.String(500))  # License back URL
     id_document = db.Column(db.String(500))  # ID document URL
+    id_front_url = db.Column(db.String(500))  # ID front URL
+    id_back_url = db.Column(db.String(500))  # ID back URL
     vehicle_document = db.Column(db.String(500))  # Vehicle registration document URL
+    vehicle_registration_url = db.Column(db.String(500))  # Vehicle registration URL
+    
     rejection_reason = db.Column(db.Text)  # Reason for rejection
     approved_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'))
     approved_at = db.Column(db.DateTime)
+    registration_date = db.Column(db.DateTime, default=datetime.utcnow)  # Registration date
     current_lat = db.Column(db.Float)
     current_lng = db.Column(db.Float)
     last_location_update = db.Column(db.DateTime)

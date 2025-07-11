@@ -1,156 +1,203 @@
-#!/usr/bin/env python3
 """
 Admin Approval System for Driver Registration
+Handles notifications and approval workflow for driver registrations
 """
 
-import os
-import sys
-from app import app
-from extensions import db
+import logging
+from datetime import datetime
 from models import Driver, AdminUser
-from bot_minimal import send_message_to_admin
+from extensions import db
 from driver_bot import send_driver_message
+from bot_minimal import send_message_to_admin
 
-def approve_driver(driver_id, admin_telegram_id):
-    """Approve a pending driver"""
-    
-    with app.app_context():
+logger = logging.getLogger(__name__)
+
+def notify_admin_new_driver_registration(driver_id):
+    """Notify admin about new driver registration with documents"""
+    try:
         driver = Driver.query.get(driver_id)
         if not driver:
-            return False, "Driver not found"
+            logger.error(f"Driver with ID {driver_id} not found")
+            return False
             
-        if driver.approval_status != 'pending':
-            return False, f"Driver is already {driver.approval_status}"
+        # Count uploaded documents
+        documents_count = 0
+        documents_list = []
+        
+        # Check both old and new field names for backwards compatibility
+        if driver.license_document or driver.license_front_url:
+            documents_count += 1
+            documents_list.append("Driver License")
+        if driver.id_document or driver.id_front_url:
+            documents_count += 1
+            documents_list.append("Government ID")
+        if driver.vehicle_document or driver.vehicle_registration_url:
+            documents_count += 1
+            documents_list.append("Vehicle Registration")
+        
+        # Create admin notification message
+        message = f"""🚨 *NEW DRIVER REGISTRATION*\n\n"""
+        message += f"👤 **Driver Details:**\n"
+        message += f"• Name: {driver.name}\n"
+        message += f"• Phone: {driver.phone_number}\n"
+        message += f"• Email: {getattr(driver, 'email', 'Not provided')}\n"
+        message += f"• Vehicle: {driver.vehicle_type.title()}\n"
+        message += f"• Registration Date: {driver.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+        
+        message += f"📄 **Documents Uploaded ({documents_count}):**\n"
+        for doc in documents_list:
+            message += f"• ✅ {doc}\n"
+        
+        message += f"\n⏳ **Status:** Pending Your Approval\n"
+        message += f"🔔 **Action Required:** Please review and approve/reject this driver in the admin dashboard.\n\n"
+        message += f"📋 **Driver ID:** #{driver.id}\n"
+        message += f"📱 **Telegram ID:** {driver.telegram_user_id or 'Not linked'}"
+        
+        # Send to all active admins
+        admins = AdminUser.query.filter_by(is_active=True).all()
+        if not admins:
+            # Fallback to default admin IDs if no admins in database
+            default_admin_ids = [383870191, 383870190]  # Add your admin IDs here
+            for admin_id in default_admin_ids:
+                try:
+                    send_message_to_admin(admin_id, message)
+                    logger.info(f"Sent new driver notification to admin {admin_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send notification to admin {admin_id}: {e}")
+        else:
+            for admin in admins:
+                try:
+                    send_message_to_admin(admin.telegram_user_id, message)
+                    logger.info(f"Sent new driver notification to admin {admin.telegram_user_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send notification to admin {admin.telegram_user_id}: {e}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error notifying admin about new driver registration: {e}")
+        return False
+
+def approve_driver(driver_id, admin_telegram_id=None):
+    """Approve a pending driver and send congratulations notification"""
+    try:
+        driver = Driver.query.get(driver_id)
+        if not driver:
+            logger.error(f"Driver with ID {driver_id} not found")
+            return False
             
-        # Update driver status - set as AVAILABLE after approval
-        driver.approval_status = 'approved'
+        # Update driver status
         driver.is_approved = True
-        driver.is_available = True  # Set as AVAILABLE
-        driver.is_active = True     # Set as ACTIVE
-        driver.approved_by = admin_telegram_id
-        driver.approved_at = db.func.now()
+        driver.approval_status = 'approved'
+        driver.is_active = True
+        driver.approved_at = datetime.utcnow()
         
         db.session.commit()
         
-        # Send approval notification to driver
-        send_driver_approval_notification(driver.telegram_user_id, driver.name)
+        # Send congratulations notification to driver
+        congratulations_message = f"""🎉 *CONGRATULATIONS! You're Approved!*\n\n"""
+        congratulations_message += f"✅ **Your driver application has been approved!**\n\n"
+        congratulations_message += f"👤 **Driver Details:**\n"
+        congratulations_message += f"• Name: {driver.name}\n"
+        congratulations_message += f"• Phone: {driver.phone_number}\n"
+        congratulations_message += f"• Vehicle: {driver.vehicle_type.title()}\n"
+        congratulations_message += f"• Status: **APPROVED** ✅\n\n"
         
-        # Send confirmation to admin
-        send_message_to_admin(admin_telegram_id, 
-            f"✅ Driver {driver.name} has been approved and is now available for deliveries.")
+        congratulations_message += f"🚚 **Next Steps:**\n"
+        congratulations_message += f"• Share your live location to receive orders\n"
+        congratulations_message += f"• Keep your phone charged and ready\n"
+        congratulations_message += f"• Maintain professional service\n\n"
         
-        return True, f"Driver {driver.name} approved successfully"
+        congratulations_message += f"📍 **IMPORTANT:** You must share your live location to receive delivery orders near you.\n\n"
+        congratulations_message += f"🎯 **You're now part of the ET-FOOD delivery team!**\n"
+        congratulations_message += f"Start earning money by delivering food to customers in your area."
+        
+        if driver.telegram_user_id:
+            send_driver_message(driver.telegram_user_id, congratulations_message)
+            logger.info(f"Sent approval notification to driver {driver.telegram_user_id}")
+        
+        # Log approval
+        logger.info(f"Driver {driver.name} (ID: {driver.id}) approved by admin {admin_telegram_id}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error approving driver {driver_id}: {e}")
+        return False
 
-def reject_driver(driver_id, admin_telegram_id, reason="Application does not meet requirements"):
-    """Reject a pending driver"""
-    
-    with app.app_context():
+def reject_driver(driver_id, admin_telegram_id=None, reason="Application does not meet requirements"):
+    """Reject a pending driver and send notification"""
+    try:
         driver = Driver.query.get(driver_id)
         if not driver:
-            return False, "Driver not found"
-            
-        if driver.approval_status != 'pending':
-            return False, f"Driver is already {driver.approval_status}"
+            logger.error(f"Driver with ID {driver_id} not found")
+            return False
             
         # Update driver status
-        driver.approval_status = 'rejected'
         driver.is_approved = False
-        driver.is_available = False
+        driver.approval_status = 'rejected'
+        driver.is_active = False
         driver.rejection_reason = reason
+        # Note: Add rejected_at field to model if needed for tracking
+        driver.updated_at = datetime.utcnow()
         
         db.session.commit()
         
         # Send rejection notification to driver
-        send_driver_rejection_notification(driver.telegram_user_id, driver.name, reason)
+        rejection_message = f"""❌ *Application Update*\n\n"""
+        rejection_message += f"We've reviewed your driver application.\n\n"
+        rejection_message += f"👤 **Application Details:**\n"
+        rejection_message += f"• Name: {driver.name}\n"
+        rejection_message += f"• Phone: {driver.phone_number}\n"
+        rejection_message += f"• Vehicle: {driver.vehicle_type.title()}\n"
+        rejection_message += f"• Status: **Not Approved**\n\n"
         
-        # Send confirmation to admin
-        send_message_to_admin(admin_telegram_id, 
-            f"❌ Driver {driver.name} has been rejected. Reason: {reason}")
+        rejection_message += f"📝 **Reason:** {reason}\n\n"
+        rejection_message += f"🔄 **Next Steps:**\n"
+        rejection_message += f"• You can reapply after addressing the issues\n"
+        rejection_message += f"• Contact admin for clarification\n"
+        rejection_message += f"• Make sure all documents are clear and valid\n\n"
         
-        return True, f"Driver {driver.name} rejected"
+        rejection_message += f"📞 **Support:** Contact restaurant admin for more information."
+        
+        if driver.telegram_user_id:
+            send_driver_message(driver.telegram_user_id, rejection_message)
+            logger.info(f"Sent rejection notification to driver {driver.telegram_user_id}")
+        
+        # Log rejection
+        logger.info(f"Driver {driver.name} (ID: {driver.id}) rejected by admin {admin_telegram_id}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error rejecting driver {driver_id}: {e}")
+        return False
 
-def send_driver_approval_notification(chat_id, driver_name):
-    """Send driver approval notification with mandatory location sharing"""
-    message = f"🎉 *Congratulations {driver_name}!*\n\n"
-    message += f"✅ Your driver registration has been **APPROVED**!\n\n"
-    message += f"🚗 You are now an official ET-FOOD delivery driver.\n"
-    message += f"💰 You can start earning money right away!\n\n"
-    message += f"📍 **IMPORTANT: You must share your live location to receive order assignments**\n"
-    message += f"⚡ Click the button below to share your location and start receiving orders!\n\n"
-    message += f"🎯 **Ready to start delivering? Share your location now!**"
-    
-    keyboard = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "📍 Share Live Location (Required)",
-                    "callback_data": "request_location"
-                }
-            ],
-            [
-                {
-                    "text": "📊 Check Status", 
-                    "callback_data": "driver_status"
-                },
-                {
-                    "text": "📱 View Orders",
-                    "callback_data": "driver_orders"
-                }
-            ],
-            [
-                {
-                    "text": "🔄 Toggle Availability",
-                    "callback_data": "toggle_availability"
-                },
-                {
-                    "text": "💰 View Earnings",
-                    "callback_data": "driver_earnings"
-                }
-            ],
-            [
-                {
-                    "text": "❓ Help & Support",
-                    "callback_data": "driver_help"
-                }
-            ]
-        ]
-    }
-    
-    send_driver_message(chat_id, message, keyboard=keyboard)
-
-def send_driver_rejection_notification(chat_id, driver_name, reason):
-    """Send driver rejection notification"""
-    message = f"❌ *Registration Update*\n\n"
-    message += f"Unfortunately, your driver registration has been declined.\n\n"
-    message += f"**Reason:** {reason}\n\n"
-    message += f"📞 If you have questions, please contact our support team.\n"
-    message += f"🔄 You can reapply after addressing the concerns mentioned above."
-    
-    send_driver_message(chat_id, message)
-
-def get_pending_drivers_for_admin():
-    """Get list of pending drivers for admin approval"""
-    
-    with app.app_context():
+def get_pending_drivers():
+    """Get all pending driver applications"""
+    try:
         pending_drivers = Driver.query.filter_by(approval_status='pending').all()
+        return pending_drivers
         
-        if not pending_drivers:
-            return "📋 No pending driver registrations."
-            
-        message = f"📋 *Pending Driver Registrations* ({len(pending_drivers)})\n\n"
-        
-        for driver in pending_drivers:
-            message += f"👤 **{driver.name}**\n"
-            message += f"📞 Phone: {driver.phone_number}\n"
-            message += f"🚗 Vehicle: {driver.vehicle_type}\n"
-            message += f"🆔 Telegram: {driver.telegram_user_id}\n"
-            message += f"📅 Applied: {driver.created_at.strftime('%Y-%m-%d %H:%M')}\n"
-            message += f"━━━━━━━━━━━━━━━━━━\n"
-        
-        message += f"\n💡 Use admin panel to approve/reject drivers."
-        
-        return message
+    except Exception as e:
+        logger.error(f"Error getting pending drivers: {e}")
+        return []
 
-if __name__ == "__main__":
-    # Test the approval system
-    print(get_pending_drivers_for_admin())
+def get_driver_documents(driver_id):
+    """Get driver document URLs for admin review"""
+    try:
+        driver = Driver.query.get(driver_id)
+        if not driver:
+            return None
+            
+        documents = {
+            'license_document': driver.license_document,
+            'id_document': driver.id_document,
+            'vehicle_document': driver.vehicle_document
+        }
+        
+        return documents
+        
+    except Exception as e:
+        logger.error(f"Error getting driver documents: {e}")
+        return None
