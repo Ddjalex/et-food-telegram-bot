@@ -253,6 +253,47 @@ def send_message_to_admin(admin_telegram_id, message):
         else:
             logger.error(f"Error sending message to admin {admin_telegram_id}: {e}")
 
+def send_message_to_all_active_users(message):
+    """Send message to all active users (customers who have used the bot recently)"""
+    try:
+        from models import Order, UserProfile
+        from datetime import datetime, timedelta
+        from app import app
+        
+        with app.app_context():
+            # Get users who have placed orders in the last 30 days
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            recent_orders = Order.query.filter(Order.created_at >= thirty_days_ago).all()
+            
+            # Get unique user IDs from recent orders
+            user_ids = set()
+            for order in recent_orders:
+                if order.telegram_user_id:
+                    user_ids.add(order.telegram_user_id)
+            
+            # Also get users who have shared contact info (UserProfile)
+            profiles = UserProfile.query.filter(UserProfile.created_at >= thirty_days_ago).all()
+            for profile in profiles:
+                if profile.telegram_user_id:
+                    user_ids.add(profile.telegram_user_id)
+            
+            # Send message to all active users
+            sent_count = 0
+            for user_id in user_ids:
+                try:
+                    send_message(user_id, message, parse_mode="Markdown")
+                    sent_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send message to user {user_id}: {e}")
+                    continue
+            
+            logger.info(f"Sent customer notification to {sent_count} active users")
+            return sent_count
+            
+    except Exception as e:
+        logger.error(f"Error sending message to all active users: {e}")
+        return 0
+
 def send_order_notification(order_id):
     """Send order notification to admins"""
     try:

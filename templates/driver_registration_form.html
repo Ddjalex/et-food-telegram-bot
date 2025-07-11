@@ -531,12 +531,72 @@
             });
         });
 
+        // Auto-fill user data from Telegram WebApp
+        function autoFillUserData() {
+            try {
+                // Check if Telegram WebApp is available
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
+                    const user = window.Telegram.WebApp.initDataUnsafe.user;
+                    
+                    if (user) {
+                        // Auto-fill name
+                        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+                        if (fullName) {
+                            document.querySelector('input[name="name"]').value = fullName;
+                        }
+                        
+                        // Auto-fill phone if available (from contact sharing)
+                        if (user.phone_number) {
+                            document.querySelector('input[name="phone_number"]').value = user.phone_number;
+                        }
+                        
+                        console.log('Auto-filled user data:', {
+                            name: fullName,
+                            phone: user.phone_number || 'Not available'
+                        });
+                    }
+                }
+                
+                // Alternative: Try to get user data from URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const userName = urlParams.get('name');
+                const userPhone = urlParams.get('phone');
+                const telegramId = urlParams.get('telegram_id');
+                
+                if (userName && !document.querySelector('input[name="name"]').value) {
+                    document.querySelector('input[name="name"]').value = decodeURIComponent(userName);
+                }
+                
+                if (userPhone && !document.querySelector('input[name="phone_number"]').value) {
+                    document.querySelector('input[name="phone_number"]').value = decodeURIComponent(userPhone);
+                }
+                
+                // Store telegram_id in a hidden field if available
+                if (telegramId) {
+                    let hiddenInput = document.querySelector('input[name="telegram_id"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'telegram_id';
+                        document.getElementById('driverRegistrationForm').appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = telegramId;
+                }
+                
+            } catch (error) {
+                console.error('Error auto-filling user data:', error);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             // If Telegram WebApp is available, expand it
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.expand();
             }
+            
+            // Auto-fill user data after a short delay to ensure WebApp is initialized
+            setTimeout(autoFillUserData, 500);
         });
     </script>
 </body>

@@ -1530,7 +1530,7 @@ def send_driver_registration_options(chat_id):
             [
                 {
                     "text": "📝 Register as New Driver",
-                    "web_app": {"url": f"{base_url}/driver-registration"}
+                    "web_app": {"url": f"{base_url}/driver-registration?telegram_id={chat_id}"}
                 }
             ],
             [
