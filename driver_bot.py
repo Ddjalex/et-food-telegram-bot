@@ -1414,16 +1414,22 @@ def setup_driver_webhook(flask_app):
             """Set up webhook after a delay to ensure host resolution"""
             time.sleep(3)  # Wait 3 seconds for host to be ready
             
-            # Check if we're in production (Render) environment
-            if os.environ.get('RENDER_EXTERNAL_URL'):
-                # Production environment - webhook should already be set
-                logger.info("Production environment detected - webhook handled by production setup")
-                return
-            
-            # Development environment - attempt to set webhook
-            success = set_driver_webhook()
-            if not success:
-                logger.warning("Driver webhook setup failed, but continuing with application startup")
+            # Always attempt to set webhook in both production and development
+            # Special handling for production environment
+            if os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('WEBHOOK_URL'):
+                logger.info("Production environment detected - setting driver webhook")
+                success = set_driver_webhook()
+                if not success:
+                    logger.error("Driver webhook setup failed in production environment")
+                else:
+                    logger.info("Driver webhook setup completed successfully in production")
+            else:
+                # Development environment
+                success = set_driver_webhook()
+                if not success:
+                    logger.warning("Driver webhook setup failed, but continuing with application startup")
+                else:
+                    logger.info("Driver webhook setup completed successfully")
         
         # Start webhook setup in background thread
         webhook_thread = threading.Thread(target=delayed_webhook_setup)

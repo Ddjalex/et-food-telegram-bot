@@ -15,12 +15,15 @@ def get_base_url():
     Returns:
         str: Clean base URL without protocol (e.g., 'example.com' or 'localhost')
     """
-    # Priority order: RENDER_EXTERNAL_URL > REPLIT_DEV_DOMAIN > localhost
+    # Priority order: RENDER_EXTERNAL_URL > WEBHOOK_URL > REPLIT_DEV_DOMAIN > localhost
     render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    webhook_url = os.environ.get('WEBHOOK_URL')
     replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
     
     if render_url:
         base_url = render_url
+    elif webhook_url:
+        base_url = webhook_url
     elif replit_domain:
         base_url = replit_domain
     else:
