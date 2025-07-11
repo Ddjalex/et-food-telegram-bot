@@ -1517,63 +1517,132 @@
                 .then(response => response.json())
                 .then(categories => {
                     const modalHtml = `
-                        <div class="modal fade" id="addMenuModal" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Add New Menu Item</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <div class="modal fade" id="addMenuModal" tabindex="-1" data-bs-backdrop="static">
+                            <div class="modal-dialog modal-xl">
+                                <div class="modal-content" style="border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                                    <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px 15px 0 0;">
+                                        <h5 class="modal-title d-flex align-items-center">
+                                            <i class="fas fa-plus-circle me-2"></i>
+                                            Add New Menu Item
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
+                                    <div class="modal-body" style="padding: 30px;">
                                         <form id="addMenuForm" enctype="multipart/form-data">
                                             <div class="row">
                                                 <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Name</label>
-                                                        <input type="text" class="form-control" name="name" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Price (ETB)</label>
-                                                        <input type="number" class="form-control" name="price" step="0.01" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Category</label>
-                                                        <select class="form-select" name="category" required>
-                                                            <option value="">Select Category</option>
-                                                            ${categories.map(cat => `<option value="${cat.name.toLowerCase()}">${cat.name}</option>`).join('')}
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Available</label>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" name="available" checked>
-                                                            <label class="form-check-label">Item is available for order</label>
+                                                    <div class="card h-100" style="border: 1px solid #e3e6f0; border-radius: 10px;">
+                                                        <div class="card-header" style="background: #f8f9fc; border-bottom: 1px solid #e3e6f0;">
+                                                            <h6 class="m-0 text-primary">
+                                                                <i class="fas fa-utensils me-1"></i>
+                                                                Basic Information
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-tag me-1"></i>
+                                                                    Item Name *
+                                                                </label>
+                                                                <input type="text" class="form-control" name="name" required 
+                                                                       placeholder="Enter item name (e.g., Beef Burger Special)"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-dollar-sign me-1"></i>
+                                                                    Price (ETB) *
+                                                                </label>
+                                                                <input type="number" class="form-control" name="price" step="0.01" required 
+                                                                       placeholder="0.00"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-list me-1"></i>
+                                                                    Category *
+                                                                </label>
+                                                                <select class="form-select" name="category" required 
+                                                                        style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                                    <option value="">Select Category</option>
+                                                                    ${categories.map(cat => `<option value="${cat.name.toLowerCase()}">${cat.name}</option>`).join('')}
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-check-circle me-1"></i>
+                                                                    Availability
+                                                                </label>
+                                                                <div class="form-check form-switch">
+                                                                    <input class="form-check-input" type="checkbox" name="available" checked>
+                                                                    <label class="form-check-label">Item is available for order</label>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Description</label>
-                                                        <textarea class="form-control" name="description" rows="3" required></textarea>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Image</label>
-                                                        <input type="file" class="form-control" name="image" accept="image/*">
-                                                        <div class="form-text">Upload an image or leave empty to use default</div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Image URL (Alternative)</label>
-                                                        <input type="url" class="form-control" name="image_url" placeholder="https://example.com/image.jpg">
-                                                        <div class="form-text">Or provide an image URL instead of uploading</div>
+                                                    <div class="card h-100" style="border: 1px solid #e3e6f0; border-radius: 10px;">
+                                                        <div class="card-header" style="background: #f8f9fc; border-bottom: 1px solid #e3e6f0;">
+                                                            <h6 class="m-0 text-primary">
+                                                                <i class="fas fa-image me-1"></i>
+                                                                Description & Image
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-align-left me-1"></i>
+                                                                    Description *
+                                                                </label>
+                                                                <textarea class="form-control" name="description" rows="4" required 
+                                                                          placeholder="Describe the item (ingredients, taste, special features)"
+                                                                          style="border-radius: 8px; border: 1px solid #d1d3e2;"></textarea>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-camera me-1"></i>
+                                                                    Upload Image
+                                                                </label>
+                                                                <input type="file" class="form-control" name="image" accept="image/*" 
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                                <div class="form-text">
+                                                                    <i class="fas fa-info-circle me-1"></i>
+                                                                    Supported formats: JPG, PNG, GIF, WebP (Max 5MB)
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-link me-1"></i>
+                                                                    Image URL (Alternative)
+                                                                </label>
+                                                                <input type="url" class="form-control" name="image_url" 
+                                                                       placeholder="https://example.com/image.jpg"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                                <div class="form-text">
+                                                                    <i class="fas fa-info-circle me-1"></i>
+                                                                    Or provide an image URL instead of uploading
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-center">
+                                                                <div id="imagePreview" class="mt-2" style="display: none;">
+                                                                    <img id="previewImg" style="max-width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e3e6f0;">
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </form>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="button" class="btn btn-primary" onclick="submitAddMenuItem()">
-                                            <i class="fas fa-plus"></i> Add Menu Item
+                                    <div class="modal-footer" style="border-top: 1px solid #e3e6f0; padding: 20px 30px;">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">
+                                            <i class="fas fa-times me-1"></i>
+                                            Cancel
+                                        </button>
+                                        <button type="button" class="btn btn-primary" onclick="submitAddMenuItem()" style="border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                            <i class="fas fa-plus me-1"></i>
+                                            Add Menu Item
                                         </button>
                                     </div>
                                 </div>
@@ -1589,6 +1658,34 @@
                     
                     // Add modal to body
                     document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    // Add image preview functionality
+                    const imageInput = document.querySelector('#addMenuModal input[name="image"]');
+                    const imageUrlInput = document.querySelector('#addMenuModal input[name="image_url"]');
+                    const previewDiv = document.getElementById('imagePreview');
+                    const previewImg = document.getElementById('previewImg');
+                    
+                    imageInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImg.src = e.target.result;
+                                previewDiv.style.display = 'block';
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                    
+                    imageUrlInput.addEventListener('input', function(e) {
+                        const url = e.target.value;
+                        if (url) {
+                            previewImg.src = url;
+                            previewDiv.style.display = 'block';
+                        } else {
+                            previewDiv.style.display = 'none';
+                        }
+                    });
                     
                     // Show modal
                     const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
