@@ -72,8 +72,7 @@ def notify_admin_new_driver_registration(driver_id):
                 except Exception as e:
                     logger.error(f"Failed to send notification to admin {admin.telegram_user_id}: {e}")
         
-        # Customer notifications disabled as requested
-        # notify_customers_new_driver_registration(driver)
+        # Customer notifications disabled - driver registration messages only go to admins
         
         return True
         
@@ -81,29 +80,8 @@ def notify_admin_new_driver_registration(driver_id):
         logger.error(f"Error notifying admin about new driver registration: {e}")
         return False
 
-def notify_customers_new_driver_registration(driver):
-    """Notify customers via main bot about new driver registration"""
-    try:
-        from bot_minimal import send_message_to_all_active_users
-        
-        # Create customer-friendly notification message
-        message = f"🚚 *NEW DRIVER JOINING ET-FOOD!*\n\n"
-        message += f"👤 **Driver:** {driver.name}\n"
-        message += f"🚗 **Vehicle:** {driver.vehicle_type.title()}\n"
-        message += f"📍 **Service Area:** Addis Ababa\n"
-        message += f"📅 **Joined:** {driver.created_at.strftime('%B %d, %Y')}\n\n"
-        message += f"⏳ **Status:** Under Review\n"
-        message += f"🎯 **What's Next:** Once approved, this driver will help deliver your orders faster!\n\n"
-        message += f"🍽️ Ready to order? Use /menu to browse our delicious food options!"
-        
-        # Send to recent active users (last 30 days)
-        send_message_to_all_active_users(message)
-        logger.info(f"Sent customer notification about new driver: {driver.name}")
-        
-    except Exception as e:
-        logger.error(f"Error sending customer notification: {e}")
-        # Don't fail the whole process if customer notification fails
-        pass
+# Customer notifications for driver registrations have been completely disabled
+# All driver registration notifications now go only to admins for review
 
 def approve_driver(driver_id, admin_telegram_id=None):
     """Approve a pending driver and send congratulations notification"""
