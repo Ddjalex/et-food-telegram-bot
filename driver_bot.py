@@ -1426,10 +1426,10 @@ def handle_driver_text_message(chat_id, text):
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
 def check_driver_registration_and_welcome(chat_id):
-    """Check if driver is registered and send appropriate welcome message - SIMPLIFIED"""
+    """Check if driver is registered and send appropriate welcome message"""
     try:
         from models import Driver
-        from main import app
+        from app import app
         
         with app.app_context():
             driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
@@ -1437,13 +1437,41 @@ def check_driver_registration_and_welcome(chat_id):
             if driver and driver.is_approved:
                 # Driver is approved, send welcome message
                 send_driver_welcome_message(chat_id, driver)
+            elif driver and not driver.is_approved:
+                # Driver exists but not approved
+                send_pending_approval_message(chat_id, driver)
             else:
-                # Not approved or not registered - send simple message
+                # Not registered - send registration options
                 send_driver_registration_options(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
         send_driver_message(chat_id, "❌ Error checking registration. Please try again later.")
+
+def send_pending_approval_message(chat_id, driver):
+    """Send message to driver waiting for approval"""
+    message = f"⏳ *Registration Under Review*\n\n"
+    message += f"Hello {driver.name}!\n\n"
+    message += f"📋 Your driver registration is being reviewed by our admin team.\n"
+    message += f"🚗 Vehicle: {driver.vehicle_type}\n"
+    message += f"📞 Phone: {driver.phone_number}\n\n"
+    message += f"⏰ **Status:** {driver.approval_status.title()}\n\n"
+    message += f"📢 You'll receive a notification once your registration is approved.\n"
+    message += f"📞 Contact admin if you have any questions.\n\n"
+    message += f"Thank you for your patience!"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📞 Contact Admin",
+                    "callback_data": "contact_admin"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_contact_request(chat_id):
     """Request contact sharing for automatic driver registration - iOS Compatible"""

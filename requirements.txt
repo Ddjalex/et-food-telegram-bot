@@ -84,3 +84,7 @@ flask
 flask-sqlalchemy
 gunicorn
 psycopg2-binary
+flask-dance
+flask-login
+oauthlib
+pyjwt

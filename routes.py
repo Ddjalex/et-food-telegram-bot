@@ -74,19 +74,22 @@ def test():
     """Test page"""
     return render_template('test.html')
 
-# Removed duplicate route - using parameterized version below
+@app.route('/driver-registration')
+def driver_registration():
+    """Driver registration form page"""
+    return render_template('driver_registration_form.html')
 
 @app.route('/api/driver-registration', methods=['POST'])
 def api_driver_registration():
     """Handle driver registration submission from mini web app"""
     try:
-        # Get form data
-        full_name = request.form.get('fullName')
-        phone_number = request.form.get('phoneNumber')
+        # Get form data - support both naming conventions
+        full_name = request.form.get('fullName') or request.form.get('name')
+        phone_number = request.form.get('phoneNumber') or request.form.get('phone_number')
         email = request.form.get('email', '')
-        vehicle_type = request.form.get('vehicleType')
+        vehicle_type = request.form.get('vehicleType') or request.form.get('vehicle_type')
         experience = request.form.get('experience', '')
-        telegram_user_id = request.form.get('telegramUserId')
+        telegram_user_id = request.form.get('telegramUserId') or request.form.get('telegram_user_id')
         
         # Validate required fields
         if not all([full_name, phone_number, vehicle_type]):
@@ -157,126 +160,102 @@ def api_driver_registration():
 
 
 
-# Duplicate function removed - using api_driver_registration instead
-
-@app.route('/driver-registration/<int:chat_id>')
-def driver_registration(chat_id):
-    """Driver registration mini web app"""
-    return render_template('driver_registration.html', chat_id=chat_id)
-
-@app.route('/api/drivers/pending', methods=['GET'])
-def api_get_pending_drivers():
-    """Get all pending driver applications for admin review"""
+@app.route('/api/driver-registration', methods=['POST'])
+def submit_driver_registration():
+    """Handle driver registration form submission"""
     try:
-        from admin_approval_system import get_pending_drivers
-        pending_drivers = get_pending_drivers()
+        # Get form data
+        chat_id = request.form.get('chat_id')
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        vehicle_type = request.form.get('vehicle_type')
+        license_front = request.files.get('license_front')
+        license_back = request.files.get('license_back')
+        id_front = request.files.get('id_front')
+        id_back = request.files.get('id_back')
+        vehicle_registration = request.files.get('vehicle_registration')
         
-        drivers_data = []
-        for driver in pending_drivers:
-            # Count uploaded documents
-            documents_count = sum([
-                1 if driver.license_document else 0,
-                1 if driver.id_document else 0,
-                1 if driver.vehicle_document else 0
-            ])
-            
-            drivers_data.append({
-                'id': driver.id,
-                'name': driver.name,
-                'phone_number': driver.phone_number,
-                'email': getattr(driver, 'email', None),
-                'vehicle_type': driver.vehicle_type,
-                'registration_date': driver.created_at.isoformat() if driver.created_at else None,
-                'documents_count': documents_count,
-                'telegram_user_id': driver.telegram_user_id
-            })
+        # Handle file uploads
+        document_urls = {}
+        files = {
+            'license_front': license_front,
+            'license_back': license_back,
+            'id_front': id_front,
+            'id_back': id_back,
+            'vehicle_registration': vehicle_registration
+        }
         
-        return jsonify({
-            'success': True,
-            'drivers': drivers_data,
-            'total_count': len(drivers_data)
-        })
+        for doc_type, file in files.items():
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(datetime.now().timestamp()))
+                filename = f"{timestamp}_{doc_type}_{filename}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                file.save(filepath)
+                document_urls[doc_type] = f"/static/uploads/{filename}"
+        
+        # Create driver record
+        driver = Driver(
+            name=name,
+            phone_number=phone,
+            email=email,
+            vehicle_type=vehicle_type,
+            telegram_user_id=int(chat_id),
+            approval_status='pending',
+            is_approved=False,
+            is_active=False,
+            is_available=False,
+            license_front_url=document_urls.get('license_front', ''),
+            license_back_url=document_urls.get('license_back', ''),
+            id_front_url=document_urls.get('id_front', ''),
+            id_back_url=document_urls.get('id_back', ''),
+            vehicle_registration_url=document_urls.get('vehicle_registration', ''),
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Notify driver via bot
+        from driver_bot import send_driver_message
+        message = f"✅ *Registration Submitted Successfully!*\n\n"
+        message += f"📋 **Application Details:**\n"
+        message += f"👤 Name: {name}\n"
+        message += f"📞 Phone: {phone}\n"
+        message += f"🚗 Vehicle: {vehicle_type}\n\n"
+        message += f"📄 **Documents Uploaded:**\n"
+        message += f"• Driver's License: {'✅' if 'license_front' in document_urls else '❌'}\n"
+        message += f"• Government ID: {'✅' if 'id_front' in document_urls else '❌'}\n"
+        message += f"• Vehicle Registration: {'✅' if 'vehicle_registration' in document_urls else '❌'}\n\n"
+        message += f"⏳ **Status:** Pending Admin Approval\n"
+        message += f"🔔 You'll receive a notification once approved!\n\n"
+        message += f"📞 Contact support if you have any questions."
+        
+        send_driver_message(chat_id, message)
+        
+        # Notify admin
+        from bot_minimal import send_message_to_admin
+        from models import AdminUser
+        admin_message = f"🚨 *New Driver Registration*\n\n"
+        admin_message += f"👤 **Driver Details:**\n"
+        admin_message += f"• Name: {name}\n"
+        admin_message += f"• Phone: {phone}\n"
+        admin_message += f"• Email: {email}\n"
+        admin_message += f"• Vehicle: {vehicle_type}\n"
+        admin_message += f"• Telegram ID: {chat_id}\n\n"
+        admin_message += f"📄 **Documents:** {len(document_urls)} uploaded\n\n"
+        admin_message += f"👆 **Action Required:** Please review and approve/reject this driver in the admin dashboard."
+        
+        admins = AdminUser.query.filter_by(is_active=True).all()
+        for admin in admins:
+            send_message_to_admin(admin.telegram_user_id, admin_message)
+        
+        return jsonify({'success': True, 'message': 'Registration submitted successfully!'})
         
     except Exception as e:
-        logger.error(f"Error getting pending drivers: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/drivers/<int:driver_id>/approve', methods=['POST'])
-def api_approve_driver(driver_id):
-    """Approve a pending driver"""
-    try:
-        from admin_approval_system import approve_driver
-        
-        # Get admin ID from request (you might want to implement proper admin authentication)
-        admin_telegram_id = request.json.get('admin_telegram_id') if request.is_json else None
-        
-        success = approve_driver(driver_id, admin_telegram_id)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'Driver approved successfully'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to approve driver'
-            }), 400
-        
-    except Exception as e:
-        logger.error(f"Error approving driver {driver_id}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/drivers/<int:driver_id>/reject', methods=['POST'])
-def api_reject_driver(driver_id):
-    """Reject a pending driver"""
-    try:
-        from admin_approval_system import reject_driver
-        
-        # Get rejection reason and admin ID from request
-        data = request.get_json() if request.is_json else {}
-        reason = data.get('reason', 'Application does not meet requirements')
-        admin_telegram_id = data.get('admin_telegram_id')
-        
-        success = reject_driver(driver_id, admin_telegram_id, reason)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'Driver rejected successfully'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to reject driver'
-            }), 400
-        
-    except Exception as e:
-        logger.error(f"Error rejecting driver {driver_id}: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/drivers/<int:driver_id>/documents', methods=['GET'])
-def api_get_driver_documents(driver_id):
-    """Get driver document URLs for admin review"""
-    try:
-        from admin_approval_system import get_driver_documents
-        
-        documents = get_driver_documents(driver_id)
-        
-        if documents:
-            return jsonify({
-                'success': True,
-                'documents': documents
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Driver not found'
-            }), 404
-        
-    except Exception as e:
-        logger.error(f"Error getting driver documents: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error submitting driver registration: {e}")
+        return jsonify({'success': False, 'error': 'Registration failed. Please try again.'}), 500
 
 @app.route('/webapp')
 def webapp():
