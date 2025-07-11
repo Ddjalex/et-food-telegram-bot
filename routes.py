@@ -606,33 +606,32 @@ def update_order_status(order_id):
         # Handle status change through workflow manager
         handle_order_status_change(order_id, old_status, new_status)
         
-        # Trigger driver notification when admin confirms order
+        # Trigger driver notification when admin confirms order using real-time delivery system
         if new_status == 'confirmed' and old_status == 'pending':
             try:
-                from complete_order_workflow import OrderWorkflowManager
-                workflow_manager = OrderWorkflowManager()
+                from real_time_delivery_system import process_order_for_delivery
                 import threading
                 
-                def find_drivers_with_context():
-                    """Function to run driver search with Flask app context"""
+                def notify_drivers_with_context():
+                    """Function to run driver notification with Flask app context"""
                     with app.app_context():
                         try:
-                            success = workflow_manager.find_nearby_drivers(order_id)
+                            success = process_order_for_delivery(order_id)
                             if success:
-                                logger.info(f"✅ Successfully notified drivers for order {order_id}")
+                                logger.info(f"✅ Real-time delivery system notified drivers for order {order_id}")
                             else:
                                 logger.warning(f"⚠️ No drivers found for order {order_id}")
                         except Exception as e:
-                            logger.error(f"Error in driver search context: {e}")
+                            logger.error(f"Error in real-time delivery system: {e}")
                 
-                # Start driver search in background to avoid blocking the response
+                # Start driver notification in background to avoid blocking the response
                 threading.Thread(
-                    target=find_drivers_with_context,
+                    target=notify_drivers_with_context,
                     daemon=True
                 ).start()
-                logger.info(f"Driver search initiated for confirmed order {order_id}")
+                logger.info(f"Real-time delivery system initiated for confirmed order {order_id}")
             except Exception as e:
-                logger.error(f"Error initiating driver search for order {order_id}: {e}")
+                logger.error(f"Error initiating real-time delivery system for order {order_id}: {e}")
         
         return jsonify({
             'success': True,

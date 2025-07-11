@@ -117,8 +117,12 @@ def approve_driver(driver_id, admin_telegram_id=None):
         congratulations_message += f"Start earning money by delivering food to customers in your area."
         
         if driver.telegram_user_id:
-            send_driver_message(driver.telegram_user_id, congratulations_message)
-            logger.info(f"Sent approval notification to driver {driver.telegram_user_id}")
+            # Send enhanced approval success message with interactive buttons
+            from enhanced_driver_system import send_driver_approval_success_message
+            send_driver_approval_success_message(driver_id)
+            logger.info(f"Sent enhanced approval notification to driver {driver.telegram_user_id}")
+        else:
+            logger.warning(f"Driver {driver.name} has no Telegram account linked for approval notification")
         
         # Log approval
         logger.info(f"Driver {driver.name} (ID: {driver.id}) approved by admin {admin_telegram_id}")

@@ -326,11 +326,23 @@ def handle_driver_callback(callback_query):
             
             if callback_data.startswith('driver_accept_'):
                 order_id = callback_data.split('_')[2]
-                handle_order_acceptance(chat_id, order_id, message_id)
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_driver_order_acceptance(chat_id, order_id)
                 
             elif callback_data.startswith('driver_reject_'):
                 order_id = callback_data.split('_')[2]
-                handle_order_rejection(chat_id, order_id, message_id)
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_driver_order_rejection(chat_id, order_id)
+                
+            elif callback_data.startswith('accept_order_'):
+                order_id = callback_data.split('_')[2]
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_driver_order_acceptance(chat_id, order_id)
+                
+            elif callback_data.startswith('decline_order_'):
+                order_id = callback_data.split('_')[2]
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_driver_order_rejection(chat_id, order_id)
                 
             elif callback_data.startswith('driver_location_'):
                 order_id = callback_data.split('_')[2]
@@ -381,11 +393,13 @@ def handle_driver_callback(callback_query):
                 
             elif callback_data.startswith('pickup_complete_'):
                 order_id = callback_data.split('_')[2]
-                handle_pickup_complete(chat_id, order_id)
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_pickup_completion(chat_id, order_id)
                 
             elif callback_data.startswith('delivery_complete_'):
                 order_id = callback_data.split('_')[2]
-                handle_delivery_complete(chat_id, order_id)
+                from real_time_delivery_system import delivery_system
+                delivery_system.handle_delivery_completion(chat_id, order_id)
                 
             elif callback_data.startswith('driver_panel_'):
                 order_id = callback_data.split('_')[2]
@@ -442,6 +456,55 @@ def handle_driver_callback(callback_query):
                 
             elif callback_data == 'view_orders':
                 send_driver_orders(chat_id)
+                
+            # Enhanced callback handlers for complete delivery workflow
+            elif callback_data.startswith('pickup_complete_'):
+                order_id = callback_data.split('_')[2]
+                handle_pickup_complete(chat_id, order_id)
+                
+            elif callback_data.startswith('delivery_complete_'):
+                order_id = callback_data.split('_')[2]
+                from enhanced_driver_system import handle_delivery_completion_workflow
+                handle_delivery_completion_workflow(chat_id, order_id)
+                
+            elif callback_data.startswith('driver_panel_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import send_driver_gps_panel
+                send_driver_gps_panel(chat_id, order_id)
+                
+            elif callback_data.startswith('call_customer_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import handle_call_customer
+                handle_call_customer(chat_id, order_id)
+                
+            elif callback_data.startswith('navigate_customer_'):
+                order_id = callback_data.split('_')[2]
+                from driver_gps_panel import handle_navigate_to_customer
+                handle_navigate_to_customer(chat_id, order_id)
+                
+            elif callback_data == 'driver_status':
+                send_driver_status_message(chat_id)
+                
+            elif callback_data == 'driver_orders':
+                send_driver_orders(chat_id)
+                
+            elif callback_data == 'driver_earnings':
+                send_driver_earnings(chat_id)
+                
+            elif callback_data == 'driver_help':
+                send_driver_help_message(chat_id)
+                
+            elif callback_data == 'toggle_availability':
+                toggle_driver_availability(chat_id)
+                
+            elif callback_data == 'request_location':
+                send_location_request(chat_id)
+                
+            elif callback_data == 'enable_live_location':
+                send_live_location_instructions(chat_id)
+                
+            elif callback_data == 'contact_support':
+                send_driver_message(chat_id, "📞 *Contact Support*\n\nFor assistance, please contact:\n📱 Admin: +251911234567\n✉️ Email: support@et-food.com\n\nOr message admin directly through this bot.")
                 
             # Answer callback query
             answer_callback_query(callback_query['id'], "Action processed!")
