@@ -1508,19 +1508,8 @@ def check_driver_registration_and_welcome(chat_id):
                 # Driver exists but not approved
                 send_pending_approval_message(chat_id, driver)
             else:
-                # Check if there are any approved drivers without telegram_user_id
-                # This handles the case where admin approved a driver but they haven't linked their account
-                unlinked_approved_drivers = Driver.query.filter(
-                    Driver.is_approved == True,
-                    Driver.telegram_user_id.is_(None)
-                ).all()
-                
-                if unlinked_approved_drivers:
-                    # There are approved drivers without Telegram ID - offer linking
-                    send_driver_contact_request(chat_id)
-                else:
-                    # Not registered - send simple contact admin message
-                    send_simple_contact_admin_message(chat_id)
+                # Driver not found - offer contact sharing for both existing/new drivers
+                send_driver_contact_request(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
