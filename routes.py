@@ -74,6 +74,108 @@ def test():
     """Test page"""
     return render_template('test.html')
 
+@app.route('/driver-registration/<int:chat_id>')
+def driver_registration(chat_id):
+    """Driver registration form"""
+    return render_template('driver_registration.html', chat_id=chat_id)
+
+@app.route('/api/driver-registration', methods=['POST'])
+def submit_driver_registration():
+    """Handle driver registration form submission"""
+    try:
+        # Get form data
+        chat_id = request.form.get('chat_id')
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        vehicle_type = request.form.get('vehicle_type')
+        license_front = request.files.get('license_front')
+        license_back = request.files.get('license_back')
+        id_front = request.files.get('id_front')
+        id_back = request.files.get('id_back')
+        vehicle_registration = request.files.get('vehicle_registration')
+        
+        # Handle file uploads
+        document_urls = {}
+        files = {
+            'license_front': license_front,
+            'license_back': license_back,
+            'id_front': id_front,
+            'id_back': id_back,
+            'vehicle_registration': vehicle_registration
+        }
+        
+        for doc_type, file in files.items():
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(datetime.now().timestamp()))
+                filename = f"{timestamp}_{doc_type}_{filename}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                file.save(filepath)
+                document_urls[doc_type] = f"/static/uploads/{filename}"
+        
+        # Create driver record
+        driver = Driver(
+            name=name,
+            phone_number=phone,
+            email=email,
+            vehicle_type=vehicle_type,
+            telegram_user_id=int(chat_id),
+            approval_status='pending',
+            is_approved=False,
+            is_active=False,
+            is_available=False,
+            license_front_url=document_urls.get('license_front', ''),
+            license_back_url=document_urls.get('license_back', ''),
+            id_front_url=document_urls.get('id_front', ''),
+            id_back_url=document_urls.get('id_back', ''),
+            vehicle_registration_url=document_urls.get('vehicle_registration', ''),
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Notify driver via bot
+        from driver_bot import send_driver_message
+        message = f"✅ *Registration Submitted Successfully!*\n\n"
+        message += f"📋 **Application Details:**\n"
+        message += f"👤 Name: {name}\n"
+        message += f"📞 Phone: {phone}\n"
+        message += f"🚗 Vehicle: {vehicle_type}\n\n"
+        message += f"📄 **Documents Uploaded:**\n"
+        message += f"• Driver's License: {'✅' if 'license_front' in document_urls else '❌'}\n"
+        message += f"• Government ID: {'✅' if 'id_front' in document_urls else '❌'}\n"
+        message += f"• Vehicle Registration: {'✅' if 'vehicle_registration' in document_urls else '❌'}\n\n"
+        message += f"⏳ **Status:** Pending Admin Approval\n"
+        message += f"🔔 You'll receive a notification once approved!\n\n"
+        message += f"📞 Contact support if you have any questions."
+        
+        send_driver_message(chat_id, message)
+        
+        # Notify admin
+        from bot_minimal import send_message_to_admin
+        from models import AdminUser
+        admin_message = f"🚨 *New Driver Registration*\n\n"
+        admin_message += f"👤 **Driver Details:**\n"
+        admin_message += f"• Name: {name}\n"
+        admin_message += f"• Phone: {phone}\n"
+        admin_message += f"• Email: {email}\n"
+        admin_message += f"• Vehicle: {vehicle_type}\n"
+        admin_message += f"• Telegram ID: {chat_id}\n\n"
+        admin_message += f"📄 **Documents:** {len(document_urls)} uploaded\n\n"
+        admin_message += f"👆 **Action Required:** Please review and approve/reject this driver in the admin dashboard."
+        
+        admins = AdminUser.query.filter_by(is_active=True).all()
+        for admin in admins:
+            send_message_to_admin(admin.telegram_user_id, admin_message)
+        
+        return jsonify({'success': True, 'message': 'Registration submitted successfully!'})
+        
+    except Exception as e:
+        logger.error(f"Error submitting driver registration: {e}")
+        return jsonify({'success': False, 'error': 'Registration failed. Please try again.'}), 500
+
 @app.route('/webapp')
 def webapp():
     """Telegram WebApp page"""
@@ -84,18 +186,15 @@ def admin():
     """Admin dashboard"""
     return render_template('admin_simple_working.html')
 
-@app.route('/driver-registration')
-def driver_registration():
-    """Driver registration page"""
-    return render_template('driver_registration.html')
+
 
 @app.route('/enhanced-driver-panel')
 def enhanced_driver_panel():
     """Enhanced driver panel with BeU delivery style"""
     return render_template('enhanced_driver_panel.html')
 
-@app.route('/api/driver-registration', methods=['POST'])
-def api_driver_registration():
+@app.route('/api/driver-registration-legacy', methods=['POST'])
+def api_driver_registration_legacy():
     """API endpoint for driver registration"""
     try:
         # Check if request has JSON data or form data

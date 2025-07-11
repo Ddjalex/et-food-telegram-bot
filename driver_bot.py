@@ -412,12 +412,19 @@ def handle_driver_callback(callback_query):
             send_driver_message(chat_id, "📍 Please share your live location using the 📎 attachment button → Location → Share Live Location")
             
         elif callback_data == 'start_registration':
-            from driver_registration import start_driver_registration
-            start_driver_registration(chat_id)
+            handle_start_registration(chat_id)
+            
+        elif callback_data == 'link_account':
+            handle_link_account(chat_id)
             
         elif callback_data == 'share_contact_for_registration':
-            from driver_registration import send_contact_request_for_registration
-            send_contact_request_for_registration(chat_id)
+            send_driver_contact_request(chat_id)
+            
+        elif callback_data == 'type_phone_number':
+            send_driver_message(chat_id, "📱 *Manual Phone Number Entry*\n\nPlease type your phone number in the format: +251912345678\n\n🔹 Include country code (+251 for Ethiopia)\n🔹 No spaces or special characters\n🔹 Example: +251911234567\n\nType your phone number now:")
+            
+        elif callback_data == 'back_to_registration':
+            send_driver_registration_options(chat_id)
             
         elif callback_data == 'toggle_status':
             toggle_driver_availability(chat_id)
@@ -1428,8 +1435,8 @@ def check_driver_registration_and_welcome(chat_id):
             driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
             
             if not driver:
-                # Driver not found, request contact sharing for automatic registration
-                send_driver_contact_request(chat_id)
+                # Driver not found, show registration options
+                send_driver_registration_options(chat_id)
             else:
                 # Driver exists, send welcome message
                 send_driver_welcome_message(chat_id, driver)
@@ -1470,6 +1477,122 @@ def send_driver_contact_request(chat_id):
         ],
         "resize_keyboard": True,
         "one_time_keyboard": True
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
+def send_driver_registration_options(chat_id):
+    """Send driver registration options with complete registration flow"""
+    message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+    message += f"🎯 **Join our delivery team and start earning!**\n\n"
+    message += f"📋 **Registration Process:**\n"
+    message += f"• Complete driver registration form\n"
+    message += f"• Upload required documents\n"
+    message += f"• Wait for admin approval\n"
+    message += f"• Start receiving delivery orders\n\n"
+    message += f"💰 **Benefits:**\n"
+    message += f"• Flexible working hours\n"
+    message += f"• Competitive rates\n"
+    message += f"• Daily earnings tracking\n"
+    message += f"• Real-time order notifications\n\n"
+    message += f"🚀 **Ready to get started?**"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📝 Complete Registration",
+                    "callback_data": "start_registration"
+                }
+            ],
+            [
+                {
+                    "text": "📞 Link Existing Account",
+                    "callback_data": "link_account"
+                }
+            ],
+            [
+                {
+                    "text": "💬 Contact Support",
+                    "callback_data": "contact_support"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
+def handle_start_registration(chat_id):
+    """Handle start registration callback"""
+    try:
+        from url_utils import get_base_url
+        base_url = get_base_url()
+        registration_url = f"{base_url}/driver-registration/{chat_id}"
+        
+        message = f"📝 *Driver Registration*\n\n"
+        message += f"To complete your registration, please:\n\n"
+        message += f"1️⃣ Click the registration link below\n"
+        message += f"2️⃣ Fill out the application form\n"
+        message += f"3️⃣ Upload required documents\n"
+        message += f"4️⃣ Submit for admin approval\n\n"
+        message += f"💡 **The registration form will open in your browser**\n\n"
+        message += f"📄 **Required Documents:**\n"
+        message += f"• Driver's License (Front & Back)\n"
+        message += f"• Government ID (Front & Back)\n"
+        message += f"• Vehicle Registration\n\n"
+        message += f"🔗 **Registration Link:**\n{registration_url}\n\n"
+        message += f"⚠️ **Note:** Keep this chat open during registration for updates."
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📝 Open Registration Form",
+                        "url": registration_url
+                    }
+                ],
+                [
+                    {
+                        "text": "📞 Contact Support",
+                        "callback_data": "contact_support"
+                    }
+                ]
+            ]
+        }
+        
+        send_driver_message(chat_id, message, keyboard=keyboard)
+        
+    except Exception as e:
+        logger.error(f"Error handling start registration: {e}")
+        send_driver_message(chat_id, "❌ Error starting registration. Please try again or contact support.")
+
+def handle_link_account(chat_id):
+    """Handle link existing account callback"""
+    message = f"📞 *Link Existing Driver Account*\n\n"
+    message += f"If you already have a driver account with ET-FOOD, please share your phone number to link your Telegram account.\n\n"
+    message += f"👇 **Choose your option:**"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📞 Share Phone Number",
+                    "callback_data": "share_contact_for_registration"
+                }
+            ],
+            [
+                {
+                    "text": "✍️ Type Phone Number",
+                    "callback_data": "type_phone_number"
+                }
+            ],
+            [
+                {
+                    "text": "🔙 Back to Registration",
+                    "callback_data": "back_to_registration"
+                }
+            ]
+        ]
     }
     
     send_driver_message(chat_id, message, keyboard=keyboard)

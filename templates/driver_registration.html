@@ -6,40 +6,53 @@
     <title>Driver Registration - ET-FOOD</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
-            margin: 0;
-            padding: 0;
+            padding: 20px 0;
         }
         .registration-container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        .card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            backdrop-filter: blur(10px);
-            background: rgba(255,255,255,0.95);
-        }
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
             color: white;
-            border-radius: 20px 20px 0 0;
+            padding: 30px;
             text-align: center;
-            padding: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .form-container {
+            padding: 30px;
+        }
+        .form-section {
+            margin-bottom: 30px;
+        }
+        .form-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
         }
         .form-control {
-            border-radius: 15px;
-            border: 2px solid #e9ecef;
-            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
             font-size: 16px;
-            transition: all 0.3s ease;
+            transition: border-color 0.3s;
         }
         .form-control:focus {
             border-color: #667eea;
@@ -48,444 +61,315 @@
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 15px;
+            border-radius: 8px;
             padding: 12px 30px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: transform 0.3s;
         }
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        .vehicle-option {
-            border: 2px solid #e9ecef;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .vehicle-option:hover {
-            border-color: #667eea;
-            background-color: #f8f9fa;
-        }
-        .vehicle-option.selected {
-            border-color: #667eea;
-            background-color: rgba(102, 126, 234, 0.1);
         }
         .document-upload {
-            border: 2px dashed #667eea;
-            border-radius: 15px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
             padding: 20px;
             text-align: center;
             margin-bottom: 15px;
-            transition: all 0.3s ease;
+            transition: border-color 0.3s;
         }
-        .document-upload:hover {
-            background-color: rgba(102, 126, 234, 0.05);
+        .document-upload.dragover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
         }
-        .upload-icon {
-            font-size: 48px;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        .progress-step {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: #e9ecef;
-            color: #6c757d;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin: 0 10px;
-        }
-        .progress-step.active {
-            background: #667eea;
-            color: white;
-        }
-        .progress-step.completed {
-            background: #28a745;
-            color: white;
-        }
-        .step-content {
+        .document-upload input[type="file"] {
             display: none;
         }
-        .step-content.active {
-            display: block;
+        .document-upload label {
+            cursor: pointer;
+            color: #666;
+            font-size: 14px;
         }
-        .preview-image {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 10px;
+        .document-upload label:hover {
+            color: #667eea;
+        }
+        .document-uploaded {
+            border-color: #28a745;
+            background-color: #f8fff8;
+        }
+        .document-uploaded .fa-check {
+            color: #28a745;
+        }
+        .required {
+            color: #dc3545;
+        }
+        .vehicle-type-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
             margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
         }
     </style>
 </head>
 <body>
     <div class="registration-container">
-        <div class="card">
-            <div class="card-header">
-                <h3><i class="fas fa-user-plus"></i> Driver Registration</h3>
-                <p class="mb-0">Join ET-FOOD delivery team</p>
-            </div>
-            <div class="card-body">
-                <!-- Progress Steps -->
-                <div class="d-flex justify-content-center mb-4">
-                    <div class="progress-step active" id="step1">1</div>
-                    <div class="progress-step" id="step2">2</div>
-                    <div class="progress-step" id="step3">3</div>
+        <div class="header">
+            <h1><i class="fas fa-truck"></i> Driver Registration</h1>
+            <p>Join the ET-FOOD delivery team and start earning today!</p>
+        </div>
+        
+        <div class="form-container">
+            <div id="alert-container"></div>
+            
+            <form id="registrationForm" enctype="multipart/form-data">
+                <input type="hidden" name="chat_id" value="{{ chat_id }}">
+                
+                <!-- Personal Information -->
+                <div class="form-section">
+                    <h4><i class="fas fa-user"></i> Personal Information</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Full Name <span class="required">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number <span class="required">*</span></label>
+                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="+251911234567" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="optional">
+                    </div>
                 </div>
-
-                <form id="registrationForm">
-                    <!-- Step 1: Personal Information -->
-                    <div class="step-content active" id="content1">
-                        <h5 class="text-center mb-3">Personal Information</h5>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-user"></i> Full Name
-                            </label>
-                            <input type="text" class="form-control" id="driverName" placeholder="Enter your full name" required>
+                
+                <!-- Vehicle Information -->
+                <div class="form-section">
+                    <h4><i class="fas fa-car"></i> Vehicle Information</h4>
+                    <div class="mb-3">
+                        <label for="vehicle_type" class="form-label">Vehicle Type <span class="required">*</span></label>
+                        <select class="form-control" id="vehicle_type" name="vehicle_type" required>
+                            <option value="">Select Vehicle Type</option>
+                            <option value="bicycle">Bicycle</option>
+                            <option value="motorcycle">Motorcycle</option>
+                            <option value="car">Car</option>
+                        </select>
+                        <div class="vehicle-type-info" id="vehicleInfo" style="display: none;">
+                            <i class="fas fa-info-circle"></i> <span id="vehicleInfoText"></span>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-phone"></i> Phone Number
-                            </label>
-                            <input type="tel" class="form-control" id="phoneNumber" placeholder="Enter your phone number" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-car"></i> Vehicle Type
-                            </label>
-                            <div id="vehicleOptions">
-                                <div class="vehicle-option" data-vehicle="car">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-car fa-2x me-3"></i>
-                                        <div>
-                                            <strong>Car</strong>
-                                            <p class="mb-0 text-muted">For larger orders and longer distances</p>
-                                        </div>
-                                    </div>
+                    </div>
+                </div>
+                
+                <!-- Document Upload -->
+                <div class="form-section">
+                    <h4><i class="fas fa-file-alt"></i> Required Documents</h4>
+                    
+                    <!-- Driver's License -->
+                    <div class="document-section" id="licenseSection">
+                        <h6>Driver's License <span class="required">*</span></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="document-upload" id="licenseFrontUpload">
+                                    <input type="file" id="license_front" name="license_front" accept="image/*" required>
+                                    <label for="license_front">
+                                        <i class="fas fa-upload"></i><br>
+                                        <strong>Front Side</strong><br>
+                                        Click to upload or drag & drop
+                                    </label>
                                 </div>
-                                <div class="vehicle-option" data-vehicle="motorcycle">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-motorcycle fa-2x me-3"></i>
-                                        <div>
-                                            <strong>Motorcycle</strong>
-                                            <p class="mb-0 text-muted">Fast delivery for regular orders</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="vehicle-option" data-vehicle="bicycle">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-bicycle fa-2x me-3"></i>
-                                        <div>
-                                            <strong>Bicycle</strong>
-                                            <p class="mb-0 text-muted">Eco-friendly for nearby deliveries</p>
-                                        </div>
-                                    </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="document-upload" id="licenseBackUpload">
+                                    <input type="file" id="license_back" name="license_back" accept="image/*" required>
+                                    <label for="license_back">
+                                        <i class="fas fa-upload"></i><br>
+                                        <strong>Back Side</strong><br>
+                                        Click to upload or drag & drop
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-primary w-100" onclick="nextStep()">
-                            Next <i class="fas fa-arrow-right"></i>
-                        </button>
                     </div>
-
-                    <!-- Step 2: Document Upload -->
-                    <div class="step-content" id="content2">
-                        <h5 class="text-center mb-3">Upload Documents</h5>
-                        
-                        <!-- Driver License Section (Car/Motorcycle only) -->
-                        <div class="mb-3" id="licenseSection">
-                            <label class="form-label">
-                                <i class="fas fa-id-card"></i> Driver License (Front & Back)
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="document-upload" onclick="document.getElementById('licenseFront').click()">
-                                <i class="fas fa-upload upload-icon"></i>
-                                <p class="mb-0">Click to upload license front</p>
-                                <input type="file" id="licenseFront" accept="image/*" style="display: none;">
-                                <img id="licenseFrontPreview" class="preview-image" style="display: none;">
+                    
+                    <!-- Government ID -->
+                    <div class="document-section">
+                        <h6>Government ID <span class="required">*</span></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="document-upload" id="idFrontUpload">
+                                    <input type="file" id="id_front" name="id_front" accept="image/*" required>
+                                    <label for="id_front">
+                                        <i class="fas fa-upload"></i><br>
+                                        <strong>Front Side</strong><br>
+                                        Click to upload or drag & drop
+                                    </label>
+                                </div>
                             </div>
-                            <div class="document-upload" onclick="document.getElementById('licenseBack').click()">
-                                <i class="fas fa-upload upload-icon"></i>
-                                <p class="mb-0">Click to upload license back</p>
-                                <input type="file" id="licenseBack" accept="image/*" style="display: none;">
-                                <img id="licenseBackPreview" class="preview-image" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="document-upload" id="idBackUpload">
+                                    <input type="file" id="id_back" name="id_back" accept="image/*" required>
+                                    <label for="id_back">
+                                        <i class="fas fa-upload"></i><br>
+                                        <strong>Back Side</strong><br>
+                                        Click to upload or drag & drop
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Government ID Section (Always required) -->
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-id-badge"></i> Government ID (Front & Back)
-                                <span class="text-danger">*</span>
-                            </label>
-                            <div class="document-upload" onclick="document.getElementById('idFront').click()">
-                                <i class="fas fa-upload upload-icon"></i>
-                                <p class="mb-0">Click to upload ID front</p>
-                                <input type="file" id="idFront" accept="image/*" style="display: none;">
-                                <img id="idFrontPreview" class="preview-image" style="display: none;">
-                            </div>
-                            <div class="document-upload" onclick="document.getElementById('idBack').click()">
-                                <i class="fas fa-upload upload-icon"></i>
-                                <p class="mb-0">Click to upload ID back</p>
-                                <input type="file" id="idBack" accept="image/*" style="display: none;">
-                                <img id="idBackPreview" class="preview-image" style="display: none;">
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary w-50" onclick="prevStep()">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            <button type="button" class="btn btn-primary w-50" onclick="nextStep()">
-                                Next <i class="fas fa-arrow-right"></i>
-                            </button>
                         </div>
                     </div>
-
-                    <!-- Step 3: Vehicle Documents -->
-                    <div class="step-content" id="content3">
-                        <h5 class="text-center mb-3">Vehicle Documents</h5>
-                        <div class="mb-3" id="vehicleDocuments">
-                            <label class="form-label">
-                                <i class="fas fa-file-alt"></i> Vehicle Registration
-                                <span class="text-danger" id="vehicleRegRequired">*</span>
-                            </label>
-                            <div class="document-upload" onclick="document.getElementById('vehicleReg').click()">
-                                <i class="fas fa-upload upload-icon"></i>
-                                <p class="mb-0">Click to upload vehicle registration</p>
-                                <input type="file" id="vehicleReg" accept="image/*" style="display: none;">
-                                <img id="vehicleRegPreview" class="preview-image" style="display: none;">
+                    
+                    <!-- Vehicle Registration -->
+                    <div class="document-section" id="vehicleRegSection">
+                        <h6>Vehicle Registration <span class="required">*</span></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="document-upload" id="vehicleRegUpload">
+                                    <input type="file" id="vehicle_registration" name="vehicle_registration" accept="image/*" required>
+                                    <label for="vehicle_registration">
+                                        <i class="fas fa-upload"></i><br>
+                                        <strong>Registration Document</strong><br>
+                                        Click to upload or drag & drop
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Information message based on vehicle type -->
-                        <div class="alert alert-info" id="vehicleInfo" style="display: none;">
-                            <i class="fas fa-info-circle"></i>
-                            <span id="vehicleInfoText"></span>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary w-50" onclick="prevStep()">
-                                <i class="fas fa-arrow-left"></i> Back
-                            </button>
-                            <button type="button" class="btn btn-success w-50" onclick="submitRegistration()">
-                                <i class="fas fa-check"></i> Complete Registration
-                            </button>
-                        </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i> Submit Registration
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentStep = 1;
-        let selectedVehicle = '';
-        let uploadedFiles = {};
-
-        // Initialize Telegram WebApp
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-
-        // Auto-fill user information from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const telegramId = urlParams.get('telegram_id');
-        const userName = urlParams.get('name');
-        const userPhone = urlParams.get('phone');
-
-        if (userName) {
-            document.getElementById('driverName').value = userName;
-        }
-        if (userPhone) {
-            document.getElementById('phoneNumber').value = userPhone;
-        }
-
-        // Vehicle selection
-        document.querySelectorAll('.vehicle-option').forEach(option => {
-            option.addEventListener('click', function() {
-                document.querySelectorAll('.vehicle-option').forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected');
-                selectedVehicle = this.dataset.vehicle;
-            });
-        });
-
-        // File upload handlers
-        ['licenseFront', 'licenseBack', 'idFront', 'idBack', 'vehicleReg'].forEach(id => {
-            document.getElementById(id).addEventListener('change', function(e) {
-                handleFileUpload(e, id);
-            });
-        });
-
-        function handleFileUpload(event, id) {
-            const file = event.target.files[0];
-            if (file) {
-                uploadedFiles[id] = file;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById(id + 'Preview');
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    preview.parentElement.querySelector('.upload-icon').style.display = 'none';
-                    preview.parentElement.querySelector('p').textContent = 'File uploaded successfully';
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function updateDocumentRequirements() {
-            const licenseSection = document.getElementById('licenseSection');
-            const vehicleDocuments = document.getElementById('vehicleDocuments');
-            const vehicleRegRequired = document.getElementById('vehicleRegRequired');
+        // Vehicle type change handler
+        document.getElementById('vehicle_type').addEventListener('change', function() {
             const vehicleInfo = document.getElementById('vehicleInfo');
             const vehicleInfoText = document.getElementById('vehicleInfoText');
+            const licenseSection = document.getElementById('licenseSection');
+            const vehicleRegSection = document.getElementById('vehicleRegSection');
+            const licenseFront = document.getElementById('license_front');
+            const licenseBack = document.getElementById('license_back');
+            const vehicleReg = document.getElementById('vehicle_registration');
             
-            if (selectedVehicle === 'bicycle') {
-                // For bicycle: Hide driver license, make vehicle registration optional
+            if (this.value === 'bicycle') {
+                vehicleInfo.style.display = 'block';
+                vehicleInfoText.innerHTML = '<strong>Bicycle drivers:</strong> Only Government ID is required. Driver\'s license and vehicle registration are not needed.';
                 licenseSection.style.display = 'none';
-                vehicleRegRequired.style.display = 'none';
+                vehicleRegSection.style.display = 'none';
+                licenseFront.required = false;
+                licenseBack.required = false;
+                vehicleReg.required = false;
+            } else {
                 vehicleInfo.style.display = 'block';
-                vehicleInfoText.textContent = 'For bicycle delivery, only Government ID is required. Vehicle registration is optional.';
-                vehicleInfo.className = 'alert alert-success';
-            } else if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
-                // For car/motorcycle: Show all documents as required
+                vehicleInfoText.innerHTML = '<strong>Car/Motorcycle drivers:</strong> All documents are required including driver\'s license and vehicle registration.';
                 licenseSection.style.display = 'block';
-                vehicleRegRequired.style.display = 'inline';
-                vehicleInfo.style.display = 'block';
-                vehicleInfoText.textContent = 'For car/motorcycle delivery, both Driver License and Vehicle Registration are required.';
-                vehicleInfo.className = 'alert alert-info';
+                vehicleRegSection.style.display = 'block';
+                licenseFront.required = true;
+                licenseBack.required = true;
+                vehicleReg.required = true;
             }
-        }
-
-        function nextStep() {
-            if (currentStep === 1) {
-                // Validate step 1
-                const name = document.getElementById('driverName').value;
-                const phone = document.getElementById('phoneNumber').value;
+        });
+        
+        // File upload handlers
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function() {
+                const uploadDiv = this.parentElement;
+                const label = uploadDiv.querySelector('label');
                 
-                if (!name || !phone || !selectedVehicle) {
-                    alert('Please fill in all required fields and select a vehicle type.');
-                    return;
+                if (this.files && this.files[0]) {
+                    uploadDiv.classList.add('document-uploaded');
+                    label.innerHTML = '<i class="fas fa-check"></i><br><strong>File Uploaded</strong><br>' + this.files[0].name;
+                } else {
+                    uploadDiv.classList.remove('document-uploaded');
+                    label.innerHTML = '<i class="fas fa-upload"></i><br><strong>' + label.dataset.title + '</strong><br>Click to upload or drag & drop';
                 }
-                
-                // Update document requirements based on vehicle type
-                updateDocumentRequirements();
-            }
+            });
+        });
+        
+        // Form submission
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            if (currentStep === 2) {
-                // Validate step 2 based on vehicle type
-                let requiredDocs = ['idFront', 'idBack']; // Always required
-                
-                // Add license requirements for car and motorcycle
-                if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
-                    requiredDocs.push('licenseFront', 'licenseBack');
-                }
-                
-                const missingDocs = requiredDocs.filter(doc => !uploadedFiles[doc]);
-                
-                if (missingDocs.length > 0) {
-                    alert('Please upload all required documents before proceeding.');
-                    return;
-                }
-            }
+            const submitBtn = document.getElementById('submitBtn');
+            const alertContainer = document.getElementById('alert-container');
             
-            if (currentStep === 3) {
-                // Validate step 3 based on vehicle type
-                if (selectedVehicle === 'car' || selectedVehicle === 'motorcycle') {
-                    if (!uploadedFiles['vehicleReg']) {
-                        alert('Please upload vehicle registration for car/motorcycle.');
-                        return;
-                    }
-                }
-            }
-
-            if (currentStep < 3) {
-                document.getElementById('content' + currentStep).classList.remove('active');
-                document.getElementById('step' + currentStep).classList.remove('active');
-                document.getElementById('step' + currentStep).classList.add('completed');
-                
-                currentStep++;
-                
-                document.getElementById('content' + currentStep).classList.add('active');
-                document.getElementById('step' + currentStep).classList.add('active');
-            }
-        }
-
-        function prevStep() {
-            if (currentStep > 1) {
-                document.getElementById('content' + currentStep).classList.remove('active');
-                document.getElementById('step' + currentStep).classList.remove('active');
-                
-                currentStep--;
-                
-                document.getElementById('content' + currentStep).classList.add('active');
-                document.getElementById('step' + currentStep).classList.remove('completed');
-                document.getElementById('step' + currentStep).classList.add('active');
-            }
-        }
-
-        async function submitRegistration() {
-            // Validate all required fields
-            const name = document.getElementById('driverName').value;
-            const phone = document.getElementById('phoneNumber').value;
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
             
-            if (!name || !phone || !selectedVehicle) {
-                alert('Please fill in all required information.');
-                return;
-            }
-
-            // For now, just register without documents due to upload issues
-            // Documents can be uploaded later via admin panel
+            // Create FormData
+            const formData = new FormData(this);
             
-            try {
-                const response = await fetch('/api/driver-registration-simple', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        telegram_id: telegramId,
-                        name: name,
-                        phone_number: phone,
-                        vehicle_type: selectedVehicle
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Show success message
-                    document.querySelector('.card-body').innerHTML = `
-                        <div class="text-center">
-                            <i class="fas fa-check-circle text-success" style="font-size: 64px;"></i>
-                            <h4 class="mt-3">Registration Submitted!</h4>
-                            <p class="text-muted">Your driver registration has been submitted successfully.</p>
-                            <p class="text-muted">Please wait for admin approval. You'll receive a notification once approved.</p>
-                            <p class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> 
-                                Documents can be submitted later through admin if required.
-                            </p>
-                            <button class="btn btn-primary" onclick="window.Telegram.WebApp.close()">
-                                <i class="fas fa-arrow-left"></i> Back to Bot
-                            </button>
+            // Submit form
+            fetch('/api/driver-registration', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> 
+                            Registration submitted successfully! You'll receive a notification once approved.
                         </div>
                     `;
-                    
-                    // Close WebApp after delay
-                    setTimeout(() => {
-                        window.Telegram.WebApp.close();
-                    }, 3000);
+                    this.reset();
                 } else {
-                    alert('Registration failed: ' + result.message);
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            ${data.error || 'Registration failed. Please try again.'}
+                        </div>
+                    `;
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred during registration. Please try again.');
+            })
+            .catch(error => {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i> 
+                        Network error. Please check your connection and try again.
+                    </div>
+                `;
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Registration';
+            });
+        });
+        
+        // Auto-scroll to alert
+        function scrollToAlert() {
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer.children.length > 0) {
+                alertContainer.scrollIntoView({ behavior: 'smooth' });
             }
         }
+        
+        // Call scroll function after alerts are shown
+        const observer = new MutationObserver(scrollToAlert);
+        observer.observe(document.getElementById('alert-container'), { childList: true });
     </script>
 </body>
 </html>
