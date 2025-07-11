@@ -28,8 +28,8 @@ DRIVER_WEBHOOK_URL = construct_webhook_url('driver-webhook')
 pending_orders = {}
 order_timers = {}
 
-# Global variable to prevent duplicate route registration
-_webhook_registered = False
+# Global variable to prevent duplicate initialization
+_driver_bot_initialized = False
 
 def send_driver_message(chat_id, text, keyboard=None, parse_mode=None):
     """Send a message to Telegram using driver bot"""
@@ -1275,20 +1275,27 @@ def handle_driver_location_update(chat_id, location):
 
 def init_driver_bot(flask_app):
     """Initialize the driver bot with Flask app context"""
+    global _driver_bot_initialized
+    
+    # Prevent duplicate initialization
+    if _driver_bot_initialized:
+        logger.info("Driver bot already initialized, skipping...")
+        return
+    
     with flask_app.app_context():
         logger.info("Initializing Driver Telegram bot...")
         
         # Set up webhook
         setup_driver_webhook(flask_app)
         
+        # Mark as initialized
+        _driver_bot_initialized = True
         logger.info("Driver bot initialized successfully!")
 
 def setup_driver_webhook(flask_app):
     """Set up webhook for the driver bot"""
-    global _webhook_registered
-    
-    # Prevent duplicate route registration
-    if _webhook_registered:
+    # Prevent duplicate route registration by checking Flask's view functions
+    if "driver_webhook" in flask_app.view_functions:
         logger.info("Driver webhook route already registered, skipping...")
         return
     
@@ -1323,8 +1330,7 @@ def setup_driver_webhook(flask_app):
                 logger.error(f"Error processing driver webhook: {e}")
                 return jsonify({'error': str(e)}), 500
         
-        # Mark webhook as registered
-        _webhook_registered = True
+        # Log successful route registration
         logger.info("Driver webhook route registered successfully")
         
         # Set webhook with delay to allow host resolution
