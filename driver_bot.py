@@ -1426,7 +1426,7 @@ def handle_driver_text_message(chat_id, text):
         send_driver_message(chat_id, "🤖 I'm the ET-FOOD Driver Bot!\n\nI'll notify you about new delivery assignments. Use /help for more information.")
 
 def check_driver_registration_and_welcome(chat_id):
-    """Check if driver is registered and send appropriate welcome message"""
+    """Check if driver is registered and send appropriate welcome message - SIMPLIFIED"""
     try:
         from models import Driver
         from main import app
@@ -1434,12 +1434,12 @@ def check_driver_registration_and_welcome(chat_id):
         with app.app_context():
             driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
             
-            if not driver:
-                # Driver not found, show registration options
-                send_driver_registration_options(chat_id)
-            else:
-                # Driver exists, send welcome message
+            if driver and driver.is_approved:
+                # Driver is approved, send welcome message
                 send_driver_welcome_message(chat_id, driver)
+            else:
+                # Not approved or not registered - send simple message
+                send_simple_driver_start(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
@@ -1482,39 +1482,21 @@ def send_driver_contact_request(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_registration_options(chat_id):
-    """Send driver registration options with complete registration flow"""
-    message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
-    message += f"🎯 **Join our delivery team and start earning!**\n\n"
-    message += f"📋 **Registration Process:**\n"
-    message += f"• Complete driver registration form\n"
-    message += f"• Upload required documents\n"
-    message += f"• Wait for admin approval\n"
-    message += f"• Start receiving delivery orders\n\n"
-    message += f"💰 **Benefits:**\n"
-    message += f"• Flexible working hours\n"
-    message += f"• Competitive rates\n"
-    message += f"• Daily earnings tracking\n"
-    message += f"• Real-time order notifications\n\n"
-    message += f"🚀 **Ready to get started?**"
+    """Send simple driver registration message"""
+    message = f"🚗 *Welcome to ET-FOOD Driver Bot*\n\n"
+    message += f"To become a driver, please contact the restaurant admin.\n\n"
+    message += f"📞 **Contact admin for driver registration**\n"
+    message += f"📍 **You must be approved by admin first**\n"
+    message += f"⚡ **Once approved, you'll get access to delivery orders**\n\n"
+    message += f"**Current Status:** Not registered\n"
+    message += f"**Next Step:** Contact admin for approval"
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
-                    "text": "📝 Complete Registration",
-                    "callback_data": "start_registration"
-                }
-            ],
-            [
-                {
-                    "text": "📞 Link Existing Account",
-                    "callback_data": "link_account"
-                }
-            ],
-            [
-                {
-                    "text": "💬 Contact Support",
-                    "callback_data": "contact_support"
+                    "text": "📞 Contact Admin",
+                    "callback_data": "contact_admin"
                 }
             ]
         ]
