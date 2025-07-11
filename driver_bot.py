@@ -108,7 +108,8 @@ def notify_driver_order_assignment(driver_telegram_id, order_data):
         message += f"📱 Open driver panel for full details or use quick actions below."
         
         # Create inline keyboard with WebApp
-        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?order_id={order_data['id']}&driver_id={driver_telegram_id}"
+        from url_utils import construct_driver_panel_url
+        webapp_url = construct_driver_panel_url(order_data['id'], driver_telegram_id)
         
         keyboard = {
             "inline_keyboard": [
@@ -267,8 +268,9 @@ def notify_driver_with_countdown(driver_telegram_id, order_id):
         message += f"⏰ *You have 1 minute to respond*\n"
         message += f"🏃‍♂️ First to accept gets the order!"
         
-        # Create WebApp URL
-        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?order_id={order_id}&driver_id={driver_telegram_id}"
+        # Create WebApp URL using centralized URL utility
+        from url_utils import construct_driver_panel_url
+        webapp_url = construct_driver_panel_url(order_id, driver_telegram_id)
         
         keyboard = {
             "inline_keyboard": [
@@ -1778,16 +1780,9 @@ def send_driver_welcome_message(chat_id, driver=None):
             message += f"🔴 You MUST share live location to receive orders\n\n"
             message += f"⚠️ **IMPORTANT**: Like BeU delivery system, you must share your live location to receive nearby orders!\n\n"
         
-        # Create WebApp URL for driver panel with environment detection
-        render_url = os.environ.get('RENDER_EXTERNAL_URL')
-        replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
-        
-        if render_url:
-            webapp_url = f"{render_url}/driver-panel?driver_id={chat_id}"
-        elif replit_domain:
-            webapp_url = f"https://{replit_domain}/driver-panel?driver_id={chat_id}"
-        else:
-            webapp_url = f"https://et-food-telegram-bot.onrender.com/driver-panel?driver_id={chat_id}"
+        # Create WebApp URL for driver panel using centralized utility
+        from url_utils import construct_url
+        webapp_url = construct_url(f'/driver-panel?driver_id={chat_id}')
         
         if location_active:
             keyboard = {
@@ -2118,7 +2113,8 @@ def send_driver_orders(chat_id):
                 message += "─────────────────\n"
             
             # Add action buttons for order management
-            webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?driver_id={driver.id}"
+            from url_utils import construct_url
+            webapp_url = construct_url(f'/driver-panel?driver_id={driver.id}')
             keyboard = {
                 "inline_keyboard": [
                     [
