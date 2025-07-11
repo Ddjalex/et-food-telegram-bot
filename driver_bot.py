@@ -1517,19 +1517,8 @@ def check_driver_registration_and_welcome(chat_id):
                 # Driver exists but not approved
                 send_pending_approval_message(chat_id, driver)
             else:
-                # Check if there are any approved drivers without telegram_user_id
-                # This handles the case where admin approved a driver but they haven't linked their account
-                unlinked_approved_drivers = Driver.query.filter(
-                    Driver.is_approved == True,
-                    Driver.telegram_user_id.is_(None)
-                ).all()
-                
-                if unlinked_approved_drivers:
-                    # There are approved drivers without Telegram ID - offer linking
-                    send_driver_contact_request(chat_id)
-                else:
-                    # No approved drivers without Telegram ID - send registration options
-                    send_driver_registration_options(chat_id)
+                # Not registered - send simple contact admin message
+                send_simple_contact_admin_message(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
@@ -1559,6 +1548,22 @@ def send_pending_approval_message(chat_id, driver):
     }
     
     send_driver_message(chat_id, message, keyboard=keyboard)
+
+def send_simple_contact_admin_message(chat_id):
+    """Send simple message for unregistered drivers"""
+    message = f"🚚 *Welcome to ET-FOOD Driver Bot!*\n\n"
+    message += f"👋 Hello! This bot is for registered ET-FOOD delivery drivers only.\n\n"
+    message += f"📋 **To become a driver:**\n"
+    message += f"• Contact our admin team\n"
+    message += f"• Complete the registration process\n"
+    message += f"• Get approved by management\n\n"
+    message += f"📞 **Contact Information:**\n"
+    message += f"• Phone: +251-XXX-XXXX\n"
+    message += f"• Ask for driver registration\n\n"
+    message += f"✅ Once approved, you'll be able to receive delivery assignments through this bot.\n\n"
+    message += f"Thank you for your interest in joining ET-FOOD!"
+    
+    send_driver_message(chat_id, message)
 
 def send_driver_contact_request(chat_id):
     """Request contact sharing for automatic driver registration - iOS Compatible"""

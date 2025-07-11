@@ -14,6 +14,32 @@ from bot_minimal import send_message, send_message_to_admin
 
 logger = logging.getLogger(__name__)
 
+def is_registered_driver(chat_id):
+    """Check if user is a registered and approved driver"""
+    try:
+        from app import app
+        
+        with app.app_context():
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            return driver and driver.is_approved
+    except Exception as e:
+        logger.error(f"Error checking driver registration: {e}")
+        return False
+
+def handle_unregistered_user(chat_id, callback_query_id):
+    """Handle callbacks from unregistered users"""
+    try:
+        answer_callback_query(callback_query_id, "❌ Please contact admin to register as driver")
+        
+        message = f"❌ *Access Denied*\n\n"
+        message += f"This feature is only available for registered drivers.\n\n"
+        message += f"📞 Contact admin to register as a delivery driver."
+        
+        send_driver_message(chat_id, message)
+        
+    except Exception as e:
+        logger.error(f"Error handling unregistered user: {e}")
+
 def handle_driver_callback(callback_query):
     """Handle all driver bot callback queries"""
     try:
@@ -64,12 +90,18 @@ def handle_driver_callback(callback_query):
         elif callback_data == 'navigate_restaurant':
             handle_navigate_restaurant(chat_id, callback_query_id)
             
-        # Driver status management
+        # Driver status management (only for registered drivers)
         elif callback_data == 'driver_status':
-            handle_driver_status(chat_id, callback_query_id)
+            if is_registered_driver(chat_id):
+                handle_driver_status(chat_id, callback_query_id)
+            else:
+                handle_unregistered_user(chat_id, callback_query_id)
             
         elif callback_data == 'driver_orders':
-            handle_driver_orders(chat_id, callback_query_id)
+            if is_registered_driver(chat_id):
+                handle_driver_orders(chat_id, callback_query_id)
+            else:
+                handle_unregistered_user(chat_id, callback_query_id)
             
         elif callback_data == 'toggle_availability':
             handle_toggle_availability(chat_id, callback_query_id)
