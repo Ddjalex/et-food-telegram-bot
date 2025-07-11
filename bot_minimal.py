@@ -52,7 +52,7 @@ def notify_driver_assignment(driver_id, order_id):
             
             # Create driver panel URL for monitoring
             import os
-            driver_panel_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN', 'localhost')}/driver-panel?order_id={order.id}&driver_id={driver.id}"
+            driver_panel_url = f"https://{os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('REPLIT_DEV_DOMAIN', 'localhost').replace('https://', '')}/driver-panel?order_id={order.id}&driver_id={driver.id}"
             
             keyboard = {
                 "inline_keyboard": [
