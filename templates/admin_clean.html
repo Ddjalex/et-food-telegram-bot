@@ -1604,9 +1604,16 @@
                                                                     <i class="fas fa-camera me-1"></i>
                                                                     Upload Image
                                                                 </label>
-                                                                <input type="file" class="form-control" name="image" accept="image/*" 
-                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
-                                                                <div class="form-text">
+                                                                <div class="drop-zone" id="dropZone" style="border: 2px dashed #d1d3e2; border-radius: 8px; padding: 20px; text-align: center; background: #f8f9fc; cursor: pointer; transition: all 0.3s ease;">
+                                                                    <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                                                    <p class="mb-2 text-muted">Drag & drop your image here or click to browse</p>
+                                                                    <input type="file" class="form-control d-none" id="imageFileInput" name="image" accept="image/*">
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('imageFileInput').click()">
+                                                                        <i class="fas fa-folder-open me-1"></i>
+                                                                        Browse Files
+                                                                    </button>
+                                                                </div>
+                                                                <div class="form-text mt-2">
                                                                     <i class="fas fa-info-circle me-1"></i>
                                                                     Supported formats: JPG, PNG, GIF, WebP (Max 5MB)
                                                                 </div>
@@ -1661,32 +1668,151 @@
                     // Add modal to body
                     document.body.insertAdjacentHTML('beforeend', modalHtml);
                     
-                    // Set up image preview functionality
-                    const imageInput = document.querySelector('#addMenuModal input[name="image"]');
+                    // Set up enhanced drag-and-drop and image preview functionality
+                    const imageInput = document.getElementById('imageFileInput');
+                    const dropZone = document.getElementById('dropZone');
                     const imageUrlInput = document.querySelector('#addMenuModal input[name="image_url"]');
                     const previewDiv = document.getElementById('imagePreview');
                     const previewImg = document.getElementById('previewImg');
                     
+                    // File validation function
+                    function validateImageFile(file) {
+                        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        
+                        if (!validTypes.includes(file.type)) {
+                            alert('Invalid file type. Please upload JPG, PNG, GIF, or WebP images only.');
+                            return false;
+                        }
+                        
+                        if (file.size > maxSize) {
+                            alert('File size too large. Please upload images smaller than 5MB.');
+                            return false;
+                        }
+                        
+                        return true;
+                    }
+                    
+                    // Handle file selection and preview
+                    function handleFileSelect(file) {
+                        if (validateImageFile(file)) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImg.src = e.target.result;
+                                previewDiv.style.display = 'block';
+                                
+                                // Update drop zone appearance
+                                dropZone.innerHTML = \`
+                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                    <p class="mb-2 text-success">Image uploaded successfully!</p>
+                                    <p class="text-muted small">File: \${file.name}</p>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetDropZone()">
+                                        <i class="fas fa-times me-1"></i>
+                                        Change Image
+                                    </button>
+                                \`;
+                                dropZone.style.border = '2px dashed #28a745';
+                                dropZone.style.background = '#f8fff8';
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                    
+                    // Reset drop zone to original state
+                    window.resetDropZone = function() {
+                        dropZone.innerHTML = \`
+                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                            <p class="mb-2 text-muted">Drag & drop your image here or click to browse</p>
+                            <input type="file" class="form-control d-none" id="imageFileInput" name="image" accept="image/*">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('imageFileInput').click()">
+                                <i class="fas fa-folder-open me-1"></i>
+                                Browse Files
+                            </button>
+                        \`;
+                        dropZone.style.border = '2px dashed #d1d3e2';
+                        dropZone.style.background = '#f8f9fc';
+                        previewDiv.style.display = 'none';
+                        
+                        // Re-attach event listeners
+                        const newImageInput = document.getElementById('imageFileInput');
+                        if (newImageInput) {
+                            newImageInput.addEventListener('change', function(e) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    handleFileSelect(file);
+                                }
+                            });
+                        }
+                    };
+                    
+                    // Set up drag and drop events
+                    if (dropZone) {
+                        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, preventDefaults, false);
+                        });
+                        
+                        function preventDefaults(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                        
+                        ['dragenter', 'dragover'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, highlight, false);
+                        });
+                        
+                        ['dragleave', 'drop'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, unhighlight, false);
+                        });
+                        
+                        function highlight(e) {
+                            dropZone.style.border = '2px dashed #007bff';
+                            dropZone.style.background = '#f0f8ff';
+                        }
+                        
+                        function unhighlight(e) {
+                            dropZone.style.border = '2px dashed #d1d3e2';
+                            dropZone.style.background = '#f8f9fc';
+                        }
+                        
+                        dropZone.addEventListener('drop', handleDrop, false);
+                        
+                        function handleDrop(e) {
+                            const dt = e.dataTransfer;
+                            const files = dt.files;
+                            
+                            if (files.length > 0) {
+                                const file = files[0];
+                                imageInput.files = files;
+                                handleFileSelect(file);
+                            }
+                        }
+                    }
+                    
+                    // Handle regular file input
                     if (imageInput) {
                         imageInput.addEventListener('change', function(e) {
                             const file = e.target.files[0];
                             if (file) {
-                                const reader = new FileReader();
-                                reader.onload = function(e) {
-                                    previewImg.src = e.target.result;
-                                    previewDiv.style.display = 'block';
-                                };
-                                reader.readAsDataURL(file);
+                                handleFileSelect(file);
                             }
                         });
                     }
                     
+                    // Handle image URL input
                     if (imageUrlInput) {
                         imageUrlInput.addEventListener('input', function(e) {
                             const url = e.target.value;
                             if (url) {
                                 previewImg.src = url;
                                 previewDiv.style.display = 'block';
+                                
+                                // Clear file input when URL is provided
+                                if (imageInput) {
+                                    imageInput.value = '';
+                                }
+                                
+                                // Reset drop zone
+                                resetDropZone();
                             } else {
                                 previewDiv.style.display = 'none';
                             }
