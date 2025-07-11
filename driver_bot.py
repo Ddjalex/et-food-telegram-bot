@@ -1522,8 +1522,8 @@ def send_driver_registration_options(chat_id):
     message += f"• Real-time delivery system access"
     
     # Get base URL for mini web app
-    from url_utils import get_base_url
-    base_url = get_base_url()
+    from url_utils import construct_url
+    base_url = construct_url(https=True)
     
     keyboard = {
         "inline_keyboard": [
