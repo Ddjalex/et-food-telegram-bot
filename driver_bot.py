@@ -1439,7 +1439,7 @@ def check_driver_registration_and_welcome(chat_id):
                 send_driver_welcome_message(chat_id, driver)
             else:
                 # Not approved or not registered - send simple message
-                send_simple_driver_start(chat_id)
+                send_driver_registration_options(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
