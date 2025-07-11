@@ -1260,17 +1260,8 @@ def handle_driver_contact_share(chat_id, contact):
                 notify_admin_driver_link(driver.name, phone_number, chat_id)
                 
             else:
-                # No existing driver found - start registration process
-                notify_admin_new_driver_attempt(chat_id, phone_number, first_name)
-                
-                message = f"👋 Hello {first_name}!\n\n"
-                message += f"📱 Phone: {phone_number}\n"
-                message += f"🚫 No driver profile found for this number.\n\n"
-                message += f"🎯 Your registration request has been sent to admin.\n"
-                message += f"⏳ Please wait for approval to start receiving orders.\n\n"
-                message += f"📞 Contact admin if you have questions."
-                
-                send_driver_message(chat_id, message)
+                # No existing driver found - show registration form
+                send_driver_registration_form(chat_id, phone_number, first_name)
                 
     except Exception as e:
         logger.error(f"Error handling driver contact share: {e}")
@@ -1517,8 +1508,19 @@ def check_driver_registration_and_welcome(chat_id):
                 # Driver exists but not approved
                 send_pending_approval_message(chat_id, driver)
             else:
-                # Not registered - send simple contact admin message
-                send_simple_contact_admin_message(chat_id)
+                # Check if there are any approved drivers without telegram_user_id
+                # This handles the case where admin approved a driver but they haven't linked their account
+                unlinked_approved_drivers = Driver.query.filter(
+                    Driver.is_approved == True,
+                    Driver.telegram_user_id.is_(None)
+                ).all()
+                
+                if unlinked_approved_drivers:
+                    # There are approved drivers without Telegram ID - offer linking
+                    send_driver_contact_request(chat_id)
+                else:
+                    # Not registered - send simple contact admin message
+                    send_simple_contact_admin_message(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
@@ -1564,6 +1566,58 @@ def send_simple_contact_admin_message(chat_id):
     message += f"Thank you for your interest in joining ET-FOOD!"
     
     send_driver_message(chat_id, message)
+
+def send_driver_registration_form(chat_id, phone_number, first_name):
+    """Send driver registration form as WebApp"""
+    try:
+        from url_utils import construct_url
+        
+        # Create registration form URL with user data
+        webapp_url = construct_url(f'/driver-registration?phone={phone_number}&name={first_name}&telegram_id={chat_id}')
+        
+        message = f"🚚 *Driver Registration*\n\n"
+        message += f"👋 Hello {first_name}!\n\n"
+        message += f"📱 Phone: {phone_number}\n"
+        message += f"🆔 Telegram ID: {chat_id}\n\n"
+        message += f"📋 **Complete your driver registration using the form below:**\n\n"
+        message += f"✅ Personal information\n"
+        message += f"🚗 Vehicle details\n"
+        message += f"📄 Document upload\n"
+        message += f"📍 Location preferences\n\n"
+        message += f"⏰ Registration takes 2-3 minutes to complete."
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📝 Complete Registration",
+                        "web_app": {"url": webapp_url}
+                    }
+                ],
+                [
+                    {
+                        "text": "📞 Contact Admin Instead",
+                        "callback_data": "contact_admin"
+                    }
+                ]
+            ]
+        }
+        
+        send_driver_message(chat_id, message, keyboard=keyboard)
+        
+    except Exception as e:
+        logger.error(f"Error sending registration form: {e}")
+        # Fallback to admin contact message
+        notify_admin_new_driver_attempt(chat_id, phone_number, first_name)
+        
+        message = f"👋 Hello {first_name}!\n\n"
+        message += f"📱 Phone: {phone_number}\n"
+        message += f"🚫 Registration system temporarily unavailable.\n\n"
+        message += f"🎯 Your contact details have been sent to admin for manual registration.\n"
+        message += f"⏳ Please wait for approval to start receiving orders.\n\n"
+        message += f"📞 Contact admin if you have questions."
+        
+        send_driver_message(chat_id, message)
 
 def send_driver_contact_request(chat_id):
     """Request contact sharing for automatic driver registration - iOS Compatible"""

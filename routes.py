@@ -74,12 +74,7 @@ def test():
     """Test page"""
     return render_template('test.html')
 
-@app.route('/driver-registration')
-def driver_registration():
-    """Driver registration form page"""
-    return render_template('driver_registration_form.html')
-
-@app.route('/api/driver-registration', methods=['POST'])
+@app.route('/api/driver-registration-legacy', methods=['POST'])
 def api_driver_registration():
     """Handle driver registration submission from mini web app"""
     try:
@@ -3001,5 +2996,152 @@ def get_available_drivers_for_order(order_id):
     except Exception as e:
         logger.error(f"Error getting available drivers for order {order_id}: {e}")
         return jsonify({'error': 'Failed to get available drivers'}), 500
+
+@app.route('/driver-registration')
+def driver_registration():
+    """Driver registration WebApp page"""
+    return render_template('driver_registration_webapp.html')
+
+@app.route('/api/driver-registration-webapp', methods=['POST'])
+def submit_driver_registration_webapp():
+    """Submit driver registration form"""
+    try:
+        # Handle both JSON and FormData
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData from WebApp
+            telegram_user_id = request.form.get('telegram_user_id')
+            name = request.form.get('name')
+            phone_number = request.form.get('phone_number')
+            email = request.form.get('email', '')
+            age = int(request.form.get('age'))
+            address = request.form.get('address')
+            vehicle_type = request.form.get('vehicle_type')
+            vehicle_model = request.form.get('vehicle_model', '')
+            license_plate = request.form.get('license_plate', '')
+            vehicle_year = request.form.get('vehicle_year')
+            
+            # Handle document uploads
+            document_urls = {}
+            
+            # Government ID (always required)
+            if 'id_front' in request.files:
+                file = request.files['id_front']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"id_front_{timestamp}_{filename}"
+                    filepath = os.path.join(UPLOAD_FOLDER, filename)
+                    file.save(filepath)
+                    document_urls['id_front_url'] = f"/static/uploads/{filename}"
+            
+            if 'id_back' in request.files:
+                file = request.files['id_back']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"id_back_{timestamp}_{filename}"
+                    filepath = os.path.join(UPLOAD_FOLDER, filename)
+                    file.save(filepath)
+                    document_urls['id_back_url'] = f"/static/uploads/{filename}"
+            
+            # Driver license and vehicle registration (only for motorcycle/car)
+            if vehicle_type != 'bicycle':
+                if 'license_front' in request.files:
+                    file = request.files['license_front']
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        timestamp = str(int(datetime.now().timestamp()))
+                        filename = f"license_front_{timestamp}_{filename}"
+                        filepath = os.path.join(UPLOAD_FOLDER, filename)
+                        file.save(filepath)
+                        document_urls['license_front_url'] = f"/static/uploads/{filename}"
+                
+                if 'license_back' in request.files:
+                    file = request.files['license_back']
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        timestamp = str(int(datetime.now().timestamp()))
+                        filename = f"license_back_{timestamp}_{filename}"
+                        filepath = os.path.join(UPLOAD_FOLDER, filename)
+                        file.save(filepath)
+                        document_urls['license_back_url'] = f"/static/uploads/{filename}"
+                
+                if 'vehicle_registration' in request.files:
+                    file = request.files['vehicle_registration']
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        timestamp = str(int(datetime.now().timestamp()))
+                        filename = f"vehicle_reg_{timestamp}_{filename}"
+                        filepath = os.path.join(UPLOAD_FOLDER, filename)
+                        file.save(filepath)
+                        document_urls['vehicle_registration_url'] = f"/static/uploads/{filename}"
+        else:
+            # JSON data (legacy support)
+            data = request.get_json()
+            telegram_user_id = data.get('telegram_user_id')
+            name = data.get('name')
+            phone_number = data.get('phone_number')
+            email = data.get('email', '')
+            age = int(data.get('age'))
+            address = data.get('address')
+            vehicle_type = data.get('vehicle_type')
+            vehicle_model = data.get('vehicle_model', '')
+            license_plate = data.get('license_plate', '')
+            vehicle_year = data.get('vehicle_year')
+            document_urls = {}
+        
+        # Create new driver with pending approval
+        driver = Driver(
+            name=name,
+            phone_number=phone_number,
+            email=email,
+            age=age,
+            address=address,
+            telegram_user_id=telegram_user_id,
+            vehicle_type=vehicle_type,
+            vehicle_model=vehicle_model,
+            license_plate=license_plate,
+            vehicle_year=int(vehicle_year) if vehicle_year else None,
+            approval_status='pending',
+            is_approved=False,
+            is_active=False,
+            is_available=False,
+            **document_urls  # Add all document URLs
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        # Notify admin about new driver registration
+        from admin_approval_system import notify_admin_new_driver_registration
+        notify_admin_new_driver_registration(driver.id)
+        
+        # Send confirmation to driver
+        from driver_bot import send_driver_message
+        message = f"✅ *Registration Submitted Successfully!*\n\n"
+        message += f"👤 Name: {name}\n"
+        message += f"📱 Phone: {phone_number}\n"
+        message += f"🚗 Vehicle: {vehicle_type.title()}\n\n"
+        message += f"📋 **Status:** Under Review\n\n"
+        message += f"🔍 Your application is being reviewed by our admin team.\n"
+        message += f"⏰ You'll receive a notification once approved.\n\n"
+        message += f"📞 Contact admin if you have any questions.\n\n"
+        message += f"Thank you for your interest in joining ET-FOOD!"
+        
+        send_driver_message(telegram_user_id, message)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Driver registration submitted successfully',
+            'driver_id': driver.id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting driver registration: {e}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to submit registration. Please try again.'
+        }), 500
 
 
