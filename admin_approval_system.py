@@ -72,8 +72,8 @@ def notify_admin_new_driver_registration(driver_id):
                 except Exception as e:
                     logger.error(f"Failed to send notification to admin {admin.telegram_user_id}: {e}")
         
-        # Also send notification to customer bot for public awareness
-        notify_customers_new_driver_registration(driver)
+        # Customer notifications disabled as requested
+        # notify_customers_new_driver_registration(driver)
         
         return True
         
