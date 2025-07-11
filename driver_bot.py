@@ -900,18 +900,17 @@ def handle_delivery_complete(chat_id, order_id):
             
             # Update order status
             order.status = 'delivered'
-            order.delivery_time = datetime.utcnow()
+            order.updated_at = datetime.utcnow()
             
             # Make driver available again
             driver.is_available = True
-            driver.current_order_id = None
             
             db.session.commit()
             
             # Calculate delivery time
             delivery_duration = ""
-            if order.pickup_time:
-                duration = order.delivery_time - order.pickup_time
+            if hasattr(order, 'pickup_time') and order.pickup_time:
+                duration = order.updated_at - order.pickup_time
                 minutes = int(duration.total_seconds() / 60)
                 delivery_duration = f"{minutes} minutes"
             
@@ -950,7 +949,7 @@ def handle_delivery_complete(chat_id, order_id):
             customer_message += f"💳 **Payment:** {order.payment_method}\n"
             if delivery_duration:
                 customer_message += f"⏰ **Delivery Time:** {delivery_duration}\n"
-            customer_message += f"🕐 **Completed At:** {order.delivery_time.strftime('%I:%M %p')}\n\n"
+            customer_message += f"🕐 **Completed At:** {order.updated_at.strftime('%I:%M %p')}\n\n"
             customer_message += f"🌟 **Thank you for choosing ET-FOOD!**\n"
             customer_message += f"📝 We'd love to hear your feedback about this order.\n"
             customer_message += f"⭐ Rate your experience and help us improve our service!"
