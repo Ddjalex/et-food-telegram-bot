@@ -126,66 +126,43 @@ def handle_order_acceptance(chat_id, order_id, callback_query_id):
     """Handle order acceptance by driver"""
     try:
         from app import app
+        from driver_bot import handle_order_acceptance as driver_handle_order_acceptance
         
         with app.app_context():
-            # Use the delivery system to handle order acceptance
-            success = delivery_system.handle_order_acceptance(chat_id, order_id)
+            # Use the driver bot function to handle order acceptance
+            success = driver_handle_order_acceptance(chat_id, order_id, None)
             
             if success:
                 answer_callback_query(callback_query_id, "✅ Order accepted successfully!")
-                
-                # Send additional driver instructions
-                message = f"🎉 *Order Accepted!*\n\n"
-                message += f"📋 Order #{order_id} is now assigned to you.\n\n"
-                message += f"🚚 **Next Steps:**\n"
-                message += f"1. Share your live location 📍\n"
-                message += f"2. Pick up from restaurant 🏪\n"
-                message += f"3. Deliver to customer 🏠\n"
-                message += f"4. Complete delivery ✅\n\n"
-                message += f"⚠️ **Important:** Share your location now for real-time tracking!"
-                
-                keyboard = {
-                    "inline_keyboard": [
-                        [
-                            {
-                                "text": "📍 Share Live Location",
-                                "callback_data": "request_location"
-                            }
-                        ]
-                    ]
-                }
-                
-                send_driver_message(chat_id, message, keyboard=keyboard)
-                
+                logger.info(f"Order {order_id} successfully accepted by driver {chat_id}")
             else:
                 answer_callback_query(callback_query_id, "❌ Order no longer available")
+                logger.warning(f"Order {order_id} could not be accepted by driver {chat_id}")
                 
     except Exception as e:
         logger.error(f"Error handling order acceptance: {e}")
-        answer_callback_query(callback_query_id, "Error accepting order")
+        answer_callback_query(callback_query_id, "❌ Error accepting order")
 
 def handle_order_rejection(chat_id, order_id, callback_query_id):
     """Handle order rejection by driver"""
     try:
         from app import app
+        from driver_bot import handle_order_rejection as driver_handle_order_rejection
         
         with app.app_context():
-            # Reassign order to next driver
-            delivery_system.reassign_order_to_next_driver(order_id, exclude_driver_id=chat_id)
+            # Use the driver bot function to handle order rejection
+            success = driver_handle_order_rejection(chat_id, order_id, None)
             
-            answer_callback_query(callback_query_id, "Order declined - assigned to next driver")
-            
-            # Send confirmation to driver
-            message = f"❌ *Order Declined*\n\n"
-            message += f"📋 Order #{order_id} has been declined.\n"
-            message += f"🔄 The order has been reassigned to the next available driver.\n\n"
-            message += f"✅ You remain available for new orders."
-            
-            send_driver_message(chat_id, message)
-            
+            if success:
+                answer_callback_query(callback_query_id, "Order declined")
+                logger.info(f"Order {order_id} declined by driver {chat_id}")
+            else:
+                answer_callback_query(callback_query_id, "❌ Order already processed")
+                logger.warning(f"Order {order_id} could not be declined by driver {chat_id}")
+                
     except Exception as e:
         logger.error(f"Error handling order rejection: {e}")
-        answer_callback_query(callback_query_id, "Error declining order")
+        answer_callback_query(callback_query_id, "❌ Error declining order")
 
 def handle_location_request(chat_id, callback_query_id):
     """Handle location sharing request"""
