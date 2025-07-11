@@ -8,7 +8,6 @@ from datetime import datetime
 from models import Driver, AdminUser
 from extensions import db
 from driver_bot import send_driver_message
-from bot_minimal import send_message_to_admin
 
 logger = logging.getLogger(__name__)
 
@@ -53,22 +52,22 @@ def notify_admin_new_driver_registration(driver_id):
         message += f"📋 **Driver ID:** #{driver.id}\n"
         message += f"📱 **Telegram ID:** {driver.telegram_user_id or 'Not linked'}"
         
-        # Send to all active admins
+        # Send to all active admins via driver bot to avoid customer bot interference
         admins = AdminUser.query.filter_by(is_active=True).all()
         if not admins:
             # Fallback to default admin IDs if no admins in database
             default_admin_ids = [383870191, 383870190]  # Add your admin IDs here
             for admin_id in default_admin_ids:
                 try:
-                    send_message_to_admin(admin_id, message)
-                    logger.info(f"Sent new driver notification to admin {admin_id}")
+                    send_driver_message(admin_id, message)
+                    logger.info(f"Sent new driver notification to admin {admin_id} via driver bot")
                 except Exception as e:
                     logger.error(f"Failed to send notification to admin {admin_id}: {e}")
         else:
             for admin in admins:
                 try:
-                    send_message_to_admin(admin.telegram_user_id, message)
-                    logger.info(f"Sent new driver notification to admin {admin.telegram_user_id}")
+                    send_driver_message(admin.telegram_user_id, message)
+                    logger.info(f"Sent new driver notification to admin {admin.telegram_user_id} via driver bot")
                 except Exception as e:
                     logger.error(f"Failed to send notification to admin {admin.telegram_user_id}: {e}")
         
