@@ -1597,33 +1597,32 @@ def send_driver_contact_request(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_registration_options(chat_id):
-    """Send driver registration options with inline buttons for mini web app"""
+    """Send enhanced driver registration options with admin approval system"""
     message = f"🚗 *Welcome to ET-FOOD Driver Bot*\n\n"
-    message += f"Join our delivery team! Choose an option below:\n\n"
-    message += f"📝 **New drivers:** Complete registration form\n"
-    message += f"🔗 **Existing drivers:** Link your account\n\n"
-    message += f"📋 **Registration includes:**\n"
-    message += f"• Personal information\n"
-    message += f"• Document upload (ID, License, Vehicle)\n"
-    message += f"• Admin approval process\n"
-    message += f"• Real-time delivery system access"
-    
-    # Get base URL for mini web app
-    from url_utils import construct_url
-    base_url = construct_url(https=True)
+    message += f"✅ *Registration successful!*\n\n"
+    message += f"📋 **Next Steps:**\n"
+    message += f"• Admin will review your application\n"
+    message += f"• You'll receive approval notification here\n"
+    message += f"• Share your location when approved\n"
+    message += f"• Start receiving delivery orders\n\n"
+    message += f"🔗 **Already approved?** Link your account to start receiving orders!"
     
     keyboard = {
         "inline_keyboard": [
             [
                 {
-                    "text": "📝 Register as New Driver",
-                    "web_app": {"url": f"{base_url}/driver-registration?telegram_id={chat_id}"}
+                    "text": "🔗 Link Existing Account",
+                    "callback_data": "link_account"
                 }
             ],
             [
                 {
-                    "text": "🔗 Link Existing Account",
-                    "callback_data": "link_account"
+                    "text": "📱 Driver Status",
+                    "callback_data": "driver_status"
+                },
+                {
+                    "text": "📞 Contact Admin",
+                    "callback_data": "contact_support"
                 }
             ]
         ]
