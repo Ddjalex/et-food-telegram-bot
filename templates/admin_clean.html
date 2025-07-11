@@ -1400,14 +1400,21 @@
         }
 
         function deleteDriver(driverId) {
-            if (confirm('Are you sure you want to delete this driver? This action cannot be undone and will unassign any active orders.')) {
+            if (confirm('⚠️ PERMANENT DELETION WARNING\n\nThis will:\n• Permanently delete driver from system\n• Unassign any active orders\n• Delete all driver data\n• Allow driver to register fresh\n\nDriver will be notified they can register again.\n\nContinue with permanent deletion?')) {
                 fetch(`/api/drivers/${driverId}`, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message + (data.unassigned_orders > 0 ? `\n${data.unassigned_orders} orders were unassigned.` : ''));
+                        let message = data.message;
+                        if (data.unassigned_orders > 0) {
+                            message += `\n\n📋 ${data.unassigned_orders} active orders were unassigned and reset to 'confirmed' status.`;
+                        }
+                        if (data.notification_sent) {
+                            message += `\n\n📱 Driver was notified they can register fresh.`;
+                        }
+                        alert(message);
                         loadDrivers();
                     } else {
                         alert('Error deleting driver: ' + data.error);

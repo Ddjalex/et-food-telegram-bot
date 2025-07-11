@@ -2925,9 +2925,11 @@ def get_driver_documents(driver_id):
 
 @app.route('/api/drivers/<int:driver_id>', methods=['DELETE'])
 def delete_driver(driver_id):
-    """Delete a driver"""
+    """Permanently delete a driver and allow fresh registration"""
     try:
         driver = Driver.query.get_or_404(driver_id)
+        driver_telegram_id = driver.telegram_user_id
+        driver_name = driver.name
         
         # First, unassign any active orders
         active_orders = Order.query.filter_by(driver_id=driver_id).filter(
@@ -2938,17 +2940,44 @@ def delete_driver(driver_id):
             order.driver_id = None
             order.status = 'confirmed'  # Reset to confirmed so admin can reassign
             
-        # Delete the driver
+        # Check for UserProfile record and delete if exists
+        try:
+            from models import UserProfile
+            user_profile = UserProfile.query.filter_by(telegram_user_id=driver_telegram_id).first()
+            if user_profile:
+                db.session.delete(user_profile)
+                logger.info(f"Deleted UserProfile for driver {driver_name}")
+        except Exception as e:
+            logger.warning(f"No UserProfile found or error deleting: {e}")
+            
+        # Delete the driver record completely
         db.session.delete(driver)
         db.session.commit()
         
+        # Notify driver via driver bot that they can register fresh
+        if driver_telegram_id:
+            try:
+                from driver_bot import send_driver_message
+                message = f"👋 *Account Removed*\n\n"
+                message += f"Your driver account has been permanently removed from the system.\n\n"
+                message += f"✅ You can now register as a new driver if you wish.\n"
+                message += f"📝 Use /start to begin fresh registration.\n\n"
+                message += f"Thank you for your service!"
+                
+                send_driver_message(driver_telegram_id, message)
+                logger.info(f"Notified driver {driver_name} about account deletion")
+            except Exception as e:
+                logger.warning(f"Could not notify driver about deletion: {e}")
+        
         return jsonify({
             'success': True,
-            'message': f'Driver {driver.name} deleted successfully',
-            'unassigned_orders': len(active_orders)
+            'message': f'Driver {driver_name} permanently deleted. They can register fresh now.',
+            'unassigned_orders': len(active_orders),
+            'notification_sent': driver_telegram_id is not None
         })
+        
     except Exception as e:
-        logger.error(f"Error deleting driver: {e}")
+        logger.error(f"Error permanently deleting driver: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
