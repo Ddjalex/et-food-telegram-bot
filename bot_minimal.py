@@ -51,19 +51,8 @@ def notify_driver_assignment(driver_id, order_id):
             admin_message += f"🚚 Delivery Bot is now processing your order..."
             
             # Create driver panel URL for monitoring
-            import os
-            # Construct clean URL for driver panel
-            render_url = os.environ.get('RENDER_EXTERNAL_URL')
-            replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
-            
-            if render_url:
-                base_url = render_url.replace('https://', '').replace('http://', '')
-            elif replit_domain:
-                base_url = replit_domain.replace('https://', '').replace('http://', '')
-            else:
-                base_url = 'localhost'
-            
-            driver_panel_url = f"https://{base_url}/driver-panel?order_id={order.id}&driver_id={driver.id}"
+            from url_utils import construct_driver_panel_url
+            driver_panel_url = construct_driver_panel_url(order.id, driver.id)
             
             keyboard = {
                 "inline_keyboard": [

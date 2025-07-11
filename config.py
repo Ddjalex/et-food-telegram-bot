@@ -6,28 +6,13 @@ class Config:
     DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN', 'your_driver_bot_token_here')
     @staticmethod
     def get_webhook_url():
-        """Safely construct webhook URL with proper protocol handling"""
-        # Get environment variables
-        render_url = os.environ.get('RENDER_EXTERNAL_URL')
-        replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
+        """Get webhook URL with fallback to custom URL if set"""
         custom_url = os.environ.get('WEBHOOK_URL')
-        
         if custom_url:
             return custom_url
         
-        # Choose the appropriate base URL
-        if render_url:
-            base_url = render_url
-        elif replit_domain:
-            base_url = replit_domain
-        else:
-            base_url = 'localhost'
-        
-        # Strip any existing protocol
-        base_url = base_url.replace('https://', '').replace('http://', '')
-        
-        # Construct clean HTTPS URL
-        return f"https://{base_url}"
+        from url_utils import construct_url
+        return construct_url()
     
     WEBHOOK_URL = get_webhook_url()
     

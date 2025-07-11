@@ -20,32 +20,9 @@ logger = logging.getLogger(__name__)
 # Driver Bot Configuration
 DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN')
 
-def construct_webhook_url():
-    """Safely construct webhook URL with proper protocol handling"""
-    # Get environment variables
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    replit_domain = os.environ.get('REPLIT_DEV_DOMAIN')
-    
-    # Choose the appropriate base URL
-    if render_url:
-        base_url = render_url
-    elif replit_domain:
-        base_url = replit_domain
-    else:
-        base_url = 'localhost'
-    
-    # Strip any existing protocol
-    base_url = base_url.replace('https://', '').replace('http://', '')
-    
-    # Construct clean HTTPS URL
-    webhook_url = f"https://{base_url}/driver-webhook"
-    
-    # Log the final URL for verification
-    logger.info(f"Driver bot webhook URL constructed: {webhook_url}")
-    
-    return webhook_url
+from url_utils import construct_webhook_url
 
-DRIVER_WEBHOOK_URL = construct_webhook_url()
+DRIVER_WEBHOOK_URL = construct_webhook_url('driver-webhook')
 
 # Order timeout tracking
 pending_orders = {}
@@ -2009,9 +1986,10 @@ def send_driver_help_message_old(chat_id):
 def set_driver_webhook():
     """Set webhook for driver bot with retry mechanism"""
     import time
+    from url_utils import construct_webhook_url
     
-    # Use the same clean URL construction logic
-    webhook_url = construct_webhook_url()
+    # Use the centralized URL construction logic
+    webhook_url = construct_webhook_url('driver-webhook')
     
     if not webhook_url or 'localhost' in webhook_url:
         logger.error("No valid webhook domain available (REPLIT_DEV_DOMAIN or RENDER_EXTERNAL_URL)")
