@@ -3013,12 +3013,7 @@ def submit_driver_registration_webapp():
             name = request.form.get('name')
             phone_number = request.form.get('phone_number')
             email = request.form.get('email', '')
-            age = int(request.form.get('age'))
-            address = request.form.get('address')
             vehicle_type = request.form.get('vehicle_type')
-            vehicle_model = request.form.get('vehicle_model', '')
-            license_plate = request.form.get('license_plate', '')
-            vehicle_year = request.form.get('vehicle_year')
             
             # Handle document uploads
             document_urls = {}
@@ -3082,30 +3077,29 @@ def submit_driver_registration_webapp():
             name = data.get('name')
             phone_number = data.get('phone_number')
             email = data.get('email', '')
-            age = int(data.get('age'))
-            address = data.get('address')
             vehicle_type = data.get('vehicle_type')
-            vehicle_model = data.get('vehicle_model', '')
-            license_plate = data.get('license_plate', '')
-            vehicle_year = data.get('vehicle_year')
             document_urls = {}
+        
+        # Validate required fields
+        if not all([telegram_user_id, name, phone_number, vehicle_type]):
+            logger.error(f"Missing required fields: telegram_user_id={telegram_user_id}, name={name}, phone_number={phone_number}, vehicle_type={vehicle_type}")
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields: name, phone number, and vehicle type are required.'
+            }), 400
         
         # Create new driver with pending approval
         driver = Driver(
             name=name,
             phone_number=phone_number,
             email=email,
-            age=age,
-            address=address,
-            telegram_user_id=telegram_user_id,
+            telegram_user_id=int(telegram_user_id) if telegram_user_id else None,
             vehicle_type=vehicle_type,
-            vehicle_model=vehicle_model,
-            license_plate=license_plate,
-            vehicle_year=int(vehicle_year) if vehicle_year else None,
             approval_status='pending',
             is_approved=False,
             is_active=False,
             is_available=False,
+            registration_date=datetime.utcnow(),
             **document_urls  # Add all document URLs
         )
         
@@ -3138,10 +3132,12 @@ def submit_driver_registration_webapp():
         
     except Exception as e:
         logger.error(f"Error submitting driver registration: {e}")
+        logger.error(f"Request form data: {dict(request.form)}")
+        logger.error(f"Request files: {list(request.files.keys())}")
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': 'Failed to submit registration. Please try again.'
+            'message': f'Failed to submit registration: {str(e)}'
         }), 500
 
 
