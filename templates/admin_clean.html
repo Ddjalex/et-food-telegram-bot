@@ -1650,6 +1650,8 @@
                         </div>
                     `;
                     
+
+                    
                     // Remove existing modal if any
                     const existingModal = document.getElementById('addMenuModal');
                     if (existingModal) {
@@ -1659,33 +1661,37 @@
                     // Add modal to body
                     document.body.insertAdjacentHTML('beforeend', modalHtml);
                     
-                    // Add image preview functionality
+                    // Set up image preview functionality
                     const imageInput = document.querySelector('#addMenuModal input[name="image"]');
                     const imageUrlInput = document.querySelector('#addMenuModal input[name="image_url"]');
                     const previewDiv = document.getElementById('imagePreview');
                     const previewImg = document.getElementById('previewImg');
                     
-                    imageInput.addEventListener('change', function(e) {
-                        const file = e.target.files[0];
-                        if (file) {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                previewImg.src = e.target.result;
-                                previewDiv.style.display = 'block';
-                            };
-                            reader.readAsDataURL(file);
-                        }
-                    });
+                    if (imageInput) {
+                        imageInput.addEventListener('change', function(e) {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = function(e) {
+                                    previewImg.src = e.target.result;
+                                    previewDiv.style.display = 'block';
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        });
+                    }
                     
-                    imageUrlInput.addEventListener('input', function(e) {
-                        const url = e.target.value;
-                        if (url) {
-                            previewImg.src = url;
-                            previewDiv.style.display = 'block';
-                        } else {
-                            previewDiv.style.display = 'none';
-                        }
-                    });
+                    if (imageUrlInput) {
+                        imageUrlInput.addEventListener('input', function(e) {
+                            const url = e.target.value;
+                            if (url) {
+                                previewImg.src = url;
+                                previewDiv.style.display = 'block';
+                            } else {
+                                previewDiv.style.display = 'none';
+                            }
+                        });
+                    }
                     
                     // Show modal
                     const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
