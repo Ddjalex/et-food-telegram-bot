@@ -135,6 +135,13 @@
                 <div class="col-auto">
                     <div class="d-flex align-items-center">
                         <div class="me-3">
+                            <select id="timeFilter" class="form-select form-select-sm" onchange="loadOrders()">
+                                <option value="recent">Last 4 Hours</option>
+                                <option value="today" selected>Last 24 Hours</option>
+                                <option value="all">All Active</option>
+                            </select>
+                        </div>
+                        <div class="me-3">
                             <span id="orderCount" class="badge bg-primary fs-6">0</span>
                             <small class="text-muted">Active Orders</small>
                         </div>
@@ -264,7 +271,8 @@
         }
 
         function loadOrders() {
-            fetch('/api/kitchen/orders')
+            const timeFilter = document.getElementById('timeFilter').value;
+            fetch(`/api/kitchen/orders?time_filter=${timeFilter}`)
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];

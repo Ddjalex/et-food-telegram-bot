@@ -473,11 +473,34 @@ def get_orders():
 def get_kitchen_orders():
     """Get orders for kitchen staff - all active orders including pending"""
     try:
+        # Get time filter parameter (default: today only)
+        time_filter = request.args.get('time_filter', 'today')
+        
         # Get orders for kitchen staff (include out_for_delivery to show driver assignments)
         active_statuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery']
-        orders = Order.query.filter(
-            Order.status.in_(active_statuses)
-        ).order_by(Order.created_at.asc()).all()
+        
+        from datetime import datetime, timedelta
+        
+        # Apply time filter
+        if time_filter == 'today':
+            # Only show orders from last 24 hours
+            since_time = datetime.utcnow() - timedelta(hours=24)
+            orders = Order.query.filter(
+                Order.status.in_(active_statuses),
+                Order.created_at >= since_time
+            ).order_by(Order.created_at.asc()).all()
+        elif time_filter == 'recent':
+            # Only show orders from last 4 hours
+            since_time = datetime.utcnow() - timedelta(hours=4)
+            orders = Order.query.filter(
+                Order.status.in_(active_statuses),
+                Order.created_at >= since_time
+            ).order_by(Order.created_at.asc()).all()
+        else:
+            # Show all active orders
+            orders = Order.query.filter(
+                Order.status.in_(active_statuses)
+            ).order_by(Order.created_at.asc()).all()
         
         # Format orders for kitchen interface
         kitchen_orders = []
