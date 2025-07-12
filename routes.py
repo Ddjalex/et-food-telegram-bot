@@ -710,7 +710,7 @@ def get_order_driver_status(order_id):
                     'driver_location': {
                         'lat': driver.current_lat,
                         'lng': driver.current_lng,
-                        'last_update': driver.location_updated_at.isoformat() if driver.location_updated_at else None
+                        'last_update': driver.last_location_update.isoformat() if driver.last_location_update else None
                     },
                     'assignment_time': order.updated_at.isoformat() if order.updated_at else None
                 })
