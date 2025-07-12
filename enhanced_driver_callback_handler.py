@@ -577,7 +577,7 @@ def handle_order_acceptance(chat_id, order_id):
                     [
                         {
                             "text": f"📞 Call {order.customer_name}",
-                            "url": f"tel:{order.customer_phone}"
+                            "callback_data": f"call_customer_{order_id}"
                         }
                     ],
                     [
@@ -587,6 +587,10 @@ def handle_order_acceptance(chat_id, order_id):
                         }
                     ],
                     [
+                        {
+                            "text": "✅ Pickup Complete",
+                            "callback_data": f"pickup_complete_{order_id}"
+                        },
                         {
                             "text": "✅ Mark as Delivered",
                             "callback_data": f"complete_order_{order_id}"
@@ -835,17 +839,31 @@ def handle_call_customer(chat_id, order_id):
         with app.app_context():
             order = Order.query.get(order_id)
             if order:
-                message = f"📞 **Customer Contact**\n\n"
+                message = f"📞 **Customer Contact Information**\n\n"
                 message += f"👤 **Name**: {order.customer_name}\n"
-                message += f"📱 **Phone**: {order.customer_phone}\n\n"
-                message += f"💡 **Tip**: Tap the phone number to call directly"
+                message += f"📱 **Phone**: `{order.customer_phone}`\n"
+                message += f"📍 **Address**: {order.customer_address}\n\n"
+                message += f"💡 **Instructions**:\n"
+                message += f"• Long press the phone number to copy\n"
+                message += f"• Use your phone's dialer to call\n"
+                message += f"• Contact customer for delivery coordination"
                 
                 keyboard = {
                     "inline_keyboard": [
                         [
                             {
-                                "text": f"📞 Call {order.customer_name}",
-                                "url": f"tel:{order.customer_phone}"
+                                "text": "🗺️ Navigate to Customer",
+                                "url": f"https://maps.google.com/maps?q={order.location_lat},{order.location_lng}" if order.location_lat else "https://maps.google.com"
+                            }
+                        ],
+                        [
+                            {
+                                "text": "✅ Pickup Complete",
+                                "callback_data": f"pickup_complete_{order_id}"
+                            },
+                            {
+                                "text": "✅ Mark as Delivered",
+                                "callback_data": f"delivery_complete_{order_id}"
                             }
                         ]
                     ]
