@@ -1370,6 +1370,8 @@ def handle_driver_location_update(chat_id, location):
                     driver.current_latitude = location['latitude']
                     driver.current_longitude = location['longitude']
                     driver.last_location_update = datetime.utcnow()
+                    # Activate driver when they share location
+                    driver.is_active = True
                     db.session.commit()
                     
                     logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_latitude}, {driver.current_longitude}")

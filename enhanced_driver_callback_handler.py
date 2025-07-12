@@ -360,6 +360,9 @@ def handle_toggle_availability(chat_id):
                 
             # Toggle availability
             driver.is_available = not driver.is_available
+            # Also activate driver when they become available
+            if driver.is_available:
+                driver.is_active = True
             db.session.commit()
             
             status = "Available" if driver.is_available else "Busy"

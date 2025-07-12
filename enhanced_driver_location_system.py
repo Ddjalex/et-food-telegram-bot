@@ -147,6 +147,8 @@ class DriverLocationTracker:
                 driver.current_latitude = location['latitude']
                 driver.current_longitude = location['longitude']
                 driver.last_location_update = datetime.utcnow()
+                # Activate driver when they share location
+                driver.is_active = True
                 db.session.commit()
                 
                 # Update live location session
