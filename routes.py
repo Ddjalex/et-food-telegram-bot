@@ -2,7 +2,7 @@ import os
 import json
 import csv
 from io import StringIO
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import render_template, request, jsonify, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from app import app
@@ -484,9 +484,13 @@ def get_kitchen_orders():
         for order in orders:
             order_dict = order.to_dict()
             
-            # Calculate time since order was placed
+            # Calculate time since order was placed - use proper timezone handling
             order_time = order.created_at
-            now = datetime.utcnow()
+            if order_time.tzinfo is None:
+                # If no timezone info, assume UTC
+                order_time = order_time.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
             time_diff = now - order_time
             order_dict['minutes_ago'] = int(time_diff.total_seconds() / 60)
             

@@ -258,7 +258,7 @@
                             playNotificationSound();
                             showBrowserNotification(
                                 'New Order Received!',
-                                `Order #${order.id} from ${order.customer_name} - ${order.items ? JSON.parse(order.items).length : 0} items`,
+                                `Order #${order.id} from ${order.customer_name} - ${order.items ? order.items.length : 0} items`,
                                 '/static/favicon.ico'
                             );
                             
@@ -303,7 +303,7 @@
             
             let itemCount = 0;
             try {
-                const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                const items = order.items || [];
                 itemCount = items.length;
             } catch (e) {
                 itemCount = 0;
@@ -330,7 +330,7 @@
             // Parse items
             let items = [];
             try {
-                items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                items = order.items || [];
             } catch (e) {
                 console.error('Error parsing items for order', order.id, e);
                 items = [];
@@ -432,7 +432,7 @@
                     // Parse items
                     let items = [];
                     try {
-                        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        items = order.items || [];
                     } catch (e) {
                         console.error('Error parsing items for order', order.id, e);
                         items = [];
