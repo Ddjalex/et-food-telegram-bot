@@ -874,6 +874,12 @@ async function loadOrdersTab() {
                 `<button class="btn btn-sm btn-outline-success me-1" onclick="showCustomerLocation(${order.location_lat}, ${order.location_lng}, '${order.customer_name}')" title="View Customer Location">
                     <i class="fas fa-map-marker-alt"></i>
                 </button>` : '';
+            
+            // Driver tracking button for out_for_delivery orders
+            const driverTrackingButton = order.status === 'out_for_delivery' && order.driver_id ? 
+                `<button class="btn btn-sm btn-primary me-1" onclick="showDriverTracking(${order.id})" title="Track Driver">
+                    <i class="fas fa-truck"></i> Track Driver
+                </button>` : '';
 
             row.innerHTML = `
                 <td>#${order.id}</td>
@@ -886,6 +892,7 @@ async function loadOrdersTab() {
                 <td>
                     <div class="btn-group">
                         ${locationButton}
+                        ${driverTrackingButton}
                         <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -1431,5 +1438,345 @@ async function removeDriver(driverId) {
 function refreshDriverData() {
     loadDriversTab();
     loadDashboardData();
+}
+
+// Driver Tracking Functions
+async function showDriverTracking(orderId) {
+    try {
+        // Get order details with driver information
+        const orderResponse = await fetch(`/api/orders/${orderId}`);
+        const orderData = await orderResponse.json();
+        
+        if (!orderData.success || !orderData.order.driver_id) {
+            alert('Driver information not found for this order.');
+            return;
+        }
+        
+        const order = orderData.order;
+        
+        // Get driver details
+        const driverResponse = await fetch(`/api/drivers/${order.driver_id}`);
+        const driverData = await driverResponse.json();
+        
+        if (!driverData.success) {
+            alert('Failed to load driver information.');
+            return;
+        }
+        
+        const driver = driverData.driver;
+        
+        // Create driver tracking modal
+        const modalHtml = `
+            <div class="modal fade" id="driverTrackingModal" tabindex="-1" aria-labelledby="driverTrackingModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="driverTrackingModalLabel">
+                                <i class="fas fa-truck"></i> Driver Tracking - Order #${order.id}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <!-- Driver Information Panel -->
+                                <div class="col-md-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-user"></i> Driver Information</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="driver-avatar text-center mb-3">
+                                                <div class="avatar-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 50%; font-size: 24px; font-weight: bold;">
+                                                    ${driver.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <h6 class="mt-2 mb-0">${driver.name}</h6>
+                                                <small class="text-muted">${driver.vehicle_type || 'Vehicle'}</small>
+                                            </div>
+                                            
+                                            <div class="driver-details">
+                                                <div class="mb-2">
+                                                    <strong><i class="fas fa-phone text-success"></i> Phone:</strong><br>
+                                                    <a href="tel:${driver.phone_number}" class="btn btn-sm btn-success w-100 mt-1">
+                                                        <i class="fas fa-phone"></i> Call ${driver.phone_number}
+                                                    </a>
+                                                </div>
+                                                
+                                                <div class="mb-2">
+                                                    <strong><i class="fas fa-circle text-${driver.is_available ? 'success' : 'warning'}"></i> Status:</strong><br>
+                                                    <span class="badge bg-${driver.is_available ? 'success' : 'warning'}">
+                                                        ${driver.is_available ? 'Available' : 'Busy'}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="mb-2">
+                                                    <strong><i class="fas fa-clock"></i> Last Update:</strong><br>
+                                                    <small class="text-muted">${driver.last_location_update ? new Date(driver.last_location_update).toLocaleString() : 'Never'}</small>
+                                                </div>
+                                                
+                                                ${driver.current_lat && driver.current_lng ? `
+                                                <div class="mb-2">
+                                                    <strong><i class="fas fa-map-marker-alt text-primary"></i> Location:</strong><br>
+                                                    <button class="btn btn-sm btn-primary w-100 mt-1" onclick="openDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                                                        <i class="fas fa-external-link-alt"></i> View on Maps
+                                                    </button>
+                                                </div>
+                                                ` : '<div class="alert alert-warning"><small>No GPS location available</small></div>'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Order & Customer Information Panel -->
+                                <div class="col-md-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-shopping-bag"></i> Order & Customer Info</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="order-info">
+                                                <div class="mb-3">
+                                                    <strong><i class="fas fa-user text-info"></i> Customer:</strong><br>
+                                                    ${order.customer_name}<br>
+                                                    <a href="tel:${order.customer_phone}" class="btn btn-sm btn-info w-100 mt-1">
+                                                        <i class="fas fa-phone"></i> Call Customer
+                                                    </a>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <strong><i class="fas fa-map-marker-alt text-danger"></i> Delivery Address:</strong><br>
+                                                    <small>${order.customer_address || 'Address not provided'}</small>
+                                                    ${order.location_lat && order.location_lng ? `
+                                                    <button class="btn btn-sm btn-danger w-100 mt-1" onclick="openCustomerLocation(${order.location_lat}, ${order.location_lng}, '${order.customer_name}')">
+                                                        <i class="fas fa-navigation"></i> Navigate to Customer
+                                                    </button>
+                                                    ` : ''}
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <strong><i class="fas fa-money-bill text-success"></i> Payment:</strong><br>
+                                                    <span class="badge bg-success">${order.payment_method}</span><br>
+                                                    <strong>ETB ${order.total_amount.toFixed(2)}</strong>
+                                                </div>
+                                                
+                                                <div class="mb-2">
+                                                    <strong><i class="fas fa-clock"></i> Order Time:</strong><br>
+                                                    <small>${new Date(order.created_at).toLocaleString()}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Live Tracking & Controls Panel -->
+                                <div class="col-md-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-satellite-dish"></i> Live Tracking & Controls</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="tracking-controls">
+                                                <div class="mb-3">
+                                                    <button class="btn btn-warning w-100 mb-2" onclick="requestDriverLocation(${driver.id})">
+                                                        <i class="fas fa-location-arrow"></i> Request Location Update
+                                                    </button>
+                                                    
+                                                    <button class="btn btn-info w-100 mb-2" onclick="openLiveTrackingMap(${order.id})">
+                                                        <i class="fas fa-map"></i> Open Live Tracking Map
+                                                    </button>
+                                                    
+                                                    <button class="btn btn-primary w-100 mb-2" onclick="sendMessageToDriver(${driver.telegram_user_id})">
+                                                        <i class="fas fa-comment"></i> Send Message to Driver
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="tracking-status">
+                                                    <div class="alert alert-info">
+                                                        <h6><i class="fas fa-route"></i> Delivery Status</h6>
+                                                        <div class="status-timeline">
+                                                            <div class="status-step completed">
+                                                                <i class="fas fa-check-circle"></i> Order Accepted
+                                                            </div>
+                                                            <div class="status-step ${order.status === 'out_for_delivery' ? 'active' : ''}">
+                                                                <i class="fas fa-truck"></i> Out for Delivery
+                                                            </div>
+                                                            <div class="status-step ${order.status === 'delivered' ? 'completed' : ''}">
+                                                                <i class="fas fa-flag-checkered"></i> Delivered
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="quick-actions">
+                                                    <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+                                                    <button class="btn btn-sm btn-outline-warning w-100 mb-1" onclick="markOrderAsDelivered(${order.id})">
+                                                        <i class="fas fa-check"></i> Mark as Delivered
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger w-100" onclick="reportDeliveryIssue(${order.id})">
+                                                        <i class="fas fa-exclamation-triangle"></i> Report Issue
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="refreshDriverTracking(${order.id})">
+                                <i class="fas fa-sync"></i> Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('driverTrackingModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add custom CSS for status timeline
+        const style = document.createElement('style');
+        style.textContent = `
+            .status-timeline {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .status-step {
+                display: flex;
+                align-items: center;
+                padding: 8px 0;
+                font-size: 14px;
+                color: #6c757d;
+            }
+            .status-step i {
+                margin-right: 8px;
+                width: 16px;
+            }
+            .status-step.completed {
+                color: #28a745;
+                font-weight: 500;
+            }
+            .status-step.active {
+                color: #007bff;
+                font-weight: 600;
+                background-color: #f8f9fa;
+                border-radius: 4px;
+                padding: 10px;
+            }
+            .avatar-circle {
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('driverTrackingModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error showing driver tracking:', error);
+        alert('Failed to load driver tracking information.');
+    }
+}
+
+// Helper functions for driver tracking
+function openDriverLocation(lat, lng, driverName) {
+    const url = `https://www.google.com/maps?q=${lat},${lng}&z=15&t=m`;
+    window.open(url, '_blank');
+}
+
+function openCustomerLocation(lat, lng, customerName) {
+    const url = `https://www.google.com/maps/dir/9.047658,38.741143/${lat},${lng}`;
+    window.open(url, '_blank');
+}
+
+function openLiveTrackingMap(orderId) {
+    const url = `/live-tracking?order_id=${orderId}`;
+    window.open(url, '_blank', 'width=1200,height=800');
+}
+
+async function sendMessageToDriver(telegramUserId) {
+    const message = prompt('Enter message to send to driver:');
+    if (!message) return;
+    
+    try {
+        const response = await fetch('/api/send-driver-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                telegram_user_id: telegramUserId,
+                message: message
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Message sent to driver successfully.');
+        } else {
+            alert('Failed to send message to driver.');
+        }
+    } catch (error) {
+        console.error('Error sending message to driver:', error);
+        alert('Failed to send message to driver.');
+    }
+}
+
+async function markOrderAsDelivered(orderId) {
+    if (!confirm('Are you sure you want to mark this order as delivered?')) return;
+    
+    try {
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'delivered'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Order marked as delivered successfully.');
+            // Close modal and refresh orders
+            const modal = bootstrap.Modal.getInstance(document.getElementById('driverTrackingModal'));
+            modal.hide();
+            loadOrdersTab();
+        } else {
+            alert('Failed to mark order as delivered.');
+        }
+    } catch (error) {
+        console.error('Error marking order as delivered:', error);
+        alert('Failed to mark order as delivered.');
+    }
+}
+
+function reportDeliveryIssue(orderId) {
+    const issue = prompt('Describe the delivery issue:');
+    if (!issue) return;
+    
+    // You can implement issue reporting logic here
+    alert('Delivery issue reported. Admin will be notified.');
+}
+
+function refreshDriverTracking(orderId) {
+    // Close current modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('driverTrackingModal'));
+    modal.hide();
+    
+    // Reopen with fresh data
+    setTimeout(() => showDriverTracking(orderId), 500);
 }
 

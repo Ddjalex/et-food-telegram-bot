@@ -3501,3 +3501,83 @@ def submit_driver_registration_webapp():
         }), 500
 
 
+
+
+@app.route('/api/orders/<int:order_id>', methods=['GET'])
+def get_order_details(order_id):
+    """Get detailed order information including driver details"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Parse items
+        items = []
+        try:
+            items = json.loads(order.items) if isinstance(order.items, str) else order.items
+        except:
+            items = []
+        
+        order_data = {
+            'id': order.id,
+            'customer_name': order.customer_name,
+            'customer_phone': order.customer_phone,
+            'customer_address': order.customer_address,
+            'location_lat': order.location_lat,
+            'location_lng': order.location_lng,
+            'items': items,
+            'total_amount': order.total_amount,
+            'payment_method': order.payment_method,
+            'status': order.status,
+            'driver_id': order.driver_id,
+            'created_at': order.created_at.isoformat(),
+            'updated_at': order.updated_at.isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'order': order_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting order details: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to get order details'
+        }), 500
+
+@app.route('/api/send-driver-message', methods=['POST'])
+def send_driver_message_api():
+    """Send message to driver via Telegram"""
+    try:
+        data = request.get_json()
+        telegram_user_id = data.get('telegram_user_id')
+        message = data.get('message')
+        
+        if not telegram_user_id or not message:
+            return jsonify({
+                'success': False,
+                'message': 'Telegram user ID and message are required'
+            }), 400
+        
+        # Import driver bot function
+        from driver_bot import send_driver_message
+        
+        # Send message via driver bot
+        success = send_driver_message(telegram_user_id, f"📨 *Message from Admin*\n\n{message}")
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Message sent successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to send message'
+            })
+        
+    except Exception as e:
+        logger.error(f"Error sending driver message: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to send message'
+        }), 500
