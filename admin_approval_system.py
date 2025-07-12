@@ -9,6 +9,39 @@ from models import Driver, AdminUser
 from extensions import db
 from driver_bot import send_driver_message
 
+def send_driver_approval_notification(chat_id, driver_name):
+    """Send driver approval notification"""
+    message = f"🎉 *CONGRATULATIONS! You're Approved!*\n\n"
+    message += f"✅ **Your driver application has been approved!**\n\n"
+    message += f"👤 **Driver:** {driver_name}\n"
+    message += f"🚚 **Status:** ACTIVE & READY FOR ORDERS\n\n"
+    message += f"📍 **IMPORTANT:** Share your live location to receive delivery orders near you.\n\n"
+    message += f"🎯 **You're now part of the ET-FOOD delivery team!**\n"
+    message += f"Start earning money by delivering food to customers."
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📍 Share Location Now",
+                    "callback_data": "request_location"
+                }
+            ],
+            [
+                {
+                    "text": "📱 Driver Status",
+                    "callback_data": "driver_status"
+                },
+                {
+                    "text": "💰 View Earnings",
+                    "callback_data": "driver_earnings"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
 logger = logging.getLogger(__name__)
 
 def notify_admin_new_driver_registration(driver_id):
@@ -117,10 +150,35 @@ def approve_driver(driver_id, admin_telegram_id=None):
         congratulations_message += f"Start earning money by delivering food to customers in your area."
         
         if driver.telegram_user_id:
-            # Send enhanced approval success message with interactive buttons
-            from enhanced_driver_system import send_driver_approval_success_message
-            send_driver_approval_success_message(driver_id)
-            logger.info(f"Sent enhanced approval notification to driver {driver.telegram_user_id}")
+            # Send congratulations notification directly via driver bot
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📍 Share Location Now",
+                            "callback_data": "request_location"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📱 Driver Status",
+                            "callback_data": "driver_status"
+                        },
+                        {
+                            "text": "💰 View Earnings",
+                            "callback_data": "driver_earnings"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📞 Contact Support",
+                            "callback_data": "contact_support"
+                        }
+                    ]
+                ]
+            }
+            send_driver_message(driver.telegram_user_id, congratulations_message, keyboard=keyboard)
+            logger.info(f"Sent congratulations approval notification to driver {driver.telegram_user_id}")
         else:
             logger.warning(f"Driver {driver.name} has no Telegram account linked for approval notification")
         

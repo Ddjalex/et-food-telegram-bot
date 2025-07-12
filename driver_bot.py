@@ -1546,8 +1546,8 @@ def check_driver_registration_and_welcome(chat_id):
                 # Driver exists but not approved
                 send_pending_approval_message(chat_id, driver)
             else:
-                # Driver not found - offer contact sharing for both existing/new drivers
-                send_driver_contact_request(chat_id)
+                # Driver not found - only show contact admin message (no registration)
+                send_simple_contact_admin_message(chat_id)
                 
     except Exception as e:
         logger.error(f"Error checking driver registration: {e}")
