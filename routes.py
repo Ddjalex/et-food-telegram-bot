@@ -473,8 +473,8 @@ def get_orders():
 def get_kitchen_orders():
     """Get orders for kitchen staff - all active orders including pending"""
     try:
-        # Get orders that need kitchen attention (pending, confirmed, preparing)
-        active_statuses = ['pending', 'confirmed', 'preparing']
+        # Get orders for kitchen staff (include out_for_delivery to show driver assignments)
+        active_statuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery']
         orders = Order.query.filter(
             Order.status.in_(active_statuses)
         ).order_by(Order.created_at.asc()).all()
@@ -566,6 +566,37 @@ def kitchen_update_order_status(order_id):
                 logger.info(f"Started driver search for order #{order_id} marked as preparing")
             except Exception as e:
                 logger.error(f"Error starting driver search for order #{order_id}: {e}")
+        
+        # When kitchen marks order as "ready", notify assigned driver
+        elif new_status == 'ready' and order.driver_id:
+            try:
+                from driver_bot import send_driver_message
+                driver = Driver.query.get(order.driver_id)
+                if driver and driver.telegram_user_id:
+                    message = f"🍽️ *ORDER READY FOR PICKUP*\n\n"
+                    message += f"📋 Order #{order_id}\n"
+                    message += f"👤 Customer: {order.customer_name}\n"
+                    message += f"📍 Restaurant: ET-FOOD Kitchen\n"
+                    message += f"🏠 Delivery: {order.delivery_address}\n"
+                    message += f"💰 Total: {order.total_amount} ETB\n\n"
+                    message += f"🚗 Please proceed to restaurant for pickup!"
+                    
+                    keyboard = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "📍 Navigate to Restaurant", "url": "https://maps.google.com/?q=9.047658,38.741143"},
+                                {"text": "☎️ Call Restaurant", "url": "tel:+251911234567"}
+                            ],
+                            [
+                                {"text": "✅ Confirm Pickup", "callback_data": f"pickup_complete_{order_id}"}
+                            ]
+                        ]
+                    }
+                    
+                    send_driver_message(driver.telegram_user_id, message, keyboard=keyboard)
+                    logger.info(f"Notified driver {driver.name} that order #{order_id} is ready for pickup")
+            except Exception as e:
+                logger.error(f"Error notifying driver about ready order #{order_id}: {e}")
         
         return jsonify({
             'success': True,
@@ -672,7 +703,7 @@ def get_order_driver_status(order_id):
                     'driver_info': {
                         'id': driver.id,
                         'name': driver.name,
-                        'phone': driver.phone,
+                        'phone': driver.phone_number,
                         'vehicle_type': driver.vehicle_type,
                         'telegram_user_id': driver.telegram_user_id
                     },
@@ -711,11 +742,11 @@ def get_admin_live_orders():
                     order_dict['driver'] = {
                         'id': driver.id,
                         'name': driver.name,
-                        'phone': driver.phone,
+                        'phone': driver.phone_number,
                         'vehicle_type': driver.vehicle_type,
                         'current_lat': driver.current_lat,
                         'current_lng': driver.current_lng,
-                        'location_updated_at': driver.location_updated_at.isoformat() if driver.location_updated_at else None,
+                        'location_updated_at': driver.last_location_update.isoformat() if driver.last_location_update else None,
                         'is_available': driver.is_available,
                         'is_active': driver.is_active
                     }

@@ -98,6 +98,26 @@
             padding: 15px;
             margin-top: 15px;
         }
+        
+        .order-preparing .order-header {
+            background: linear-gradient(135deg, #17a2b8, #007bff);
+            animation: pulse 2s infinite;
+            color: white;
+        }
+
+        .order-ready .order-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .order-delivery .order-header {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            color: white;
+        }
+        
+        .bg-purple {
+            background-color: #6f42c1 !important;
+        }
     </style>
 </head>
 <body>
@@ -371,6 +391,10 @@
                 case 'ready':
                     headerClass = 'order-header order-ready';
                     statusBadge = '<span class="status-badge bg-success">Ready for Pickup</span>';
+                    break;
+                case 'out_for_delivery':
+                    headerClass = 'order-header order-delivery';
+                    statusBadge = '<span class="status-badge bg-purple">Out for Delivery</span>';
                     break;
             }
             
