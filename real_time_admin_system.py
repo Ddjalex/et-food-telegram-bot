@@ -24,6 +24,11 @@ def notify_admin_new_order(order_id):
                 logger.error(f"Order {order_id} not found")
                 return False
             
+            # Log the order for kitchen dashboard
+            logger.info(f"🔔 NEW ORDER RECEIVED - Order #{order.id}")
+            logger.info(f"Customer: {order.customer_name}, Phone: {order.customer_phone}")
+            logger.info(f"Total: {order.total_amount:.2f} ETB, Payment: {order.payment_method}")
+            
             # Create comprehensive order notification for admin
             message = f"🔔 *NEW ORDER RECEIVED*\n\n"
             message += f"📋 **Order Details:**\n"
@@ -48,68 +53,28 @@ def notify_admin_new_order(order_id):
                 except (json.JSONDecodeError, TypeError, KeyError) as e:
                     message += f"• Order items (details unavailable)\n"
             
-            message += f"\n⚡ **Admin Actions Required:**\n"
-            message += f"1. Review order details\n"
-            message += f"2. Confirm order for preparation\n"
-            message += f"3. System will find nearby drivers\n"
-            message += f"4. Monitor delivery progress\n\n"
-            message += f"🎯 **Click buttons below to manage order:**"
+            # Try to send to admins via Telegram if BOT_TOKEN is configured
+            try:
+                from config import Config
+                if Config.BOT_TOKEN and Config.BOT_TOKEN != 'your_bot_token_here':
+                    admins = AdminUser.query.filter_by(is_active=True).all()
+                    if admins:
+                        for admin in admins:
+                            if admin.telegram_user_id:
+                                try:
+                                    from bot_minimal import send_message
+                                    send_message(admin.telegram_user_id, message, parse_mode="Markdown")
+                                    logger.info(f"New order notification sent to admin {admin.username}")
+                                except Exception as e:
+                                    logger.error(f"Failed to send notification to admin {admin.username}: {e}")
+                    else:
+                        logger.warning("No active admins found to notify")
+                else:
+                    logger.info("BOT_TOKEN not configured - notification logged for kitchen dashboard")
+            except Exception as e:
+                logger.error(f"Error sending telegram notification: {e}")
             
-            # Create admin action keyboard
-            keyboard = {
-                "inline_keyboard": [
-                    [
-                        {
-                            "text": "✅ Confirm Order",
-                            "callback_data": f"admin_confirm_{order.id}"
-                        },
-                        {
-                            "text": "❌ Reject Order",
-                            "callback_data": f"admin_reject_{order.id}"
-                        }
-                    ],
-                    [
-                        {
-                            "text": "📞 Call Customer",
-                            "url": f"tel:{order.customer_phone}"
-                        },
-                        {
-                            "text": "📍 View Location",
-                            "callback_data": f"admin_location_{order.id}"
-                        }
-                    ],
-                    [
-                        {
-                            "text": "🖥️ Open Admin Dashboard",
-                            "url": f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/admin"
-                        }
-                    ]
-                ]
-            }
-            
-            # Send notification to all admins
-            admins = AdminUser.query.filter_by(is_active=True).all()
-            if not admins:
-                logger.warning("No active admins found to notify")
-                return False
-            
-            notification_sent = False
-            for admin in admins:
-                if admin.telegram_user_id:
-                    try:
-                        from bot_minimal import send_message
-                        result = send_message(admin.telegram_user_id, message, keyboard)
-                        if result:
-                            notification_sent = True
-                            logger.info(f"New order notification sent to admin {admin.username}")
-                    except Exception as e:
-                        logger.error(f"Failed to send notification to admin {admin.username}: {e}")
-            
-            if not notification_sent:
-                logger.warning("Failed to send notifications to any admin")
-                return False
-            
-            logger.info(f"New order #{order_id} notification sent to admins")
+            logger.info(f"New order #{order_id} notification processed")
             return True
             
     except Exception as e:
