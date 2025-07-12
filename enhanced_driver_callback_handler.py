@@ -50,7 +50,16 @@ def handle_driver_callback(callback_query):
         logger.info(f"Received callback from driver {chat_id}: {callback_data}")
         
         # Order acceptance/rejection
-        if callback_data.startswith('accept_order_'):
+        if callback_data.startswith('driver_accept_'):
+            order_id = int(callback_data.split('_')[2])
+            handle_order_acceptance(chat_id, order_id, callback_query_id)
+            
+        elif callback_data.startswith('driver_decline_'):
+            order_id = int(callback_data.split('_')[2])
+            handle_order_rejection(chat_id, order_id, callback_query_id)
+            
+        # Legacy support for accept_order_ format
+        elif callback_data.startswith('accept_order_'):
             order_id = int(callback_data.split('_')[2])
             handle_order_acceptance(chat_id, order_id, callback_query_id)
             

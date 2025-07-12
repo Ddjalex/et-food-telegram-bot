@@ -340,10 +340,8 @@
                 items = [];
             }
             
-            // Calculate time since order
-            const orderTime = new Date(order.created_at);
-            const now = new Date();
-            const diffMinutes = Math.floor((now - orderTime) / (1000 * 60));
+            // Use pre-calculated minutes from API
+            const diffMinutes = order.minutes_ago || 0;
             const isUrgent = diffMinutes > 15;
             
             // Create items HTML

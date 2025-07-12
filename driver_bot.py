@@ -508,6 +508,19 @@ def handle_driver_callback(callback_query):
             elif callback_data == 'contact_support':
                 send_driver_message(chat_id, "📞 *Contact Support*\n\nFor assistance, please contact:\n📱 Admin: +251911234567\n✉️ Email: support@et-food.com\n\nOr message admin directly through this bot.")
                 
+            # Handle order acceptance/rejection (main functionality)
+            elif callback_data.startswith('driver_accept_'):
+                # Use enhanced callback handler for order acceptance
+                from enhanced_driver_callback_handler import handle_driver_callback
+                handle_driver_callback(callback_query)
+                return  # Exit here to avoid duplicate handling
+                
+            elif callback_data.startswith('driver_decline_'):
+                # Use enhanced callback handler for order rejection
+                from enhanced_driver_callback_handler import handle_driver_callback
+                handle_driver_callback(callback_query)
+                return  # Exit here to avoid duplicate handling
+                
             # Answer callback query
             answer_callback_query(callback_query['id'], "Action processed!")
             
