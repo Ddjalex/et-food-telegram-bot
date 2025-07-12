@@ -165,6 +165,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" id="unavailableBtn" onclick="markOrderUnavailable()" title="Mark order items as unavailable">
+                        <i class="fas fa-times-circle me-1"></i>
+                        Order Unavailable
+                    </button>
                     <button type="button" class="btn btn-primary" id="confirmBtn" onclick="updateOrderStatus('confirmed')" style="display: none;">
                         <i class="fas fa-check-circle me-1"></i>
                         Confirm Order
@@ -495,11 +499,19 @@
                     const confirmBtn = document.getElementById('confirmBtn');
                     const preparingBtn = document.getElementById('preparingBtn');
                     const readyBtn = document.getElementById('readyBtn');
+                    const unavailableBtn = document.getElementById('unavailableBtn');
                     
                     // Hide all buttons first
                     confirmBtn.style.display = 'none';
                     preparingBtn.style.display = 'none';
                     readyBtn.style.display = 'none';
+                    
+                    // Show unavailable button for all active orders (pending, confirmed, preparing)
+                    if (['pending', 'confirmed', 'preparing'].includes(order.status)) {
+                        unavailableBtn.style.display = 'inline-block';
+                    } else {
+                        unavailableBtn.style.display = 'none';
+                    }
                     
                     // Show appropriate button based on current status
                     switch(order.status) {
@@ -550,6 +562,45 @@
             .catch(error => {
                 console.error('Error updating order status:', error);
                 showNotification('Error updating order status', 'error');
+            });
+        }
+
+        function markOrderUnavailable() {
+            if (!currentOrderId) return;
+            
+            // Show confirmation dialog
+            const reason = prompt("Please specify the reason for unavailability (this will be sent to the customer):", "Sorry, this item is currently unavailable in the kitchen.");
+            
+            if (reason === null) return; // User cancelled
+            
+            if (!reason.trim()) {
+                showNotification('Please provide a reason for unavailability', 'error');
+                return;
+            }
+            
+            fetch(`/api/orders/${currentOrderId}/unavailable`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({reason: reason.trim()})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Order #${currentOrderId} marked as unavailable. Customer has been notified.`, 'success');
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrders();
+                } else {
+                    showNotification(data.error || 'Error marking order as unavailable', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error marking order as unavailable:', error);
+                showNotification('Error marking order as unavailable', 'error');
             });
         }
 

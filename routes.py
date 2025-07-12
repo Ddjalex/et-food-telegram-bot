@@ -559,6 +559,76 @@ def kitchen_update_order_status(order_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to update order status'}), 500
 
+@app.route('/api/orders/<int:order_id>/unavailable', methods=['POST'])
+def mark_order_unavailable(order_id):
+    """Kitchen staff endpoint to mark order as unavailable"""
+    try:
+        data = request.get_json()
+        reason = data.get('reason', 'Order items are currently unavailable')
+        
+        if not reason.strip():
+            return jsonify({'error': 'Reason for unavailability is required'}), 400
+        
+        order = Order.query.get_or_404(order_id)
+        
+        # Only allow marking unavailable for active orders
+        if order.status not in ['pending', 'confirmed', 'preparing']:
+            return jsonify({'error': f'Cannot mark order as unavailable. Current status: {order.status}'}), 400
+        
+        # Update order status to cancelled
+        old_status = order.status
+        order.status = 'cancelled'
+        order.updated_at = datetime.utcnow()
+        order.special_instructions = f"[UNAVAILABLE] {reason}"
+        
+        db.session.commit()
+        
+        # Notify customer about order unavailability
+        try:
+            from bot_minimal import send_message
+            customer_message = f"""
+🚫 *Order Unavailable - Order #{order_id}*
+
+Dear {order.customer_name},
+
+We're sorry to inform you that your order is currently unavailable.
+
+*Reason:* {reason}
+
+*Order Details:*
+- Order ID: #{order_id}
+- Total Amount: ETB {order.total_amount:.2f}
+
+We apologize for the inconvenience. Please try ordering again later or contact us for alternative options.
+
+Thank you for your understanding.
+
+- ET-FOOD Team
+            """
+            
+            # Try to send notification to customer via their telegram_user_id
+            if order.telegram_user_id:
+                send_message(order.telegram_user_id, customer_message, parse_mode="Markdown")
+                logger.info(f"Sent unavailability notification to customer for order #{order_id}")
+            else:
+                logger.warning(f"No telegram_user_id for order #{order_id}, notification not sent")
+                
+        except Exception as e:
+            logger.error(f"Error sending unavailability notification: {e}")
+        
+        logger.info(f"Kitchen marked order #{order_id} as unavailable. Reason: {reason}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order #{order_id} marked as unavailable. Customer has been notified.',
+            'order_id': order_id,
+            'reason': reason
+        })
+        
+    except Exception as e:
+        logger.error(f"Error marking order as unavailable: {e}")
+        return jsonify({'error': 'Failed to mark order as unavailable'}), 500
+
 @app.route('/api/live-drivers')
 def get_live_drivers():
     """Get drivers with live location data"""
