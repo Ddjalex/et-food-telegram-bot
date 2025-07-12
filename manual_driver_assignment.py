@@ -89,7 +89,9 @@ def manually_assign_driver(order_id, driver_id, admin_telegram_id):
         
         # Assign driver to order
         order.driver_id = driver_id
-        order.status = 'confirmed'
+        # Only update status if it's pending, otherwise keep current status
+        if order.status == 'pending':
+            order.status = 'confirmed'
         order.assigned_at = datetime.utcnow()
         
         # Make driver busy

@@ -1681,11 +1681,11 @@ def find_nearby_drivers_for_order(order_id):
     try:
         order = Order.query.get_or_404(order_id)
         
-        # Check if order is in correct status
-        if order.status not in ['pending', 'confirmed']:
+        # Check if order is in correct status for driver assignment
+        if order.status not in ['pending', 'confirmed', 'ready']:
             return jsonify({
                 'success': False, 
-                'message': f'Order status "{order.status}" cannot be processed for driver assignment'
+                'message': f'Order status "{order.status}" cannot be processed for driver assignment. Order must be pending, confirmed, or ready.'
             }), 400
         
         # Use the existing nearby driver system
