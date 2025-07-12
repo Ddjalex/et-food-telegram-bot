@@ -411,15 +411,81 @@
                             <div>
                                 <strong class="text-success">ETB ${order.total_amount.toFixed(2)}</strong>
                             </div>
-                            <div>
+                            <div class="d-flex flex-column align-items-end">
                                 <small class="text-muted">Click to view details</small>
+                                <div id="driver-status-${order.id}" class="mt-1">
+                                    <!-- Driver status will be loaded here -->
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
             
+            // Load driver status for this order
+            loadDriverStatus(order.id);
+            
             return col;
+        }
+
+        function loadDriverStatus(orderId) {
+            fetch(`/api/orders/${orderId}/driver-status`)
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById(`driver-status-${orderId}`);
+                    if (statusDiv) {
+                        if (data.driver_assigned && data.driver_info) {
+                            statusDiv.innerHTML = `
+                                <small class="text-info">
+                                    <i class="fas fa-motorcycle me-1"></i>
+                                    ${data.driver_info.name}
+                                    <br>
+                                    <button class="btn btn-xs btn-outline-primary" onclick="trackDriver(${orderId}, '${data.driver_info.name}')">
+                                        <i class="fas fa-map-marker-alt"></i> Track
+                                    </button>
+                                </small>
+                            `;
+                        } else {
+                            statusDiv.innerHTML = `
+                                <small class="text-muted">
+                                    <i class="fas fa-search me-1"></i>
+                                    Finding driver...
+                                </small>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading driver status:', error);
+                });
+        }
+
+        function trackDriver(orderId, driverName) {
+            fetch(`/api/orders/${orderId}/driver-status`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.driver_assigned && data.driver_location) {
+                        const lat = data.driver_location.lat;
+                        const lng = data.driver_location.lng;
+                        const lastUpdate = data.driver_location.last_update;
+                        
+                        if (lat && lng) {
+                            // Open Google Maps with driver location
+                            const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}&zoom=15`;
+                            window.open(mapsUrl, '_blank');
+                            
+                            showNotification(`Opening ${driverName}'s location on Google Maps`, 'info');
+                        } else {
+                            showNotification(`${driverName} location not available`, 'error');
+                        }
+                    } else {
+                        showNotification('Driver location not available', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error tracking driver:', error);
+                    showNotification('Error loading driver location', 'error');
+                });
         }
 
         function showOrderDetails(orderId) {

@@ -484,24 +484,20 @@ def get_kitchen_orders():
         for order in orders:
             order_dict = order.to_dict()
             
-            # Calculate time since order was placed - use proper UTC time calculation
-            from datetime import datetime, timezone
+            # Calculate time since order was placed - simple approach
+            from datetime import datetime
             
-            # Get current UTC time
-            now_utc = datetime.now(timezone.utc)
-            
-            # Handle order creation time - convert to UTC if needed
+            # Get current time and order creation time (both as naive datetime)
+            now = datetime.utcnow()
             order_time = order.created_at
-            if order_time.tzinfo is None:
-                # If naive datetime, assume it's already UTC
-                order_time_utc = order_time.replace(tzinfo=timezone.utc)
-            else:
-                # Convert to UTC if it has timezone info
-                order_time_utc = order_time.astimezone(timezone.utc)
             
-            # Calculate difference
-            time_diff = now_utc - order_time_utc
-            minutes_ago = max(0, int(time_diff.total_seconds() / 60))  # Ensure non-negative
+            # Calculate difference in minutes
+            if order_time:
+                time_diff = now - order_time
+                minutes_ago = max(0, int(time_diff.total_seconds() / 60))
+            else:
+                minutes_ago = 0
+                
             order_dict['minutes_ago'] = minutes_ago
             
             kitchen_orders.append(order_dict)
@@ -552,9 +548,24 @@ def kitchen_update_order_status(order_id):
         
         # Notify customer about status change
         try:
+            from bot_minimal import notify_customer_status_change
             notify_customer_status_change(order_id, new_status)
         except Exception as e:
             logger.error(f"Error notifying customer about status change: {e}")
+        
+        # When kitchen marks order as "preparing", automatically search for nearby drivers
+        if new_status == 'preparing':
+            try:
+                from threading import Thread
+                def find_and_notify_drivers():
+                    with app.app_context():
+                        find_and_notify_nearby_drivers(order_id)
+                
+                # Run driver search in background thread
+                Thread(target=find_and_notify_drivers, daemon=True).start()
+                logger.info(f"Started driver search for order #{order_id} marked as preparing")
+            except Exception as e:
+                logger.error(f"Error starting driver search for order #{order_id}: {e}")
         
         return jsonify({
             'success': True,
@@ -638,6 +649,92 @@ Thank you for your understanding.
     except Exception as e:
         logger.error(f"Error marking order as unavailable: {e}")
         return jsonify({'error': 'Failed to mark order as unavailable'}), 500
+
+@app.route('/api/orders/<int:order_id>/driver-status', methods=['GET'])
+def get_order_driver_status(order_id):
+    """Get driver assignment status and location for specific order"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        response_data = {
+            'order_id': order_id,
+            'driver_assigned': False,
+            'driver_info': None,
+            'driver_location': None,
+            'assignment_time': None
+        }
+        
+        if order.driver_id:
+            driver = Driver.query.get(order.driver_id)
+            if driver:
+                response_data.update({
+                    'driver_assigned': True,
+                    'driver_info': {
+                        'id': driver.id,
+                        'name': driver.name,
+                        'phone': driver.phone,
+                        'vehicle_type': driver.vehicle_type,
+                        'telegram_user_id': driver.telegram_user_id
+                    },
+                    'driver_location': {
+                        'lat': driver.current_lat,
+                        'lng': driver.current_lng,
+                        'last_update': driver.location_updated_at.isoformat() if driver.location_updated_at else None
+                    },
+                    'assignment_time': order.updated_at.isoformat() if order.updated_at else None
+                })
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting driver status for order #{order_id}: {e}")
+        return jsonify({'error': 'Failed to get driver status'}), 500
+
+@app.route('/api/admin/live-orders', methods=['GET'])
+def get_admin_live_orders():
+    """Get live orders with driver tracking for admin dashboard"""
+    try:
+        # Get orders that are being prepared or out for delivery
+        active_statuses = ['preparing', 'ready', 'out_for_delivery']
+        orders = Order.query.filter(
+            Order.status.in_(active_statuses)
+        ).order_by(Order.updated_at.desc()).all()
+        
+        live_orders = []
+        for order in orders:
+            order_dict = order.to_dict()
+            
+            # Add driver information if assigned
+            if order.driver_id:
+                driver = Driver.query.get(order.driver_id)
+                if driver:
+                    order_dict['driver'] = {
+                        'id': driver.id,
+                        'name': driver.name,
+                        'phone': driver.phone,
+                        'vehicle_type': driver.vehicle_type,
+                        'current_lat': driver.current_lat,
+                        'current_lng': driver.current_lng,
+                        'location_updated_at': driver.location_updated_at.isoformat() if driver.location_updated_at else None,
+                        'is_available': driver.is_available,
+                        'is_active': driver.is_active
+                    }
+                else:
+                    order_dict['driver'] = None
+            else:
+                order_dict['driver'] = None
+            
+            live_orders.append(order_dict)
+        
+        return jsonify({
+            'success': True,
+            'orders': live_orders,
+            'count': len(live_orders)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching live orders for admin: {e}")
+        return jsonify({'error': 'Failed to fetch live orders'}), 500
 
 @app.route('/api/live-drivers')
 def get_live_drivers():
