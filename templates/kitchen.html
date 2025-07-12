@@ -272,9 +272,17 @@
 
         function loadOrders() {
             const timeFilter = document.getElementById('timeFilter').value;
+            console.log('Loading orders with filter:', timeFilter);
             fetch(`/api/kitchen/orders?time_filter=${timeFilter}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Orders data received:', data);
                     const orders = data.orders || [];
                     const container = document.getElementById('ordersContainer');
                     const emptyState = document.getElementById('emptyState');

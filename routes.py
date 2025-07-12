@@ -507,6 +507,18 @@ def get_kitchen_orders():
         for order in orders:
             order_dict = order.to_dict()
             
+            # Ensure items are always parsed as JSON
+            if isinstance(order_dict.get('items'), str):
+                try:
+                    import json
+                    order_dict['items'] = json.loads(order_dict['items'])
+                except (json.JSONDecodeError, TypeError):
+                    # If parsing fails, set to empty list
+                    order_dict['items'] = []
+            elif not isinstance(order_dict.get('items'), list):
+                # If items is not a list, set to empty list
+                order_dict['items'] = []
+            
             # Calculate time since order was placed - simple approach
             from datetime import datetime
             
