@@ -603,7 +603,7 @@ def handle_order_acceptance(driver_chat_id, order_id, message_id):
                 return False
                 
             # Check if order is still available for assignment
-            if order.status not in ['confirmed', 'preparing']:
+            if order.status not in ['confirmed', 'preparing', 'ready']:
                 send_driver_message(driver_chat_id, f"❌ Order #{order_id} is no longer available (Status: {order.status})")
                 return False
                 
