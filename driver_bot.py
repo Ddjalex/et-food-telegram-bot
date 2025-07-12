@@ -315,8 +315,8 @@ def handle_driver_callback(callback_query):
     """Handle driver bot callback queries"""
     try:
         # Use the enhanced callback handler system
-        from enhanced_driver_callback_handler import handle_driver_callback as enhanced_handler
-        enhanced_handler(callback_query)
+        from enhanced_driver_callback_handler import handle_enhanced_driver_callback
+        handle_enhanced_driver_callback(callback_query)
         
     except Exception as e:
         logger.error(f"Error in enhanced callback handler: {e}")
@@ -1351,26 +1351,35 @@ def notify_admin_driver_link(driver_name, phone_number, telegram_id):
         logger.error(f"Error notifying admin about driver link: {e}")
 
 def handle_driver_location_update(chat_id, location):
-    """Handle driver location update"""
+    """Handle driver location update with enhanced tracking"""
     try:
-        from models import Driver
-        from app import db
-        from main import app
+        from enhanced_driver_location_system import driver_location_tracker
         
-        with app.app_context():
-            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
-            if driver:
-                driver.current_lat = location['latitude']
-                driver.current_lng = location['longitude']
-                driver.last_location_update = datetime.utcnow()
-                db.session.commit()
-                
-                logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_lat}, {driver.current_lng}")
-                
-                send_driver_message(chat_id, f"📍 Location updated successfully!\n\n✅ **Admin can now track your delivery**\n📍 GPS: {driver.current_lat:.4f}, {driver.current_lng:.4f}\n⏰ Updated: {driver.last_location_update.strftime('%H:%M:%S')}\n\n⚠️ **Keep sharing your location regularly** to receive order assignments in your area.")
-            else:
-                logger.warning(f"Driver not found for Telegram ID: {chat_id}")
-                send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin or use /start to register.")
+        # Use enhanced location tracking system
+        success = driver_location_tracker.handle_location_update(chat_id, location)
+        
+        if not success:
+            # Fallback to basic handling
+            from models import Driver
+            from app import db
+            from main import app
+            
+            with app.app_context():
+                driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+                if driver:
+                    driver.current_latitude = location['latitude']
+                    driver.current_longitude = location['longitude']
+                    driver.last_location_update = datetime.utcnow()
+                    db.session.commit()
+                    
+                    logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_latitude}, {driver.current_longitude}")
+                    
+                    # Don't send repeated location update messages if driver is sharing live location
+                    if not driver_location_tracker.is_driver_sharing_live_location(chat_id):
+                        send_driver_message(chat_id, f"📍 Location updated successfully!\n\n✅ **Ready to receive orders**\n📍 GPS: {driver.current_latitude:.4f}, {driver.current_longitude:.4f}\n⏰ Updated: {driver.last_location_update.strftime('%H:%M:%S')}")
+                else:
+                    logger.warning(f"Driver not found for Telegram ID: {chat_id}")
+                    send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin or use /start to register.")
             
     except Exception as e:
         logger.error(f"Error updating driver location for {chat_id}: {e}")
@@ -1792,35 +1801,47 @@ def handle_link_account(chat_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def send_driver_welcome_message(chat_id, driver=None):
-    """Enhanced BeU delivery-style driver welcome message with live location requirement"""
+    """Enhanced BeU delivery-style driver welcome message with smart location system"""
     if driver and driver.approval_status == 'approved':
-        # Check location sharing status
+        # Check live location sharing status using enhanced system
+        from enhanced_driver_location_system import driver_location_tracker
         from datetime import datetime, timedelta
+        
+        is_sharing_live = driver_location_tracker.is_driver_sharing_live_location(chat_id)
+        
+        # Check database location update recency
         location_active = False
         if driver.last_location_update:
             time_diff = datetime.utcnow() - driver.last_location_update
             location_active = time_diff.total_seconds() < 600  # Less than 10 minutes
         
-        # Approved driver welcome with mandatory location sharing
+        # Approved driver welcome with smart location management
         message = f"🚚 *Welcome back, {driver.name}!*\n\n"
         message += f"✅ *Status: APPROVED DRIVER*\n"
         message += f"📞 Phone: {driver.phone_number}\n"
         message += f"🚗 Vehicle: {driver.vehicle_type}\n\n"
         
-        # Location sharing status
-        if location_active:
-            message += f"📍 **Location Status: ACTIVE** ✅\n"
-            message += f"🟢 You can receive order assignments\n\n"
+        # Location sharing status with enhanced tracking
+        if is_sharing_live:
+            message += f"📍 **Live Location: ACTIVE** 🔴\n"
+            message += f"🟢 Automatic order assignments enabled\n"
+            message += f"📡 Real-time tracking: ON\n\n"
+            message += f"💡 **Smart System Active**: No need to share location again until you stop!"
+        elif location_active:
+            message += f"📍 **Location: RECENT** ⚠️\n"
+            message += f"🟡 Orders available, but live tracking recommended\n\n"
+            message += f"💡 **Tip**: Enable live location for automatic order assignments!"
         else:
-            message += f"📍 **Location Status: INACTIVE** ❌\n"
+            message += f"📍 **Location: INACTIVE** ❌\n"
             message += f"🔴 You MUST share live location to receive orders\n\n"
-            message += f"⚠️ **IMPORTANT**: Like BeU delivery system, you must share your live location to receive nearby orders!\n\n"
+            message += f"⚠️ **Setup Required**: One-time live location sharing needed!"
         
         # Create WebApp URL for driver panel using centralized utility
         from url_utils import construct_url
         webapp_url = construct_url(f'/driver-panel?driver_id={chat_id}')
         
-        if location_active:
+        if is_sharing_live:
+            # Full functionality available
             keyboard = {
                 "inline_keyboard": [
                     [
@@ -1841,8 +1862,8 @@ def send_driver_welcome_message(chat_id, driver=None):
                     ],
                     [
                         {
-                            "text": "📍 Update Location",
-                            "callback_data": "request_location"
+                            "text": "📍 Location Status",
+                            "callback_data": "location_status"
                         },
                         {
                             "text": "📞 Support",
@@ -1852,19 +1873,23 @@ def send_driver_welcome_message(chat_id, driver=None):
                 ]
             }
         else:
-            # Force location sharing first
+            # Prompt for live location setup
             keyboard = {
                 "inline_keyboard": [
                     [
                         {
-                            "text": "📍 SHARE LIVE LOCATION (Required)",
-                            "callback_data": "request_location"
+                            "text": "📍 Start Live Location",
+                            "callback_data": "start_live_location"
                         }
                     ],
                     [
                         {
-                            "text": "🔄 Enable Live Location",
-                            "callback_data": "enable_live_location"
+                            "text": "📊 View Status",
+                            "callback_data": "driver_status"
+                        },
+                        {
+                            "text": "ℹ️ How to Share",
+                            "callback_data": "location_help"
                         }
                     ],
                     [
@@ -1875,6 +1900,12 @@ def send_driver_welcome_message(chat_id, driver=None):
                     ]
                 ]
             }
+            
+            # Auto-request live location setup if not already done
+            if driver_location_tracker.should_request_location(chat_id):
+                # Send setup instructions after a brief delay
+                import threading
+                threading.Timer(3.0, lambda: driver_location_tracker.request_initial_location_sharing(chat_id)).start()
     elif driver and driver.approval_status == 'pending':
         # Pending approval
         message = f"⏳ *Registration Under Review*\n\n"
