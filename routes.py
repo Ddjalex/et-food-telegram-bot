@@ -799,10 +799,28 @@ def get_admin_live_orders():
                         'is_available': driver.is_available,
                         'is_active': driver.is_active
                     }
+                    
+                    # Add pickup status information
+                    if order.status == 'out_for_delivery':
+                        order_dict['pickup_status'] = {
+                            'picked_up': True,
+                            'pickup_time': order.updated_at.isoformat(),
+                            'driver_name': driver.name,
+                            'status_text': f"Picked up by {driver.name}"
+                        }
+                    else:
+                        order_dict['pickup_status'] = {
+                            'picked_up': False,
+                            'pickup_time': None,
+                            'driver_name': driver.name,
+                            'status_text': f"Assigned to {driver.name}"
+                        }
                 else:
                     order_dict['driver'] = None
+                    order_dict['pickup_status'] = {'picked_up': False, 'pickup_time': None, 'driver_name': None, 'status_text': 'Driver not found'}
             else:
                 order_dict['driver'] = None
+                order_dict['pickup_status'] = {'picked_up': False, 'pickup_time': None, 'driver_name': None, 'status_text': 'No driver assigned'}
             
             live_orders.append(order_dict)
         

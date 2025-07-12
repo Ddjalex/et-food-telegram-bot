@@ -898,11 +898,12 @@ def handle_call_restaurant(chat_id, order_id):
     send_driver_message(chat_id, message, keyboard=keyboard)
 
 def handle_pickup_complete(chat_id, order_id):
-    """Handle pickup completion"""
+    """Handle pickup completion with admin and kitchen notifications"""
     try:
         from models import Order, Driver
         from app import db
         from main import app
+        from bot_minimal import send_message_to_admin
         
         with app.app_context():
             order = Order.query.get(order_id)
@@ -912,11 +913,12 @@ def handle_pickup_complete(chat_id, order_id):
                 send_driver_message(chat_id, "❌ Order or driver not found.")
                 return
                 
-            # Update order status
+            # Update order status to 'out_for_delivery'
             order.status = 'out_for_delivery'
             order.updated_at = datetime.utcnow()
             db.session.commit()
             
+            # Send confirmation to driver
             message = f"✅ **Pickup Confirmed**\n\n"
             message += f"📦 **Order #{order_id}** picked up successfully\n"
             message += f"🎯 **Status**: On the way to customer\n\n"
@@ -946,9 +948,64 @@ def handle_pickup_complete(chat_id, order_id):
             
             send_driver_message(chat_id, message, keyboard=keyboard)
             
+            # Notify admin about pickup completion
+            admin_message = f"📦 **Order Picked Up!**\n\n"
+            admin_message += f"📋 **Order #{order_id}**\n"
+            admin_message += f"🚚 **Driver**: {driver.name}\n"
+            admin_message += f"📞 **Driver Phone**: {driver.phone_number}\n"
+            admin_message += f"🚗 **Vehicle**: {driver.vehicle_type}\n\n"
+            admin_message += f"👤 **Customer**: {order.customer_name}\n"
+            admin_message += f"📱 **Customer Phone**: {order.customer_phone}\n"
+            admin_message += f"💰 **Amount**: {order.total_amount} ETB\n"
+            admin_message += f"💳 **Payment**: {order.payment_method}\n\n"
+            admin_message += f"📍 **Status**: Driver has picked up the order from kitchen and is on the way to customer\n"
+            admin_message += f"⏰ **Pickup Time**: {datetime.utcnow().strftime('%H:%M:%S')}\n\n"
+            admin_message += f"🎯 **Next**: Driver will deliver to customer"
+            
+            # Send to customer (order originator)
+            send_message_to_admin(order.telegram_user_id, f"🚚 **Your Order is On the Way!**\n\n📦 Order #{order_id} has been picked up by driver {driver.name} and is being delivered to you.\n\n📞 Driver contact: {driver.phone_number}")
+            
+            # Send to admin
+            send_message_to_admin(5753181035, admin_message)  # Main admin
+            
+            # Notify kitchen staff about pickup completion
+            notify_kitchen_pickup_complete(order_id, driver.name)
+            
+            logger.info(f"✅ Order #{order_id} picked up by driver {driver.name}")
+            
     except Exception as e:
         logger.error(f"Error handling pickup complete: {e}")
         send_driver_message(chat_id, "❌ Error updating pickup status.")
+
+def notify_kitchen_pickup_complete(order_id, driver_name):
+    """Send pickup completion notification to kitchen staff"""
+    try:
+        from models import Order
+        from app import app
+        from bot_minimal import send_message_to_admin
+        
+        with app.app_context():
+            order = Order.query.get(order_id)
+            if not order:
+                return
+                
+            # Create kitchen notification message
+            kitchen_message = f"🍽️ **Kitchen Update - Order Picked Up**\n\n"
+            kitchen_message += f"📋 **Order #{order_id}**\n"
+            kitchen_message += f"🚚 **Driver**: {driver_name}\n"
+            kitchen_message += f"📦 **Status**: Picked up from kitchen\n"
+            kitchen_message += f"🎯 **Next**: Driver delivering to customer\n\n"
+            kitchen_message += f"👤 **Customer**: {order.customer_name}\n"
+            kitchen_message += f"🍴 **Items**: {len(order.items)} items\n"
+            kitchen_message += f"💰 **Total**: {order.total_amount} ETB\n"
+            kitchen_message += f"⏰ **Pickup Time**: {datetime.utcnow().strftime('%H:%M:%S')}\n\n"
+            kitchen_message += f"✅ **Kitchen Task Complete** - Order ready for delivery"
+            
+            # Send to kitchen staff (using admin channel for now)
+            send_message_to_admin(5753181035, kitchen_message)
+            
+    except Exception as e:
+        logger.error(f"Error sending kitchen pickup notification: {e}")
 
 def handle_delivery_complete(chat_id, order_id):
     """Handle delivery completion"""
