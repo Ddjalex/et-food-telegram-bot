@@ -510,16 +510,12 @@ def handle_driver_callback(callback_query):
                 
             # Handle order acceptance/rejection (main functionality)
             elif callback_data.startswith('driver_accept_'):
-                # Use enhanced callback handler for order acceptance
-                from enhanced_driver_callback_handler import handle_driver_callback
-                handle_driver_callback(callback_query)
-                return  # Exit here to avoid duplicate handling
+                order_id = callback_data.split('_')[2]
+                handle_order_acceptance(chat_id, order_id, callback_query['message']['message_id'])
                 
             elif callback_data.startswith('driver_decline_'):
-                # Use enhanced callback handler for order rejection
-                from enhanced_driver_callback_handler import handle_driver_callback
-                handle_driver_callback(callback_query)
-                return  # Exit here to avoid duplicate handling
+                order_id = callback_data.split('_')[2]
+                handle_order_rejection(chat_id, order_id, callback_query['message']['message_id'])
                 
             # Answer callback query
             answer_callback_query(callback_query['id'], "Action processed!")
