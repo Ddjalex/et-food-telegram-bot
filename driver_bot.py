@@ -1010,14 +1010,17 @@ def handle_delivery_complete(chat_id, order_id):
                 minutes = int(duration.total_seconds() / 60)
                 delivery_duration = f"{minutes} minutes"
             
-            # Notify driver
+            # Notify driver with customer rating display
             message = f"🎉 *Delivery Completed Successfully!*\n\n"
             message += f"📋 Order #{order_id} delivered\n"
             message += f"✅ Status: Completed\n"
             message += f"⏰ Delivery time: {delivery_duration}\n"
             message += f"💰 Payment: {order.payment_method}\n\n"
-            message += f"🎯 **Great job!** You're now available for new orders.\n"
-            message += f"📊 Check your earnings in the driver panel."
+            message += f"👤 **Customer:** {order.customer_name}\n"
+            message += f"📞 **Phone:** {order.customer_phone}\n"
+            message += f"⭐ **Customer will rate this delivery**\n\n"
+            message += f"🎯 **Great job!** You're automatically available for new orders.\n"
+            message += f"📊 Check your earnings and wait for next delivery assignment."
             
             keyboard = {
                 "inline_keyboard": [
@@ -1029,6 +1032,16 @@ def handle_delivery_complete(chat_id, order_id):
                         {
                             "text": "📋 View Orders",
                             "callback_data": "driver_orders"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "🔄 Check Status",
+                            "callback_data": "driver_status"
+                        },
+                        {
+                            "text": "📍 Share Location",
+                            "callback_data": "request_location"
                         }
                     ]
                 ]
@@ -1050,7 +1063,7 @@ def handle_delivery_complete(chat_id, order_id):
             customer_message += f"📝 We'd love to hear your feedback about this order.\n"
             customer_message += f"⭐ Rate your experience and help us improve our service!"
             
-            # Add customer feedback buttons
+            # Add customer feedback buttons with order again option
             customer_keyboard = {
                 "inline_keyboard": [
                     [
@@ -1077,6 +1090,10 @@ def handle_delivery_complete(chat_id, order_id):
                         {
                             "text": "📝 Leave Feedback",
                             "callback_data": f"feedback_{order_id}"
+                        },
+                        {
+                            "text": "🍽️ Order Again",
+                            "callback_data": "open_menu_again"
                         }
                     ]
                 ]

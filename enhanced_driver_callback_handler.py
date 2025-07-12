@@ -346,15 +346,17 @@ def handle_delivery_complete(chat_id, order_id, callback_query_id):
                 minutes = int(duration.total_seconds() / 60)
                 delivery_duration = f"{minutes} minutes"
             
-            # Notify driver
-            message = f"🎉 *Delivery Completed!*\n\n"
+            # Notify driver with customer rating info
+            message = f"🎉 *Delivery Completed Successfully!*\n\n"
             message += f"📋 Order #{order_id}\n"
             message += f"👤 Customer: {order.customer_name}\n"
+            message += f"📞 Phone: {order.customer_phone}\n"
             message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
             if delivery_duration:
                 message += f"⏱️ Delivery time: {delivery_duration}\n"
-            message += f"\n✅ **Status:** Available for new orders\n"
-            message += f"💪 Great job! Ready for your next delivery?"
+            message += f"\n⭐ **Customer is rating this delivery**\n"
+            message += f"✅ **Status:** Automatically available for new orders\n"
+            message += f"💪 Great job! You're ready for your next delivery!"
             
             keyboard = {
                 "inline_keyboard": [
@@ -364,8 +366,18 @@ def handle_delivery_complete(chat_id, order_id, callback_query_id):
                             "callback_data": "driver_earnings"
                         },
                         {
-                            "text": "🔄 Toggle Availability",
-                            "callback_data": "toggle_availability"
+                            "text": "🔄 Check Status",
+                            "callback_data": "driver_status"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "📍 Share Location",
+                            "callback_data": "request_location"
+                        },
+                        {
+                            "text": "📋 View Orders",
+                            "callback_data": "driver_orders"
                         }
                     ]
                 ]

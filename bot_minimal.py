@@ -505,6 +505,32 @@ def handle_callback_query(callback_query):
         send_cart_info(chat_id, user_id)
     elif data == "review":
         send_review_form(chat_id)
+    elif data == "open_menu_again":
+        # Handle "Order Again" button from delivery completion
+        send_catalog(chat_id)
+        send_message(chat_id, "🍽️ Welcome back! Choose from our delicious menu below.")
+    elif data.startswith("rate_order_"):
+        # Handle order rating
+        parts = data.split("_")
+        order_id = int(parts[2])
+        rating = int(parts[3])
+        handle_order_rating(order_id, rating, user_id)
+        send_message(chat_id, f"⭐ Thank you for rating! Your {rating}-star rating has been recorded.")
+        
+        # Show order again option after rating
+        keyboard = {
+            "inline_keyboard": [
+                [{
+                    "text": "🍽️ Order Again",
+                    "callback_data": "open_menu_again"
+                }]
+            ]
+        }
+        send_message(chat_id, "Would you like to place another order?", keyboard)
+    elif data.startswith("feedback_"):
+        # Handle feedback request
+        order_id = data.split("_")[1]
+        handle_feedback_request(chat_id, user_id, order_id)
     else:
         send_message(chat_id, f"📦 You selected: {data}")
 
@@ -1019,6 +1045,68 @@ feedback_mode_users = set()
 def check_feedback_mode(user_id):
     """Check if user is in feedback mode"""
     return user_id in feedback_mode_users
+
+def handle_order_rating(order_id, rating, user_id):
+    """Handle order rating submission"""
+    try:
+        from extensions import db
+        from models import Order
+        
+        order = Order.query.get(order_id)
+        if order and order.telegram_user_id == user_id:
+            # Store rating in order (you might want to add a rating field to Order model)
+            # For now, we'll log it and notify admin
+            logger.info(f"Order #{order_id} rated {rating} stars by user {user_id}")
+            
+            # Notify admin about the rating
+            admin_message = f"⭐ **Customer Rating Received**\n\n"
+            admin_message += f"📋 Order #{order_id}\n"
+            admin_message += f"⭐ Rating: {rating} stars\n"
+            admin_message += f"👤 Customer: {order.customer_name}\n"
+            admin_message += f"💰 Amount: {order.total_amount:.2f} ETB"
+            
+            # Send to all active admins
+            from models import AdminUser, Driver
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            for admin in admins:
+                if admin.telegram_user_id:
+                    send_message_to_admin(admin.telegram_user_id, admin_message)
+            
+            # Notify the driver about the rating
+            driver = Driver.query.filter_by(id=order.driver_id).first()
+            if driver and driver.telegram_user_id:
+                from driver_bot import send_driver_message
+                
+                # Create star display
+                stars = "⭐" * rating
+                driver_rating_message = f"🎉 **Customer Rating Received!**\n\n"
+                driver_rating_message += f"📋 Order #{order_id}\n"
+                driver_rating_message += f"⭐ Rating: {stars} ({rating}/5)\n"
+                driver_rating_message += f"👤 Customer: {order.customer_name}\n"
+                driver_rating_message += f"💰 Order value: {order.total_amount:.2f} ETB\n\n"
+                driver_rating_message += f"🎯 Great job! Keep up the excellent service!\n"
+                driver_rating_message += f"📊 This rating helps improve your driver profile."
+                
+                # Add buttons for driver actions
+                rating_keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📊 View All Ratings",
+                                "callback_data": "driver_earnings"
+                            },
+                            {
+                                "text": "🔄 Check Status",
+                                "callback_data": "driver_status"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(driver.telegram_user_id, driver_rating_message, keyboard=rating_keyboard)
+                    
+    except Exception as e:
+        logger.error(f"Error handling order rating: {e}")
 
 def handle_feedback_request(chat_id, user_id):
     """Handle feedback request from user"""
