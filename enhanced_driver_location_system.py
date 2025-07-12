@@ -144,8 +144,8 @@ class DriverLocationTracker:
                     return False
                     
                 # Update driver location in database
-                driver.current_latitude = location['latitude']
-                driver.current_longitude = location['longitude']
+                driver.current_lat = location['latitude']
+                driver.current_lng = location['longitude']
                 driver.last_location_update = datetime.utcnow()
                 # Activate driver when they share location
                 driver.is_active = True
@@ -238,15 +238,15 @@ class DriverLocationTracker:
             
             with app.app_context():
                 driver = Driver.query.filter_by(telegram_user_id=driver_telegram_id).first()
-                if not driver or not driver.current_latitude or not driver.current_longitude:
+                if not driver or not driver.current_lat or not driver.current_lng:
                     return float('inf')
                     
                 if not order.location_lat or not order.location_lng:
                     return float('inf')
                     
                 # Simple distance calculation (you can implement Haversine formula for accuracy)
-                lat_diff = abs(float(driver.current_latitude) - float(order.location_lat))
-                lng_diff = abs(float(driver.current_longitude) - float(order.location_lng))
+                lat_diff = abs(float(driver.current_lat) - float(order.location_lat))
+                lng_diff = abs(float(driver.current_lng) - float(order.location_lng))
                 
                 # Approximate distance in kilometers
                 distance = ((lat_diff ** 2 + lng_diff ** 2) ** 0.5) * 111  # 111 km per degree

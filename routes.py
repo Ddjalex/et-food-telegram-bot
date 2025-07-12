@@ -576,8 +576,22 @@ def kitchen_update_order_status(order_id):
         except Exception as e:
             logger.error(f"Error notifying customer about status change: {e}")
         
-        # When kitchen marks order as "ready", automatically search for nearby drivers
-        if new_status == 'ready':
+        # When kitchen marks order as "preparing", automatically search for nearby drivers
+        if new_status == 'preparing':
+            try:
+                from threading import Thread
+                def find_and_notify_drivers():
+                    with app.app_context():
+                        find_and_notify_nearby_drivers(order_id)
+                
+                # Run driver search in background thread
+                Thread(target=find_and_notify_drivers, daemon=True).start()
+                logger.info(f"Started driver search for order #{order_id} marked as preparing - kitchen started preparing food")
+            except Exception as e:
+                logger.error(f"Error starting driver search for order #{order_id}: {e}")
+        
+        # When kitchen marks order as "ready", also notify drivers (backup notification)
+        elif new_status == 'ready':
             try:
                 from threading import Thread
                 def find_and_notify_drivers():

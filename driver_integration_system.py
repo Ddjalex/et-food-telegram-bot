@@ -116,8 +116,9 @@ class DriverIntegrationSystem:
         
         message += f"\n⚡ *FIRST TO ACCEPT GETS THE ORDER!*"
         
-        # Create enhanced keyboard
-        webapp_url = f"https://{os.environ.get('REPLIT_DEV_DOMAIN')}/driver-panel?order_id={order.id}&driver_id={driver.id}"
+        # Create enhanced keyboard  
+        from url_utils import construct_url
+        webapp_url = construct_url(f"/driver-panel?order_id={order.id}&driver_id={driver.id}")
         
         keyboard = {
             "inline_keyboard": [

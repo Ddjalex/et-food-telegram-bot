@@ -1367,18 +1367,18 @@ def handle_driver_location_update(chat_id, location):
             with app.app_context():
                 driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
                 if driver:
-                    driver.current_latitude = location['latitude']
-                    driver.current_longitude = location['longitude']
+                    driver.current_lat = location['latitude']
+                    driver.current_lng = location['longitude']
                     driver.last_location_update = datetime.utcnow()
                     # Activate driver when they share location
                     driver.is_active = True
                     db.session.commit()
                     
-                    logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_latitude}, {driver.current_longitude}")
+                    logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_lat}, {driver.current_lng}")
                     
                     # Don't send repeated location update messages if driver is sharing live location
                     if not driver_location_tracker.is_driver_sharing_live_location(chat_id):
-                        send_driver_message(chat_id, f"📍 Location updated successfully!\n\n✅ **Ready to receive orders**\n📍 GPS: {driver.current_latitude:.4f}, {driver.current_longitude:.4f}\n⏰ Updated: {driver.last_location_update.strftime('%H:%M:%S')}")
+                        send_driver_message(chat_id, f"📍 Location updated successfully!\n\n✅ **Ready to receive orders**\n📍 GPS: {driver.current_lat:.4f}, {driver.current_lng:.4f}\n⏰ Updated: {driver.last_location_update.strftime('%H:%M:%S')}")
                 else:
                     logger.warning(f"Driver not found for Telegram ID: {chat_id}")
                     send_driver_message(chat_id, "❌ Driver profile not found. Please contact admin or use /start to register.")
