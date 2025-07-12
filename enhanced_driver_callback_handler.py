@@ -67,16 +67,37 @@ def handle_enhanced_driver_callback(callback_query):
             handle_driver_earnings(chat_id)
         elif callback_data == "ready_for_orders":
             handle_ready_for_orders(chat_id)
-        elif callback_data.startswith("accept_order_"):
-            order_id = callback_data.replace("accept_order_", "")
+        elif callback_data.startswith("accept_order_") or callback_data.startswith("driver_accept_"):
+            if callback_data.startswith("accept_order_"):
+                order_id = callback_data.replace("accept_order_", "")
+            else:
+                order_id = callback_data.replace("driver_accept_", "")
             handle_order_acceptance(chat_id, order_id)
-        elif callback_data.startswith("decline_order_"):
-            order_id = callback_data.replace("decline_order_", "")
+        elif callback_data.startswith("decline_order_") or callback_data.startswith("driver_reject_"):
+            if callback_data.startswith("decline_order_"):
+                order_id = callback_data.replace("decline_order_", "")
+            else:
+                order_id = callback_data.replace("driver_reject_", "")
             handle_order_decline(chat_id, order_id)
         elif callback_data.startswith("complete_order_"):
             order_id = callback_data.replace("complete_order_", "")
             handle_order_completion(chat_id, order_id)
+        elif callback_data.startswith("call_customer_"):
+            order_id = callback_data.replace("call_customer_", "")
+            handle_call_customer(chat_id, order_id)
+        elif callback_data.startswith("call_restaurant_"):
+            order_id = callback_data.replace("call_restaurant_", "")
+            handle_call_restaurant(chat_id, order_id)
+        elif callback_data.startswith("pickup_complete_"):
+            order_id = callback_data.replace("pickup_complete_", "")
+            handle_pickup_complete(chat_id, order_id)
+        elif callback_data.startswith("delivery_complete_"):
+            order_id = callback_data.replace("delivery_complete_", "")
+            handle_delivery_complete(chat_id, order_id)
         else:
+            # Unknown callback - log it and send helpful message
+            logger.warning(f"Unknown callback data received: {callback_data}")
+            send_driver_message(chat_id, f"⚠️ Unknown action. Please try again or use the menu buttons.")
             # Handle other callback data
             handle_generic_callback(chat_id, callback_data)
             
@@ -325,7 +346,7 @@ def handle_driver_orders(chat_id):
                     message += f"{status_emoji} **Order #{order.id}**\n"
                     message += f"👤 {order.customer_name}\n"
                     message += f"💰 {order.total_amount} ETB\n"
-                    message += f"📍 {order.delivery_address}\n"
+                    message += f"📍 {order.customer_address}\n"
                     message += f"🔄 Status: {order.status.title()}\n\n"
                 
                 keyboard = {
@@ -541,7 +562,7 @@ def handle_order_acceptance(chat_id, order_id):
             message += f"📦 **Order #{order_id}**\n"
             message += f"👤 **Customer**: {order.customer_name}\n"
             message += f"📞 **Phone**: {order.customer_phone}\n"
-            message += f"📍 **Address**: {order.delivery_address}\n"
+            message += f"📍 **Address**: {order.customer_address}\n"
             message += f"💰 **Amount**: {order.total_amount} ETB\n"
             message += f"💳 **Payment**: {order.payment_method}\n\n"
             message += f"🎯 **Next Steps:**\n"
@@ -734,7 +755,7 @@ def notify_customer_delivery_completion(order_id):
                 message = f"✅ **Order Delivered!**\n\n"
                 message += f"📦 **Order #{order_id}** has been delivered successfully!\n"
                 message += f"💰 **Amount**: {order.total_amount} ETB\n"
-                message += f"📍 **Address**: {order.delivery_address}\n\n"
+                message += f"📍 **Address**: {order.customer_address}\n\n"
                 message += f"🌟 **Rate your experience:**\n"
                 message += f"How was your delivery experience?\n\n"
                 message += f"Thank you for choosing ET-FOOD!"
@@ -778,7 +799,7 @@ def notify_driver_about_orders(driver_telegram_id, order_id):
             message = f"🔔 **New Order Available!**\n\n"
             message += f"📦 **Order #{order_id}**\n"
             message += f"👤 **Customer**: {order.customer_name}\n"
-            message += f"📍 **Address**: {order.delivery_address}\n"
+            message += f"📍 **Address**: {order.customer_address}\n"
             message += f"💰 **Amount**: {order.total_amount} ETB\n"
             message += f"💳 **Payment**: {order.payment_method}\n\n"
             message += f"🎯 **Quick Decision Required**\n"
@@ -804,3 +825,167 @@ def notify_driver_about_orders(driver_telegram_id, order_id):
             
     except Exception as e:
         logger.error(f"Error notifying driver about orders: {e}")
+
+def handle_call_customer(chat_id, order_id):
+    """Handle call customer callback"""
+    try:
+        from models import Order
+        from app import app
+        
+        with app.app_context():
+            order = Order.query.get(order_id)
+            if order:
+                message = f"📞 **Customer Contact**\n\n"
+                message += f"👤 **Name**: {order.customer_name}\n"
+                message += f"📱 **Phone**: {order.customer_phone}\n\n"
+                message += f"💡 **Tip**: Tap the phone number to call directly"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": f"📞 Call {order.customer_name}",
+                                "url": f"tel:{order.customer_phone}"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(chat_id, message, keyboard=keyboard)
+            else:
+                send_driver_message(chat_id, "❌ Order not found.")
+    except Exception as e:
+        logger.error(f"Error handling call customer: {e}")
+        send_driver_message(chat_id, "❌ Error retrieving customer contact.")
+
+def handle_call_restaurant(chat_id, order_id):
+    """Handle call restaurant callback"""
+    message = f"📞 **Restaurant Contact**\n\n"
+    message += f"🏪 **ET-FOOD Kitchen**\n"
+    message += f"📱 **Phone**: +251-911-123-456\n"
+    message += f"📍 **Address**: Bole Road, Addis Ababa\n\n"
+    message += f"💡 **Tip**: Call to coordinate pickup time"
+    
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "📞 Call Restaurant",
+                    "url": "tel:+251911123456"
+                }
+            ]
+        ]
+    }
+    
+    send_driver_message(chat_id, message, keyboard=keyboard)
+
+def handle_pickup_complete(chat_id, order_id):
+    """Handle pickup completion"""
+    try:
+        from models import Order, Driver
+        from app import db
+        from main import app
+        
+        with app.app_context():
+            order = Order.query.get(order_id)
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if not order or not driver:
+                send_driver_message(chat_id, "❌ Order or driver not found.")
+                return
+                
+            # Update order status
+            order.status = 'out_for_delivery'
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            message = f"✅ **Pickup Confirmed**\n\n"
+            message += f"📦 **Order #{order_id}** picked up successfully\n"
+            message += f"🎯 **Status**: On the way to customer\n\n"
+            message += f"📍 **Next**: Navigate to customer address\n"
+            message += f"📞 **Contact customer** if needed"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "📞 Call Customer",
+                            "callback_data": f"call_customer_{order_id}"
+                        },
+                        {
+                            "text": "🗺️ Navigate",
+                            "url": f"https://maps.google.com/maps?q={order.location_lat},{order.location_lng}" if order.location_lat else "https://maps.google.com"
+                        }
+                    ],
+                    [
+                        {
+                            "text": "✅ Mark as Delivered",
+                            "callback_data": f"delivery_complete_{order_id}"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
+            
+    except Exception as e:
+        logger.error(f"Error handling pickup complete: {e}")
+        send_driver_message(chat_id, "❌ Error updating pickup status.")
+
+def handle_delivery_complete(chat_id, order_id):
+    """Handle delivery completion"""
+    try:
+        from models import Order, Driver
+        from app import db
+        from main import app
+        
+        with app.app_context():
+            order = Order.query.get(order_id)
+            driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
+            
+            if not order or not driver:
+                send_driver_message(chat_id, "❌ Order or driver not found.")
+                return
+                
+            # Mark order as delivered
+            order.status = 'delivered'
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            # Set driver as available
+            driver.is_available = True
+            db.session.commit()
+            
+            message = f"🎉 **Delivery Completed!**\n\n"
+            message += f"📦 **Order #{order_id}** delivered successfully\n"
+            message += f"👤 **Customer**: {order.customer_name}\n"
+            message += f"💰 **Amount**: {order.total_amount} ETB\n\n"
+            message += f"✅ **You are now available** for new orders\n"
+            message += f"🎯 **Great job!** Keep up the excellent work."
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "🎯 Ready for Orders",
+                            "callback_data": "ready_for_orders"
+                        },
+                        {
+                            "text": "💰 View Earnings",
+                            "callback_data": "driver_earnings"
+                        }
+                    ]
+                ]
+            }
+            
+            send_driver_message(chat_id, message, keyboard=keyboard)
+            
+            # Notify customer about delivery completion
+            notify_customer_delivery_completion(order_id)
+            
+            # Notify admin about completion
+            notify_admin_delivery_completion(order_id, driver)
+            
+    except Exception as e:
+        logger.error(f"Error handling delivery complete: {e}")
+        send_driver_message(chat_id, "❌ Error completing delivery.")
