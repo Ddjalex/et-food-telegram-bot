@@ -433,10 +433,18 @@
                         return;
                     }
                     
-                    // Parse items
+                    // Parse items - handle both string and array formats
                     let items = [];
                     try {
-                        items = order.items || [];
+                        if (typeof order.items === 'string') {
+                            // If items is a string, parse it as JSON
+                            items = JSON.parse(order.items);
+                        } else if (Array.isArray(order.items)) {
+                            // If items is already an array, use it directly
+                            items = order.items;
+                        } else {
+                            items = [];
+                        }
                     } catch (e) {
                         console.error('Error parsing items for order', order.id, e);
                         items = [];

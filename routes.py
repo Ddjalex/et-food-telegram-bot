@@ -484,15 +484,25 @@ def get_kitchen_orders():
         for order in orders:
             order_dict = order.to_dict()
             
-            # Calculate time since order was placed - use proper timezone handling
+            # Calculate time since order was placed - use proper UTC time calculation
+            from datetime import datetime, timezone
+            
+            # Get current UTC time
+            now_utc = datetime.now(timezone.utc)
+            
+            # Handle order creation time - convert to UTC if needed
             order_time = order.created_at
             if order_time.tzinfo is None:
-                # If no timezone info, assume UTC
-                order_time = order_time.replace(tzinfo=timezone.utc)
+                # If naive datetime, assume it's already UTC
+                order_time_utc = order_time.replace(tzinfo=timezone.utc)
+            else:
+                # Convert to UTC if it has timezone info
+                order_time_utc = order_time.astimezone(timezone.utc)
             
-            now = datetime.now(timezone.utc)
-            time_diff = now - order_time
-            order_dict['minutes_ago'] = int(time_diff.total_seconds() / 60)
+            # Calculate difference
+            time_diff = now_utc - order_time_utc
+            minutes_ago = max(0, int(time_diff.total_seconds() / 60))  # Ensure non-negative
+            order_dict['minutes_ago'] = minutes_ago
             
             kitchen_orders.append(order_dict)
         
