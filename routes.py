@@ -267,6 +267,11 @@ def admin():
     """Admin dashboard"""
     return render_template('admin_simple_working.html')
 
+@app.route('/kitchen')
+def kitchen_dashboard():
+    """Kitchen dashboard for staff"""
+    return render_template('kitchen.html')
+
 
 
 @app.route('/enhanced-driver-panel')
