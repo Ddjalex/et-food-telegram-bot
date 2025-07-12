@@ -428,7 +428,14 @@
                                 </div>
                                 <div class="mt-2">
                                     ${order.driver_id ? 
-                                        `<small class="text-success">Driver assigned</small>` : 
+                                        `<div class="d-flex gap-2">
+                                            <small class="text-success">Driver: ${order.driver_name || 'Assigned'}</small>
+                                            ${order.status === 'out_for_delivery' ? 
+                                                `<button class="btn btn-sm btn-info" onclick="trackDriver(${order.id})">
+                                                    <i class="fas fa-map-marker-alt"></i> Track Driver
+                                                </button>` : ''
+                                            }
+                                        </div>` : 
                                         `<button class="btn btn-sm btn-secondary" onclick="assignDriver(${order.id})">
                                             <i class="fas fa-motorcycle"></i> Assign Driver
                                         </button>`
@@ -1425,6 +1432,304 @@
                     alert('Error deleting driver');
                 });
             }
+        }
+
+        // Driver tracking function
+        function trackDriver(orderId) {
+            fetch(`/api/orders/${orderId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const order = data.order;
+                        const driver = data.driver;
+                        
+                        // Create comprehensive driver tracking modal
+                        const modalHtml = `
+                            <div class="modal fade" id="driverTrackingModal" tabindex="-1">
+                                <div class="modal-dialog modal-xl">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-map-marker-alt"></i> Driver Tracking - Order #${order.id}
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body p-0">
+                                            <div class="row g-0">
+                                                <!-- Driver Info Panel -->
+                                                <div class="col-md-4 bg-light p-3">
+                                                    <div class="card border-0 mb-3">
+                                                        <div class="card-header bg-primary text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-user-tie"></i> Driver Information
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="text-center mb-3">
+                                                                <div class="avatar-circle bg-primary text-white mx-auto mb-2" style="width: 60px; height: 60px; line-height: 60px; border-radius: 50%;">
+                                                                    <i class="fas fa-user fa-2x"></i>
+                                                                </div>
+                                                                <h5 class="mb-1">${driver.name}</h5>
+                                                                <small class="text-muted">${driver.vehicle_type}</small>
+                                                            </div>
+                                                            <div class="row g-2 mb-3">
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="callDriver('${driver.phone_number}')">
+                                                                        <i class="fas fa-phone"></i> Call
+                                                                    </button>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-outline-success btn-sm w-100" onclick="messageDriver(${driver.id})">
+                                                                        <i class="fas fa-comments"></i> Message
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Phone:</strong> ${driver.phone_number}
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Status:</strong> 
+                                                                <span class="badge bg-${driver.is_available ? 'success' : 'warning'}">
+                                                                    ${driver.is_available ? 'Available' : 'Busy'}
+                                                                </span>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Location:</strong> 
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-muted">
+                                                                        ${driver.current_latitude ? `${driver.current_latitude.toFixed(6)}, ${driver.current_longitude.toFixed(6)}` : 'Not available'}
+                                                                    </small>
+                                                                    <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})" title="Request Location">
+                                                                        <i class="fas fa-location-arrow"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Order & Customer Info -->
+                                                    <div class="card border-0">
+                                                        <div class="card-header bg-success text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-shopping-cart"></i> Order & Customer
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <strong>Customer:</strong> ${order.customer_name}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Phone:</strong> ${order.customer_phone}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Address:</strong> ${order.customer_address}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Total:</strong> ETB ${order.total_amount.toFixed(2)}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Payment:</strong> ${order.payment_method}
+                                                            </div>
+                                                            <div class="d-grid gap-2">
+                                                                <button class="btn btn-outline-primary btn-sm" onclick="navigateToCustomer(${order.customer_latitude}, ${order.customer_longitude})">
+                                                                    <i class="fas fa-route"></i> Navigate to Customer
+                                                                </button>
+                                                                <button class="btn btn-outline-success btn-sm" onclick="callCustomer('${order.customer_phone}')">
+                                                                    <i class="fas fa-phone"></i> Call Customer
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Live Tracking & Controls -->
+                                                <div class="col-md-8">
+                                                    <div class="card border-0 h-100">
+                                                        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-map"></i> Live Tracking & Controls
+                                                            </h6>
+                                                            <div class="btn-group">
+                                                                <button class="btn btn-outline-light btn-sm" onclick="refreshDriverTracking(${orderId})">
+                                                                    <i class="fas fa-sync"></i> Refresh
+                                                                </button>
+                                                                <button class="btn btn-outline-light btn-sm" onclick="centerMapOnDriver(${driver.id})">
+                                                                    <i class="fas fa-crosshairs"></i> Center Map
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="card-body p-0">
+                                                            <div id="driverTrackingMap" style="height: 400px; width: 100%;"></div>
+                                                            <div class="p-3">
+                                                                <div class="row g-3">
+                                                                    <div class="col-md-6">
+                                                                        <div class="card bg-light">
+                                                                            <div class="card-body text-center">
+                                                                                <h6 class="mb-2">Request Driver Location</h6>
+                                                                                <button class="btn btn-primary btn-sm" onclick="requestDriverLocation(${driver.id})">
+                                                                                    <i class="fas fa-location-arrow"></i> Request GPS
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="card bg-light">
+                                                                            <div class="card-body text-center">
+                                                                                <h6 class="mb-2">Direct Communication</h6>
+                                                                                <button class="btn btn-success btn-sm" onclick="messageDriver(${driver.id})">
+                                                                                    <i class="fas fa-paper-plane"></i> Send Message
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" onclick="viewFullMap(${driver.id})">
+                                                <i class="fas fa-expand"></i> View Full Map
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Remove existing modal if present
+                        const existingModal = document.getElementById('driverTrackingModal');
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
+                        // Add modal to body
+                        document.body.insertAdjacentHTML('beforeend', modalHtml);
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('driverTrackingModal'));
+                        modal.show();
+                        
+                        // Initialize map when modal is shown
+                        document.getElementById('driverTrackingModal').addEventListener('shown.bs.modal', function () {
+                            initializeDriverTrackingMap(order, driver);
+                        });
+                        
+                        // Clean up when modal is hidden
+                        document.getElementById('driverTrackingModal').addEventListener('hidden.bs.modal', function () {
+                            this.remove();
+                        });
+                        
+                    } else {
+                        alert('Error loading order details: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error tracking driver:', error);
+                    alert('Error loading driver tracking information');
+                });
+        }
+        
+        // Helper functions for driver tracking
+        function callDriver(phoneNumber) {
+            window.open(`tel:${phoneNumber}`, '_self');
+        }
+        
+        function callCustomer(phoneNumber) {
+            window.open(`tel:${phoneNumber}`, '_self');
+        }
+        
+        function messageDriver(driverId) {
+            const message = prompt('Send message to driver:');
+            if (message) {
+                fetch('/api/send-driver-message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({driver_id: driverId, message: message})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Message sent successfully');
+                    } else {
+                        alert('Error sending message: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    alert('Error sending message');
+                });
+            }
+        }
+        
+        function navigateToCustomer(lat, lng) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+        
+        function initializeDriverTrackingMap(order, driver) {
+            // Initialize map centered on driver location or customer location
+            const lat = driver.current_latitude || order.customer_latitude || 9.0054;
+            const lng = driver.current_longitude || order.customer_longitude || 38.7636;
+            
+            const trackingMap = L.map('driverTrackingMap').setView([lat, lng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(trackingMap);
+            
+            // Add driver marker if location available
+            if (driver.current_latitude && driver.current_longitude) {
+                L.marker([driver.current_latitude, driver.current_longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-motorcycle" style="color: blue;"></i>',
+                        iconSize: [30, 30],
+                        className: 'driver-marker'
+                    })
+                }).addTo(trackingMap)
+                .bindPopup(`<b>${driver.name}</b><br>Driver Location<br><small>Vehicle: ${driver.vehicle_type}</small>`);
+            }
+            
+            // Add customer marker
+            if (order.customer_latitude && order.customer_longitude) {
+                L.marker([order.customer_latitude, order.customer_longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-home" style="color: red;"></i>',
+                        iconSize: [30, 30],
+                        className: 'customer-marker'
+                    })
+                }).addTo(trackingMap)
+                .bindPopup(`<b>${order.customer_name}</b><br>Delivery Address<br><small>${order.customer_address}</small>`);
+            }
+            
+            // Store map reference for later use
+            window.currentTrackingMap = trackingMap;
+        }
+        
+        function refreshDriverTracking(orderId) {
+            // Refresh the tracking modal with updated data
+            const modal = document.getElementById('driverTrackingModal');
+            if (modal) {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                setTimeout(() => trackDriver(orderId), 300);
+            }
+        }
+        
+        function centerMapOnDriver(driverId) {
+            if (window.currentTrackingMap) {
+                // Request fresh location and center map
+                requestDriverLocation(driverId);
+            }
+        }
+        
+        function viewFullMap(driverId) {
+            // Open full screen map view
+            const url = `https://www.google.com/maps/search/?api=1&query=drivers+near+me`;
+            window.open(url, '_blank');
         }
 
         // Category management functions

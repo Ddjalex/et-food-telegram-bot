@@ -910,6 +910,8 @@ def create_order():
         db.session.rollback()
         return jsonify({'error': 'Failed to create order'}), 500
 
+
+
 @app.route('/api/orders/<int:order_id>/status', methods=['PUT'])
 def update_order_status(order_id):
     """Update order status with automatic driver notification"""
@@ -3516,25 +3518,48 @@ def get_order_details(order_id):
         except:
             items = []
         
+        # Get driver information if assigned
+        driver_info = None
+        if order.driver_id:
+            driver = Driver.query.get(order.driver_id)
+            if driver:
+                driver_info = {
+                    'id': driver.id,
+                    'name': driver.name,
+                    'phone_number': driver.phone_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'current_latitude': driver.current_latitude,
+                    'current_longitude': driver.current_longitude,
+                    'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                    'is_available': driver.is_available,
+                    'is_active': driver.is_active,
+                    'telegram_user_id': driver.telegram_user_id
+                }
+        
         order_data = {
             'id': order.id,
             'customer_name': order.customer_name,
             'customer_phone': order.customer_phone,
             'customer_address': order.customer_address,
+            'customer_latitude': order.location_lat,
+            'customer_longitude': order.location_lng,
             'location_lat': order.location_lat,
             'location_lng': order.location_lng,
             'items': items,
-            'total_amount': order.total_amount,
+            'total_amount': float(order.total_amount),
             'payment_method': order.payment_method,
             'status': order.status,
             'driver_id': order.driver_id,
+            'transaction_id': order.transaction_id,
+            'transaction_image_url': order.transaction_image_url,
             'created_at': order.created_at.isoformat(),
             'updated_at': order.updated_at.isoformat()
         }
         
         return jsonify({
             'success': True,
-            'order': order_data
+            'order': order_data,
+            'driver': driver_info
         })
         
     except Exception as e:
@@ -3543,6 +3568,97 @@ def get_order_details(order_id):
             'success': False,
             'message': 'Failed to get order details'
         }), 500
+
+@app.route('/api/orders/<int:order_id>/details')
+def get_order_details_detailed(order_id):
+    """Get comprehensive order details including driver information for tracking"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Get driver information if assigned
+        driver_info = None
+        if order.driver_id:
+            driver = Driver.query.get(order.driver_id)
+            if driver:
+                driver_info = {
+                    'id': driver.id,
+                    'name': driver.name,
+                    'phone_number': driver.phone_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'current_latitude': driver.current_latitude,
+                    'current_longitude': driver.current_longitude,
+                    'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                    'is_available': driver.is_available,
+                    'is_active': driver.is_active,
+                    'telegram_user_id': driver.telegram_user_id
+                }
+        
+        # Build order details
+        order_details = {
+            'id': order.id,
+            'customer_name': order.customer_name,
+            'customer_phone': order.customer_phone,
+            'customer_address': order.customer_address,
+            'customer_latitude': order.location_lat,
+            'customer_longitude': order.location_lng,
+            'items': order.items if isinstance(order.items, list) else json.loads(order.items or '[]'),
+            'total_amount': float(order.total_amount),
+            'payment_method': order.payment_method,
+            'status': order.status,
+            'created_at': order.created_at.isoformat(),
+            'updated_at': order.updated_at.isoformat(),
+            'driver_id': order.driver_id,
+            'transaction_id': order.transaction_id,
+            'transaction_image_url': order.transaction_image_url
+        }
+        
+        return jsonify({
+            'success': True,
+            'order': order_details,
+            'driver': driver_info
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching order details: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to fetch order details'
+        }), 500
+
+@app.route('/api/send-driver-message', methods=['POST'])
+def send_driver_message_route():
+    """Send message to driver via Telegram"""
+    try:
+        data = request.get_json()
+        driver_id = data.get('driver_id')
+        message = data.get('message')
+        
+        if not driver_id or not message:
+            return jsonify({'success': False, 'message': 'Driver ID and message are required'}), 400
+        
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if not driver.telegram_user_id:
+            return jsonify({'success': False, 'message': 'Driver has no Telegram account linked'}), 400
+        
+        # Send message via driver bot
+        from driver_bot import send_driver_message
+        success = send_driver_message(driver.telegram_user_id, f"📨 Message from Admin:\n\n{message}")
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Message sent to {driver.name}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to send message to driver'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error sending driver message: {e}")
+        return jsonify({'success': False, 'message': 'Server error'}), 500
 
 @app.route('/api/send-driver-message', methods=['POST'])
 def send_driver_message_api():
