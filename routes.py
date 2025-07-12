@@ -466,10 +466,10 @@ def get_orders():
 
 @app.route('/api/kitchen/orders', methods=['GET'])
 def get_kitchen_orders():
-    """Get orders for kitchen staff - only active orders"""
+    """Get orders for kitchen staff - all active orders including pending"""
     try:
-        # Get orders that need kitchen attention (confirmed, preparing, ready)
-        active_statuses = ['confirmed', 'preparing']
+        # Get orders that need kitchen attention (pending, confirmed, preparing)
+        active_statuses = ['pending', 'confirmed', 'preparing']
         orders = Order.query.filter(
             Order.status.in_(active_statuses)
         ).order_by(Order.created_at.asc()).all()
@@ -503,8 +503,8 @@ def kitchen_update_order_status(order_id):
         data = request.get_json()
         new_status = data.get('status')
         
-        # Kitchen staff can only update to preparing or ready
-        valid_kitchen_statuses = ['preparing', 'ready']
+        # Kitchen staff can update to confirmed, preparing or ready
+        valid_kitchen_statuses = ['confirmed', 'preparing', 'ready']
         
         if not new_status or new_status not in valid_kitchen_statuses:
             return jsonify({'error': f'Kitchen staff can only update status to: {", ".join(valid_kitchen_statuses)}'}), 400
@@ -513,11 +513,18 @@ def kitchen_update_order_status(order_id):
         old_status = order.status
         
         # Validate status transition
-        if old_status == 'preparing' and new_status == 'preparing':
-            return jsonify({'error': 'Order is already being prepared'}), 400
+        if old_status == new_status:
+            return jsonify({'error': f'Order is already {new_status}'}), 400
         
-        if old_status not in ['confirmed', 'preparing'] and new_status in valid_kitchen_statuses:
-            return jsonify({'error': f'Cannot update order from {old_status} status'}), 400
+        # Allow kitchen staff to progress orders from pending -> confirmed -> preparing -> ready
+        valid_transitions = {
+            'pending': ['confirmed'],
+            'confirmed': ['preparing'],
+            'preparing': ['ready']
+        }
+        
+        if old_status in valid_transitions and new_status not in valid_transitions.get(old_status, []):
+            return jsonify({'error': f'Cannot update order from {old_status} to {new_status}'}), 400
         
         order.status = new_status
         order.updated_at = datetime.utcnow()

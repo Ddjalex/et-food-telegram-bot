@@ -126,6 +126,13 @@
             </div>
         </div>
 
+        <!-- New Order Notification Banner -->
+        <div class="alert alert-success alert-dismissible fade" role="alert" id="newOrderAlert" style="display: none;">
+            <i class="fas fa-bell me-2"></i>
+            <strong>New Order Received!</strong> <span id="newOrderMessage"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <!-- Auto-refresh button -->
         <button class="refresh-btn" onclick="loadOrders()" title="Refresh Orders">
             <i class="fas fa-sync-alt"></i>
@@ -158,11 +165,15 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" onclick="updateOrderStatus('preparing')">
-                        <i class="fas fa-fire me-1"></i>
-                        Mark as Preparing
+                    <button type="button" class="btn btn-primary" id="confirmBtn" onclick="updateOrderStatus('confirmed')" style="display: none;">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Confirm Order
                     </button>
-                    <button type="button" class="btn btn-success" onclick="updateOrderStatus('ready')">
+                    <button type="button" class="btn btn-warning" id="preparingBtn" onclick="updateOrderStatus('preparing')" style="display: none;">
+                        <i class="fas fa-fire me-1"></i>
+                        Start Preparing
+                    </button>
+                    <button type="button" class="btn btn-success" id="readyBtn" onclick="updateOrderStatus('ready')" style="display: none;">
                         <i class="fas fa-check me-1"></i>
                         Mark as Ready
                     </button>
@@ -175,12 +186,58 @@
     <script>
         let currentOrderId = null;
         let autoRefreshInterval = null;
+        let lastOrderCount = 0;
+        let knownOrderIds = new Set();
 
         // Load orders on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadOrders();
             startAutoRefresh();
+            requestNotificationPermission();
         });
+
+        // Request notification permission
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                // Create audio context for notification sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (error) {
+                console.log('Audio notification not available');
+            }
+        }
+
+        // Show browser notification
+        function showBrowserNotification(title, body, icon = '/static/favicon.ico') {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: icon,
+                    badge: icon
+                });
+            }
+        }
 
         function loadOrders() {
             fetch('/api/kitchen/orders')
@@ -190,6 +247,28 @@
                     const container = document.getElementById('ordersContainer');
                     const emptyState = document.getElementById('emptyState');
                     const orderCount = document.getElementById('orderCount');
+                    
+                    // Check for new orders
+                    const currentOrderIds = new Set(orders.map(order => order.id));
+                    const newOrders = orders.filter(order => !knownOrderIds.has(order.id));
+                    
+                    // If there are new orders and we already have known orders (not first load)
+                    if (newOrders.length > 0 && knownOrderIds.size > 0) {
+                        newOrders.forEach(order => {
+                            playNotificationSound();
+                            showBrowserNotification(
+                                'New Order Received!',
+                                `Order #${order.id} from ${order.customer_name} - ${order.items ? JSON.parse(order.items).length : 0} items`,
+                                '/static/favicon.ico'
+                            );
+                            
+                            // Show banner notification
+                            showNewOrderBanner(order);
+                        });
+                    }
+                    
+                    // Update known orders
+                    knownOrderIds = currentOrderIds;
                     
                     // Update order count
                     orderCount.textContent = orders.length;
@@ -215,6 +294,33 @@
                     console.error('Error loading orders:', error);
                     showNotification('Error loading orders', 'error');
                 });
+        }
+
+        // Show new order banner notification
+        function showNewOrderBanner(order) {
+            const alert = document.getElementById('newOrderAlert');
+            const message = document.getElementById('newOrderMessage');
+            
+            let itemCount = 0;
+            try {
+                const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                itemCount = items.length;
+            } catch (e) {
+                itemCount = 0;
+            }
+            
+            message.textContent = `Order #${order.id} from ${order.customer_name} - ${itemCount} items - ${order.status.toUpperCase()}`;
+            
+            alert.style.display = 'block';
+            alert.classList.add('show');
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 150);
+            }, 10000);
         }
 
         function createOrderCard(order) {
@@ -248,17 +354,21 @@
             let statusBadge = '';
             
             switch(order.status) {
+                case 'pending':
+                    headerClass = 'order-header';
+                    statusBadge = '<span class="status-badge bg-warning">Pending Confirmation</span>';
+                    break;
                 case 'confirmed':
                     headerClass = 'order-header';
-                    statusBadge = '<span class="status-badge bg-primary">New Order</span>';
+                    statusBadge = '<span class="status-badge bg-primary">Confirmed - Ready to Cook</span>';
                     break;
                 case 'preparing':
                     headerClass = 'order-header order-preparing';
-                    statusBadge = '<span class="status-badge bg-warning">Preparing</span>';
+                    statusBadge = '<span class="status-badge bg-info">Preparing</span>';
                     break;
                 case 'ready':
                     headerClass = 'order-header order-ready';
-                    statusBadge = '<span class="status-badge bg-success">Ready</span>';
+                    statusBadge = '<span class="status-badge bg-success">Ready for Pickup</span>';
                     break;
             }
             
@@ -380,6 +490,29 @@
                             </table>
                         </div>
                     `;
+                    
+                    // Show appropriate buttons based on order status
+                    const confirmBtn = document.getElementById('confirmBtn');
+                    const preparingBtn = document.getElementById('preparingBtn');
+                    const readyBtn = document.getElementById('readyBtn');
+                    
+                    // Hide all buttons first
+                    confirmBtn.style.display = 'none';
+                    preparingBtn.style.display = 'none';
+                    readyBtn.style.display = 'none';
+                    
+                    // Show appropriate button based on current status
+                    switch(order.status) {
+                        case 'pending':
+                            confirmBtn.style.display = 'inline-block';
+                            break;
+                        case 'confirmed':
+                            preparingBtn.style.display = 'inline-block';
+                            break;
+                        case 'preparing':
+                            readyBtn.style.display = 'inline-block';
+                            break;
+                    }
                     
                     // Show modal
                     const modal = new bootstrap.Modal(document.getElementById('orderModal'));
