@@ -74,6 +74,11 @@ def test():
     """Test page"""
     return render_template('test.html')
 
+@app.route('/kitchen')
+def kitchen():
+    """Kitchen staff interface"""
+    return render_template('kitchen.html')
+
 @app.route('/api/driver-registration-legacy', methods=['POST'])
 def api_driver_registration():
     """Handle driver registration submission from mini web app"""
@@ -458,6 +463,85 @@ def get_orders():
     except Exception as e:
         logger.error(f"Error fetching orders: {e}")
         return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/kitchen/orders', methods=['GET'])
+def get_kitchen_orders():
+    """Get orders for kitchen staff - only active orders"""
+    try:
+        # Get orders that need kitchen attention (confirmed, preparing, ready)
+        active_statuses = ['confirmed', 'preparing']
+        orders = Order.query.filter(
+            Order.status.in_(active_statuses)
+        ).order_by(Order.created_at.asc()).all()
+        
+        # Format orders for kitchen interface
+        kitchen_orders = []
+        for order in orders:
+            order_dict = order.to_dict()
+            
+            # Calculate time since order was placed
+            order_time = order.created_at
+            now = datetime.utcnow()
+            time_diff = now - order_time
+            order_dict['minutes_ago'] = int(time_diff.total_seconds() / 60)
+            
+            kitchen_orders.append(order_dict)
+        
+        return jsonify({
+            'success': True,
+            'orders': kitchen_orders,
+            'count': len(kitchen_orders)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching kitchen orders: {e}")
+        return jsonify({'error': 'Failed to fetch kitchen orders'}), 500
+
+@app.route('/api/orders/<int:order_id>/status', methods=['POST'])
+def kitchen_update_order_status(order_id):
+    """Kitchen staff endpoint to update order status"""
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        # Kitchen staff can only update to preparing or ready
+        valid_kitchen_statuses = ['preparing', 'ready']
+        
+        if not new_status or new_status not in valid_kitchen_statuses:
+            return jsonify({'error': f'Kitchen staff can only update status to: {", ".join(valid_kitchen_statuses)}'}), 400
+        
+        order = Order.query.get_or_404(order_id)
+        old_status = order.status
+        
+        # Validate status transition
+        if old_status == 'preparing' and new_status == 'preparing':
+            return jsonify({'error': 'Order is already being prepared'}), 400
+        
+        if old_status not in ['confirmed', 'preparing'] and new_status in valid_kitchen_statuses:
+            return jsonify({'error': f'Cannot update order from {old_status} status'}), 400
+        
+        order.status = new_status
+        order.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Notify customer about status change
+        try:
+            notify_customer_status_change(order_id, new_status)
+        except Exception as e:
+            logger.error(f"Error notifying customer about status change: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order #{order_id} marked as {new_status}',
+            'order_id': order_id,
+            'old_status': old_status,
+            'new_status': new_status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating order status: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update order status'}), 500
 
 @app.route('/api/live-drivers')
 def get_live_drivers():

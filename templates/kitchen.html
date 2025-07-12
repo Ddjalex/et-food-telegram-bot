@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Kitchen Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .kitchen-header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            margin: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .order-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 15px 15px 0 0;
+        }
+        .order-preparing {
+            background: linear-gradient(135deg, #fd7e14 0%, #f8d7da 100%);
+        }
+        .order-ready {
+            background: linear-gradient(135deg, #20c997 0%, #d4edda 100%);
+        }
+        .order-items {
+            padding: 20px;
+        }
+        .item-badge {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 5px 12px;
+            margin: 3px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+        .status-badge {
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8em;
+        }
+        .urgent-order {
+            border-left: 5px solid #dc3545;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+            50% { box-shadow: 0 4px 25px rgba(220, 53, 69, 0.6); }
+            100% { box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+        }
+        .refresh-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 50px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        .order-time {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .customer-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="kitchen-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h2 class="mb-0">
+                        <i class="fas fa-utensils text-primary me-2"></i>
+                        Kitchen Staff Dashboard
+                    </h2>
+                    <p class="mb-0 text-muted">View and manage incoming orders</p>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <span id="orderCount" class="badge bg-primary fs-6">0</span>
+                            <small class="text-muted">Active Orders</small>
+                        </div>
+                        <div class="me-3">
+                            <span id="lastUpdate" class="text-muted small">Never</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto-refresh button -->
+        <button class="refresh-btn" onclick="loadOrders()" title="Refresh Orders">
+            <i class="fas fa-sync-alt"></i>
+            <span class="ms-2 d-none d-md-inline">Refresh</span>
+        </button>
+
+        <!-- Orders Container -->
+        <div class="row" id="ordersContainer">
+            <!-- Orders will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-clipboard-list fa-4x mb-4" style="opacity: 0.5;"></i>
+            <h3>No Active Orders</h3>
+            <p>All orders are completed or no new orders yet.</p>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="orderModalBody">
+                    <!-- Order details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" onclick="updateOrderStatus('preparing')">
+                        <i class="fas fa-fire me-1"></i>
+                        Mark as Preparing
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="updateOrderStatus('ready')">
+                        <i class="fas fa-check me-1"></i>
+                        Mark as Ready
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentOrderId = null;
+        let autoRefreshInterval = null;
+
+        // Load orders on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+            startAutoRefresh();
+        });
+
+        function loadOrders() {
+            fetch('/api/kitchen/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const container = document.getElementById('ordersContainer');
+                    const emptyState = document.getElementById('emptyState');
+                    const orderCount = document.getElementById('orderCount');
+                    
+                    // Update order count
+                    orderCount.textContent = orders.length;
+                    
+                    // Update last update time
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                    
+                    if (orders.length === 0) {
+                        container.innerHTML = '';
+                        emptyState.style.display = 'block';
+                        return;
+                    }
+                    
+                    emptyState.style.display = 'none';
+                    container.innerHTML = '';
+                    
+                    orders.forEach(order => {
+                        const orderCard = createOrderCard(order);
+                        container.appendChild(orderCard);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                    showNotification('Error loading orders', 'error');
+                });
+        }
+
+        function createOrderCard(order) {
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-lg-4';
+            
+            // Parse items
+            let items = [];
+            try {
+                items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+            } catch (e) {
+                console.error('Error parsing items for order', order.id, e);
+                items = [];
+            }
+            
+            // Calculate time since order
+            const orderTime = new Date(order.created_at);
+            const now = new Date();
+            const diffMinutes = Math.floor((now - orderTime) / (1000 * 60));
+            const isUrgent = diffMinutes > 15;
+            
+            // Create items HTML
+            const itemsHtml = items.map(item => 
+                `<span class="item-badge">
+                    <strong>${item.name}</strong> x${item.quantity}
+                </span>`
+            ).join('');
+            
+            // Status styling
+            let headerClass = 'order-header';
+            let statusBadge = '';
+            
+            switch(order.status) {
+                case 'confirmed':
+                    headerClass = 'order-header';
+                    statusBadge = '<span class="status-badge bg-primary">New Order</span>';
+                    break;
+                case 'preparing':
+                    headerClass = 'order-header order-preparing';
+                    statusBadge = '<span class="status-badge bg-warning">Preparing</span>';
+                    break;
+                case 'ready':
+                    headerClass = 'order-header order-ready';
+                    statusBadge = '<span class="status-badge bg-success">Ready</span>';
+                    break;
+            }
+            
+            col.innerHTML = `
+                <div class="order-card ${isUrgent ? 'urgent-order' : ''}" onclick="showOrderDetails(${order.id})">
+                    <div class="${headerClass}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">Order #${order.id}</h5>
+                                <div class="order-time">
+                                    <i class="fas fa-clock me-1"></i>
+                                    ${diffMinutes} minutes ago
+                                    ${isUrgent ? '<i class="fas fa-exclamation-triangle text-warning ms-2" title="Urgent!"></i>' : ''}
+                                </div>
+                            </div>
+                            <div>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="order-items">
+                        <div class="mb-3">
+                            <h6><i class="fas fa-user me-1"></i> ${order.customer_name}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-credit-card me-1"></i>
+                                ${order.payment_method || 'Cash on Delivery'}
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <h6><i class="fas fa-utensils me-1"></i> Items (${items.length}):</h6>
+                            <div>
+                                ${itemsHtml}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-success">ETB ${order.total_amount.toFixed(2)}</strong>
+                            </div>
+                            <div>
+                                <small class="text-muted">Click to view details</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+
+        function showOrderDetails(orderId) {
+            currentOrderId = orderId;
+            
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    if (!order) {
+                        showNotification('Order not found', 'error');
+                        return;
+                    }
+                    
+                    // Parse items
+                    let items = [];
+                    try {
+                        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                    } catch (e) {
+                        console.error('Error parsing items for order', order.id, e);
+                        items = [];
+                    }
+                    
+                    const itemsHtml = items.map(item => `
+                        <tr>
+                            <td><strong>${item.name}</strong></td>
+                            <td class="text-center">${item.quantity}</td>
+                            <td class="text-end">ETB ${(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+                    
+                    const modalBody = document.getElementById('orderModalBody');
+                    modalBody.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-info-circle me-1"></i> Order Information</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>Order ID:</strong></td><td>#${order.id}</td></tr>
+                                    <tr><td><strong>Customer:</strong></td><td>${order.customer_name}</td></tr>
+                                    <tr><td><strong>Phone:</strong></td><td>${order.customer_phone || 'Not provided'}</td></tr>
+                                    <tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">${order.status}</span></td></tr>
+                                    <tr><td><strong>Payment:</strong></td><td>${order.payment_method || 'Cash on Delivery'}</td></tr>
+                                    <tr><td><strong>Order Time:</strong></td><td>${new Date(order.created_at).toLocaleString()}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-map-marker-alt me-1"></i> Delivery Information</h6>
+                                <div class="customer-info">
+                                    <p><strong>Address:</strong><br>${order.delivery_address || 'Not provided'}</p>
+                                    ${order.special_instructions ? `<p><strong>Special Instructions:</strong><br>${order.special_instructions}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h6><i class="fas fa-utensils me-1"></i> Order Items</h6>
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th class="text-center">Quantity</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHtml}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-success">
+                                        <th colspan="2">Total Amount</th>
+                                        <th class="text-end">ETB ${order.total_amount.toFixed(2)}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    `;
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading order details:', error);
+                    showNotification('Error loading order details', 'error');
+                });
+        }
+
+        function updateOrderStatus(newStatus) {
+            if (!currentOrderId) return;
+            
+            fetch(`/api/orders/${currentOrderId}/status`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Order #${currentOrderId} marked as ${newStatus}`, 'success');
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrders();
+                } else {
+                    showNotification('Error updating order status', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating order status:', error);
+                showNotification('Error updating order status', 'error');
+            });
+        }
+
+        function startAutoRefresh() {
+            // Refresh every 30 seconds
+            autoRefreshInterval = setInterval(loadOrders, 30000);
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification system
+            const alertClass = type === 'error' ? 'alert-danger' : 
+                              type === 'success' ? 'alert-success' : 'alert-info';
+            
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Handle visibility change to refresh when tab becomes active
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                loadOrders();
+            }
+        });
+    </script>
+</body>
+</html>
