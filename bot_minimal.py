@@ -403,6 +403,11 @@ def handle_message(message):
     if 'location' in message:
         handle_location_share(chat_id, message['location'], user_id)
         return
+    
+    # Handle photo/image attachments (payment receipts)
+    if 'photo' in message:
+        handle_photo_attachment(chat_id, message['photo'], user_id, message.get('message_id'))
+        return
 
     if text == "/start":
         send_start_message(chat_id)
@@ -1192,6 +1197,105 @@ def handle_location_share(chat_id, location, user_id):
     except Exception as e:
         logger.error(f"Failed to save location: {e}")
         send_message(chat_id, "❌ Failed to save location. Please try again.")
+
+def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
+    """Handle photo/image attachments (payment receipts)"""
+    try:
+        # Get the largest photo size
+        photo_info = photo[-1]  # Last item is usually the largest
+        file_id = photo_info['file_id']
+        
+        # Send acknowledgment message
+        receipt_message = f"📸 **Payment Receipt Received**\n\n"
+        receipt_message += f"✅ Thank you for uploading your payment receipt!\n\n"
+        receipt_message += f"🔍 **Next Steps:**\n"
+        receipt_message += f"• Our admin team will verify your payment\n"
+        receipt_message += f"• You'll receive confirmation within 2-5 minutes\n"
+        receipt_message += f"• Once verified, your order will be processed\n\n"
+        receipt_message += f"📱 We'll notify you as soon as payment is confirmed.\n"
+        receipt_message += f"Thank you for your patience! 😊"
+        
+        send_message(chat_id, receipt_message, parse_mode='Markdown')
+        
+        # Find the user's most recent order that's awaiting payment
+        from models import Order, AdminUser
+        from main import app
+        
+        with app.app_context():
+            recent_order = Order.query.filter_by(
+                telegram_user_id=user_id,
+                status='confirmed'
+            ).order_by(Order.created_at.desc()).first()
+            
+            if not recent_order:
+                # If no confirmed order found, check for any recent order
+                recent_order = Order.query.filter_by(
+                    telegram_user_id=user_id
+                ).order_by(Order.created_at.desc()).first()
+            
+            if recent_order:
+                # Notify admin about receipt upload
+                admins = AdminUser.query.filter_by(is_active=True).all()
+                
+                admin_message = f"📸 **Payment Receipt Uploaded**\n\n"
+                admin_message += f"📦 Order #{recent_order.id}\n"
+                admin_message += f"👤 Customer: {recent_order.customer_name}\n"
+                admin_message += f"📞 Phone: {recent_order.customer_phone}\n"
+                admin_message += f"💰 Amount: {recent_order.total_amount:.2f} ETB\n"
+                admin_message += f"📅 Order Date: {recent_order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                admin_message += f"🔍 **Please verify the payment receipt and update order status**"
+                
+                admin_keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "✅ Payment Verified", "callback_data": f"verify_payment_{recent_order.id}"},
+                            {"text": "❌ Payment Not Found", "callback_data": f"payment_not_found_{recent_order.id}"}
+                        ],
+                        [
+                            {"text": "📱 View Receipt", "callback_data": f"view_receipt_{file_id}"}
+                        ]
+                    ]
+                }
+                
+                # Forward the photo to all admins
+                for admin in admins:
+                    try:
+                        # Forward the photo if we have message_id
+                        if message_id:
+                            url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/forwardMessage"
+                            requests.post(url, json={
+                                "chat_id": admin.telegram_user_id,
+                                "from_chat_id": chat_id,
+                                "message_id": message_id
+                            })
+                        else:
+                            # Send the photo directly using sendPhoto
+                            url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendPhoto"
+                            requests.post(url, json={
+                                "chat_id": admin.telegram_user_id,
+                                "photo": file_id,
+                                "caption": f"Payment receipt from {recent_order.customer_name} (Order #{recent_order.id})"
+                            })
+                        
+                        # Send admin message with verification buttons
+                        send_message(admin.telegram_user_id, admin_message, admin_keyboard, parse_mode='Markdown')
+                    except Exception as e:
+                        logger.error(f"Failed to notify admin {admin.telegram_user_id}: {e}")
+                        
+            else:
+                # No recent order found
+                support_message = f"📸 **Receipt Received**\n\n"
+                support_message += f"We received your payment receipt, but couldn't find a recent order.\n\n"
+                support_message += f"📞 Please contact support:\n"
+                support_message += f"WhatsApp: +251-911-123456\n"
+                support_message += f"Phone: +251-911-123456\n\n"
+                support_message += f"Include your order number and payment details."
+                
+                send_message(chat_id, support_message, parse_mode='Markdown')
+                
+    except Exception as e:
+        logger.error(f"Failed to handle photo attachment: {e}")
+        send_message(chat_id, "❌ Failed to process receipt. Please try again or contact support.")
 
 def handle_admin_command(chat_id, text):
     """Handle admin commands"""
