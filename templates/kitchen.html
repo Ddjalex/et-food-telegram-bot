@@ -192,21 +192,13 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" id="unavailableBtn" onclick="markOrderUnavailable()" title="Mark order items as unavailable">
-                        <i class="fas fa-times-circle me-1"></i>
-                        Order Unavailable
-                    </button>
-                    <button type="button" class="btn btn-primary" id="confirmBtn" onclick="updateOrderStatus('confirmed')" style="display: none;">
+                    <button type="button" class="btn btn-success" id="availableBtn" onclick="markOrderAvailable()" style="display: none;">
                         <i class="fas fa-check-circle me-1"></i>
-                        Confirm Order
+                        Available
                     </button>
-                    <button type="button" class="btn btn-warning" id="preparingBtn" onclick="updateOrderStatus('preparing')" style="display: none;">
+                    <button type="button" class="btn btn-warning" id="prepareBtn" onclick="startPreparing()" style="display: none;">
                         <i class="fas fa-fire me-1"></i>
-                        Start Preparing
-                    </button>
-                    <button type="button" class="btn btn-success" id="readyBtn" onclick="updateOrderStatus('ready')" style="display: none;">
-                        <i class="fas fa-check me-1"></i>
-                        Mark as Ready
+                        Prepare
                     </button>
                 </div>
             </div>
@@ -544,33 +536,26 @@
                     `;
                     
                     // Show appropriate buttons based on order status
-                    const confirmBtn = document.getElementById('confirmBtn');
-                    const preparingBtn = document.getElementById('preparingBtn');
-                    const readyBtn = document.getElementById('readyBtn');
-                    const unavailableBtn = document.getElementById('unavailableBtn');
+                    const availableBtn = document.getElementById('availableBtn');
+                    const prepareBtn = document.getElementById('prepareBtn');
                     
                     // Hide all buttons first
-                    confirmBtn.style.display = 'none';
-                    preparingBtn.style.display = 'none';
-                    readyBtn.style.display = 'none';
-                    
-                    // Show unavailable button for all active orders (pending, confirmed, preparing)
-                    if (['pending', 'confirmed', 'preparing'].includes(order.status)) {
-                        unavailableBtn.style.display = 'inline-block';
-                    } else {
-                        unavailableBtn.style.display = 'none';
-                    }
+                    availableBtn.style.display = 'none';
+                    prepareBtn.style.display = 'none';
                     
                     // Show appropriate button based on current status
                     switch(order.status) {
                         case 'pending':
-                            confirmBtn.style.display = 'inline-block';
+                            availableBtn.style.display = 'inline-block';
                             break;
                         case 'confirmed':
-                            preparingBtn.style.display = 'inline-block';
+                            prepareBtn.style.display = 'inline-block';
                             break;
                         case 'preparing':
-                            readyBtn.style.display = 'inline-block';
+                            // Order is being prepared, no buttons needed
+                            break;
+                        case 'ready':
+                            // Order is ready, no buttons needed
                             break;
                     }
                     
@@ -613,28 +598,18 @@
             });
         }
 
-        function markOrderUnavailable() {
+        function markOrderAvailable() {
             if (!currentOrderId) return;
             
-            // Show confirmation dialog
-            const reason = prompt("Please specify the reason for unavailability (this will be sent to the customer):", "Sorry, this item is currently unavailable in the kitchen.");
-            
-            if (reason === null) return; // User cancelled
-            
-            if (!reason.trim()) {
-                showNotification('Please provide a reason for unavailability', 'error');
-                return;
-            }
-            
-            fetch(`/api/orders/${currentOrderId}/unavailable`, {
+            fetch(`/api/orders/${currentOrderId}/status`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({reason: reason.trim()})
+                body: JSON.stringify({status: 'confirmed'})
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showNotification(`Order #${currentOrderId} marked as unavailable. Customer has been notified.`, 'success');
+                    showNotification(`Order #${currentOrderId} marked as available. Customer has been notified.`, 'success');
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
@@ -643,12 +618,41 @@
                     // Reload orders
                     loadOrders();
                 } else {
-                    showNotification(data.error || 'Error marking order as unavailable', 'error');
+                    showNotification('Error marking order as available', 'error');
                 }
             })
             .catch(error => {
-                console.error('Error marking order as unavailable:', error);
-                showNotification('Error marking order as unavailable', 'error');
+                console.error('Error marking order as available:', error);
+                showNotification('Error marking order as available', 'error');
+            });
+        }
+
+        function startPreparing() {
+            if (!currentOrderId) return;
+            
+            fetch(`/api/orders/${currentOrderId}/status`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: 'preparing'})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Order #${currentOrderId} preparation started. Customer has been notified.`, 'success');
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrders();
+                } else {
+                    showNotification('Error starting order preparation', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error starting order preparation:', error);
+                showNotification('Error starting order preparation', 'error');
             });
         }
 
