@@ -57,3 +57,19 @@ create_tables()
 
 # Import routes to register them
 from routes import *  # noqa: F401
+
+# Initialize bot with webhook
+try:
+    from bot_minimal import init_bot
+    init_bot(app)
+    print("Bot initialized successfully")
+except Exception as e:
+    print(f"Error initializing bot: {e}")
+    
+# Initialize driver bot if available
+try:
+    from driver_bot import init_driver_bot
+    init_driver_bot(app)
+    print("Driver bot initialized successfully")
+except Exception as e:
+    print(f"Error initializing driver bot: {e}")
