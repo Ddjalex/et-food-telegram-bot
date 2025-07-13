@@ -35,7 +35,7 @@ class DriverIntegrationSystem:
         data = {
             'chat_id': telegram_id,
             'text': message,
-            'parse_mode': 'Markdown',
+            'parse_mode': 'HTML',
             'disable_web_page_preview': True
         }
         
@@ -62,18 +62,18 @@ class DriverIntegrationSystem:
             if not order:
                 return False
             
-            # Find available drivers within 10km with recent location updates
-            ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
+            # Find available drivers with location data (more flexible timing for testing)
             available_drivers = Driver.query.filter_by(
                 is_active=True,
                 is_available=True,
                 is_approved=True
             ).filter(
                 Driver.telegram_user_id.isnot(None),
-                Driver.last_location_update >= ten_minutes_ago,
                 Driver.current_lat.isnot(None),
                 Driver.current_lng.isnot(None)
             ).all()
+            
+            print(f"🔍 Found {len(available_drivers)} available drivers with location data")
             
             if not available_drivers:
                 self.notify_admin_no_drivers(order)
@@ -85,9 +85,11 @@ class DriverIntegrationSystem:
             # Calculate distances and sort by proximity
             drivers_with_distance = []
             for driver in available_drivers:
+                # Use restaurant location as the pickup point (Addis Ababa coordinates)
+                restaurant_lat, restaurant_lng = 9.047658, 38.741143
                 distance = self.calculate_distance(
                     driver.current_lat, driver.current_lng,
-                    order.location_lat or 9.165, order.location_lng or 40.510
+                    restaurant_lat, restaurant_lng
                 )
                 if distance <= search_radius:  # Within configurable radius
                     drivers_with_distance.append((driver, distance))
@@ -96,39 +98,54 @@ class DriverIntegrationSystem:
             
             # Send notifications to top 3 nearest drivers
             notifications_sent = 0
+            failed_notifications = []
             for driver, distance in drivers_with_distance[:3]:
+                print(f"🚗 Trying to notify {driver.name} (ID: {driver.telegram_user_id}) - {distance:.1f}km away")
                 if self.send_order_notification(driver, order, distance):
                     notifications_sent += 1
+                    print(f"✅ Successfully notified {driver.name}")
+                else:
+                    failed_notifications.append(f"{driver.name} (ID: {driver.telegram_user_id})")
+                    print(f"❌ Failed to notify {driver.name} - they may need to start the driver bot first")
             
-            print(f"📱 Sent {notifications_sent} driver notifications for Order #{order_id} (search radius: {search_radius}km)")
+            if failed_notifications:
+                print(f"⚠️ Failed to notify {len(failed_notifications)} drivers: {', '.join(failed_notifications)}")
+                print("💡 Drivers need to start @Food_Driver_Bot first to receive notifications")
+            
+            print(f"📱 Sent {notifications_sent}/{len(drivers_with_distance[:3])} driver notifications for Order #{order_id} (search radius: {search_radius}km)")
             return notifications_sent > 0
     
     def send_order_notification(self, driver, order, distance):
         """Send detailed order notification to driver"""
-        # Create BeUdelivery-style notification
-        message = f"🚚 *NEW DELIVERY REQUEST*\n\n"
-        message += f"📋 *Order #{order.id}*\n"
-        message += f"⏰ *{datetime.now().strftime('%H:%M')}* | 📍 *{distance:.1f}km away*\n\n"
+        # Create BeUdelivery-style notification with HTML formatting
+        message = f"🚚 <b>NEW DELIVERY REQUEST</b>\n\n"
+        message += f"📋 <b>Order #{order.id}</b>\n"
+        message += f"⏰ <b>{datetime.now().strftime('%H:%M')}</b> | 📍 <b>{distance:.1f}km away</b>\n\n"
         
         # Restaurant info
-        message += f"🏪 *Restaurant:* ET-FOOD Kitchen\n"
-        message += f"📍 *Pickup:* Bole Road, Addis Ababa\n\n"
+        message += f"🏪 <b>Restaurant:</b> ET-FOOD Kitchen\n"
+        message += f"📍 <b>Pickup:</b> Bole Road, Addis Ababa\n\n"
         
-        # Customer info
-        message += f"👤 *Customer:* {order.customer_name}\n"
-        message += f"📞 *Phone:* {order.customer_phone}\n"
-        message += f"🏠 *Delivery:* {order.customer_address}\n\n"
+        # Customer info 
+        message += f"👤 <b>Customer:</b> {order.customer_name}\n"
+        message += f"📞 <b>Phone:</b> {order.customer_phone}\n"
+        message += f"🏠 <b>Delivery:</b> Location provided\n\n"
         
         # Order details
-        message += f"💰 *Amount:* {order.total_amount:.2f} ETB\n"
-        message += f"💳 *Payment:* {order.payment_method.upper()}\n"
+        message += f"💰 <b>Amount:</b> {order.total_amount:.2f} ETB\n"
+        message += f"💳 <b>Payment:</b> {order.payment_method.upper()}\n"
         
         # Add item summary
         if order.items:
-            item_count = sum(item.get('quantity', 1) for item in order.items)
-            message += f"📦 *Items:* {item_count} item(s)\n"
+            try:
+                # Parse JSON string if needed
+                items = order.items if isinstance(order.items, list) else json.loads(order.items)
+                item_count = sum(item.get('quantity', 1) for item in items)
+                message += f"📦 <b>Items:</b> {item_count} item(s)\n"
+            except (json.JSONDecodeError, TypeError):
+                message += f"📦 <b>Items:</b> Multiple items\n"
         
-        message += f"\n⚡ *FIRST TO ACCEPT GETS THE ORDER!*"
+        message += f"\n⚡ <b>FIRST TO ACCEPT GETS THE ORDER!</b>"
         
         # Create enhanced keyboard  
         from url_utils import construct_url
