@@ -365,7 +365,26 @@ def notify_customer_status_change(order_id, new_status):
         message += f"Total: {order.total_amount:.2f} ETB\n"
         message += f"Thank you for choosing ET-FOOD! 🍽️"
 
-        send_message(order.telegram_user_id, message, parse_mode='Markdown')
+        # Add inline deposit buttons for confirmed orders
+        keyboard = None
+        if new_status == 'confirmed':
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🏦 CBE Bank", "callback_data": f"deposit_cbe_{order.id}"},
+                        {"text": "📱 TeleBirr", "callback_data": f"deposit_telebirr_{order.id}"}
+                    ],
+                    [
+                        {"text": "🏪 Dashen Bank", "callback_data": f"deposit_dashen_{order.id}"},
+                        {"text": "📞 Contact Support", "callback_data": f"contact_support_{order.id}"}
+                    ],
+                    [
+                        {"text": "💳 Payment Complete", "callback_data": f"payment_complete_{order.id}"}
+                    ]
+                ]
+            }
+
+        send_message(order.telegram_user_id, message, keyboard, parse_mode='Markdown')
 
     except Exception as e:
         logger.error(f"Failed to notify customer status change: {e}")
@@ -465,7 +484,7 @@ def handle_callback_query(callback_query):
     user_id = callback_query["from"]["id"]
     
     # Admin callback handlers
-    if data.startswith(('confirm_order_', 'preparing_order_', 'assign_bot_', 'assign_driver_', 'delivered_order_', 'cancel_order_', 'select_driver_', 'accept_delivery_', 'decline_delivery_')):
+    if data.startswith(('confirm_order_', 'preparing_order_', 'assign_bot_', 'assign_driver_', 'delivered_order_', 'cancel_order_', 'select_driver_', 'accept_delivery_', 'decline_delivery_', 'verify_payment_', 'payment_not_found_')):
         handle_admin_callback(callback_query)
         return
     
@@ -533,6 +552,219 @@ def handle_callback_query(callback_query):
         # Handle feedback request
         order_id = data.split("_")[1]
         handle_feedback_request(chat_id, user_id, order_id)
+    elif data.startswith("deposit_"):
+        # Handle deposit button selections
+        parts = data.split("_")
+        deposit_method = parts[1]
+        order_id = int(parts[2])
+        
+        # Get order details
+        from models import Order
+        order = Order.query.get(order_id)
+        if not order:
+            send_message(chat_id, "❌ Order not found.")
+            return
+        
+        # Create deposit instruction messages
+        deposit_messages = {
+            "cbe": f"🏦 **Commercial Bank of Ethiopia (CBE)**\n\n"
+                   f"💰 Amount: {order.total_amount:.2f} ETB\n"
+                   f"🔢 Account: 1000123456789\n"
+                   f"👤 Account Name: ET-FOOD Restaurant\n\n"
+                   f"📱 **Steps:**\n"
+                   f"1. Open your mobile banking app\n"
+                   f"2. Select 'Transfer Money'\n"
+                   f"3. Enter the account number above\n"
+                   f"4. Transfer {order.total_amount:.2f} ETB\n"
+                   f"5. Take a screenshot of the receipt\n"
+                   f"6. Click 'Payment Complete' below\n\n"
+                   f"⏰ Please complete within 15 minutes",
+            
+            "telebirr": f"📱 **TeleBirr Payment**\n\n"
+                        f"💰 Amount: {order.total_amount:.2f} ETB\n"
+                        f"📞 Phone: +251-911-234567\n"
+                        f"👤 Account Name: ET-FOOD\n\n"
+                        f"📱 **Steps:**\n"
+                        f"1. Open TeleBirr app\n"
+                        f"2. Select 'Send Money'\n"
+                        f"3. Enter phone number above\n"
+                        f"4. Send {order.total_amount:.2f} ETB\n"
+                        f"5. Take a screenshot of the receipt\n"
+                        f"6. Click 'Payment Complete' below\n\n"
+                        f"⏰ Please complete within 15 minutes",
+            
+            "dashen": f"🏪 **Dashen Bank**\n\n"
+                      f"💰 Amount: {order.total_amount:.2f} ETB\n"
+                      f"🔢 Account: 0987654321012\n"
+                      f"👤 Account Name: ET-FOOD Restaurant\n\n"
+                      f"📱 **Steps:**\n"
+                      f"1. Open your Dashen mobile app\n"
+                      f"2. Select 'Transfer'\n"
+                      f"3. Enter the account number above\n"
+                      f"4. Transfer {order.total_amount:.2f} ETB\n"
+                      f"5. Take a screenshot of the receipt\n"
+                      f"6. Click 'Payment Complete' below\n\n"
+                      f"⏰ Please complete within 15 minutes",
+            
+            "support": f"📞 **Contact Support**\n\n"
+                       f"💬 **WhatsApp:** +251-911-123456\n"
+                       f"📞 **Phone:** +251-911-123456\n"
+                       f"💰 **Your Order:** #{order.id}\n"
+                       f"💵 **Amount:** {order.total_amount:.2f} ETB\n\n"
+                       f"Our support team will help you with:\n"
+                       f"• Payment assistance\n"
+                       f"• Alternative payment methods\n"
+                       f"• Order questions\n\n"
+                       f"📱 Available 24/7"
+        }
+        
+        message = deposit_messages.get(deposit_method, "Payment method not found")
+        
+        # Create back button and payment complete button
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🏦 CBE Bank", "callback_data": f"deposit_cbe_{order.id}"},
+                    {"text": "📱 TeleBirr", "callback_data": f"deposit_telebirr_{order.id}"}
+                ],
+                [
+                    {"text": "🏪 Dashen Bank", "callback_data": f"deposit_dashen_{order.id}"},
+                    {"text": "📞 Contact Support", "callback_data": f"deposit_support_{order.id}"}
+                ],
+                [
+                    {"text": "💳 Payment Complete", "callback_data": f"payment_complete_{order.id}"}
+                ]
+            ]
+        }
+        
+        send_message(chat_id, message, keyboard, parse_mode='Markdown')
+    
+    elif data.startswith("payment_complete_"):
+        # Handle payment completion notification
+        order_id = int(data.split("_")[2])
+        
+        # Get order details
+        from models import Order
+        order = Order.query.get(order_id)
+        if not order:
+            send_message(chat_id, "❌ Order not found.")
+            return
+        
+        # Notify customer
+        confirmation_message = f"✅ **Payment Confirmation Received**\n\n"
+        confirmation_message += f"📦 Order #{order.id}\n"
+        confirmation_message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+        confirmation_message += f"🔍 Our admin team will verify your payment shortly.\n"
+        confirmation_message += f"⏰ This usually takes 2-5 minutes.\n\n"
+        confirmation_message += f"📱 You'll receive a notification once verified.\n"
+        confirmation_message += f"Thank you for your patience! 😊"
+        
+        send_message(chat_id, confirmation_message, parse_mode='Markdown')
+        
+        # Notify admin about payment completion
+        try:
+            from models import AdminUser
+            admins = AdminUser.query.filter_by(is_active=True).all()
+            
+            admin_message = f"💳 **Payment Completion Reported**\n\n"
+            admin_message += f"📦 Order #{order.id}\n"
+            admin_message += f"👤 Customer: {order.customer_name}\n"
+            admin_message += f"📞 Phone: {order.customer_phone}\n"
+            admin_message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+            admin_message += f"🔍 **Please verify the payment and update order status**"
+            
+            admin_keyboard = {
+                "inline_keyboard": [
+                    [
+                        {"text": "✅ Payment Verified", "callback_data": f"verify_payment_{order.id}"},
+                        {"text": "❌ Payment Not Found", "callback_data": f"payment_not_found_{order.id}"}
+                    ]
+                ]
+            }
+            
+            for admin in admins:
+                send_message(admin.telegram_user_id, admin_message, admin_keyboard, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to notify admin about payment completion: {e}")
+    
+    elif data.startswith("verify_payment_"):
+        # Handle admin payment verification
+        order_id = int(data.split("_")[2])
+        
+        # Check if user is admin
+        from models import AdminUser
+        admin = AdminUser.query.filter_by(telegram_user_id=user_id).first()
+        if not admin:
+            return
+        
+        # Update order status
+        from models import Order
+        from extensions import db
+        order = Order.query.get(order_id)
+        if order:
+            order.status = 'payment_verified'
+            db.session.commit()
+            
+            # Notify customer
+            notify_customer_status_change(order_id, 'payment_verified')
+            
+            # Update admin message
+            url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/editMessageText"
+            requests.post(url, json={
+                "chat_id": chat_id,
+                "message_id": callback_query["message"]["message_id"],
+                "text": f"✅ Payment verified for Order #{order_id}",
+                "parse_mode": "Markdown"
+            })
+    
+    elif data.startswith("payment_not_found_"):
+        # Handle payment not found
+        order_id = int(data.split("_")[3])
+        
+        # Check if user is admin
+        from models import AdminUser
+        admin = AdminUser.query.filter_by(telegram_user_id=user_id).first()
+        if not admin:
+            return
+        
+        # Get order details
+        from models import Order
+        order = Order.query.get(order_id)
+        if not order:
+            return
+        
+        # Notify customer about payment issue
+        issue_message = f"❌ **Payment Verification Issue**\n\n"
+        issue_message += f"📦 Order #{order.id}\n"
+        issue_message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+        issue_message += f"🔍 We couldn't find your payment in our system.\n"
+        issue_message += f"📱 Please contact support or try again:\n"
+        issue_message += f"📞 +251-911-123456\n\n"
+        issue_message += f"💡 **Tips:**\n"
+        issue_message += f"• Check if transfer was successful\n"
+        issue_message += f"• Verify account numbers\n"
+        issue_message += f"• Contact your bank if needed"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 Try Payment Again", "callback_data": f"deposit_cbe_{order.id}"},
+                    {"text": "📞 Contact Support", "callback_data": f"deposit_support_{order.id}"}
+                ]
+            ]
+        }
+        
+        send_message(order.telegram_user_id, issue_message, keyboard, parse_mode='Markdown')
+        
+        # Update admin message
+        url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/editMessageText"
+        requests.post(url, json={
+            "chat_id": chat_id,
+            "message_id": callback_query["message"]["message_id"],
+            "text": f"❌ Payment not found for Order #{order_id} - Customer notified",
+            "parse_mode": "Markdown"
+        })
+    
     else:
         send_message(chat_id, f"📦 You selected: {data}")
 
