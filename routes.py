@@ -592,29 +592,41 @@ def kitchen_update_order_status(order_id):
         if new_status == 'preparing':
             try:
                 from threading import Thread
+                from driver_integration_system import driver_system
+                
                 def find_and_notify_drivers():
                     with app.app_context():
-                        find_and_notify_nearby_drivers(order_id)
+                        success = driver_system.notify_new_order(order_id)
+                        if success:
+                            logger.info(f"✅ Successfully notified drivers about order #{order_id} - kitchen started preparing food")
+                        else:
+                            logger.warning(f"⚠️ No drivers available for order #{order_id} - kitchen preparing but no drivers found")
                 
                 # Run driver search in background thread
                 Thread(target=find_and_notify_drivers, daemon=True).start()
-                logger.info(f"Started driver search for order #{order_id} marked as preparing - kitchen started preparing food")
+                logger.info(f"🔍 Started automatic driver search for order #{order_id} marked as preparing")
             except Exception as e:
-                logger.error(f"Error starting driver search for order #{order_id}: {e}")
+                logger.error(f"❌ Error starting driver search for order #{order_id}: {e}")
         
         # When kitchen marks order as "ready", also notify drivers (backup notification)
         elif new_status == 'ready':
             try:
                 from threading import Thread
+                from driver_integration_system import driver_system
+                
                 def find_and_notify_drivers():
                     with app.app_context():
-                        find_and_notify_nearby_drivers(order_id)
+                        success = driver_system.notify_new_order(order_id)
+                        if success:
+                            logger.info(f"✅ Successfully notified drivers about order #{order_id} - food is ready for pickup")
+                        else:
+                            logger.warning(f"⚠️ No drivers available for order #{order_id} - food ready but no drivers found")
                 
                 # Run driver search in background thread
                 Thread(target=find_and_notify_drivers, daemon=True).start()
-                logger.info(f"Started driver search for order #{order_id} marked as ready - food is prepared and ready for pickup")
+                logger.info(f"🔍 Started automatic driver search for order #{order_id} marked as ready")
             except Exception as e:
-                logger.error(f"Error starting driver search for order #{order_id}: {e}")
+                logger.error(f"❌ Error starting driver search for order #{order_id}: {e}")
         
         # When order status changes to out_for_delivery, notify assigned driver with pickup details
         elif new_status == 'out_for_delivery' and order.driver_id:
