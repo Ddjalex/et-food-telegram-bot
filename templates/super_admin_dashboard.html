@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Super Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bg-dark: #1a252f;
+            --bg-light: #ecf0f1;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-container {
+            padding: 20px;
+        }
+
+        .company-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .company-logo {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .stats-cards {
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .control-section {
+            margin-bottom: 40px;
+        }
+
+        .control-section h4 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .btn-control {
+            margin: 5px;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-control:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .system-info {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .table th {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-online { background-color: #d4edda; color: #155724; }
+        .status-offline { background-color: #f8d7da; color: #721c24; }
+        .status-busy { background-color: #fff3cd; color: #856404; }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav-tabs .nav-link {
+            border-radius: 10px 10px 0 0;
+            margin-right: 5px;
+            border: none;
+            background-color: #ecf0f1;
+            color: var(--primary-color);
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+
+        .notification-panel {
+            background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Company Header -->
+        <div class="company-header">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <div class="company-logo">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <h1 class="mb-2">ET-FOOD Super Admin Dashboard</h1>
+                    <p class="mb-1"><i class="fas fa-map-marker-alt"></i> Ethiopian Food Delivery Service</p>
+                    <p class="mb-1"><i class="fas fa-phone"></i> +251-911-123456 | <i class="fas fa-envelope"></i> admin@etfood.et</p>
+                    <p class="mb-0"><i class="fas fa-clock"></i> Last Updated: <span id="lastUpdate"></span></p>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-light btn-control" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-cards">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon text-primary">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-number text-primary" id="totalOrders">0</div>
+                        <div class="text-muted">Total Orders</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon text-success">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-number text-success" id="totalCustomers">0</div>
+                        <div class="text-muted">Total Customers</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon text-warning">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <div class="stat-number text-warning" id="activeDrivers">0</div>
+                        <div class="text-muted">Active Drivers</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon text-info">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-number text-info" id="todayRevenue">0</div>
+                        <div class="text-muted">Today Revenue (ETB)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="system-info">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4><i class="fas fa-server"></i> System Status</h4>
+                    <p>Server: <span class="badge bg-success">Online</span></p>
+                    <p>Database: <span class="badge bg-success">Connected</span></p>
+                    <p>Telegram Bot: <span class="badge bg-success" id="botStatus">Active</span></p>
+                </div>
+                <div class="col-md-6">
+                    <h4><i class="fas fa-chart-line"></i> Performance</h4>
+                    <p>Response Time: <span class="text-success">120ms</span></p>
+                    <p>Uptime: <span class="text-success">99.9%</span></p>
+                    <p>Active Sessions: <span class="text-info" id="activeSessions">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <ul class="nav nav-tabs" id="controlTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel">
+                        <i class="fas fa-shopping-cart"></i> Orders Management
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="kitchen-tab" data-bs-toggle="tab" data-bs-target="#kitchen-panel">
+                        <i class="fas fa-utensils"></i> Kitchen Control
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="drivers-tab" data-bs-toggle="tab" data-bs-target="#drivers-panel">
+                        <i class="fas fa-motorcycle"></i> Driver Management
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics-panel">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-panel">
+                        <i class="fas fa-cogs"></i> System Settings
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="controlTabsContent">
+                <!-- Orders Management Panel -->
+                <div class="tab-pane fade show active" id="orders-panel">
+                    <div class="control-section">
+                        <h4>Order Controls</h4>
+                        <button class="btn btn-primary btn-control" onclick="openOrderManager()">
+                            <i class="fas fa-list"></i> View All Orders
+                        </button>
+                        <button class="btn btn-success btn-control" onclick="openKitchenDashboard()">
+                            <i class="fas fa-utensils"></i> Kitchen Dashboard
+                        </button>
+                        <button class="btn btn-info btn-control" onclick="exportOrders()">
+                            <i class="fas fa-download"></i> Export Orders
+                        </button>
+                        <button class="btn btn-warning btn-control" onclick="viewLiveOrders()">
+                            <i class="fas fa-eye"></i> Live Tracking
+                        </button>
+                    </div>
+
+                    <!-- Recent Orders Table -->
+                    <div class="table-container">
+                        <h5>Recent Orders</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentOrdersTable">
+                                    <!-- Orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kitchen Control Panel -->
+                <div class="tab-pane fade" id="kitchen-panel">
+                    <div class="control-section">
+                        <h4>Kitchen Staff Management</h4>
+                        <button class="btn btn-primary btn-control" onclick="addKitchenStaff()">
+                            <i class="fas fa-user-plus"></i> Add Kitchen Staff
+                        </button>
+                        <button class="btn btn-success btn-control" onclick="viewKitchenPerformance()">
+                            <i class="fas fa-chart-line"></i> Performance Report
+                        </button>
+                        <button class="btn btn-warning btn-control" onclick="manageShifts()">
+                            <i class="fas fa-calendar"></i> Manage Shifts
+                        </button>
+                        <button class="btn btn-info btn-control" onclick="kitchenSettings()">
+                            <i class="fas fa-cog"></i> Kitchen Settings
+                        </button>
+                    </div>
+
+                    <!-- Kitchen Staff Table -->
+                    <div class="table-container">
+                        <h5>Kitchen Staff Status</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Staff Name</th>
+                                        <th>Role</th>
+                                        <th>Shift</th>
+                                        <th>Status</th>
+                                        <th>Orders Completed</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kitchenStaffTable">
+                                    <tr>
+                                        <td>Abebe Kebede</td>
+                                        <td>Head Chef</td>
+                                        <td>Morning (6AM-2PM)</td>
+                                        <td><span class="status-badge status-online">Online</span></td>
+                                        <td>15</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning">Edit</button>
+                                            <button class="btn btn-sm btn-danger">Remove</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Meron Tadesse</td>
+                                        <td>Prep Cook</td>
+                                        <td>Evening (2PM-10PM)</td>
+                                        <td><span class="status-badge status-offline">Offline</span></td>
+                                        <td>8</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning">Edit</button>
+                                            <button class="btn btn-sm btn-danger">Remove</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Driver Management Panel -->
+                <div class="tab-pane fade" id="drivers-panel">
+                    <div class="control-section">
+                        <h4>Driver Operations</h4>
+                        <button class="btn btn-primary btn-control" onclick="addDriver()">
+                            <i class="fas fa-user-plus"></i> Add Driver
+                        </button>
+                        <button class="btn btn-success btn-control" onclick="viewDriverMap()">
+                            <i class="fas fa-map"></i> Live Map
+                        </button>
+                        <button class="btn btn-warning btn-control" onclick="driverPerformance()">
+                            <i class="fas fa-chart-bar"></i> Performance
+                        </button>
+                        <button class="btn btn-info btn-control" onclick="managePayouts()">
+                            <i class="fas fa-money-bill"></i> Payouts
+                        </button>
+                    </div>
+
+                    <!-- Driver Table -->
+                    <div class="table-container">
+                        <h5>Active Drivers</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Driver Name</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Current Order</th>
+                                        <th>Deliveries Today</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driversTable">
+                                    <!-- Drivers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Panel -->
+                <div class="tab-pane fade" id="analytics-panel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Daily Orders</h5>
+                                <canvas id="ordersChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Revenue Analysis</h5>
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Popular Items</h5>
+                                <canvas id="popularItemsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Driver Performance</h5>
+                                <canvas id="driverChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Settings Panel -->
+                <div class="tab-pane fade" id="system-panel">
+                    <div class="control-section">
+                        <h4>System Configuration</h4>
+                        <button class="btn btn-primary btn-control" onclick="manageUsers()">
+                            <i class="fas fa-users-cog"></i> User Management
+                        </button>
+                        <button class="btn btn-success btn-control" onclick="menuManagement()">
+                            <i class="fas fa-list"></i> Menu Management
+                        </button>
+                        <button class="btn btn-warning btn-control" onclick="systemLogs()">
+                            <i class="fas fa-file-alt"></i> System Logs
+                        </button>
+                        <button class="btn btn-danger btn-control" onclick="systemRestart()">
+                            <i class="fas fa-power-off"></i> System Restart
+                        </button>
+                    </div>
+
+                    <!-- System Settings -->
+                    <div class="table-container">
+                        <h5>Configuration Settings</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Delivery Radius (KM)</label>
+                                    <input type="number" class="form-control" value="10" id="deliveryRadius">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Minimum Order Amount (ETB)</label>
+                                    <input type="number" class="form-control" value="50" id="minOrderAmount">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Delivery Fee (ETB)</label>
+                                    <input type="number" class="form-control" value="15" id="deliveryFee">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Service Hours</label>
+                                    <input type="text" class="form-control" value="8:00 AM - 11:00 PM" id="serviceHours">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Company Phone</label>
+                                    <input type="text" class="form-control" value="+251-911-123456" id="companyPhone">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Company Email</label>
+                                    <input type="email" class="form-control" value="admin@etfood.et" id="companyEmail">
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" onclick="saveSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Panel -->
+        <div class="notification-panel">
+            <h4><i class="fas fa-bell"></i> System Notifications</h4>
+            <div id="notificationsList">
+                <div class="alert alert-light mb-2">
+                    <strong>System:</strong> New order received from Addis Ababa area
+                    <span class="float-end text-muted">2 min ago</span>
+                </div>
+                <div class="alert alert-light mb-2">
+                    <strong>Kitchen:</strong> Order #123 completed and ready for pickup
+                    <span class="float-end text-muted">5 min ago</span>
+                </div>
+                <div class="alert alert-light mb-0">
+                    <strong>Driver:</strong> Driver Ahmed completed delivery for Order #122
+                    <span class="float-end text-muted">8 min ago</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLastUpdateTime();
+            loadDashboardData();
+            initializeCharts();
+            setInterval(updateLastUpdateTime, 1000);
+            setInterval(loadDashboardData, 30000); // Update every 30 seconds
+        });
+
+        function updateLastUpdateTime() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        }
+
+        function loadDashboardData() {
+            // Load statistics
+            loadStatistics();
+            loadRecentOrders();
+            loadDrivers();
+        }
+
+        function loadStatistics() {
+            fetch('/api/admin/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalOrders').textContent = data.total_orders || 0;
+                    document.getElementById('totalCustomers').textContent = data.total_customers || 0;
+                    document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
+                    document.getElementById('todayRevenue').textContent = data.today_revenue || 0;
+                    document.getElementById('activeSessions').textContent = data.active_sessions || 0;
+                })
+                .catch(error => {
+                    console.error('Error loading statistics:', error);
+                });
+        }
+
+        function loadRecentOrders() {
+            fetch('/api/orders?limit=10')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('recentOrdersTable');
+                    tbody.innerHTML = '';
+                    
+                    data.orders.forEach(order => {
+                        const row = `
+                            <tr>
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td>ETB ${order.total_amount}</td>
+                                <td><span class="status-badge ${getStatusClass(order.status)}">${order.status}</span></td>
+                                <td>${new Date(order.created_at).toLocaleTimeString()}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewOrder(${order.id})">View</button>
+                                    <button class="btn btn-sm btn-warning" onclick="editOrder(${order.id})">Edit</button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                });
+        }
+
+        function loadDrivers() {
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('driversTable');
+                    tbody.innerHTML = '';
+                    
+                    data.drivers.forEach(driver => {
+                        const row = `
+                            <tr>
+                                <td>${driver.name}</td>
+                                <td>${driver.vehicle_type}</td>
+                                <td><span class="status-badge ${driver.is_active ? 'status-online' : 'status-offline'}">${driver.is_active ? 'Online' : 'Offline'}</span></td>
+                                <td>${driver.current_order || 'None'}</td>
+                                <td>${driver.deliveries_today || 0}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewDriver(${driver.id})">View</button>
+                                    <button class="btn btn-sm btn-warning" onclick="editDriver(${driver.id})">Edit</button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading drivers:', error);
+                });
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'delivered': return 'status-online';
+                case 'cancelled': return 'status-offline';
+                case 'preparing': return 'status-busy';
+                default: return 'status-busy';
+            }
+        }
+
+        function initializeCharts() {
+            // Orders Chart
+            const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+            new Chart(ordersCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Orders',
+                        data: [12, 19, 8, 15, 25, 30, 22],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                }
+            });
+
+            // Revenue Chart
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            new Chart(revenueCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Revenue (ETB)',
+                        data: [1200, 1900, 800, 1500, 2500, 3000, 2200],
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                    }]
+                }
+            });
+
+            // Popular Items Chart
+            const popularCtx = document.getElementById('popularItemsChart').getContext('2d');
+            new Chart(popularCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Burger', 'Pizza', 'Shawarma', 'Pasta', 'Drinks'],
+                    datasets: [{
+                        data: [30, 25, 20, 15, 10],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                    }]
+                }
+            });
+
+            // Driver Performance Chart
+            const driverCtx = document.getElementById('driverChart').getContext('2d');
+            new Chart(driverCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Speed', 'Rating', 'Orders', 'Availability', 'Punctuality'],
+                    datasets: [{
+                        label: 'Average Performance',
+                        data: [4.2, 4.8, 4.5, 4.3, 4.6],
+                        fill: true,
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        pointBackgroundColor: 'rgb(255, 99, 132)',
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    }
+                }
+            });
+        }
+
+        // Dashboard Functions
+        function refreshDashboard() {
+            loadDashboardData();
+            showNotification('Dashboard refreshed successfully!', 'success');
+        }
+
+        function openOrderManager() {
+            window.open('/admin', '_blank');
+        }
+
+        function openKitchenDashboard() {
+            window.open('/kitchen', '_blank');
+        }
+
+        function exportOrders() {
+            window.open('/api/orders/export', '_blank');
+        }
+
+        function viewLiveOrders() {
+            alert('Live tracking will open in a new window');
+        }
+
+        function addKitchenStaff() {
+            alert('Add Kitchen Staff functionality');
+        }
+
+        function viewKitchenPerformance() {
+            alert('Kitchen Performance Report');
+        }
+
+        function manageShifts() {
+            alert('Shift Management');
+        }
+
+        function kitchenSettings() {
+            alert('Kitchen Settings');
+        }
+
+        function addDriver() {
+            alert('Add Driver functionality');
+        }
+
+        function viewDriverMap() {
+            alert('Driver Map will open');
+        }
+
+        function driverPerformance() {
+            alert('Driver Performance Report');
+        }
+
+        function managePayouts() {
+            alert('Payout Management');
+        }
+
+        function manageUsers() {
+            alert('User Management');
+        }
+
+        function menuManagement() {
+            window.open('/admin', '_blank');
+        }
+
+        function systemLogs() {
+            alert('System Logs');
+        }
+
+        function systemRestart() {
+            if(confirm('Are you sure you want to restart the system?')) {
+                alert('System restart initiated');
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                delivery_radius: document.getElementById('deliveryRadius').value,
+                min_order_amount: document.getElementById('minOrderAmount').value,
+                delivery_fee: document.getElementById('deliveryFee').value,
+                service_hours: document.getElementById('serviceHours').value,
+                company_phone: document.getElementById('companyPhone').value,
+                company_email: document.getElementById('companyEmail').value
+            };
+
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showNotification('Settings saved successfully!', 'success');
+            })
+            .catch(error => {
+                showNotification('Error saving settings', 'error');
+            });
+        }
+
+        function viewOrder(orderId) {
+            alert(`View order #${orderId}`);
+        }
+
+        function editOrder(orderId) {
+            alert(`Edit order #${orderId}`);
+        }
+
+        function viewDriver(driverId) {
+            alert(`View driver #${driverId}`);
+        }
+
+        function editDriver(driverId) {
+            alert(`Edit driver #${driverId}`);
+        }
+
+        function showNotification(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+            const notification = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            const container = document.querySelector('.dashboard-container');
+            container.insertAdjacentHTML('afterbegin', notification);
+            
+            setTimeout(() => {
+                const alert = container.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

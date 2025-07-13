@@ -79,6 +79,13 @@ def kitchen():
     """Kitchen staff interface"""
     return render_template('kitchen.html')
 
+@app.route('/super-admin')
+def super_admin():
+    """Super Admin Dashboard - Complete control panel"""
+    return render_template('super_admin_dashboard.html')
+
+
+
 @app.route('/api/driver-registration-legacy', methods=['POST'])
 def api_driver_registration():
     """Handle driver registration submission from mini web app"""
@@ -266,6 +273,134 @@ def webapp():
 def admin():
     """Admin dashboard"""
     return render_template('admin_simple_working.html')
+
+@app.route('/admin-panel')
+def admin_panel():
+    """Alternative admin panel"""
+    return render_template('admin_clean.html')
+
+@app.route('/api/admin/statistics')
+def get_admin_statistics():
+    """Get comprehensive admin statistics for super admin dashboard"""
+    try:
+        # Total orders
+        total_orders = Order.query.count()
+        
+        # Total customers (unique telegram users)
+        total_customers = db.session.query(Order.telegram_user_id).distinct().count()
+        
+        # Active drivers
+        active_drivers = Driver.query.filter_by(is_active=True, is_approved=True).count()
+        
+        # Today's revenue
+        today = datetime.now().date()
+        today_orders = Order.query.filter(
+            db.func.date(Order.created_at) == today,
+            Order.status.in_(['delivered', 'out_for_delivery', 'preparing'])
+        ).all()
+        today_revenue = sum(order.total_amount for order in today_orders)
+        
+        # Recent orders count (last 24 hours)
+        yesterday = datetime.now() - timedelta(days=1)
+        recent_orders = Order.query.filter(Order.created_at >= yesterday).count()
+        
+        # Active sessions (orders in progress)
+        active_sessions = Order.query.filter(
+            Order.status.in_(['pending', 'confirmed', 'preparing', 'out_for_delivery'])
+        ).count()
+        
+        return jsonify({
+            'total_orders': total_orders,
+            'total_customers': total_customers,
+            'active_drivers': active_drivers,
+            'today_revenue': round(today_revenue, 2),
+            'recent_orders': recent_orders,
+            'active_sessions': active_sessions
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting admin statistics: {e}")
+        return jsonify({'error': 'Failed to load statistics'}), 500
+
+@app.route('/api/drivers')
+def get_drivers_list():
+    """Get list of all drivers for super admin dashboard"""
+    try:
+        drivers = Driver.query.all()
+        drivers_data = []
+        
+        for driver in drivers:
+            # Get today's deliveries count
+            today = datetime.now().date()
+            deliveries_today = Order.query.filter(
+                Order.driver_id == driver.id,
+                db.func.date(Order.updated_at) == today,
+                Order.status == 'delivered'
+            ).count()
+            
+            # Get current order if any
+            current_order = Order.query.filter(
+                Order.driver_id == driver.id,
+                Order.status.in_(['out_for_delivery', 'preparing'])
+            ).first()
+            
+            drivers_data.append({
+                'id': driver.id,
+                'name': driver.name,
+                'phone_number': driver.phone_number,
+                'vehicle_type': driver.vehicle_type or 'Unknown',
+                'is_active': driver.is_active,
+                'is_available': driver.is_available,
+                'is_approved': driver.is_approved,
+                'current_order': f"Order #{current_order.id}" if current_order else None,
+                'deliveries_today': deliveries_today,
+                'telegram_user_id': driver.telegram_user_id
+            })
+        
+        return jsonify({'drivers': drivers_data})
+        
+    except Exception as e:
+        logger.error(f"Error getting drivers list: {e}")
+        return jsonify({'error': 'Failed to load drivers'}), 500
+
+@app.route('/api/settings', methods=['POST'])
+def save_system_settings():
+    """Save system configuration settings"""
+    try:
+        data = request.get_json()
+        
+        # Define settings to save
+        settings_map = {
+            'delivery_radius': data.get('delivery_radius', '10'),
+            'min_order_amount': data.get('min_order_amount', '50'),
+            'delivery_fee': data.get('delivery_fee', '15'),
+            'service_hours': data.get('service_hours', '8:00 AM - 11:00 PM'),
+            'company_phone': data.get('company_phone', '+251-911-123456'),
+            'company_email': data.get('company_email', 'admin@etfood.et')
+        }
+        
+        # Update or create settings
+        for key, value in settings_map.items():
+            setting = SystemSettings.query.filter_by(setting_key=key).first()
+            if setting:
+                setting.setting_value = str(value)
+                setting.updated_at = datetime.utcnow()
+            else:
+                setting = SystemSettings(
+                    setting_key=key,
+                    setting_value=str(value),
+                    description=f"System setting for {key.replace('_', ' ').title()}"
+                )
+                db.session.add(setting)
+        
+        db.session.commit()
+        logger.info("System settings updated successfully")
+        
+        return jsonify({'success': True, 'message': 'Settings saved successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error saving system settings: {e}")
+        return jsonify({'error': 'Failed to save settings'}), 500
 
 @app.route('/kitchen')
 def kitchen_dashboard():
