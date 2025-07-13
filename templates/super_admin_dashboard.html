@@ -343,9 +343,12 @@
                 <!-- Payment Verification Panel -->
                 <div class="tab-pane fade" id="payment-panel">
                     <div class="control-section">
-                        <h4>Payment Verification</h4>
-                        <p class="text-muted">Verify customer payments that have been deposited to bank accounts</p>
-                        <button class="btn btn-primary btn-control" onclick="refreshPaymentVerification()">
+                        <h4>Payment Verification (View Only)</h4>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-eye"></i>
+                            <strong>Super Admin View:</strong> This is a view-only panel. Payment verification actions are handled by Admin staff. In the future, this will be automated.
+                        </div>
+                        <button class="btn btn-primary btn-control" onclick="refreshSuperAdminPaymentVerification()">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
                         <button class="btn btn-info btn-control" onclick="viewBankDetails()">
@@ -355,10 +358,10 @@
 
                     <!-- Payment Verification Orders -->
                     <div class="table-container">
-                        <h5>Orders Awaiting Payment Verification</h5>
+                        <h5>All Payment Verification Orders</h5>
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            These orders have been confirmed and customers have been sent bank account details for deposit. Verify payments manually after checking your bank accounts.
+                            View all orders with payment screenshots uploaded by customers. Admin staff handle verification manually.
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -369,19 +372,20 @@
                                         <th>Phone</th>
                                         <th>Amount (ETB)</th>
                                         <th>Order Time</th>
-                                        <th>Items</th>
-                                        <th>Actions</th>
+                                        <th>Payment Method</th>
+                                        <th>Screenshot</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="paymentVerificationTable">
+                                <tbody id="superAdminPaymentVerificationTable">
                                     <!-- Orders will be loaded here -->
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noPaymentOrders" class="text-center p-4" style="display: none;">
+                        <div id="noSuperAdminPaymentOrders" class="text-center p-4" style="display: none;">
                             <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                            <h5>No Orders Waiting for Payment Verification</h5>
-                            <p class="text-muted">All orders have been processed or there are no confirmed orders requiring payment verification.</p>
+                            <h5>No Payment Orders Found</h5>
+                            <p class="text-muted">No customers have uploaded payment receipts yet.</p>
                         </div>
                     </div>
                 </div>
@@ -973,6 +977,92 @@
                 console.error('Error:', error);
                 showNotification('Error verifying payment', 'error');
             });
+        }
+
+        // Super Admin Payment Verification Functions
+        function refreshSuperAdminPaymentVerification() {
+            loadSuperAdminPaymentVerificationOrders();
+            showNotification('Payment verification data refreshed!', 'success');
+        }
+
+        function loadSuperAdminPaymentVerificationOrders() {
+            fetch('/api/orders/payment-verification/super-admin')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('superAdminPaymentVerificationTable');
+                    const noOrdersDiv = document.getElementById('noSuperAdminPaymentOrders');
+                    
+                    if (data.orders && data.orders.length > 0) {
+                        tbody.innerHTML = '';
+                        noOrdersDiv.style.display = 'none';
+                        tbody.parentElement.parentElement.style.display = 'block';
+                        
+                        data.orders.forEach(order => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td>${order.customer_phone || 'N/A'}</td>
+                                <td>ETB ${order.total_amount.toFixed(2)}</td>
+                                <td>${new Date(order.created_at).toLocaleString()}</td>
+                                <td>
+                                    <span class="badge bg-info">${order.payment_method || 'Not specified'}</span>
+                                </td>
+                                <td>
+                                    ${order.transaction_image_url ? 
+                                        `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
+                                            <i class="fas fa-image"></i> View
+                                        </button>` : 
+                                        '<span class="text-muted">No screenshot</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge ${order.status === 'payment_verified' ? 'bg-success' : 'bg-warning'}">${order.status}</span>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        tbody.innerHTML = '';
+                        tbody.parentElement.parentElement.style.display = 'none';
+                        noOrdersDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading super admin payment verification orders:', error);
+                    showNotification('Error loading payment verification orders', 'error');
+                });
+        }
+
+        function viewPaymentScreenshot(imageUrl) {
+            const modalHtml = `
+                <div class="modal fade" id="paymentScreenshotModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Payment Screenshot</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                <img src="${imageUrl}" alt="Payment Screenshot" class="img-fluid" style="max-height: 500px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('paymentScreenshotModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('paymentScreenshotModal'));
+            modal.show();
         }
 
         function viewBankDetails() {
