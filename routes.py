@@ -7,7 +7,7 @@ from flask import render_template, request, jsonify, send_file, session, redirec
 from werkzeug.utils import secure_filename
 from app import app
 from extensions import db
-from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver
+from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change
 import logging
@@ -3753,3 +3753,69 @@ def send_driver_message_api():
             'success': False,
             'message': 'Failed to send message'
         }), 500
+
+# Driver Search Radius Management API Endpoints
+@app.route('/api/admin/driver-search-radius', methods=['GET'])
+def get_driver_search_radius():
+    """Get current driver search radius setting"""
+    try:
+        setting = SystemSettings.query.filter_by(setting_key='driver_search_radius').first()
+        
+        if setting:
+            radius = float(setting.setting_value)
+        else:
+            radius = 10.0  # Default 10km
+        
+        return jsonify({
+            'success': True,
+            'radius': radius,
+            'unit': 'km'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting driver search radius: {e}")
+        return jsonify({'error': 'Failed to get search radius'}), 500
+
+@app.route('/api/admin/driver-search-radius', methods=['PUT'])
+def update_driver_search_radius():
+    """Update driver search radius setting"""
+    try:
+        data = request.get_json()
+        new_radius = data.get('radius')
+        
+        if not new_radius:
+            return jsonify({'error': 'Radius value is required'}), 400
+        
+        try:
+            radius_value = float(new_radius)
+            if radius_value <= 0:
+                return jsonify({'error': 'Radius must be a positive number'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid radius value'}), 400
+        
+        # Get or create the setting
+        setting = SystemSettings.query.filter_by(setting_key='driver_search_radius').first()
+        
+        if setting:
+            setting.setting_value = str(radius_value)
+            setting.updated_at = datetime.utcnow()
+        else:
+            setting = SystemSettings(
+                setting_key='driver_search_radius',
+                setting_value=str(radius_value),
+                description='Driver search radius in kilometers for order assignments'
+            )
+            db.session.add(setting)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'radius': radius_value,
+            'unit': 'km',
+            'message': f'Driver search radius updated to {radius_value}km'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating driver search radius: {e}")
+        return jsonify({'error': 'Failed to update search radius'}), 500

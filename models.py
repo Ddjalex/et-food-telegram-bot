@@ -73,6 +73,24 @@ class AdminUser(db.Model):
     telegram_user_id = db.Column(db.BigInteger, unique=True, nullable=False)
     username = db.Column(db.String(100))
     is_active = db.Column(db.Boolean, default=True)
+
+class SystemSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    setting_key = db.Column(db.String(100), unique=True, nullable=False)
+    setting_value = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'setting_key': self.setting_key,
+            'setting_value': self.setting_value,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Category(db.Model):

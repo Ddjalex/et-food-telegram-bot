@@ -400,6 +400,75 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane fade" id="settings" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-cogs me-2"></i>
+                                    Driver Search Settings
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="searchRadius" class="form-label">
+                                            Driver Search Radius
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="searchRadius" 
+                                                   placeholder="10" min="1" max="100" step="0.5">
+                                            <span class="input-group-text">km</span>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Distance radius for finding nearby drivers when assigning orders
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-primary" id="updateRadiusBtn">
+                                                <i class="fas fa-save me-2"></i>
+                                                Update Radius
+                                            </button>
+                                            <button class="btn btn-secondary" id="resetRadiusBtn">
+                                                <i class="fas fa-undo me-2"></i>
+                                                Reset to Default (10km)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Information
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-circle text-success me-2"></i>
+                                    <span>Current Radius: <strong id="currentRadius">10</strong> km</span>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    <strong>Tip:</strong> Increasing the radius will find more drivers but may increase delivery time. Decreasing it will find closer drivers but may reduce availability.
+                                </div>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Note:</strong> Changes take effect immediately for new orders.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1344,7 +1413,100 @@
             }
         });
 
+        // Settings Tab Functions
+        function loadDriverSearchRadius() {
+            fetch('/api/admin/driver-search-radius')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('searchRadius').value = data.radius;
+                        document.getElementById('currentRadius').textContent = data.radius;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading radius:', error);
+                });
+        }
+
+        function updateDriverSearchRadius() {
+            const radiusInput = document.getElementById('searchRadius');
+            const radius = parseFloat(radiusInput.value);
+            
+            if (!radius || radius <= 0) {
+                alert('Please enter a valid radius value (greater than 0)');
+                return;
+            }
+            
+            if (radius > 100) {
+                alert('Radius cannot exceed 100 km');
+                return;
+            }
+            
+            fetch('/api/admin/driver-search-radius', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ radius: radius })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('currentRadius').textContent = data.radius;
+                    alert(data.message);
+                } else {
+                    alert(data.error || 'Failed to update radius');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating radius:', error);
+                alert('Failed to update radius');
+            });
+        }
+
+        function resetDriverSearchRadius() {
+            if (confirm('Reset driver search radius to default 10km?')) {
+                fetch('/api/admin/driver-search-radius', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ radius: 10 })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('searchRadius').value = 10;
+                        document.getElementById('currentRadius').textContent = 10;
+                        alert('Radius reset to default 10km');
+                    } else {
+                        alert(data.error || 'Failed to reset radius');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error resetting radius:', error);
+                    alert('Failed to reset radius');
+                });
+            }
+        }
+
+        // Initialize settings tab
+        function initializeSettings() {
+            // Load current radius when settings tab is opened
+            document.querySelector('a[href="#settings"]').addEventListener('click', function() {
+                loadDriverSearchRadius();
+            });
+            
+            // Update radius button
+            document.getElementById('updateRadiusBtn').addEventListener('click', updateDriverSearchRadius);
+            
+            // Reset radius button
+            document.getElementById('resetRadiusBtn').addEventListener('click', resetDriverSearchRadius);
+        }
+
         // Initialize (removed duplicate - using admin-enhanced.js instead)
+        // Initialize settings
+        initializeSettings();
     </script>
 </body>
 </html>

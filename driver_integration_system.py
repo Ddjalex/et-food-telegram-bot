@@ -10,12 +10,23 @@ import requests
 from datetime import datetime, timedelta
 from app import app
 from extensions import db
-from models import Driver, Order, AdminUser
+from models import Driver, Order, AdminUser, SystemSettings
 
 class DriverIntegrationSystem:
     def __init__(self):
         self.driver_bot_token = os.environ.get('DRIVER_BOT_TOKEN')
         self.base_url = f"https://api.telegram.org/bot{self.driver_bot_token}"
+    
+    def get_search_radius(self):
+        """Get the current search radius from admin settings"""
+        with app.app_context():
+            setting = SystemSettings.query.filter_by(setting_key='driver_search_radius').first()
+            if setting:
+                try:
+                    return float(setting.setting_value)
+                except (ValueError, TypeError):
+                    return 10.0  # Default 10km
+            return 10.0  # Default 10km
         
     def send_driver_notification(self, telegram_id, message, keyboard=None):
         """Send notification to driver with enhanced formatting"""
@@ -68,6 +79,9 @@ class DriverIntegrationSystem:
                 self.notify_admin_no_drivers(order)
                 return False
             
+            # Get configurable search radius
+            search_radius = self.get_search_radius()
+            
             # Calculate distances and sort by proximity
             drivers_with_distance = []
             for driver in available_drivers:
@@ -75,7 +89,7 @@ class DriverIntegrationSystem:
                     driver.current_lat, driver.current_lng,
                     order.location_lat or 9.165, order.location_lng or 40.510
                 )
-                if distance <= 10:  # Within 10km
+                if distance <= search_radius:  # Within configurable radius
                     drivers_with_distance.append((driver, distance))
             
             drivers_with_distance.sort(key=lambda x: x[1])
@@ -86,7 +100,7 @@ class DriverIntegrationSystem:
                 if self.send_order_notification(driver, order, distance):
                     notifications_sent += 1
             
-            print(f"📱 Sent {notifications_sent} driver notifications for Order #{order_id}")
+            print(f"📱 Sent {notifications_sent} driver notifications for Order #{order_id} (search radius: {search_radius}km)")
             return notifications_sent > 0
     
     def send_order_notification(self, driver, order, distance):
@@ -161,14 +175,17 @@ class DriverIntegrationSystem:
     
     def notify_admin_no_drivers(self, order):
         """Notify admin when no drivers are available"""
+        search_radius = self.get_search_radius()
         admin_message = f"⚠️ *NO DRIVERS AVAILABLE*\n\n"
         admin_message += f"Order #{order.id} cannot be assigned\n"
         admin_message += f"Customer: {order.customer_name}\n"
         admin_message += f"Phone: {order.customer_phone}\n"
-        admin_message += f"Amount: {order.total_amount:.2f} ETB\n\n"
+        admin_message += f"Amount: {order.total_amount:.2f} ETB\n"
+        admin_message += f"Search Radius: {search_radius}km\n\n"
         admin_message += f"*Action Required:*\n"
         admin_message += f"• Contact drivers to go online\n"
         admin_message += f"• Manually assign from admin dashboard\n"
+        admin_message += f"• Consider increasing search radius\n"
         admin_message += f"• Consider using delivery bot"
         
         # Send to all active admins
