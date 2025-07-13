@@ -272,6 +272,11 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment-panel">
+                        <i class="fas fa-credit-card"></i> Payment Verification
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="kitchen-tab" data-bs-toggle="tab" data-bs-target="#kitchen-panel">
                         <i class="fas fa-utensils"></i> Kitchen Control
                     </button>
@@ -331,6 +336,52 @@
                                     <!-- Orders will be loaded here -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Verification Panel -->
+                <div class="tab-pane fade" id="payment-panel">
+                    <div class="control-section">
+                        <h4>Payment Verification</h4>
+                        <p class="text-muted">Verify customer payments that have been deposited to bank accounts</p>
+                        <button class="btn btn-primary btn-control" onclick="refreshPaymentVerification()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-info btn-control" onclick="viewBankDetails()">
+                            <i class="fas fa-university"></i> Bank Account Details
+                        </button>
+                    </div>
+
+                    <!-- Payment Verification Orders -->
+                    <div class="table-container">
+                        <h5>Orders Awaiting Payment Verification</h5>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            These orders have been confirmed and customers have been sent bank account details for deposit. Verify payments manually after checking your bank accounts.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Phone</th>
+                                        <th>Amount (ETB)</th>
+                                        <th>Order Time</th>
+                                        <th>Items</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentVerificationTable">
+                                    <!-- Orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noPaymentOrders" class="text-center p-4" style="display: none;">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5>No Orders Waiting for Payment Verification</h5>
+                            <p class="text-muted">All orders have been processed or there are no confirmed orders requiring payment verification.</p>
                         </div>
                     </div>
                 </div>
@@ -558,8 +609,10 @@
             updateLastUpdateTime();
             loadDashboardData();
             initializeCharts();
+            loadPaymentVerificationOrders(); // Load payment verification orders
             setInterval(updateLastUpdateTime, 1000);
             setInterval(loadDashboardData, 30000); // Update every 30 seconds
+            setInterval(loadPaymentVerificationOrders, 60000); // Update payment verification every minute
         });
 
         function updateLastUpdateTime() {
@@ -836,6 +889,118 @@
 
         function editDriver(driverId) {
             alert(`Edit driver #${driverId}`);
+        }
+
+        // Payment Verification Functions
+        function refreshPaymentVerification() {
+            loadPaymentVerificationOrders();
+            showNotification('Payment verification data refreshed!', 'success');
+        }
+
+        function loadPaymentVerificationOrders() {
+            fetch('/api/admin/payment-verification')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayPaymentVerificationOrders(data.orders);
+                    } else {
+                        showNotification('Error loading payment verification orders', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error loading payment verification orders', 'error');
+                });
+        }
+
+        function displayPaymentVerificationOrders(orders) {
+            const tableBody = document.getElementById('paymentVerificationTable');
+            const noOrdersDiv = document.getElementById('noPaymentOrders');
+            
+            if (orders.length === 0) {
+                tableBody.innerHTML = '';
+                noOrdersDiv.style.display = 'block';
+                return;
+            }
+            
+            noOrdersDiv.style.display = 'none';
+            
+            const ordersHtml = orders.map(order => {
+                const orderTime = new Date(order.created_at).toLocaleString();
+                const itemsList = order.items.map(item => `${item.name} (${item.quantity}x)`).join(', ');
+                
+                return `
+                    <tr>
+                        <td><strong>#${order.id}</strong></td>
+                        <td>${order.customer_name}</td>
+                        <td>${order.customer_phone}</td>
+                        <td><strong>${order.total_amount} ETB</strong></td>
+                        <td>${orderTime}</td>
+                        <td><small>${itemsList}</small></td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="verifyPayment(${order.id})">
+                                <i class="fas fa-check-circle"></i> Verify Payment
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tableBody.innerHTML = ordersHtml;
+        }
+
+        function verifyPayment(orderId) {
+            if (!confirm(`Are you sure you want to verify payment for Order #${orderId}?\\n\\nThis action confirms that you have received the payment in your bank account.`)) {
+                return;
+            }
+            
+            fetch(`/api/admin/verify-payment/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Payment verified for Order #${orderId}. Customer has been notified and order will proceed to kitchen.`, 'success');
+                    loadPaymentVerificationOrders(); // Refresh the list
+                } else {
+                    showNotification(data.error || 'Error verifying payment', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error verifying payment', 'error');
+            });
+        }
+
+        function viewBankDetails() {
+            const bankInfo = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-university"></i> Commercial Bank of Ethiopia (CBE)</h6>
+                        <p><strong>Account:</strong> 1000123456789<br>
+                        <strong>Account Name:</strong> ET-FOOD Restaurant</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-mobile-alt"></i> TeleBirr</h6>
+                        <p><strong>Phone:</strong> +251-911-234567<br>
+                        <strong>Account Name:</strong> ET-FOOD</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-university"></i> Dashen Bank</h6>
+                        <p><strong>Account:</strong> 0987654321012<br>
+                        <strong>Account Name:</strong> ET-FOOD Restaurant</p>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    These are the bank account details that customers receive when they place orders. Check these accounts for deposits before verifying payments.
+                </div>
+            `;
+            
+            alert('Bank Account Details:\\n\\nCommercial Bank of Ethiopia (CBE)\\nAccount: 1000123456789\\nAccount Name: ET-FOOD Restaurant\\n\\nTeleBirr\\nPhone: +251-911-234567\\nAccount Name: ET-FOOD\\n\\nDashen Bank\\nAccount: 0987654321012\\nAccount Name: ET-FOOD Restaurant');
         }
 
         function showNotification(message, type = 'info') {

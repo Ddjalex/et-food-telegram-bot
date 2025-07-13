@@ -198,7 +198,7 @@
                     </button>
                     <button type="button" class="btn btn-info" id="paymentVerifiedBtn" onclick="markPaymentVerified()" style="display: none;">
                         <i class="fas fa-credit-card me-1"></i>
-                        Payment Verified
+                        Confirm Payment Received
                     </button>
                     <button type="button" class="btn btn-warning" id="prepareBtn" onclick="startPreparing()" style="display: none;">
                         <i class="fas fa-fire me-1"></i>
@@ -394,11 +394,11 @@
                     break;
                 case 'confirmed':
                     headerClass = 'order-header';
-                    statusBadge = '<span class="status-badge bg-primary">Confirmed - Awaiting Payment</span>';
+                    statusBadge = '<span class="status-badge bg-primary">Confirmed - Customer Notified for Deposit</span>';
                     break;
                 case 'payment_verified':
                     headerClass = 'order-header';
-                    statusBadge = '<span class="status-badge bg-success">Payment Verified - Ready to Cook</span>';
+                    statusBadge = '<span class="status-badge bg-success">Payment Received - Ready to Cook</span>';
                     break;
                 case 'preparing':
                     headerClass = 'order-header order-preparing';
@@ -622,7 +622,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showNotification(`Order #${currentOrderId} marked as available. Customer has been notified.`, 'success');
+                    showNotification(`Order #${currentOrderId} marked as available. Customer has been sent bank account details for deposit.`, 'success');
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
@@ -651,7 +651,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showNotification(`Order #${currentOrderId} payment verified. Ready to start cooking.`, 'success');
+                    showNotification(`Order #${currentOrderId} payment confirmed. Ready to start cooking.`, 'success');
                     
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));

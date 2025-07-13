@@ -343,7 +343,7 @@ def notify_customer_status_change(order_id, new_status):
             return
 
         status_messages = {
-            'confirmed': '✅ Your order has been confirmed! Please deposit the payment amount and our kitchen staff will verify it.',
+            'confirmed': f'✅ Your order has been confirmed!\n\n💰 Please deposit {order.total_amount:.2f} ETB using one of these methods:\n\n🏦 **Commercial Bank of Ethiopia (CBE)**\nAccount: 1000123456789\nAccount Name: ET-FOOD Restaurant\n\n📱 **TeleBirr**\nPhone: +251-911-234567\nAccount Name: ET-FOOD\n\n🏪 **Dashen Bank**\nAccount: 0987654321012\nAccount Name: ET-FOOD Restaurant\n\n📞 **Contact us after deposit:**\n+251-911-123456\n\nAfter making the deposit, our admin will verify your payment and start preparing your order.',
             'payment_verified': '💳 Payment verified! Your order is now being prepared.',
             'preparing': '👨‍🍳 We are preparing your order.',
             'delivered': '🎉 Your order has been delivered!',

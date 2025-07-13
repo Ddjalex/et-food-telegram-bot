@@ -84,6 +84,75 @@ def super_admin():
     """Super Admin Dashboard - Complete control panel"""
     return render_template('super_admin_dashboard.html')
 
+@app.route('/api/admin/payment-verification', methods=['GET'])
+def get_payment_verification_orders():
+    """Get orders that need payment verification"""
+    try:
+        # Get orders with 'confirmed' status waiting for payment verification
+        orders = Order.query.filter_by(status='confirmed').order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            # Parse items
+            items = []
+            try:
+                if isinstance(order.items, str):
+                    items = json.loads(order.items)
+                elif isinstance(order.items, list):
+                    items = order.items
+            except:
+                items = []
+            
+            orders_data.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'customer_address': order.customer_address,
+                'total_amount': order.total_amount,
+                'payment_method': order.payment_method,
+                'items': items,
+                'created_at': order.created_at.isoformat(),
+                'status': order.status
+            })
+        
+        return jsonify({
+            'success': True,
+            'orders': orders_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting payment verification orders: {e}")
+        return jsonify({'error': 'Failed to get orders'}), 500
+
+@app.route('/api/admin/verify-payment/<int:order_id>', methods=['POST'])
+def verify_payment(order_id):
+    """Admin endpoint to verify that payment has been received"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        if order.status != 'confirmed':
+            return jsonify({'error': f'Order status is {order.status}, expected confirmed'}), 400
+        
+        # Update order status to payment_verified
+        order.status = 'payment_verified'
+        order.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Notify customer that payment has been verified
+        notify_customer_status_change(order_id, 'payment_verified')
+        
+        logger.info(f"Admin verified payment for order #{order_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Payment verified for order #{order_id}',
+            'order_id': order_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error verifying payment for order #{order_id}: {e}")
+        return jsonify({'error': 'Failed to verify payment'}), 500
+
 
 
 @app.route('/api/driver-registration-legacy', methods=['POST'])
