@@ -744,6 +744,7 @@
             loadDashboardStats();
             loadOrders(1, 'today'); // Load recent orders
             loadRecentOrders(); // Load for dashboard display
+            loadPaymentNotifications(); // Load payment notifications
         }
 
         // Load dashboard statistics
@@ -768,7 +769,9 @@
             // Load driver statistics
             fetch('/api/drivers')
                 .then(response => response.json())
-                .then(drivers => {
+                .then(data => {
+                    // Handle both array response and object response
+                    const drivers = Array.isArray(data) ? data : (data.drivers || []);
                     const activeDrivers = drivers.filter(driver => 
                         driver.is_active && driver.approval_status === 'approved'
                     ).length;
@@ -1627,8 +1630,9 @@
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('paymentNotifications');
+                    const notifications = data.notifications || [];
                     
-                    if (data.length === 0) {
+                    if (notifications.length === 0) {
                         container.innerHTML = `
                             <div class="text-center p-4">
                                 <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -1640,9 +1644,9 @@
                         return;
                     }
                     
-                    updatePaymentBadge(data.length);
+                    updatePaymentBadge(notifications.length);
                     
-                    container.innerHTML = data.map(order => `
+                    container.innerHTML = notifications.map(order => `
                         <div class="card mb-3" id="payment-${order.id}">
                             <div class="card-body">
                                 <div class="row align-items-center">
@@ -1659,8 +1663,8 @@
                                         <small class="text-muted">${order.payment_method}</small>
                                     </div>
                                     <div class="col-md-2">
-                                        ${order.transaction_image_url ? `
-                                            <button class="btn btn-sm btn-outline-info" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
+                                        ${order.screenshot_url ? `
+                                            <button class="btn btn-sm btn-outline-info" onclick="viewPaymentScreenshot('${order.screenshot_url}')">
                                                 <i class="fas fa-image me-1"></i>
                                                 View Receipt
                                             </button>
