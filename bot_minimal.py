@@ -1140,7 +1140,7 @@ def handle_contact_share(chat_id, contact, user_id):
     # Save to database
     try:
         from models import UserProfile, db
-        from main import app
+        from app import app
         
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
@@ -1178,7 +1178,7 @@ def handle_location_share(chat_id, location, user_id):
     
     try:
         from models import UserProfile, db
-        from main import app
+        from app import app
         
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
@@ -1229,7 +1229,7 @@ def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
         
         # Find the user's most recent order that's awaiting payment
         from models import Order, AdminUser
-        from main import app
+        from app import app
         
         with app.app_context():
             recent_order = Order.query.filter_by(
@@ -1265,51 +1265,61 @@ def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
                 
                 # Notify admin about receipt upload
                 admins = AdminUser.query.filter_by(is_active=True).all()
+                logger.info(f"Found {len(admins)} admin users for notification")
                 
-                admin_message = f"📸 **Payment Receipt Uploaded**\n\n"
-                admin_message += f"📦 Order #{recent_order.id}\n"
-                admin_message += f"👤 Customer: {recent_order.customer_name}\n"
-                admin_message += f"📞 Phone: {recent_order.customer_phone}\n"
-                admin_message += f"💰 Amount: {recent_order.total_amount:.2f} ETB\n"
-                admin_message += f"📅 Order Date: {recent_order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
-                admin_message += f"🔍 **Please verify the payment receipt and update order status**"
-                
-                admin_keyboard = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "✅ Payment Verified", "callback_data": f"verify_payment_{recent_order.id}"},
-                            {"text": "❌ Payment Not Found", "callback_data": f"payment_not_found_{recent_order.id}"}
-                        ],
-                        [
-                            {"text": "📱 View Receipt", "callback_data": f"view_receipt_{file_id}"}
+                if admins:
+                    admin_message = f"📸 **Payment Receipt Uploaded**\n\n"
+                    admin_message += f"📦 Order #{recent_order.id}\n"
+                    admin_message += f"👤 Customer: {recent_order.customer_name}\n"
+                    admin_message += f"📞 Phone: {recent_order.customer_phone}\n"
+                    admin_message += f"💰 Amount: {recent_order.total_amount:.2f} ETB\n"
+                    admin_message += f"📅 Order Date: {recent_order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                    admin_message += f"🔍 **Please verify the payment receipt and update order status**"
+                    
+                    admin_keyboard = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "✅ Payment Verified", "callback_data": f"verify_payment_{recent_order.id}"},
+                                {"text": "❌ Payment Not Found", "callback_data": f"payment_not_found_{recent_order.id}"}
+                            ],
+                            [
+                                {"text": "📱 View Receipt", "callback_data": f"view_receipt_{file_id}"}
+                            ]
                         ]
-                    ]
-                }
-                
-                # Forward the photo to all admins
-                for admin in admins:
-                    try:
-                        # Forward the photo if we have message_id
-                        if message_id:
-                            url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/forwardMessage"
-                            requests.post(url, json={
-                                "chat_id": admin.telegram_user_id,
-                                "from_chat_id": chat_id,
-                                "message_id": message_id
-                            })
-                        else:
-                            # Send the photo directly using sendPhoto
-                            url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendPhoto"
-                            requests.post(url, json={
-                                "chat_id": admin.telegram_user_id,
-                                "photo": file_id,
-                                "caption": f"Payment receipt from {recent_order.customer_name} (Order #{recent_order.id})"
-                            })
-                        
-                        # Send admin message with verification buttons
-                        send_message(admin.telegram_user_id, admin_message, admin_keyboard, parse_mode='Markdown')
-                    except Exception as e:
-                        logger.error(f"Failed to notify admin {admin.telegram_user_id}: {e}")
+                    }
+                    
+                    # Send notifications to all admins
+                    for admin in admins:
+                        try:
+                            logger.info(f"Notifying admin {admin.telegram_user_id} about payment receipt")
+                            
+                            # Forward the photo if we have message_id
+                            if message_id:
+                                url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/forwardMessage"
+                                response = requests.post(url, json={
+                                    "chat_id": admin.telegram_user_id,
+                                    "from_chat_id": chat_id,
+                                    "message_id": message_id
+                                })
+                                logger.info(f"Photo forward response: {response.status_code} - {response.text}")
+                            else:
+                                # Send the photo directly using sendPhoto
+                                url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendPhoto"
+                                response = requests.post(url, json={
+                                    "chat_id": admin.telegram_user_id,
+                                    "photo": file_id,
+                                    "caption": f"Payment receipt from {recent_order.customer_name} (Order #{recent_order.id})"
+                                })
+                                logger.info(f"Photo send response: {response.status_code} - {response.text}")
+                            
+                            # Send admin message with verification buttons
+                            send_message(admin.telegram_user_id, admin_message, admin_keyboard, parse_mode='Markdown')
+                            logger.info(f"Successfully notified admin {admin.telegram_user_id}")
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to notify admin {admin.telegram_user_id}: {e}")
+                else:
+                    logger.warning("No active admin users found for payment receipt notification")
                         
             else:
                 # No recent order found
@@ -1373,7 +1383,7 @@ def check_user_registration(chat_id, user_id):
     """Check if user has shared both contact and location"""
     try:
         from models import UserProfile, db
-        from main import app
+        from app import app
         
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
@@ -1496,7 +1506,7 @@ def handle_feedback_submission(chat_id, user_id, feedback_text):
     try:
         # Get user info
         from models import UserProfile, AdminUser
-        from main import app
+        from app import app
         
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
