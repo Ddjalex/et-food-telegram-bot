@@ -1060,6 +1060,7 @@ def api_request_driver_live_location(driver_id):
         return jsonify({'success': False, 'message': 'Server error'}), 500
 
 # Payment Verification API Endpoints
+@app.route('/api/admin/payment-verification', methods=['GET'])
 @app.route('/api/orders/payment-verification', methods=['GET'])
 def get_payment_verification_orders():
     """Get orders requiring payment verification"""
