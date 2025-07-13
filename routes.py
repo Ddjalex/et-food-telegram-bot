@@ -84,74 +84,9 @@ def super_admin():
     """Super Admin Dashboard - Complete control panel"""
     return render_template('super_admin_dashboard.html')
 
-@app.route('/api/admin/payment-verification', methods=['GET'])
-def get_payment_verification_orders():
-    """Get orders that need payment verification"""
-    try:
-        # Get orders with 'confirmed' status waiting for payment verification
-        orders = Order.query.filter_by(status='confirmed').order_by(Order.created_at.desc()).all()
-        
-        orders_data = []
-        for order in orders:
-            # Parse items
-            items = []
-            try:
-                if isinstance(order.items, str):
-                    items = json.loads(order.items)
-                elif isinstance(order.items, list):
-                    items = order.items
-            except:
-                items = []
-            
-            orders_data.append({
-                'id': order.id,
-                'customer_name': order.customer_name,
-                'customer_phone': order.customer_phone,
-                'customer_address': order.customer_address,
-                'total_amount': order.total_amount,
-                'payment_method': order.payment_method,
-                'items': items,
-                'created_at': order.created_at.isoformat(),
-                'status': order.status
-            })
-        
-        return jsonify({
-            'success': True,
-            'orders': orders_data
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting payment verification orders: {e}")
-        return jsonify({'error': 'Failed to get orders'}), 500
 
-@app.route('/api/admin/verify-payment/<int:order_id>', methods=['POST'])
-def verify_payment(order_id):
-    """Admin endpoint to verify that payment has been received"""
-    try:
-        order = Order.query.get_or_404(order_id)
-        
-        if order.status != 'confirmed':
-            return jsonify({'error': f'Order status is {order.status}, expected confirmed'}), 400
-        
-        # Update order status to payment_verified
-        order.status = 'payment_verified'
-        order.updated_at = datetime.utcnow()
-        db.session.commit()
-        
-        # Notify customer that payment has been verified
-        notify_customer_status_change(order_id, 'payment_verified')
-        
-        logger.info(f"Admin verified payment for order #{order_id}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Payment verified for order #{order_id}',
-            'order_id': order_id
-        })
-        
-    except Exception as e:
-        logger.error(f"Error verifying payment for order #{order_id}: {e}")
-        return jsonify({'error': 'Failed to verify payment'}), 500
+
+
 
 
 
@@ -1123,6 +1058,105 @@ def api_request_driver_live_location(driver_id):
     except Exception as e:
         logger.error(f"Error requesting driver live location: {e}")
         return jsonify({'success': False, 'message': 'Server error'}), 500
+
+# Payment Verification API Endpoints
+@app.route('/api/orders/payment-verification', methods=['GET'])
+def get_payment_verification_orders():
+    """Get orders requiring payment verification"""
+    try:
+        # Get orders that need payment verification (status = 'payment_pending' or 'confirmed' with transaction_image_url)
+        orders = Order.query.filter(
+            db.or_(
+                Order.status == 'payment_pending',
+                db.and_(
+                    Order.status == 'confirmed',
+                    Order.transaction_image_url.isnot(None)
+                )
+            )
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            order_dict = order.to_dict()
+            orders_data.append(order_dict)
+        
+        return jsonify({
+            'success': True,
+            'orders': orders_data,
+            'count': len(orders_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching payment verification orders: {e}")
+        return jsonify({'error': 'Failed to fetch payment verification orders'}), 500
+
+@app.route('/api/orders/<int:order_id>/verify-payment', methods=['POST'])
+def verify_payment(order_id):
+    """Verify payment for an order"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        
+        # Update order status to payment_verified
+        order.status = 'payment_verified'
+        db.session.commit()
+        
+        # Notify customer about payment verification
+        try:
+            from bot_minimal import send_message
+            message = f"✅ **Payment Verified**\n\n"
+            message += f"📦 Order #{order.id}\n"
+            message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+            message += f"🍳 Your payment has been verified! Kitchen staff will now start preparing your order.\n"
+            message += f"⏰ Estimated preparation time: 15-20 minutes\n\n"
+            message += f"Thank you for your order! 😊"
+            
+            send_message(order.telegram_user_id, message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Error sending payment verification notification: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Payment verified successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error verifying payment for order #{order_id}: {e}")
+        return jsonify({'error': 'Failed to verify payment'}), 500
+
+@app.route('/api/orders/<int:order_id>/reject-payment', methods=['POST'])
+def reject_payment(order_id):
+    """Reject payment for an order"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        reason = data.get('reason', 'Payment verification failed')
+        
+        # Update order status to cancelled
+        order.status = 'cancelled'
+        db.session.commit()
+        
+        # Notify customer about payment rejection
+        try:
+            from bot_minimal import send_message
+            message = f"❌ **Payment Rejected**\n\n"
+            message += f"📦 Order #{order.id}\n"
+            message += f"💰 Amount: {order.total_amount:.2f} ETB\n\n"
+            message += f"🚫 **Reason:** {reason}\n\n"
+            message += f"Please try again with a clear payment screenshot or contact support.\n\n"
+            message += f"Thank you for your understanding."
+            
+            send_message(order.telegram_user_id, message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Error sending payment rejection notification: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Payment rejected successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error rejecting payment for order #{order_id}: {e}")
+        return jsonify({'error': 'Failed to reject payment'}), 500
 
 @app.route('/api/orders', methods=['POST'])
 def create_order():
@@ -2963,40 +2997,7 @@ def get_payment_notifications():
 
 
 
-@app.route('/api/admin/reject-payment/<int:order_id>', methods=['POST'])
-def reject_payment(order_id):
-    """Admin reject payment for order"""
-    try:
-        data = request.get_json()
-        reason = data.get('reason', 'Payment not found or invalid')
-        
-        order = Order.query.get_or_404(order_id)
-        
-        # Update order status
-        order.status = 'cancelled'
-        db.session.commit()
-        
-        # Notify customer about rejection
-        try:
-            from bot_minimal import send_message
-            message = f"❌ **Payment Verification Failed**\n\n"
-            message += f"Order #{order_id} has been cancelled.\n\n"
-            message += f"**Reason:** {reason}\n\n"
-            message += f"Please contact us if you believe this is an error.\n"
-            message += f"📞 Support: +251-911-123456"
-            
-            send_message(order.telegram_user_id, message, parse_mode='Markdown')
-        except Exception as e:
-            logger.error(f"Failed to notify customer: {e}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Payment rejected for Order #{order_id}',
-            'order_id': order_id
-        })
-    except Exception as e:
-        logger.error(f"Error rejecting payment: {e}")
-        return jsonify({'error': 'Failed to reject payment'}), 500
+
 
 @app.route('/api/admin/orders/clear-previous', methods=['POST'])
 def clear_previous_orders():

@@ -71,6 +71,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="#payment-verification" data-tab="payment-verification">
+                                <i class="fas fa-credit-card"></i> Payment Verification
+                                <span id="paymentVerificationCount" class="badge bg-warning ms-2" style="display: none;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#drivers" data-tab="drivers">
                                 <i class="fas fa-motorcycle"></i> Drivers
                             </a>
@@ -216,6 +222,44 @@
                         </div>
                         <div class="row" id="categoriesGrid">
                             <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Verification Tab -->
+                <div id="payment-verification-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Payment Verification</h3>
+                            <div>
+                                <button class="btn btn-outline-info" onclick="loadPaymentVerificationOrders()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Phone</th>
+                                        <th>Amount (ETB)</th>
+                                        <th>Order Time</th>
+                                        <th>Payment Method</th>
+                                        <th>Screenshot</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentVerificationTableBody">
+                                    <!-- Payment verification orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noPaymentOrders" class="text-center p-4" style="display: none;">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5>No Orders Waiting for Payment Verification</h5>
+                            <p class="text-muted">All orders have been processed or there are no confirmed orders requiring payment verification.</p>
                         </div>
                     </div>
                 </div>
@@ -383,6 +427,9 @@
                     break;
                 case 'categories':
                     loadCategories();
+                    break;
+                case 'payment-verification':
+                    loadPaymentVerificationOrders();
                     break;
                 case 'drivers':
                     initializeLiveTracking();
@@ -783,6 +830,155 @@
                     });
                 })
                 .catch(error => console.error('Error loading categories:', error));
+        }
+
+        // Load payment verification orders
+        function loadPaymentVerificationOrders() {
+            fetch('/api/orders/payment-verification')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('paymentVerificationTableBody');
+                    const noOrdersDiv = document.getElementById('noPaymentOrders');
+                    const badge = document.getElementById('paymentVerificationCount');
+                    
+                    if (data.orders && data.orders.length > 0) {
+                        tbody.innerHTML = '';
+                        noOrdersDiv.style.display = 'none';
+                        tbody.parentElement.parentElement.style.display = 'block';
+                        
+                        // Update badge count
+                        badge.textContent = data.orders.length;
+                        badge.style.display = 'inline';
+                        
+                        data.orders.forEach(order => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td>${order.customer_phone || 'N/A'}</td>
+                                <td>ETB ${order.total_amount.toFixed(2)}</td>
+                                <td>${new Date(order.created_at).toLocaleString()}</td>
+                                <td>
+                                    <span class="badge bg-info">${order.payment_method || 'Not specified'}</span>
+                                </td>
+                                <td>
+                                    ${order.transaction_image_url ? 
+                                        `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
+                                            <i class="fas fa-image"></i> View
+                                        </button>` : 
+                                        '<span class="text-muted">No screenshot</span>'
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-success" onclick="verifyPayment(${order.id})" title="Verify Payment">
+                                            <i class="fas fa-check"></i> Verify
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="rejectPayment(${order.id})" title="Reject Payment">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    } else {
+                        tbody.innerHTML = '';
+                        tbody.parentElement.parentElement.style.display = 'none';
+                        noOrdersDiv.style.display = 'block';
+                        
+                        // Hide badge
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading payment verification orders:', error);
+                    alert('Error loading payment verification orders');
+                });
+        }
+
+        // View payment screenshot
+        function viewPaymentScreenshot(imageUrl) {
+            const modalHtml = `
+                <div class="modal fade" id="paymentScreenshotModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Payment Screenshot</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                <img src="${imageUrl}" alt="Payment Screenshot" class="img-fluid" style="max-height: 500px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('paymentScreenshotModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('paymentScreenshotModal'));
+            modal.show();
+        }
+
+        // Verify payment
+        function verifyPayment(orderId) {
+            if (!confirm('Are you sure you want to verify this payment?')) {
+                return;
+            }
+            
+            fetch(`/api/orders/${orderId}/verify-payment`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment verified successfully');
+                    loadPaymentVerificationOrders();
+                } else {
+                    alert('Error verifying payment: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error verifying payment:', error);
+                alert('Error verifying payment');
+            });
+        }
+
+        // Reject payment
+        function rejectPayment(orderId) {
+            const reason = prompt('Please provide a reason for rejecting this payment:');
+            if (!reason) {
+                return;
+            }
+            
+            fetch(`/api/orders/${orderId}/reject-payment`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({reason: reason})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment rejected successfully');
+                    loadPaymentVerificationOrders();
+                } else {
+                    alert('Error rejecting payment: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error rejecting payment:', error);
+                alert('Error rejecting payment');
+            });
         }
 
         // Global variables for map

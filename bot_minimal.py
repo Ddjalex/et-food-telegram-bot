@@ -645,7 +645,7 @@ def handle_callback_query(callback_query):
         send_message(chat_id, message, keyboard, parse_mode='Markdown')
     
     elif data.startswith("payment_complete_"):
-        # Handle payment completion notification
+        # Handle payment completion notification - REQUIRE SCREENSHOT
         order_id = int(data.split("_")[2])
         
         # Get order details
@@ -654,6 +654,16 @@ def handle_callback_query(callback_query):
         if not order:
             send_message(chat_id, "❌ Order not found.")
             return
+        
+        # Check if payment screenshot was uploaded
+        if not order.transaction_image_url:
+            send_message(chat_id, "❌ **Payment Screenshot Required**\n\n📸 Please upload a screenshot of your payment receipt first, then click 'Payment Complete'.\n\n**How to upload:**\n1. Take a screenshot of your payment receipt\n2. Send the image to this chat\n3. Then click 'Payment Complete' button", parse_mode='Markdown')
+            return
+        
+        # Update order status to payment_pending (waiting for admin verification)
+        from extensions import db
+        order.status = 'payment_pending'
+        db.session.commit()
         
         # Notify customer
         confirmation_message = f"✅ **Payment Confirmation Received**\n\n"
