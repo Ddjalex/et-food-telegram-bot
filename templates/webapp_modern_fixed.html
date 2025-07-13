@@ -600,13 +600,59 @@
             color: #6b7280;
         }
         
-        .payment-options {
+        .payment-info {
             margin-bottom: 20px;
         }
         
-        .payment-options h4 {
+        .payment-info h4 {
             color: #ffffff;
             margin-bottom: 10px;
+        }
+
+        .payment-notice {
+            background: #16213e;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .notice-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .payment-icon {
+            font-size: 24px;
+            margin-top: 5px;
+        }
+
+        .notice-text {
+            flex: 1;
+        }
+
+        .notice-text strong {
+            color: #3b82f6;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .notice-text p {
+            color: #d1d5db;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .payment-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .step {
+            color: #9ca3af;
+            font-size: 14px;
+            padding: 2px 0;
         }
         
         .payment-methods {
@@ -1490,52 +1536,20 @@
                             </div>
                         </div>
                         
-                        <div class="payment-options">
-                            <h4>Payment Method</h4>
-                            <div class="payment-methods">
-                                <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="cash_on_delivery" checked>
-                                    <span class="payment-icon">💵</span>
-                                    <span>Cash on Delivery</span>
-                                </label>
-                                <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="telebirr">
+                        <div class="payment-info">
+                            <h4>Payment Information</h4>
+                            <div class="payment-notice">
+                                <div class="notice-content">
                                     <span class="payment-icon">💰</span>
-                                    <span>TeleBirr</span>
-                                </label>
-                                <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="cbe_birr">
-                                    <span class="payment-icon">🏛️</span>
-                                    <span>CBE Birr</span>
-                                </label>
-                                <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="mpessa">
-                                    <span class="payment-icon">📱</span>
-                                    <span>M-Pesa</span>
-                                </label>
-                                <label class="payment-method">
-                                    <input type="radio" name="paymentMethod" value="bank_transfer">
-                                    <span class="payment-icon">🏦</span>
-                                    <span>Bank Transfer</span>
-                                </label>
-                            </div>
-                            
-                            <!-- Payment Details Section (Hidden by default) -->
-                            <div id="paymentDetails" class="payment-details" style="display: none;">
-                                <div class="mt-3 p-3" style="background: #16213e; border-radius: 8px;">
-                                    <h5 id="paymentMethodTitle">Payment Details</h5>
-                                    <div id="paymentInstructions"></div>
-                                    
-                                    <div class="mt-3">
-                                        <label for="transactionId" class="form-label">Transaction ID</label>
-                                        <input type="text" id="transactionId" class="form-control" placeholder="Enter transaction ID" style="background: #1a1a2e; border: 1px solid #374151; color: #ffffff;">
-                                    </div>
-                                    
-                                    <div class="mt-3">
-                                        <label for="transactionImage" class="form-label">Payment Screenshot</label>
-                                        <input type="file" id="transactionImage" class="form-control" accept="image/*" style="background: #1a1a2e; border: 1px solid #374151; color: #ffffff;">
-                                        <div id="imagePreview" class="mt-2" style="display: none;">
-                                            <img id="previewImg" style="max-width: 200px; max-height: 200px; border-radius: 8px;">
+                                    <div class="notice-text">
+                                        <strong>Manual Payment Verification</strong>
+                                        <p>After placing your order, our kitchen staff will confirm availability. You will then be contacted for payment details and your order will be prepared after payment confirmation.</p>
+                                        <div class="payment-steps">
+                                            <div class="step">1. Place your order</div>
+                                            <div class="step">2. Kitchen confirms availability</div>
+                                            <div class="step">3. You receive payment details</div>
+                                            <div class="step">4. Make payment</div>
+                                            <div class="step">5. Kitchen starts preparation</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1697,32 +1711,15 @@
             }
         }
 
-        // Place order with selected payment method
+        // Place order with manual payment verification
         async function placeOrder() {
             const customerName = document.getElementById('customerName').value.trim();
             const customerPhone = document.getElementById('customerPhone').value.trim();
             const customerAddress = document.getElementById('customerAddress').value.trim();
-            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
             
             if (!customerName || !customerPhone || !customerAddress) {
                 alert('Please fill in all required fields');
                 return;
-            }
-
-            // Only require transaction details for non-cash payment methods
-            if (paymentMethod !== 'cash_on_delivery') {
-                const transactionId = document.getElementById('transactionId').value.trim();
-                const transactionImage = document.getElementById('transactionImage').files[0];
-                
-                if (!transactionId) {
-                    alert('Please enter the transaction ID for this payment method');
-                    return;
-                }
-                
-                if (!transactionImage) {
-                    alert('Please upload a screenshot of your payment');
-                    return;
-                }
             }
 
             // Get telegram user ID  
@@ -1737,16 +1734,10 @@
                 customer_name: customerName,
                 customer_phone: customerPhone,
                 customer_address: customerAddress,
-                payment_method: paymentMethod,
+                payment_method: 'manual_verification', // All orders use manual payment verification
                 location_lat: window.currentOrderLocation?.latitude,
                 location_lng: window.currentOrderLocation?.longitude
             };
-
-            // Add payment details only for non-cash methods
-            if (paymentMethod !== 'cash_on_delivery') {
-                orderData.transaction_id = document.getElementById('transactionId').value.trim();
-                orderData.transaction_image = document.getElementById('transactionImage').files[0];
-            }
 
             await submitOrder(orderData);
         }
@@ -1763,27 +1754,7 @@
                     placeOrderBtn.disabled = true;
                 }
 
-                // Handle file upload if present (only for non-cash payments)
-                if (orderData.transaction_image) {
-                    // First upload the image
-                    const formData = new FormData();
-                    formData.append('file', orderData.transaction_image);
-                    
-                    const uploadResponse = await fetch('/api/upload-image', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    if (uploadResponse.ok) {
-                        const uploadResult = await uploadResponse.json();
-                        orderData.transaction_image_url = uploadResult.image_url;
-                    } else {
-                        throw new Error('Failed to upload payment screenshot');
-                    }
-                    
-                    // Remove the file object from orderData
-                    delete orderData.transaction_image;
-                }
+                // No file upload needed for manual payment verification
 
                 const response = await fetch('/api/orders', {
                     method: 'POST',
@@ -1811,15 +1782,7 @@
                     closeCheckoutModal();
                     
                     // Show success message
-                    const paymentMethodText = {
-                        'cash_on_delivery': 'Cash on Delivery',
-                        'telebirr': 'TeleBirr',
-                        'cbe_birr': 'CBE Birr',
-                        'mpessa': 'M-Pesa',
-                        'bank_transfer': 'Bank Transfer'
-                    }[orderData.payment_method] || 'Cash on Delivery';
-                    
-                    const successMessage = `Order placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\nPayment: ${paymentMethodText}`;
+                    const successMessage = `Order placed successfully!\nTotal: ${Math.round(orderData.total_amount)} ETB\n\nKitchen staff will confirm your order availability and contact you for payment details.`;
                     
                     // Use simple alert for compatibility with all Telegram WebApp versions
                     alert(successMessage);

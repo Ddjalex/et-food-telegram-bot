@@ -343,7 +343,8 @@ def notify_customer_status_change(order_id, new_status):
             return
 
         status_messages = {
-            'confirmed': '✅ Your order has been confirmed!',
+            'confirmed': '✅ Your order has been confirmed! Please deposit the payment amount and our kitchen staff will verify it.',
+            'payment_verified': '💳 Payment verified! Your order is now being prepared.',
             'preparing': '👨‍🍳 We are preparing your order.',
             'delivered': '🎉 Your order has been delivered!',
             'cancelled': '❌ Your order has been cancelled.'
@@ -352,6 +353,7 @@ def notify_customer_status_change(order_id, new_status):
         status_emoji = {
             'pending': '⏳',
             'confirmed': '✅',
+            'payment_verified': '💳',
             'preparing': '👨‍🍳',
             'delivered': '🎉',
             'cancelled': '❌'
