@@ -738,12 +738,90 @@
             }
         }
 
+        // Initialize dashboard statistics
+        function initializeDashboard() {
+            // Load dashboard statistics
+            loadDashboardStats();
+            loadOrders(1, 'today'); // Load recent orders
+            loadRecentOrders(); // Load for dashboard display
+        }
+
+        // Load dashboard statistics
+        function loadDashboardStats() {
+            // Load order statistics
+            fetch('/api/orders?limit=1000')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const totalOrders = orders.length;
+                    const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+                    const pendingOrders = orders.filter(order => order.status === 'pending').length;
+                    
+                    document.getElementById('totalOrders').textContent = totalOrders;
+                    document.getElementById('totalRevenue').textContent = `ETB ${totalRevenue.toFixed(2)}`;
+                    document.getElementById('pendingOrders').textContent = pendingOrders;
+                })
+                .catch(error => {
+                    console.error('Error loading order statistics:', error);
+                });
+            
+            // Load driver statistics
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const activeDrivers = drivers.filter(driver => 
+                        driver.is_active && driver.approval_status === 'approved'
+                    ).length;
+                    document.getElementById('activeDrivers').textContent = activeDrivers;
+                })
+                .catch(error => {
+                    console.error('Error loading driver statistics:', error);
+                    document.getElementById('activeDrivers').textContent = '0';
+                });
+        }
+
+        // Load recent orders for dashboard
+        function loadRecentOrders() {
+            fetch('/api/orders?limit=10')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tbody = document.getElementById('recentOrdersTable');
+                    tbody.innerHTML = '';
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No recent orders</td></tr>';
+                        return;
+                    }
+                    
+                    orders.slice(0, 5).forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>${getStatusBadge(order.status)}</td>
+                            <td>${order.minutes_ago} min ago</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="showOrderDetails(${order.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading recent orders:', error);
+                    const tbody = document.getElementById('recentOrdersTable');
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading orders</td></tr>';
+                });
+        }
+
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize admin dashboard
-            if (typeof initializeDashboard === 'function') {
-                initializeDashboard();
-            }
+            initializeDashboard();
             
             // Initialize payment notifications when tab is shown
             document.querySelector('a[href="#payments"]').addEventListener('click', function() {

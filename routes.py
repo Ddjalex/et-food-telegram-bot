@@ -326,46 +326,7 @@ def get_admin_statistics():
         logger.error(f"Error getting admin statistics: {e}")
         return jsonify({'error': 'Failed to load statistics'}), 500
 
-@app.route('/api/drivers')
-def get_drivers_list():
-    """Get list of all drivers for super admin dashboard"""
-    try:
-        drivers = Driver.query.all()
-        drivers_data = []
-        
-        for driver in drivers:
-            # Get today's deliveries count
-            today = datetime.now().date()
-            deliveries_today = Order.query.filter(
-                Order.driver_id == driver.id,
-                db.func.date(Order.updated_at) == today,
-                Order.status == 'delivered'
-            ).count()
-            
-            # Get current order if any
-            current_order = Order.query.filter(
-                Order.driver_id == driver.id,
-                Order.status.in_(['out_for_delivery', 'preparing'])
-            ).first()
-            
-            drivers_data.append({
-                'id': driver.id,
-                'name': driver.name,
-                'phone_number': driver.phone_number,
-                'vehicle_type': driver.vehicle_type or 'Unknown',
-                'is_active': driver.is_active,
-                'is_available': driver.is_available,
-                'is_approved': driver.is_approved,
-                'current_order': f"Order #{current_order.id}" if current_order else None,
-                'deliveries_today': deliveries_today,
-                'telegram_user_id': driver.telegram_user_id
-            })
-        
-        return jsonify({'drivers': drivers_data})
-        
-    except Exception as e:
-        logger.error(f"Error getting drivers list: {e}")
-        return jsonify({'error': 'Failed to load drivers'}), 500
+# Driver endpoint removed - using consolidated endpoint below
 
 @app.route('/api/settings', methods=['POST'])
 def save_system_settings():
@@ -1986,29 +1947,7 @@ def remove_driver_api(driver_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Failed to remove driver'}), 500
 
-@app.route('/api/drivers')
-def get_all_drivers():
-    """Get all drivers for admin management"""
-    try:
-        drivers = Driver.query.all()
-        return jsonify([{
-            'id': driver.id,
-            'name': driver.name,
-            'phone_number': driver.phone_number,
-            'telegram_user_id': driver.telegram_user_id,
-            'vehicle_type': driver.vehicle_type,
-            'is_active': driver.is_active,
-            'is_available': driver.is_available,
-            'is_approved': driver.is_approved,
-            'approval_status': driver.approval_status,
-            'current_lat': driver.current_lat,
-            'current_lng': driver.current_lng,
-            'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
-            'created_at': driver.created_at.isoformat() if driver.created_at else None
-        } for driver in drivers])
-    except Exception as e:
-        logger.error(f"Error fetching all drivers: {e}")
-        return jsonify({'error': 'Failed to fetch drivers'}), 500
+# Duplicate driver endpoint removed - using consolidated endpoint below
 
 @app.route('/api/drivers/<int:driver_id>/unassign-orders', methods=['POST'])
 def unassign_driver_orders(driver_id):
