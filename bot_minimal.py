@@ -1234,6 +1234,25 @@ def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
                 ).order_by(Order.created_at.desc()).first()
             
             if recent_order:
+                # Get file path from Telegram and store screenshot URL in database
+                try:
+                    file_info_url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/getFile"
+                    file_response = requests.get(file_info_url, params={'file_id': file_id})
+                    file_data = file_response.json()
+                    
+                    if file_data.get('ok'):
+                        file_path = file_data['result']['file_path']
+                        file_url = f"https://api.telegram.org/file/bot{Config.BOT_TOKEN}/{file_path}"
+                        recent_order.transaction_image_url = file_url
+                        db.session.commit()
+                    else:
+                        logger.error(f"Failed to get file info: {file_data}")
+                except Exception as e:
+                    logger.error(f"Failed to get file URL: {e}")
+                    # Store file_id as fallback
+                    recent_order.transaction_image_url = f"telegram_file_id:{file_id}"
+                    db.session.commit()
+                
                 # Notify admin about receipt upload
                 admins = AdminUser.query.filter_by(is_active=True).all()
                 

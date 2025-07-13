@@ -2931,6 +2931,73 @@ def get_live_tracking_data():
 
 
 
+@app.route('/api/admin/payment-notifications', methods=['GET'])
+def get_payment_notifications():
+    """Get pending payment notifications for admin"""
+    try:
+        # Get orders with payment screenshots but not yet verified
+        orders = Order.query.filter(
+            Order.status.in_(['confirmed', 'pending']),
+            Order.transaction_image_url.isnot(None)
+        ).order_by(Order.created_at.desc()).all()
+        
+        notifications = []
+        for order in orders:
+            notifications.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'total_amount': order.total_amount,
+                'created_at': order.created_at.isoformat(),
+                'screenshot_url': order.transaction_image_url,
+                'status': order.status
+            })
+        
+        return jsonify({
+            'notifications': notifications,
+            'count': len(notifications)
+        })
+    except Exception as e:
+        logger.error(f"Error getting payment notifications: {e}")
+        return jsonify({'error': 'Failed to get payment notifications'}), 500
+
+
+
+@app.route('/api/admin/reject-payment/<int:order_id>', methods=['POST'])
+def reject_payment(order_id):
+    """Admin reject payment for order"""
+    try:
+        data = request.get_json()
+        reason = data.get('reason', 'Payment not found or invalid')
+        
+        order = Order.query.get_or_404(order_id)
+        
+        # Update order status
+        order.status = 'cancelled'
+        db.session.commit()
+        
+        # Notify customer about rejection
+        try:
+            from bot_minimal import send_message
+            message = f"❌ **Payment Verification Failed**\n\n"
+            message += f"Order #{order_id} has been cancelled.\n\n"
+            message += f"**Reason:** {reason}\n\n"
+            message += f"Please contact us if you believe this is an error.\n"
+            message += f"📞 Support: +251-911-123456"
+            
+            send_message(order.telegram_user_id, message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to notify customer: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Payment rejected for Order #{order_id}',
+            'order_id': order_id
+        })
+    except Exception as e:
+        logger.error(f"Error rejecting payment: {e}")
+        return jsonify({'error': 'Failed to reject payment'}), 500
+
 @app.route('/api/admin/orders/clear-previous', methods=['POST'])
 def clear_previous_orders():
     """Clear previous orders (delivered, cancelled) from admin dashboard"""
