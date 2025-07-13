@@ -1229,7 +1229,7 @@ def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
         
         # Find the user's most recent order that's awaiting payment
         from models import Order, AdminUser
-        from app import app
+        from app import app, db
         
         with app.app_context():
             recent_order = Order.query.filter_by(

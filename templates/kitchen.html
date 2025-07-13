@@ -196,10 +196,7 @@
                         <i class="fas fa-check-circle me-1"></i>
                         Available
                     </button>
-                    <button type="button" class="btn btn-info" id="paymentVerifiedBtn" onclick="markPaymentVerified()" style="display: none;">
-                        <i class="fas fa-credit-card me-1"></i>
-                        Payment Verified
-                    </button>
+
                     <button type="button" class="btn btn-warning" id="prepareBtn" onclick="startPreparing()" style="display: none;">
                         <i class="fas fa-fire me-1"></i>
                         Start Preparing
@@ -396,10 +393,7 @@
                     headerClass = 'order-header';
                     statusBadge = '<span class="status-badge bg-primary">Confirmed - Customer Notified for Deposit</span>';
                     break;
-                case 'payment_verified':
-                    headerClass = 'order-header';
-                    statusBadge = '<span class="status-badge bg-success">Payment Received - Ready to Cook</span>';
-                    break;
+
                 case 'preparing':
                     headerClass = 'order-header order-preparing';
                     statusBadge = '<span class="status-badge bg-info">Preparing</span>';
@@ -545,12 +539,10 @@
                     
                     // Show appropriate buttons based on order status
                     const availableBtn = document.getElementById('availableBtn');
-                    const paymentVerifiedBtn = document.getElementById('paymentVerifiedBtn');
                     const prepareBtn = document.getElementById('prepareBtn');
                     
                     // Hide all buttons first
                     availableBtn.style.display = 'none';
-                    paymentVerifiedBtn.style.display = 'none';
                     prepareBtn.style.display = 'none';
                     
                     // Show appropriate button based on current status
@@ -559,9 +551,6 @@
                             availableBtn.style.display = 'inline-block';
                             break;
                         case 'confirmed':
-                            paymentVerifiedBtn.style.display = 'inline-block';
-                            break;
-                        case 'payment_verified':
                             prepareBtn.style.display = 'inline-block';
                             break;
                         case 'preparing':
@@ -640,34 +629,7 @@
             });
         }
 
-        function markPaymentVerified() {
-            if (!currentOrderId) return;
-            
-            fetch(`/api/orders/${currentOrderId}/status`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({status: 'payment_verified'})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(`Order #${currentOrderId} payment confirmed. Ready to start cooking.`, 'success');
-                    
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
-                    modal.hide();
-                    
-                    // Reload orders
-                    loadOrders();
-                } else {
-                    showNotification('Error verifying payment', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error verifying payment:', error);
-                showNotification('Error verifying payment', 'error');
-            });
-        }
+
 
         function startPreparing() {
             if (!currentOrderId) return;
