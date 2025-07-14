@@ -2,6 +2,50 @@ from extensions import db
 from datetime import datetime
 from sqlalchemy import func
 
+class Restaurant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    address = db.Column(db.Text)
+    phone = db.Column(db.String(20))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    logo_url = db.Column(db.String(500))
+    cover_image_url = db.Column(db.String(500))
+    is_active = db.Column(db.Boolean, default=True)
+    is_featured = db.Column(db.Boolean, default=False)
+    delivery_fee = db.Column(db.Float, default=0.0)
+    minimum_order = db.Column(db.Float, default=0.0)
+    estimated_delivery_time = db.Column(db.String(50), default='30-45 minutes')
+    opening_hours = db.Column(db.JSON)  # Store as JSON: {"monday": "09:00-22:00", ...}
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    menu_items = db.relationship('MenuItem', backref='restaurant', lazy=True)
+    orders = db.relationship('Order', backref='restaurant', lazy=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'address': self.address,
+            'phone': self.phone,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'logo_url': self.logo_url,
+            'cover_image_url': self.cover_image_url,
+            'is_active': self.is_active,
+            'is_featured': self.is_featured,
+            'delivery_fee': self.delivery_fee,
+            'minimum_order': self.minimum_order,
+            'estimated_delivery_time': self.estimated_delivery_time,
+            'opening_hours': self.opening_hours,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -10,6 +54,7 @@ class MenuItem(db.Model):
     image_url = db.Column(db.String(500))
     category = db.Column(db.String(50), default='burgers')  # burgers, snacks, sauces, drinks
     available = db.Column(db.Boolean, default=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -20,7 +65,8 @@ class MenuItem(db.Model):
             'description': self.description,
             'image_url': self.image_url,
             'category': self.category,
-            'available': self.available
+            'available': self.available,
+            'restaurant_id': self.restaurant_id
         }
 
 class Order(db.Model):
@@ -36,6 +82,7 @@ class Order(db.Model):
     transaction_image_url = db.Column(db.String(500))  # Payment screenshot URL
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, preparing, out_for_delivery, delivered, cancelled
     driver_id = db.Column(db.Integer, db.ForeignKey('driver.id'), nullable=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, default=1)
     location_lat = db.Column(db.Float)
     location_lng = db.Column(db.Float)
     delivery_notes = db.Column(db.Text)
@@ -60,6 +107,7 @@ class Order(db.Model):
             'transaction_image_url': self.transaction_image_url,
             'status': self.status,
             'driver_id': self.driver_id,
+            'restaurant_id': self.restaurant_id,
             'location_lat': self.location_lat,
             'location_lng': self.location_lng,
             'delivery_notes': self.delivery_notes,

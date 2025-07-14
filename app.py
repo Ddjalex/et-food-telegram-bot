@@ -30,8 +30,65 @@ def create_tables():
         import models  # noqa: F401
         db.create_all()
         
-        # Initialize default data if needed
-        from models import Category, MenuItem
+        # Initialize default restaurants first
+        from models import Restaurant, Category, MenuItem
+        if Restaurant.query.count() == 0:
+            # Create default restaurants
+            restaurants = [
+                {
+                    'name': 'X Factory',
+                    'description': 'Premium food factory with authentic flavors',
+                    'address': 'Addis Ababa, Ethiopia',
+                    'phone': '+251911123456',
+                    'latitude': 9.0579,
+                    'longitude': 38.7914,
+                    'is_active': True,
+                    'is_featured': True,
+                    'delivery_fee': 50.0,
+                    'minimum_order': 200.0,
+                    'estimated_delivery_time': '30-45 minutes',
+                    'opening_hours': {
+                        'monday': '09:00-22:00',
+                        'tuesday': '09:00-22:00',
+                        'wednesday': '09:00-22:00',
+                        'thursday': '09:00-22:00',
+                        'friday': '09:00-22:00',
+                        'saturday': '09:00-22:00',
+                        'sunday': '09:00-22:00'
+                    }
+                },
+                {
+                    'name': 'Y Factory Restaurant',
+                    'description': 'Modern restaurant with diverse cuisine',
+                    'address': 'Addis Ababa, Ethiopia',
+                    'phone': '+251911654321',
+                    'latitude': 9.0519,
+                    'longitude': 38.7269,
+                    'is_active': True,
+                    'is_featured': False,
+                    'delivery_fee': 40.0,
+                    'minimum_order': 150.0,
+                    'estimated_delivery_time': '25-40 minutes',
+                    'opening_hours': {
+                        'monday': '08:00-23:00',
+                        'tuesday': '08:00-23:00',
+                        'wednesday': '08:00-23:00',
+                        'thursday': '08:00-23:00',
+                        'friday': '08:00-23:00',
+                        'saturday': '08:00-23:00',
+                        'sunday': '08:00-23:00'
+                    }
+                }
+            ]
+            
+            for rest_data in restaurants:
+                restaurant = Restaurant(**rest_data)
+                db.session.add(restaurant)
+            
+            db.session.commit()
+            print("Default restaurants created")
+        
+        # Initialize default categories if needed
         if Category.query.count() == 0:
             # Create default categories
             categories = [
@@ -57,6 +114,7 @@ create_tables()
 
 # Import routes to register them
 from routes import *  # noqa: F401
+from restaurant_routes import *  # noqa: F401
 
 # Initialize bot with webhook
 try:

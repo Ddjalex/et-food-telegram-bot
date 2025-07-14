@@ -1112,6 +1112,19 @@
             </select>
         </div>
 
+        <!-- Restaurant Info Section -->
+        <div class="restaurant-info" style="background: #16213e; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex-grow: 1;">
+                    <h3 id="restaurantName" style="margin: 0; color: #ffffff; font-size: 18px;">Loading Restaurant...</h3>
+                    <div id="restaurantInfo" style="margin-top: 5px;"></div>
+                </div>
+                <button onclick="changeRestaurant()" style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                    Change Restaurant
+                </button>
+            </div>
+        </div>
+
         <!-- User Profile Modal -->
         <div id="profileModal" class="profile-modal" style="display: none;">
             <div class="profile-modal-content">
@@ -1294,11 +1307,58 @@
         // Load menu items
         async function loadMenuItems() {
             try {
-                const response = await fetch('/api/menu');
-                menuItems = await response.json();
-                displayProducts();
+                // Get selected restaurant ID from URL parameter or localStorage
+                const urlParams = new URLSearchParams(window.location.search);
+                let restaurantId = urlParams.get('restaurant') || localStorage.getItem('selectedRestaurant') || 1;
+                
+                const response = await fetch(`/api/restaurants/${restaurantId}/menu`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    menuItems = data.menu_items;
+                    // Update restaurant info in header
+                    updateRestaurantInfo(data.restaurant);
+                    displayProducts();
+                } else {
+                    console.error('Error loading menu:', data.error);
+                    // Fallback to default menu
+                    const fallbackResponse = await fetch('/api/menu');
+                    menuItems = await fallbackResponse.json();
+                    displayProducts();
+                }
             } catch (error) {
                 console.error('Error loading menu:', error);
+                // Fallback to default menu
+                try {
+                    const fallbackResponse = await fetch('/api/menu');
+                    menuItems = await fallbackResponse.json();
+                    displayProducts();
+                } catch (fallbackError) {
+                    console.error('Error loading fallback menu:', fallbackError);
+                }
+            }
+        }
+
+        // Update restaurant info in header
+        function updateRestaurantInfo(restaurant) {
+            if (!restaurant) return;
+            
+            // Update page title
+            document.title = `${restaurant.name} - Order Now`;
+            
+            // Update restaurant info in header if element exists
+            const restaurantNameElement = document.getElementById('restaurantName');
+            if (restaurantNameElement) {
+                restaurantNameElement.textContent = restaurant.name;
+            }
+            
+            const restaurantInfoElement = document.getElementById('restaurantInfo');
+            if (restaurantInfoElement) {
+                restaurantInfoElement.innerHTML = `
+                    <div style="font-size: 12px; color: #9ca3af;">
+                        ${restaurant.address} • ${restaurant.estimated_delivery_time}
+                    </div>
+                `;
             }
         }
 
@@ -1728,6 +1788,10 @@
                 telegramUserId = window.Telegram.WebApp.initDataUnsafe.user.id;
             }
 
+            // Get selected restaurant ID
+            const urlParams = new URLSearchParams(window.location.search);
+            const restaurantId = urlParams.get('restaurant') || localStorage.getItem('selectedRestaurant') || 1;
+
             const orderData = {
                 ...window.currentOrderData,
                 telegram_user_id: telegramUserId,
@@ -1736,7 +1800,8 @@
                 customer_address: customerAddress,
                 payment_method: 'manual_verification', // All orders use manual payment verification
                 location_lat: window.currentOrderLocation?.latitude,
-                location_lng: window.currentOrderLocation?.longitude
+                location_lng: window.currentOrderLocation?.longitude,
+                restaurant_id: parseInt(restaurantId)
             };
 
             await submitOrder(orderData);
@@ -2429,6 +2494,31 @@
         function filterByCategory(categoryName) {
             currentCategory = categoryName;
             displayProducts();
+        }
+
+        // Restaurant switching functionality
+        function changeRestaurant() {
+            window.location.href = '/select-restaurant';
+        }
+
+        // Update restaurant info in header
+        function updateRestaurantInfo(restaurant) {
+            const restaurantNameElement = document.getElementById('restaurantName');
+            const restaurantInfoElement = document.getElementById('restaurantInfo');
+            
+            if (restaurantNameElement && restaurant) {
+                restaurantNameElement.textContent = restaurant.name;
+                
+                if (restaurantInfoElement) {
+                    restaurantInfoElement.innerHTML = `
+                        <div style="color: #9ca3af; font-size: 12px;">${restaurant.description || 'Fresh food delivered fast'}</div>
+                        <div style="color: #9ca3af; font-size: 12px;">📍 ${restaurant.address || 'Addis Ababa'}</div>
+                    `;
+                }
+                
+                // Store selected restaurant in localStorage
+                localStorage.setItem('selectedRestaurant', restaurant.id);
+            }
         }
 
         // Initialize app
