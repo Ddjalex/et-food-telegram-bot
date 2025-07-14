@@ -19,6 +19,11 @@ def get_restaurants():
         logger.error(f"Error fetching restaurants: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/select-restaurant')
+def select_restaurant():
+    """Restaurant selection page"""
+    return render_template('select_restaurant.html')
+
 @app.route('/api/restaurants/<int:restaurant_id>/menu', methods=['GET'])
 def get_restaurant_menu(restaurant_id):
     """Get menu items for a specific restaurant"""
@@ -191,7 +196,3 @@ def admin_restaurants():
     """Admin page for restaurant management"""
     return render_template('admin_restaurants.html')
 
-@app.route('/select-restaurant')
-def select_restaurant():
-    """Customer restaurant selection page"""
-    return render_template('select_restaurant.html')

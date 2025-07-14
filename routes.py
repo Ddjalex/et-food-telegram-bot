@@ -367,10 +367,7 @@ def save_system_settings():
         logger.error(f"Error saving system settings: {e}")
         return jsonify({'error': 'Failed to save settings'}), 500
 
-@app.route('/kitchen')
-def kitchen_dashboard():
-    """Kitchen dashboard for staff"""
-    return render_template('kitchen.html')
+
 
 
 
