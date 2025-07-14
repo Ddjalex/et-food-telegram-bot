@@ -263,8 +263,8 @@ def get_restaurant_menu_items():
                 'description': item.description,
                 'price': float(item.price),
                 'image_url': item.image_url,
-                'category_name': item.category.name if item.category else 'No Category',
-                'is_available': item.is_available
+                'category_name': item.category if isinstance(item.category, str) else 'No Category',
+                'is_available': item.available
             })
         
         return jsonify(items_data)
@@ -279,21 +279,23 @@ def get_restaurant_categories():
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
         
-        categories = Category.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        # Get unique categories from menu items
+        from sqlalchemy import distinct
+        categories = db.session.query(distinct(MenuItem.category)).filter_by(restaurant_id=admin.restaurant_id).all()
         
         categories_data = []
-        for category in categories:
+        for i, (category_name,) in enumerate(categories):
             # Count items in this category
             item_count = MenuItem.query.filter_by(
-                category_id=category.id,
+                category=category_name,
                 restaurant_id=admin.restaurant_id
             ).count()
             
             categories_data.append({
-                'id': category.id,
-                'name': category.name,
-                'description': category.description,
-                'icon': category.icon,
+                'id': i + 1,
+                'name': category_name,
+                'description': f'{category_name} category',
+                'icon': '🍔' if 'burger' in category_name.lower() else '🍕',
                 'item_count': item_count
             })
         
@@ -1030,4 +1032,234 @@ def reject_payment_admin(order_id):
         return jsonify({'success': True, 'message': 'Payment rejected successfully'})
     except Exception as e:
         logger.error(f"Error rejecting payment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff', methods=['GET'])
+@admin_required
+def get_kitchen_staff():
+    """Get kitchen staff for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        # Get kitchen staff users for this restaurant
+        kitchen_staff = AdminUser.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            role='kitchen_staff'
+        ).all()
+        
+        staff_data = []
+        for staff in kitchen_staff:
+            staff_data.append({
+                'id': staff.id,
+                'username': staff.username,
+                'full_name': staff.full_name,
+                'phone': staff.phone,
+                'is_active': staff.is_active,
+                'created_at': staff.created_at.isoformat() if staff.created_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'kitchen_staff': staff_data
+        })
+    except Exception as e:
+        logger.error(f"Error getting kitchen staff: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff', methods=['POST'])
+@admin_required
+def add_kitchen_staff():
+    """Add kitchen staff for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        data = request.get_json()
+        
+        # Check if username already exists
+        if AdminUser.query.filter_by(username=data['username']).first():
+            return jsonify({'success': False, 'message': 'Username already exists'}), 400
+        
+        # Generate password hash
+        password_hash = generate_password_hash(data['password'])
+        
+        # Create kitchen staff user
+        kitchen_staff = AdminUser(
+            username=data['username'],
+            full_name=data['full_name'],
+            phone=data.get('phone'),
+            role='kitchen_staff',
+            password_hash=password_hash,
+            restaurant_id=admin.restaurant_id,
+            is_active=True
+        )
+        
+        db.session.add(kitchen_staff)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Kitchen staff added successfully',
+            'staff': {
+                'id': kitchen_staff.id,
+                'username': kitchen_staff.username,
+                'full_name': kitchen_staff.full_name,
+                'phone': kitchen_staff.phone
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error adding kitchen staff: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff/<int:staff_id>', methods=['DELETE'])
+@admin_required
+def delete_kitchen_staff(staff_id):
+    """Delete kitchen staff for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        # Get kitchen staff user
+        kitchen_staff = AdminUser.query.filter_by(
+            id=staff_id,
+            restaurant_id=admin.restaurant_id,
+            role='kitchen_staff'
+        ).first()
+        
+        if not kitchen_staff:
+            return jsonify({'success': False, 'message': 'Kitchen staff not found'}), 404
+        
+        db.session.delete(kitchen_staff)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Kitchen staff deleted successfully'})
+    except Exception as e:
+        logger.error(f"Error deleting kitchen staff: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/analytics', methods=['GET'])
+@admin_required
+def get_admin_analytics():
+    """Get analytics data for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        from datetime import datetime, timedelta
+        
+        # Get date range (last 30 days)
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=30)
+        
+        # Orders analytics
+        total_orders = Order.query.filter_by(restaurant_id=admin.restaurant_id).count()
+        
+        delivered_orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='delivered'
+        ).count()
+        
+        cancelled_orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='cancelled'
+        ).count()
+        
+        pending_orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='pending'
+        ).count()
+        
+        # Revenue analytics
+        total_revenue = db.session.query(
+            db.func.sum(Order.total_amount)
+        ).filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='delivered'
+        ).scalar() or 0
+        
+        # Popular items
+        popular_items = db.session.query(
+            MenuItem.name,
+            db.func.count(Order.id).label('order_count')
+        ).join(
+            Order, db.text("JSON_EXTRACT(orders.items, '$[*].name') LIKE '%' || menu_items.name || '%'")
+        ).filter(
+            MenuItem.restaurant_id == admin.restaurant_id,
+            Order.status == 'delivered'
+        ).group_by(MenuItem.name).order_by(
+            db.text('order_count DESC')
+        ).limit(5).all()
+        
+        return jsonify({
+            'success': True,
+            'analytics': {
+                'total_orders': total_orders,
+                'delivered_orders': delivered_orders,
+                'cancelled_orders': cancelled_orders,
+                'pending_orders': pending_orders,
+                'total_revenue': float(total_revenue),
+                'popular_items': [{'name': item.name, 'count': item.order_count} for item in popular_items]
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting analytics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/settings', methods=['GET'])
+@admin_required
+def get_admin_settings():
+    """Get settings for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        # Get restaurant settings
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+        
+        return jsonify({
+            'success': True,
+            'settings': {
+                'restaurant_name': restaurant.name,
+                'restaurant_address': restaurant.address,
+                'restaurant_phone': restaurant.phone,
+                'delivery_fee': restaurant.delivery_fee,
+                'minimum_order': restaurant.minimum_order,
+                'estimated_delivery_time': restaurant.estimated_delivery_time,
+                'is_active': restaurant.is_active
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting settings: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/settings', methods=['POST'])
+@admin_required
+def update_admin_settings():
+    """Update settings for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        data = request.get_json()
+        
+        # Update restaurant settings
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+        
+        if 'restaurant_name' in data:
+            restaurant.name = data['restaurant_name']
+        if 'restaurant_address' in data:
+            restaurant.address = data['restaurant_address']
+        if 'restaurant_phone' in data:
+            restaurant.phone = data['restaurant_phone']
+        if 'delivery_fee' in data:
+            restaurant.delivery_fee = float(data['delivery_fee'])
+        if 'minimum_order' in data:
+            restaurant.minimum_order = float(data['minimum_order'])
+        if 'estimated_delivery_time' in data:
+            restaurant.estimated_delivery_time = data['estimated_delivery_time']
+        if 'is_active' in data:
+            restaurant.is_active = data['is_active']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings updated successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error updating settings: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
