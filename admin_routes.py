@@ -109,7 +109,7 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     """Admin dashboard - different views based on role"""
-    admin = AdminUser.query.get(session['admin_user_id'])
+    admin = AdminUser.query.options(db.joinedload(AdminUser.restaurant)).get(session['admin_user_id'])
     
     if admin.role == 'super_admin':
         return render_template('super_admin_dashboard.html', admin=admin)

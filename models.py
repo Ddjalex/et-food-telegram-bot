@@ -143,6 +143,9 @@ class AdminUser(db.Model):
     # Self-referential relationship for admin hierarchy
     created_admins = db.relationship('AdminUser', backref=db.backref('creator', remote_side=[id]))
     
+    # Relationship with Restaurant
+    restaurant = db.relationship('Restaurant', backref='admins')
+    
     def to_dict(self):
         return {
             'id': self.id,

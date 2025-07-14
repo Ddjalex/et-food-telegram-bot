@@ -484,6 +484,43 @@
                             </div>
                         </div>
 
+                        <!-- Kitchen Staff Tab -->
+                        <div class="tab-pane fade" id="kitchen-staff" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5><i class="fas fa-users me-2"></i>Kitchen Staff Management</h5>
+                                            <button class="btn btn-primary" onclick="showAddKitchenStaffModal()">
+                                                <i class="fas fa-plus me-2"></i>Add Kitchen Staff
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Username</th>
+                                                            <th>Phone</th>
+                                                            <th>Status</th>
+                                                            <th>Created</th>
+                                                            <th>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="kitchenStaffTable">
+                                                        <tr>
+                                                            <td colspan="6" class="text-center py-4">Loading kitchen staff...</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Settings Tab -->
                         <div class="tab-pane fade" id="settings" role="tabpanel">
                             <div class="card table-container">
@@ -609,6 +646,8 @@
                         setTimeout(() => loadOrders(1, 'all'), 100);
                     } else if (targetTab === '#payments') {
                         setTimeout(() => loadPaymentNotifications(), 100);
+                    } else if (targetTab === '#kitchen-staff') {
+                        setTimeout(() => loadKitchenStaff(), 100);
                     }
                 });
             });
@@ -1001,6 +1040,113 @@
 
         function addDriver() {
             alert('Add driver');
+        }
+
+        function loadKitchenStaff() {
+            fetch('/api/admin/kitchen-staff')
+                .then(response => response.json())
+                .then(data => {
+                    const staff = data.kitchen_staff || [];
+                    const tableBody = document.getElementById('kitchenStaffTable');
+                    
+                    if (staff.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No kitchen staff found</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = staff.map(member => `
+                        <tr>
+                            <td>${member.full_name}</td>
+                            <td>${member.username}</td>
+                            <td>${member.phone || 'N/A'}</td>
+                            <td>
+                                <span class="badge ${member.is_active ? 'bg-success' : 'bg-danger'}">
+                                    ${member.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>${formatTime(member.created_at)}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editKitchenStaff(${member.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteKitchenStaff(${member.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading kitchen staff:', error);
+                    document.getElementById('kitchenStaffTable').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading kitchen staff</td></tr>';
+                });
+        }
+
+        function showAddKitchenStaffModal() {
+            const username = prompt('Enter username:');
+            if (!username) return;
+            
+            const fullName = prompt('Enter full name:');
+            if (!fullName) return;
+            
+            const phone = prompt('Enter phone number (optional):');
+            const password = prompt('Enter password:');
+            if (!password) return;
+            
+            const staffData = {
+                username: username,
+                full_name: fullName,
+                phone: phone,
+                password: password
+            };
+            
+            fetch('/api/admin/kitchen-staff', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(staffData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Kitchen staff added successfully');
+                    loadKitchenStaff();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error adding kitchen staff:', error);
+                alert('Error adding kitchen staff');
+            });
+        }
+
+        function editKitchenStaff(staffId) {
+            alert(`Edit kitchen staff #${staffId}`);
+        }
+
+        function deleteKitchenStaff(staffId) {
+            if (confirm('Are you sure you want to delete this kitchen staff member?')) {
+                fetch(`/api/admin/kitchen-staff/${staffId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Kitchen staff deleted successfully');
+                        loadKitchenStaff();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting kitchen staff:', error);
+                    alert('Error deleting kitchen staff');
+                });
+            }
         }
 
         // Auto-refresh functionality
