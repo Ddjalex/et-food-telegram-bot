@@ -276,7 +276,7 @@ def webapp():
 @app.route('/admin')
 def admin():
     """Admin dashboard"""
-    return render_template('admin_simple_working.html')
+    return render_template('admin.html')
 
 @app.route('/admin-panel')
 def admin_panel():
