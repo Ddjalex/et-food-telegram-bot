@@ -564,12 +564,188 @@ function showAlert(message, type) {
 
 // Load restaurants data
 async function loadRestaurantsData() {
-    // This would load restaurant data for the restaurants tab
-    console.log('Loading restaurants data...');
+    showLoading('restaurantTable');
+    
+    try {
+        const response = await fetch('/api/admin/restaurants');
+        if (response.ok) {
+            const data = await response.json();
+            restaurantData = data.restaurants;
+            renderRestaurantsTable(restaurantData);
+        } else {
+            showError('Failed to load restaurants data');
+        }
+    } catch (error) {
+        console.error('Error loading restaurants:', error);
+        showError('Network error while loading restaurants');
+    }
+}
+
+// Render restaurants table
+function renderRestaurantsTable(restaurants) {
+    const tableBody = document.getElementById('restaurantTable');
+    
+    if (restaurants.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-store"></i> No restaurants found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = restaurants.map(restaurant => {
+        const statusBadge = restaurant.is_active ? 
+            '<span class="badge bg-success">Active</span>' :
+            '<span class="badge bg-secondary">Inactive</span>';
+        
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <img src="${restaurant.logo_url || '/static/uploads/default-restaurant.png'}" 
+                             alt="${restaurant.name}" 
+                             class="rounded me-3" 
+                             style="width: 40px; height: 40px; object-fit: cover;">
+                        <div>
+                            <div class="fw-bold">${restaurant.name}</div>
+                            <small class="text-muted">${restaurant.description || 'No description'}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        <div>${restaurant.address}</div>
+                        <small class="text-muted">${restaurant.phone || 'No phone'}</small>
+                    </div>
+                </td>
+                <td>Admin User</td>
+                <td>0</td>
+                <td>0 ETB</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary action-btn" 
+                            onclick="viewRestaurant(${restaurant.id})" 
+                            title="View Details">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning action-btn" 
+                            onclick="editRestaurant(${restaurant.id})" 
+                            title="Edit Restaurant">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tableBody.innerHTML = rows;
 }
 
 // Load analytics data
 async function loadAnalyticsData() {
-    // This would load analytics data
-    console.log('Loading analytics data...');
+    try {
+        // Initialize analytics charts
+        initializeAnalyticsCharts();
+        console.log('Analytics data loaded');
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showError('Network error while loading analytics');
+    }
+}
+
+// Initialize analytics charts
+function initializeAnalyticsCharts() {
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Revenue (ETB)',
+                    data: [12000, 19000, 15000, 25000, 22000, 30000],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Order Status Chart
+    const orderStatusCtx = document.getElementById('orderStatusChart');
+    if (orderStatusCtx) {
+        new Chart(orderStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Delivered', 'Preparing', 'Pending', 'Cancelled'],
+                datasets: [{
+                    data: [45, 25, 20, 10],
+                    backgroundColor: ['#27ae60', '#f39c12', '#3498db', '#e74c3c']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Restaurant Performance Chart
+    const restaurantPerformanceCtx = document.getElementById('restaurantPerformanceChart');
+    if (restaurantPerformanceCtx) {
+        new Chart(restaurantPerformanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Restaurant A', 'Restaurant B', 'Restaurant C', 'Restaurant D'],
+                datasets: [{
+                    label: 'Orders',
+                    data: [65, 59, 80, 45],
+                    backgroundColor: 'rgba(52, 152, 219, 0.8)'
+                }, {
+                    label: 'Revenue (ETB)',
+                    data: [28000, 48000, 40000, 25000],
+                    backgroundColor: 'rgba(39, 174, 96, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Additional restaurant functions
+function viewRestaurant(restaurantId) {
+    console.log(`Viewing restaurant ${restaurantId}`);
+    showAlert('Restaurant details will be implemented soon', 'info');
+}
+
+function editRestaurant(restaurantId) {
+    console.log(`Editing restaurant ${restaurantId}`);
+    showAlert('Restaurant editing will be implemented soon', 'info');
 }
