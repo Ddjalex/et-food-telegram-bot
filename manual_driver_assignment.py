@@ -130,9 +130,7 @@ def notify_driver_assignment(driver, order):
             return
         
         message = f"🚗 *NEW DELIVERY ASSIGNMENT*\n\n"
-        message += f"📋 Order #{order.id}\n"
-        message += f"💰 Amount: {order.total_amount:.2f} ETB\n"
-        message += f"💳 Payment: {order.payment_method}\n\n"
+        message += f"📋 Order #{order.id}\n\n"
         
         message += f"👤 **Customer Details:**\n"
         message += f"• Name: {order.customer_name}\n"

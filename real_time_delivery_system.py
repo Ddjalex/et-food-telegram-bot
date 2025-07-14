@@ -120,9 +120,7 @@ class RealTimeDeliverySystem:
         try:
             message = f"🚚 *NEW DELIVERY REQUEST*\n\n"
             message += f"📋 **Order #{order.id}**\n"
-            message += f"💰 **Total**: {order.total_amount:.2f} ETB\n"
-            message += f"📍 **Distance**: {distance:.1f} km\n"
-            message += f"💳 **Payment**: {order.payment_method}\n\n"
+            message += f"📍 **Distance**: {distance:.1f} km\n\n"
             
             message += f"👤 **Customer**: {order.customer_name}\n"
             message += f"📞 **Phone**: {order.customer_phone}\n"
@@ -136,7 +134,7 @@ class RealTimeDeliverySystem:
                 message += f"• ... and {len(order.items) - 3} more items\n"
             
             message += f"\n⏰ **Accept within 1 minute** or order will go to next driver\n"
-            message += f"💡 **Earnings**: ~{order.total_amount * 0.15:.2f} ETB delivery fee"
+            message += f"💡 **Delivery fee will be paid upon completion**"
             
             keyboard = {
                 "inline_keyboard": [

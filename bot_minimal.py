@@ -106,12 +106,12 @@ def notify_driver_assignment(driver_id, order_id):
                 
                 # This is driver notification - should NOT go to customer
                 # Send to driver only (this is fallback for driver bot failure)
+                # NOTE: Payment details (amount/method) are hidden from drivers per system requirements
                 message = f"🚚 *New Delivery Assignment*\n\n"
                 message += f"Order #{order.id}\n"
                 message += f"Customer: {order.customer_name}\n"
                 message += f"Phone: {order.customer_phone}\n"
-                message += f"Address: {order.customer_address}\n"
-                message += f"Total: {order.total_amount:.2f} ETB\n\n"
+                message += f"Address: {order.customer_address}\n\n"
                 message += f"📍 Please share your live location to help admin track delivery progress."
                 
                 keyboard = {
