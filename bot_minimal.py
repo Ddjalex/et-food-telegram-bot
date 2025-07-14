@@ -1235,27 +1235,13 @@ def handle_location_share(chat_id, location, user_id):
             # Sort by distance
             nearby_restaurants.sort(key=lambda x: x['distance'])
             
-            # Create location confirmation message
-            location_msg = f"✅ Location saved successfully!\n📍 GPS: {lat:.4f}, {lng:.4f}\n\n"
-            
-            if nearby_restaurants:
-                location_msg += f"🏪 Found {len(nearby_restaurants)} nearby restaurants:\n\n"
-                for i, restaurant in enumerate(nearby_restaurants[:3], 1):
-                    location_msg += f"{i}. {restaurant['name']}\n"
-                    location_msg += f"   📍 {restaurant['distance']} km away\n"
-                    location_msg += f"   🏠 {restaurant['address']}\n\n"
-                
-                if len(nearby_restaurants) > 3:
-                    location_msg += f"... and {len(nearby_restaurants) - 3} more restaurants nearby"
-            else:
-                location_msg += "🔍 No restaurants found within 10km radius\n"
-                location_msg += "💡 You can still browse all available restaurants"
-            
+            # Simple location confirmation without restaurant list
+            location_msg = f"✅ Location saved successfully!\n📍 GPS: {lat:.4f}, {lng:.4f}"
             send_message(chat_id, location_msg)
         
-        # Show menu WebApp after location
+        # Show restaurant selection WebApp after location
         from config import Config
-        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
+        webapp_url = f"{Config.WEBHOOK_URL}/select-restaurant"
         
         keyboard = {
             "inline_keyboard": [[{
@@ -1272,9 +1258,9 @@ def handle_location_share(chat_id, location, user_id):
 def handle_skip_location(chat_id, user_id):
     """Handle when user skips location sharing"""
     try:
-        # Show menu WebApp without location
+        # Show restaurant selection WebApp without location
         from config import Config
-        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
+        webapp_url = f"{Config.WEBHOOK_URL}/select-restaurant"
         
         keyboard = {
             "inline_keyboard": [[{
