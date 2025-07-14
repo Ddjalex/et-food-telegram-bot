@@ -198,7 +198,7 @@ def get_popular_items():
         for item in menu_items:
             items_data.append({
                 'name': item.name,
-                'category': item.category.name if item.category else 'No Category',
+                'category': item.category if item.category else 'No Category',
                 'order_count': 0,
                 'revenue': 0
             })
@@ -336,20 +336,21 @@ def get_restaurant_drivers():
         admin = AdminUser.query.get(session['admin_user_id'])
         
         from models import Driver
-        drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        # Get all drivers since they don't have restaurant_id field
+        drivers = Driver.query.all()
         
         drivers_data = []
         for driver in drivers:
             drivers_data.append({
                 'id': driver.id,
-                'full_name': driver.full_name,
-                'phone': driver.phone,
+                'full_name': driver.name,  # Driver model uses 'name' not 'full_name'
+                'phone': driver.phone_number,  # Driver model uses 'phone_number' not 'phone'
                 'vehicle_type': driver.vehicle_type,
-                'status': driver.status,
+                'status': driver.approval_status,  # Driver model uses 'approval_status' not 'status'
                 'is_active': driver.is_active,
                 'is_available': driver.is_available,
-                'current_latitude': driver.current_latitude,
-                'current_longitude': driver.current_longitude,
+                'current_latitude': driver.current_lat,  # Driver model uses 'current_lat' not 'current_latitude'
+                'current_longitude': driver.current_lng,  # Driver model uses 'current_lng' not 'current_longitude'
                 'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None
             })
         
@@ -369,16 +370,16 @@ def add_restaurant_driver():
         from models import Driver
         
         # Check if driver with same phone already exists
-        existing_driver = Driver.query.filter_by(phone=data['phone']).first()
+        existing_driver = Driver.query.filter_by(phone_number=data['phone']).first()
         if existing_driver:
             return jsonify({'success': False, 'message': 'Driver with this phone number already exists'}), 400
         
         driver = Driver(
-            full_name=data['full_name'],
-            phone=data['phone'],
+            name=data['full_name'],  # Driver model uses 'name' not 'full_name'
+            phone_number=data['phone'],  # Driver model uses 'phone_number' not 'phone'
             vehicle_type=data['vehicle_type'],
-            restaurant_id=admin.restaurant_id,
-            status='approved' if data.get('auto_approve') else 'pending',
+            approval_status='approved' if data.get('auto_approve') else 'pending',
+            is_approved=data.get('auto_approve', False),
             is_active=True,
             is_available=True,
             telegram_user_id=data.get('telegram_user_id')
@@ -400,7 +401,7 @@ def delete_restaurant_driver(driver_id):
         admin = AdminUser.query.get(session['admin_user_id'])
         
         from models import Driver
-        driver = Driver.query.filter_by(id=driver_id, restaurant_id=admin.restaurant_id).first()
+        driver = Driver.query.filter_by(id=driver_id).first()
         
         if not driver:
             return jsonify({'success': False, 'message': 'Driver not found'}), 404
