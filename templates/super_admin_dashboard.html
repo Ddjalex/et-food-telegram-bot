@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ET-FOOD - Super Admin Dashboard</title>
+    <title>ET-FOOD Super Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,54 +14,60 @@
             --success-color: #27ae60;
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
-            --bg-dark: #1a252f;
-            --bg-light: #ecf0f1;
+            --dark-color: #34495e;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .dashboard-container {
-            padding: 20px;
-        }
-
-        .company-header {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .company-logo {
-            width: 80px;
-            height: 80px;
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .sidebar {
             background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: var(--primary-color);
-            margin-bottom: 20px;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
 
-        .stats-cards {
-            margin-bottom: 30px;
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            margin: 5px 0;
+            color: var(--dark-color);
+            transition: all 0.3s ease;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+
+        .nav-pills .nav-link:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .main-content {
+            padding: 2rem;
         }
 
         .stat-card {
             background: white;
             border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
             transition: transform 0.3s ease;
-            margin-bottom: 20px;
         }
 
         .stat-card:hover {
@@ -69,1507 +75,516 @@
         }
 
         .stat-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .stat-number {
             font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
 
-        .control-panel {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .control-section {
-            margin-bottom: 40px;
-        }
-
-        .control-section h4 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-
-        .btn-control {
-            margin: 5px;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-control:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .system-info {
-            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
         }
 
         .table-container {
             background: white;
             border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        .table th {
-            background-color: var(--primary-color);
+        .table-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
             border: none;
+            border-radius: 10px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
-        .status-badge {
-            padding: 5px 12px;
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 20px;
-            font-size: 0.85rem;
             font-weight: 600;
         }
 
-        .status-online { background-color: #d4edda; color: #155724; }
-        .status-offline { background-color: #f8d7da; color: #721c24; }
-        .status-busy { background-color: #fff3cd; color: #856404; }
+        .role-super_admin {
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 100%);
+            color: white;
+        }
+
+        .role-admin {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .role-kitchen_staff {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+        }
+
+        .performance-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .performance-excellent { background: #27ae60; }
+        .performance-good { background: #f39c12; }
+        .performance-poor { background: #e74c3c; }
 
         .chart-container {
             background: white;
             border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .nav-tabs .nav-link {
-            border-radius: 10px 10px 0 0;
-            margin-right: 5px;
-            border: none;
-            background-color: #ecf0f1;
-            color: var(--primary-color);
-        }
-
-        .nav-tabs .nav-link.active {
-            background-color: var(--primary-color);
-            color: white;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         .modal-header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
+            border-radius: 15px 15px 0 0;
         }
 
-        .notification-panel {
-            background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .action-btn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            margin: 0 2px;
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Company Header -->
-        <div class="company-header">
-            <div class="row align-items-center">
-                <div class="col-md-2">
-                    <div class="company-logo">
-                        <i class="fas fa-utensils"></i>
-                    </div>
-                </div>
-                <div class="col-md-8">
-                    <h1 class="mb-2">ET-FOOD Super Admin Dashboard</h1>
-                    <p class="mb-1"><i class="fas fa-map-marker-alt"></i> Ethiopian Food Delivery Service</p>
-                    <p class="mb-1"><i class="fas fa-phone"></i> +251-911-123456 | <i class="fas fa-envelope"></i> admin@etfood.et</p>
-                    <p class="mb-0"><i class="fas fa-clock"></i> Last Updated: <span id="lastUpdate"></span></p>
-                </div>
-                <div class="col-md-2 text-end">
-                    <button class="btn btn-light btn-control" onclick="refreshDashboard()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-utensils"></i> ET-FOOD Super Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> {{ admin.full_name or admin.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
+    </nav>
 
-        <!-- Statistics Cards -->
-        <div class="stats-cards">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-icon text-primary">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="stat-number text-primary" id="totalOrders">0</div>
-                        <div class="text-muted">Total Orders</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-icon text-success">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-number text-success" id="totalCustomers">0</div>
-                        <div class="text-muted">Total Customers</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-icon text-warning">
-                            <i class="fas fa-motorcycle"></i>
-                        </div>
-                        <div class="stat-number text-warning" id="activeDrivers">0</div>
-                        <div class="text-muted">Active Drivers</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <div class="stat-icon text-info">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                        <div class="stat-number text-info" id="todayRevenue">0</div>
-                        <div class="text-muted">Today Revenue (ETB)</div>
-                    </div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="sidebar p-3">
+                    <ul class="nav nav-pills flex-column" id="adminTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#overview" data-tab="overview">
+                                <i class="fas fa-tachometer-alt"></i> Overview
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#admins" data-tab="admins">
+                                <i class="fas fa-users-cog"></i> Admin Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#restaurants" data-tab="restaurants">
+                                <i class="fas fa-store"></i> Restaurants
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#analytics" data-tab="analytics">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#system" data-tab="system">
+                                <i class="fas fa-cogs"></i> System Settings
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
-        </div>
-
-        <!-- System Status -->
-        <div class="system-info">
-            <div class="row">
-                <div class="col-md-6">
-                    <h4><i class="fas fa-server"></i> System Status</h4>
-                    <p>Server: <span class="badge bg-success">Online</span></p>
-                    <p>Database: <span class="badge bg-success">Connected</span></p>
-                    <p>Telegram Bot: <span class="badge bg-success" id="botStatus">Active</span></p>
-                </div>
-                <div class="col-md-6">
-                    <h4><i class="fas fa-chart-line"></i> Performance</h4>
-                    <p>Response Time: <span class="text-success">120ms</span></p>
-                    <p>Uptime: <span class="text-success">99.9%</span></p>
-                    <p>Active Sessions: <span class="text-info" id="activeSessions">0</span></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <ul class="nav nav-tabs" id="controlTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel">
-                        <i class="fas fa-shopping-cart"></i> Orders Management
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="payment-tab" data-bs-toggle="tab" data-bs-target="#payment-panel">
-                        <i class="fas fa-credit-card"></i> Payment Verification
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="kitchen-tab" data-bs-toggle="tab" data-bs-target="#kitchen-panel">
-                        <i class="fas fa-utensils"></i> Kitchen Control
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="drivers-tab" data-bs-toggle="tab" data-bs-target="#drivers-panel">
-                        <i class="fas fa-motorcycle"></i> Driver Management
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics-panel">
-                        <i class="fas fa-chart-bar"></i> Analytics
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="restaurants-tab" data-bs-toggle="tab" data-bs-target="#restaurants-panel">
-                        <i class="fas fa-store"></i> Restaurant Management
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-panel">
-                        <i class="fas fa-cogs"></i> System Settings
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="controlTabsContent">
-                <!-- Orders Management Panel -->
-                <div class="tab-pane fade show active" id="orders-panel">
-                    <div class="control-section">
-                        <h4>Order Controls</h4>
-                        <button class="btn btn-primary btn-control" onclick="openOrderManager()">
-                            <i class="fas fa-list"></i> View All Orders
-                        </button>
-                        <button class="btn btn-success btn-control" onclick="openKitchenDashboard()">
-                            <i class="fas fa-utensils"></i> Kitchen Dashboard
-                        </button>
-                        <button class="btn btn-info btn-control" onclick="exportOrders()">
-                            <i class="fas fa-download"></i> Export Orders
-                        </button>
-                        <button class="btn btn-warning btn-control" onclick="viewLiveOrders()">
-                            <i class="fas fa-eye"></i> Live Tracking
-                        </button>
-                    </div>
-
-                    <!-- Recent Orders Table -->
-                    <div class="table-container">
-                        <h5>Recent Orders</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Customer</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Time</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="recentOrdersTable">
-                                    <!-- Orders will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payment Verification Panel -->
-                <div class="tab-pane fade" id="payment-panel">
-                    <div class="control-section">
-                        <h4>Payment Verification (View Only)</h4>
-                        <div class="alert alert-warning">
-                            <i class="fas fa-eye"></i>
-                            <strong>Super Admin View:</strong> This is a view-only panel. Payment verification actions are handled by Admin staff. In the future, this will be automated.
-                        </div>
-                        <button class="btn btn-primary btn-control" onclick="refreshSuperAdminPaymentVerification()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                        <button class="btn btn-info btn-control" onclick="viewBankDetails()">
-                            <i class="fas fa-university"></i> Bank Account Details
-                        </button>
-                    </div>
-
-                    <!-- Payment Verification Orders -->
-                    <div class="table-container">
-                        <h5>All Payment Verification Orders</h5>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            View all orders with payment screenshots uploaded by customers. Admin staff handle verification manually.
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Customer</th>
-                                        <th>Phone</th>
-                                        <th>Amount (ETB)</th>
-                                        <th>Order Time</th>
-                                        <th>Payment Method</th>
-                                        <th>Screenshot</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="superAdminPaymentVerificationTable">
-                                    <!-- Orders will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="noSuperAdminPaymentOrders" class="text-center p-4" style="display: none;">
-                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                            <h5>No Payment Orders Found</h5>
-                            <p class="text-muted">No customers have uploaded payment receipts yet.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Kitchen Control Panel -->
-                <div class="tab-pane fade" id="kitchen-panel">
-                    <div class="control-section">
-                        <h4>Kitchen Staff Management</h4>
-                        <button class="btn btn-primary btn-control" onclick="addKitchenStaff()">
-                            <i class="fas fa-user-plus"></i> Add Kitchen Staff
-                        </button>
-                        <button class="btn btn-success btn-control" onclick="viewKitchenPerformance()">
-                            <i class="fas fa-chart-line"></i> Performance Report
-                        </button>
-                        <button class="btn btn-warning btn-control" onclick="manageShifts()">
-                            <i class="fas fa-calendar"></i> Manage Shifts
-                        </button>
-                        <button class="btn btn-info btn-control" onclick="kitchenSettings()">
-                            <i class="fas fa-cog"></i> Kitchen Settings
-                        </button>
-                    </div>
-
-                    <!-- Kitchen Staff Table -->
-                    <div class="table-container">
-                        <h5>Kitchen Staff Status</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Staff Name</th>
-                                        <th>Role</th>
-                                        <th>Shift</th>
-                                        <th>Status</th>
-                                        <th>Orders Completed</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="kitchenStaffTable">
-                                    <tr>
-                                        <td>Abebe Kebede</td>
-                                        <td>Head Chef</td>
-                                        <td>Morning (6AM-2PM)</td>
-                                        <td><span class="status-badge status-online">Online</span></td>
-                                        <td>15</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning">Edit</button>
-                                            <button class="btn btn-sm btn-danger">Remove</button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Meron Tadesse</td>
-                                        <td>Prep Cook</td>
-                                        <td>Evening (2PM-10PM)</td>
-                                        <td><span class="status-badge status-offline">Offline</span></td>
-                                        <td>8</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning">Edit</button>
-                                            <button class="btn btn-sm btn-danger">Remove</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Driver Management Panel -->
-                <div class="tab-pane fade" id="drivers-panel">
-                    <div class="control-section">
-                        <h4>Driver Operations</h4>
-                        <button class="btn btn-primary btn-control" onclick="addDriver()">
-                            <i class="fas fa-user-plus"></i> Add Driver
-                        </button>
-                        <button class="btn btn-success btn-control" onclick="viewDriverMap()">
-                            <i class="fas fa-map"></i> Live Map
-                        </button>
-                        <button class="btn btn-warning btn-control" onclick="driverPerformance()">
-                            <i class="fas fa-chart-bar"></i> Performance
-                        </button>
-                        <button class="btn btn-info btn-control" onclick="managePayouts()">
-                            <i class="fas fa-money-bill"></i> Payouts
-                        </button>
-                    </div>
-
-                    <!-- Driver Table -->
-                    <div class="table-container">
-                        <h5>Active Drivers</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Driver Name</th>
-                                        <th>Vehicle</th>
-                                        <th>Status</th>
-                                        <th>Current Order</th>
-                                        <th>Deliveries Today</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="driversTable">
-                                    <!-- Drivers will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Restaurant Management Panel -->
-                <div class="tab-pane fade" id="restaurants-panel">
-                    <div class="control-section">
-                        <h4>Restaurant Management</h4>
-                        <button class="btn btn-success btn-control" onclick="addRestaurant()">
-                            <i class="fas fa-plus"></i> Add Restaurant
-                        </button>
-                        <button class="btn btn-primary btn-control" onclick="viewRestaurants()">
-                            <i class="fas fa-list"></i> View All Restaurants
-                        </button>
-                        <button class="btn btn-warning btn-control" onclick="restaurantSettings()">
-                            <i class="fas fa-cog"></i> Restaurant Settings
-                        </button>
-                    </div>
-
-                    <!-- Restaurants Table -->
-                    <div class="table-container">
-                        <h5>Active Restaurants</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Restaurant Name</th>
-                                        <th>Address</th>
-                                        <th>Phone</th>
-                                        <th>Status</th>
-                                        <th>Menu Items</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="restaurantsTable">
-                                    <!-- Restaurants will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Analytics Panel -->
-                <div class="tab-pane fade" id="analytics-panel">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="chart-container">
-                                <h5>Daily Orders</h5>
-                                <canvas id="ordersChart"></canvas>
+            
+            <div class="col-md-9">
+                <div class="main-content">
+                    <!-- Overview Tab -->
+                    <div id="overview" class="tab-content active">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="fas fa-users-cog"></i>
+                                    </div>
+                                    <div class="stat-number text-primary" id="totalAdmins">0</div>
+                                    <div class="stat-label">Total Admins</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-store"></i>
+                                    </div>
+                                    <div class="stat-number text-success" id="totalRestaurants">0</div>
+                                    <div class="stat-label">Active Restaurants</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="stat-number text-warning" id="todayOrders">0</div>
+                                    <div class="stat-label">Today's Orders</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </div>
+                                    <div class="stat-number text-danger" id="totalRevenue">0</div>
+                                    <div class="stat-label">Total Revenue</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="chart-container">
-                                <h5>Revenue Analysis</h5>
-                                <canvas id="revenueChart"></canvas>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Admin Activity Overview</h5>
+                                    <canvas id="adminActivityChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Performance Distribution</h5>
+                                    <canvas id="performanceChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="chart-container">
-                                <h5>Popular Items</h5>
-                                <canvas id="popularItemsChart"></canvas>
-                            </div>
+
+                    <!-- Admin Management Tab -->
+                    <div id="admins" class="tab-content">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Admin Management</h2>
+                            <button class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#addAdminModal">
+                                <i class="fas fa-plus"></i> Add New Admin
+                            </button>
                         </div>
-                        <div class="col-md-6">
-                            <div class="chart-container">
-                                <h5>Driver Performance</h5>
-                                <canvas id="driverChart"></canvas>
+                        
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-users-cog"></i> System Administrators
+                                </h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Admin</th>
+                                            <th>Role</th>
+                                            <th>Restaurant</th>
+                                            <th>Performance</th>
+                                            <th>Last Active</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <div class="loading-spinner">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading admins...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- System Settings Panel -->
-                <div class="tab-pane fade" id="system-panel">
-                    <div class="control-section">
-                        <h4>System Configuration</h4>
-                        <button class="btn btn-primary btn-control" onclick="manageUsers()">
-                            <i class="fas fa-users-cog"></i> User Management
-                        </button>
-                        <button class="btn btn-success btn-control" onclick="menuManagement()">
-                            <i class="fas fa-list"></i> Menu Management
-                        </button>
-                        <button class="btn btn-warning btn-control" onclick="systemLogs()">
-                            <i class="fas fa-file-alt"></i> System Logs
-                        </button>
-                        <button class="btn btn-danger btn-control" onclick="systemRestart()">
-                            <i class="fas fa-power-off"></i> System Restart
-                        </button>
+                    <!-- Restaurants Tab -->
+                    <div id="restaurants" class="tab-content">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Restaurant Management</h2>
+                            <button class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#addRestaurantModal">
+                                <i class="fas fa-plus"></i> Add New Restaurant
+                            </button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-store"></i> All Restaurants
+                                </h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Restaurant</th>
+                                            <th>Location</th>
+                                            <th>Admin</th>
+                                            <th>Orders Today</th>
+                                            <th>Revenue</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="restaurantTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <div class="loading-spinner">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading restaurants...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- System Settings -->
-                    <div class="table-container">
-                        <h5>Configuration Settings</h5>
+                    <!-- Analytics Tab -->
+                    <div id="analytics" class="tab-content">
+                        <h2 class="mb-4">System Analytics</h2>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Monthly Revenue Trend</h5>
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Order Status Distribution</h5>
+                                    <canvas id="orderStatusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Restaurant Performance Comparison</h5>
+                                    <canvas id="restaurantPerformanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Settings Tab -->
+                    <div id="system" class="tab-content">
+                        <h2 class="mb-4">System Settings</h2>
+                        
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Radius (KM)</label>
-                                    <input type="number" class="form-control" value="10" id="deliveryRadius">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Minimum Order Amount (ETB)</label>
-                                    <input type="number" class="form-control" value="50" id="minOrderAmount">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Fee (ETB)</label>
-                                    <input type="number" class="form-control" value="15" id="deliveryFee">
+                                <div class="stat-card">
+                                    <h5>Application Settings</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">System Name</label>
+                                        <input type="text" class="form-control" value="ET-FOOD" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Currency</label>
+                                        <select class="form-select">
+                                            <option value="ETB">Ethiopian Birr (ETB)</option>
+                                            <option value="USD">US Dollar (USD)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Delivery Fee</label>
+                                        <input type="number" class="form-control" value="30" />
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Service Hours</label>
-                                    <input type="text" class="form-control" value="8:00 AM - 11:00 PM" id="serviceHours">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Company Phone</label>
-                                    <input type="text" class="form-control" value="+251-911-123456" id="companyPhone">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Company Email</label>
-                                    <input type="email" class="form-control" value="admin@etfood.et" id="companyEmail">
+                                <div class="stat-card">
+                                    <h5>Notification Settings</h5>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                        <label class="form-check-label" for="emailNotifications">
+                                            Email Notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="smsNotifications">
+                                        <label class="form-check-label" for="smsNotifications">
+                                            SMS Notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="pushNotifications" checked>
+                                        <label class="form-check-label" for="pushNotifications">
+                                            Push Notifications
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-success" onclick="saveSettings()">
-                            <i class="fas fa-save"></i> Save Settings
-                        </button>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notification Panel -->
-        <div class="notification-panel">
-            <h4><i class="fas fa-bell"></i> System Notifications</h4>
-            <div id="notificationsList">
-                <div class="alert alert-light mb-2">
-                    <strong>System:</strong> New order received from Addis Ababa area
-                    <span class="float-end text-muted">2 min ago</span>
-                </div>
-                <div class="alert alert-light mb-2">
-                    <strong>Kitchen:</strong> Order #123 completed and ready for pickup
-                    <span class="float-end text-muted">5 min ago</span>
-                </div>
-                <div class="alert alert-light mb-0">
-                    <strong>Driver:</strong> Driver Ahmed completed delivery for Order #122
-                    <span class="float-end text-muted">8 min ago</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            updateLastUpdateTime();
-            loadDashboardData();
-            initializeCharts();
-            loadPaymentVerificationOrders(); // Load payment verification orders
-            loadRestaurants(); // Load restaurants
-            setInterval(updateLastUpdateTime, 1000);
-            setInterval(loadDashboardData, 30000); // Update every 30 seconds
-            setInterval(loadPaymentVerificationOrders, 60000); // Update payment verification every minute
-        });
-
-        function updateLastUpdateTime() {
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
-        }
-
-        function loadDashboardData() {
-            // Load statistics
-            loadStatistics();
-            loadRecentOrders();
-            loadDrivers();
-        }
-
-        function loadStatistics() {
-            fetch('/api/admin/statistics')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('totalOrders').textContent = data.total_orders || 0;
-                    document.getElementById('totalCustomers').textContent = data.total_customers || 0;
-                    document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
-                    document.getElementById('todayRevenue').textContent = data.today_revenue || 0;
-                    document.getElementById('activeSessions').textContent = data.active_sessions || 0;
-                })
-                .catch(error => {
-                    console.error('Error loading statistics:', error);
-                });
-        }
-
-        function loadRecentOrders() {
-            fetch('/api/orders?limit=10')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('recentOrdersTable');
-                    tbody.innerHTML = '';
-                    
-                    data.orders.forEach(order => {
-                        const row = `
-                            <tr>
-                                <td>#${order.id}</td>
-                                <td>${order.customer_name}</td>
-                                <td>ETB ${order.total_amount}</td>
-                                <td><span class="status-badge ${getStatusClass(order.status)}">${order.status}</span></td>
-                                <td>${new Date(order.created_at).toLocaleTimeString()}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="viewOrder(${order.id})">View</button>
-                                    <button class="btn btn-sm btn-warning" onclick="editOrder(${order.id})">Edit</button>
-                                </td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading orders:', error);
-                });
-        }
-
-        function loadDrivers() {
-            fetch('/api/drivers')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('driversTable');
-                    tbody.innerHTML = '';
-                    
-                    data.drivers.forEach(driver => {
-                        const row = `
-                            <tr>
-                                <td>${driver.name}</td>
-                                <td>${driver.vehicle_type}</td>
-                                <td><span class="status-badge ${driver.is_active ? 'status-online' : 'status-offline'}">${driver.is_active ? 'Online' : 'Offline'}</span></td>
-                                <td>${driver.current_order || 'None'}</td>
-                                <td>${driver.deliveries_today || 0}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="viewDriver(${driver.id})">View</button>
-                                    <button class="btn btn-sm btn-warning" onclick="editDriver(${driver.id})">Edit</button>
-                                </td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading drivers:', error);
-                });
-        }
-
-        function getStatusClass(status) {
-            switch(status) {
-                case 'delivered': return 'status-online';
-                case 'cancelled': return 'status-offline';
-                case 'preparing': return 'status-busy';
-                default: return 'status-busy';
-            }
-        }
-
-        function initializeCharts() {
-            // Orders Chart
-            const ordersCtx = document.getElementById('ordersChart').getContext('2d');
-            new Chart(ordersCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Orders',
-                        data: [12, 19, 8, 15, 25, 30, 22],
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                }
-            });
-
-            // Revenue Chart
-            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-            new Chart(revenueCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Revenue (ETB)',
-                        data: [1200, 1900, 800, 1500, 2500, 3000, 2200],
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)'
-                    }]
-                }
-            });
-
-            // Popular Items Chart
-            const popularCtx = document.getElementById('popularItemsChart').getContext('2d');
-            new Chart(popularCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Burger', 'Pizza', 'Shawarma', 'Pasta', 'Drinks'],
-                    datasets: [{
-                        data: [30, 25, 20, 15, 10],
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-                    }]
-                }
-            });
-
-            // Driver Performance Chart
-            const driverCtx = document.getElementById('driverChart').getContext('2d');
-            new Chart(driverCtx, {
-                type: 'radar',
-                data: {
-                    labels: ['Speed', 'Rating', 'Orders', 'Availability', 'Punctuality'],
-                    datasets: [{
-                        label: 'Average Performance',
-                        data: [4.2, 4.8, 4.5, 4.3, 4.6],
-                        fill: true,
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderColor: 'rgb(255, 99, 132)',
-                        pointBackgroundColor: 'rgb(255, 99, 132)',
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 5
-                        }
-                    }
-                }
-            });
-        }
-
-        // Dashboard Functions
-        function refreshDashboard() {
-            loadDashboardData();
-            showNotification('Dashboard refreshed successfully!', 'success');
-        }
-
-        function openOrderManager() {
-            window.open('/admin', '_blank');
-        }
-
-        function openKitchenDashboard() {
-            window.open('/kitchen', '_blank');
-        }
-
-        function exportOrders() {
-            window.open('/api/orders/export', '_blank');
-        }
-
-        function viewLiveOrders() {
-            alert('Live tracking will open in a new window');
-        }
-
-        function addKitchenStaff() {
-            alert('Add Kitchen Staff functionality');
-        }
-
-        function viewKitchenPerformance() {
-            alert('Kitchen Performance Report');
-        }
-
-        function manageShifts() {
-            alert('Shift Management');
-        }
-
-        function kitchenSettings() {
-            alert('Kitchen Settings');
-        }
-
-        function addDriver() {
-            alert('Add Driver functionality');
-        }
-
-        function viewDriverMap() {
-            alert('Driver Map will open');
-        }
-
-        function driverPerformance() {
-            alert('Driver Performance Report');
-        }
-
-        function managePayouts() {
-            alert('Payout Management');
-        }
-
-        function manageUsers() {
-            alert('User Management');
-        }
-
-        function menuManagement() {
-            window.open('/admin', '_blank');
-        }
-
-        function systemLogs() {
-            alert('System Logs');
-        }
-
-        function systemRestart() {
-            if(confirm('Are you sure you want to restart the system?')) {
-                alert('System restart initiated');
-            }
-        }
-
-        function saveSettings() {
-            const settings = {
-                delivery_radius: document.getElementById('deliveryRadius').value,
-                min_order_amount: document.getElementById('minOrderAmount').value,
-                delivery_fee: document.getElementById('deliveryFee').value,
-                service_hours: document.getElementById('serviceHours').value,
-                company_phone: document.getElementById('companyPhone').value,
-                company_email: document.getElementById('companyEmail').value
-            };
-
-            fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(settings)
-            })
-            .then(response => response.json())
-            .then(data => {
-                showNotification('Settings saved successfully!', 'success');
-            })
-            .catch(error => {
-                showNotification('Error saving settings', 'error');
-            });
-        }
-
-        function viewOrder(orderId) {
-            alert(`View order #${orderId}`);
-        }
-
-        function editOrder(orderId) {
-            alert(`Edit order #${orderId}`);
-        }
-
-        function viewDriver(driverId) {
-            alert(`View driver #${driverId}`);
-        }
-
-        function editDriver(driverId) {
-            alert(`Edit driver #${driverId}`);
-        }
-
-        // Restaurant Management Functions
-        function addRestaurant() {
-            document.getElementById('restaurantModalTitle').textContent = 'Add New Restaurant';
-            document.getElementById('restaurantForm').reset();
-            document.getElementById('restaurantId').value = '';
-            document.getElementById('logoPreview').style.display = 'none';
-            document.getElementById('coverPreview').style.display = 'none';
-            const modal = new bootstrap.Modal(document.getElementById('restaurantModal'));
-            modal.show();
-        }
-
-        function viewRestaurants() {
-            loadRestaurants();
-        }
-
-        function restaurantSettings() {
-            alert('Restaurant settings feature coming soon!');
-        }
-
-        function loadRestaurants() {
-            fetch('/api/admin/restaurants')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('restaurantsTable');
-                    tbody.innerHTML = '';
-                    
-                    data.restaurants.forEach(restaurant => {
-                        const row = `
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <img src="${restaurant.logo_url || '/static/images/default-restaurant.png'}" 
-                                             alt="${restaurant.name}" 
-                                             style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-                                        <div>
-                                            <strong>${restaurant.name}</strong>
-                                            <br>
-                                            <small class="text-muted">${restaurant.description || 'No description'}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>${restaurant.address}</td>
-                                <td>${restaurant.phone}</td>
-                                <td>
-                                    <span class="badge ${restaurant.is_active ? 'bg-success' : 'bg-danger'}">
-                                        ${restaurant.is_active ? 'Active' : 'Inactive'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info">
-                                        ${restaurant.menu_items_count || 0} items
-                                    </span>
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="editRestaurant(${restaurant.id})">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading restaurants:', error);
-                    showNotification('Error loading restaurants', 'error');
-                });
-        }
-
-        function submitRestaurantForm() {
-            const formData = new FormData();
-            const form = document.getElementById('restaurantForm');
-            
-            // Get form values
-            const name = document.getElementById('restaurantName').value;
-            const description = document.getElementById('restaurantDescription').value;
-            const address = document.getElementById('restaurantAddress').value;
-            const phone = document.getElementById('restaurantPhone').value;
-            const latitude = document.getElementById('restaurantLatitude').value;
-            const longitude = document.getElementById('restaurantLongitude').value;
-            const deliveryFee = document.getElementById('restaurantDeliveryFee').value;
-            const minOrder = document.getElementById('restaurantMinOrder').value;
-            const estimatedTime = document.getElementById('restaurantEstimatedTime').value;
-            const isActive = document.getElementById('restaurantIsActive').checked;
-            const isFeatured = document.getElementById('restaurantIsFeatured').checked;
-            
-            // Validate required fields
-            if (!name || !description || !address || !phone) {
-                showNotification('Please fill in all required fields', 'error');
-                return;
-            }
-            
-            // Append form data
-            formData.append('name', name);
-            formData.append('description', description);
-            formData.append('address', address);
-            formData.append('phone', phone);
-            formData.append('latitude', latitude || '9.0579');
-            formData.append('longitude', longitude || '38.7914');
-            formData.append('delivery_fee', deliveryFee || '0');
-            formData.append('minimum_order', minOrder || '0');
-            formData.append('estimated_delivery_time', estimatedTime || '30-45 minutes');
-            formData.append('is_active', isActive ? '1' : '0');
-            formData.append('is_featured', isFeatured ? '1' : '0');
-            
-            // Handle image uploads
-            const logoFile = document.getElementById('logoUpload').files[0];
-            const coverFile = document.getElementById('coverUpload').files[0];
-            
-            if (logoFile) {
-                formData.append('logo_image', logoFile);
-            }
-            if (coverFile) {
-                formData.append('cover_image', coverFile);
-            }
-            
-            // Submit form
-            fetch('/api/admin/restaurants', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Restaurant added successfully!', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('restaurantModal')).hide();
-                    loadRestaurants();
-                } else {
-                    showNotification('Error adding restaurant: ' + data.error, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error submitting restaurant:', error);
-                showNotification('Error submitting restaurant', 'error');
-            });
-        }
-
-        function previewImage(input, previewId) {
-            const preview = document.getElementById(previewId);
-            const file = input.files[0];
-            
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        }
-
-        function deleteRestaurant(restaurantId) {
-            if (confirm('Are you sure you want to delete this restaurant?')) {
-                fetch(`/api/restaurants/super-admin/${restaurantId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('Restaurant deleted successfully!', 'success');
-                        loadRestaurants();
-                    } else {
-                        showNotification('Error deleting restaurant', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting restaurant:', error);
-                    showNotification('Error deleting restaurant', 'error');
-                });
-            }
-        }
-
-        function editRestaurant(restaurantId) {
-            // Load restaurant data and populate form
-            fetch(`/api/admin/restaurants/${restaurantId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const restaurant = data.restaurant;
-                        document.getElementById('restaurantModalTitle').textContent = 'Edit Restaurant';
-                        document.getElementById('restaurantId').value = restaurant.id;
-                        document.getElementById('restaurantName').value = restaurant.name;
-                        document.getElementById('restaurantDescription').value = restaurant.description || '';
-                        document.getElementById('restaurantAddress').value = restaurant.address;
-                        document.getElementById('restaurantPhone').value = restaurant.phone;
-                        document.getElementById('restaurantLatitude').value = restaurant.latitude;
-                        document.getElementById('restaurantLongitude').value = restaurant.longitude;
-                        document.getElementById('restaurantDeliveryFee').value = restaurant.delivery_fee;
-                        document.getElementById('restaurantMinOrder').value = restaurant.minimum_order;
-                        document.getElementById('restaurantEstimatedTime').value = restaurant.estimated_delivery_time;
-                        document.getElementById('restaurantIsActive').checked = restaurant.is_active;
-                        document.getElementById('restaurantIsFeatured').checked = restaurant.is_featured;
-                        
-                        // Show existing images
-                        if (restaurant.logo_url) {
-                            document.getElementById('logoPreview').src = restaurant.logo_url;
-                            document.getElementById('logoPreview').style.display = 'block';
-                        }
-                        if (restaurant.cover_image_url) {
-                            document.getElementById('coverPreview').src = restaurant.cover_image_url;
-                            document.getElementById('coverPreview').style.display = 'block';
-                        }
-                        
-                        const modal = new bootstrap.Modal(document.getElementById('restaurantModal'));
-                        modal.show();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading restaurant:', error);
-                    showNotification('Error loading restaurant data', 'error');
-                });
-        }
-
-        function loadRestaurantsOnInit() {
-            const restaurantsTab = document.getElementById('restaurants-tab');
-            if (restaurantsTab) {
-                restaurantsTab.addEventListener('click', function() {
-                    setTimeout(() => {
-                        loadRestaurants();
-                    }, 100);
-                });
-            }
-        }
-                .catch(error => {
-                    showNotification('Error adding restaurant', 'error');
-                });
-            }
-        }
-
-        function viewRestaurants() {
-            loadRestaurants();
-        }
-
-        function restaurantSettings() {
-            alert('Restaurant Settings');
-        }
-
-        function loadRestaurants() {
-            fetch('/api/restaurants/super-admin')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('restaurantsTable');
-                    tbody.innerHTML = '';
-                    
-                    data.restaurants.forEach(restaurant => {
-                        const row = `
-                            <tr>
-                                <td>${restaurant.name}</td>
-                                <td>${restaurant.address}</td>
-                                <td>${restaurant.phone}</td>
-                                <td><span class="status-badge ${restaurant.is_active ? 'status-online' : 'status-offline'}">${restaurant.is_active ? 'Active' : 'Inactive'}</span></td>
-                                <td>${restaurant.menu_items_count || 0}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="viewRestaurant(${restaurant.id})">View</button>
-                                    <button class="btn btn-sm btn-warning" onclick="editRestaurant(${restaurant.id})">Edit</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">Delete</button>
-                                </td>
-                            </tr>
-                        `;
-                        tbody.innerHTML += row;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading restaurants:', error);
-                });
-        }
-
-        function viewRestaurant(restaurantId) {
-            alert(`View restaurant #${restaurantId}`);
-        }
-
-        function editRestaurant(restaurantId) {
-            alert(`Edit restaurant #${restaurantId}`);
-        }
-
-        function deleteRestaurant(restaurantId) {
-            if (confirm('Are you sure you want to delete this restaurant?')) {
-                fetch(`/api/restaurants/super-admin/${restaurantId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('Restaurant deleted successfully!', 'success');
-                        loadRestaurants();
-                    } else {
-                        showNotification('Error deleting restaurant', 'error');
-                    }
-                })
-                .catch(error => {
-                    showNotification('Error deleting restaurant', 'error');
-                });
-            }
-        }
-
-        // Payment Verification Functions
-        function refreshPaymentVerification() {
-            loadPaymentVerificationOrders();
-            showNotification('Payment verification data refreshed!', 'success');
-        }
-
-        function loadPaymentVerificationOrders() {
-            fetch('/api/admin/payment-verification')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayPaymentVerificationOrders(data.orders);
-                    } else {
-                        showNotification('Error loading payment verification orders', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('Error loading payment verification orders', 'error');
-                });
-        }
-
-        function displayPaymentVerificationOrders(orders) {
-            const tableBody = document.getElementById('paymentVerificationTable');
-            const noOrdersDiv = document.getElementById('noPaymentOrders');
-            
-            if (orders.length === 0) {
-                tableBody.innerHTML = '';
-                noOrdersDiv.style.display = 'block';
-                return;
-            }
-            
-            noOrdersDiv.style.display = 'none';
-            
-            const ordersHtml = orders.map(order => {
-                const orderTime = new Date(order.created_at).toLocaleString();
-                const itemsList = order.items.map(item => `${item.name} (${item.quantity}x)`).join(', ');
-                
-                return `
-                    <tr>
-                        <td><strong>#${order.id}</strong></td>
-                        <td>${order.customer_name}</td>
-                        <td>${order.customer_phone}</td>
-                        <td><strong>${order.total_amount} ETB</strong></td>
-                        <td>${orderTime}</td>
-                        <td><small>${itemsList}</small></td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="verifyPayment(${order.id})">
-                                <i class="fas fa-check-circle"></i> Verify Payment
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-            
-            tableBody.innerHTML = ordersHtml;
-        }
-
-        function verifyPayment(orderId) {
-            if (!confirm(`Are you sure you want to verify payment for Order #${orderId}?\\n\\nThis action confirms that you have received the payment in your bank account.`)) {
-                return;
-            }
-            
-            fetch(`/api/admin/verify-payment/${orderId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(`Payment verified for Order #${orderId}. Customer has been notified and order will proceed to kitchen.`, 'success');
-                    loadPaymentVerificationOrders(); // Refresh the list
-                } else {
-                    showNotification(data.error || 'Error verifying payment', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Error verifying payment', 'error');
-            });
-        }
-
-        // Super Admin Payment Verification Functions
-        function refreshSuperAdminPaymentVerification() {
-            loadSuperAdminPaymentVerificationOrders();
-            showNotification('Payment verification data refreshed!', 'success');
-        }
-
-        function loadSuperAdminPaymentVerificationOrders() {
-            fetch('/api/orders/payment-verification/super-admin')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('superAdminPaymentVerificationTable');
-                    const noOrdersDiv = document.getElementById('noSuperAdminPaymentOrders');
-                    
-                    if (data.orders && data.orders.length > 0) {
-                        tbody.innerHTML = '';
-                        noOrdersDiv.style.display = 'none';
-                        tbody.parentElement.parentElement.style.display = 'block';
-                        
-                        data.orders.forEach(order => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>#${order.id}</td>
-                                <td>${order.customer_name}</td>
-                                <td>${order.customer_phone || 'N/A'}</td>
-                                <td>ETB ${order.total_amount.toFixed(2)}</td>
-                                <td>${new Date(order.created_at).toLocaleString()}</td>
-                                <td>
-                                    <span class="badge bg-info">${order.payment_method || 'Not specified'}</span>
-                                </td>
-                                <td>
-                                    ${order.transaction_image_url ? 
-                                        `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
-                                            <i class="fas fa-image"></i> View
-                                        </button>` : 
-                                        '<span class="text-muted">No screenshot</span>'
-                                    }
-                                </td>
-                                <td>
-                                    <span class="badge ${order.status === 'payment_verified' ? 'bg-success' : 'bg-warning'}">${order.status}</span>
-                                </td>
-                            `;
-                            tbody.appendChild(row);
-                        });
-                    } else {
-                        tbody.innerHTML = '';
-                        tbody.parentElement.parentElement.style.display = 'none';
-                        noOrdersDiv.style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading super admin payment verification orders:', error);
-                    showNotification('Error loading payment verification orders', 'error');
-                });
-        }
-
-        function viewPaymentScreenshot(imageUrl) {
-            const modalHtml = `
-                <div class="modal fade" id="paymentScreenshotModal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Payment Screenshot</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body text-center">
-                                <img src="${imageUrl}" alt="Payment Screenshot" class="img-fluid" style="max-height: 500px;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Remove existing modal if present
-            const existingModal = document.getElementById('paymentScreenshotModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-            
-            // Add new modal
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            // Show modal
-            const modal = new bootstrap.Modal(document.getElementById('paymentScreenshotModal'));
-            modal.show();
-        }
-
-        function viewBankDetails() {
-            const bankInfo = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6><i class="fas fa-university"></i> Commercial Bank of Ethiopia (CBE)</h6>
-                        <p><strong>Account:</strong> 1000123456789<br>
-                        <strong>Account Name:</strong> ET-FOOD Restaurant</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6><i class="fas fa-mobile-alt"></i> TeleBirr</h6>
-                        <p><strong>Phone:</strong> +251-911-234567<br>
-                        <strong>Account Name:</strong> ET-FOOD</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6><i class="fas fa-university"></i> Dashen Bank</h6>
-                        <p><strong>Account:</strong> 0987654321012<br>
-                        <strong>Account Name:</strong> ET-FOOD Restaurant</p>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i>
-                    These are the bank account details that customers receive when they place orders. Check these accounts for deposits before verifying payments.
-                </div>
-            `;
-            
-            alert('Bank Account Details:\\n\\nCommercial Bank of Ethiopia (CBE)\\nAccount: 1000123456789\\nAccount Name: ET-FOOD Restaurant\\n\\nTeleBirr\\nPhone: +251-911-234567\\nAccount Name: ET-FOOD\\n\\nDashen Bank\\nAccount: 0987654321012\\nAccount Name: ET-FOOD Restaurant');
-        }
-
-        function showNotification(message, type = 'info') {
-            const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
-            const notification = `
-                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            
-            const container = document.querySelector('.dashboard-container');
-            container.insertAdjacentHTML('afterbegin', notification);
-            
-            setTimeout(() => {
-                const alert = container.querySelector('.alert');
-                if (alert) {
-                    alert.remove();
-                }
-            }, 5000);
-        }
-    </script>
-
-    <!-- Restaurant Modal -->
-    <div class="modal fade" id="restaurantModal" tabindex="-1">
+    <!-- Add Admin Modal -->
+    <div class="modal fade" id="addAdminModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="restaurantModalTitle">Add New Restaurant</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus"></i> Add New Admin
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="restaurantForm">
-                        <input type="hidden" id="restaurantId">
+                    <form id="addAdminForm">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Restaurant Name *</label>
-                                    <input type="text" class="form-control" id="restaurantName" required>
+                                    <label class="form-label">Username *</label>
+                                    <input type="text" class="form-control" name="username" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Phone *</label>
-                                    <input type="text" class="form-control" id="restaurantPhone" required>
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" name="full_name">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Role *</label>
+                                    <select class="form-select" name="role" required>
+                                        <option value="admin">Restaurant Admin</option>
+                                        <option value="kitchen_staff">Kitchen Staff</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Restaurant</label>
+                                    <select class="form-select" name="restaurant_id" id="restaurantSelect">
+                                        <option value="">Select Restaurant</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Description *</label>
-                            <textarea class="form-control" id="restaurantDescription" rows="3" required></textarea>
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Address *</label>
-                            <textarea class="form-control" id="restaurantAddress" rows="2" required></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Latitude</label>
-                                    <input type="number" step="0.000001" class="form-control" id="restaurantLatitude" placeholder="9.0579">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Longitude</label>
-                                    <input type="number" step="0.000001" class="form-control" id="restaurantLongitude" placeholder="38.7914">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Fee (ETB)</label>
-                                    <input type="number" step="0.01" class="form-control" id="restaurantDeliveryFee" placeholder="0">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Minimum Order (ETB)</label>
-                                    <input type="number" step="0.01" class="form-control" id="restaurantMinOrder" placeholder="0">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Estimated Delivery Time</label>
-                                    <input type="text" class="form-control" id="restaurantEstimatedTime" placeholder="30-45 minutes">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Logo Image</label>
-                                    <input type="file" class="form-control" id="logoUpload" accept="image/*" onchange="previewImage(this, 'logoPreview')">
-                                    <img id="logoPreview" class="mt-2" style="max-width: 100px; display: none;">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Cover Image</label>
-                                    <input type="file" class="form-control" id="coverUpload" accept="image/*" onchange="previewImage(this, 'coverPreview')">
-                                    <img id="coverPreview" class="mt-2" style="max-width: 100px; display: none;">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3 form-check">
-                                    <input type="checkbox" class="form-check-input" id="restaurantIsActive" checked>
-                                    <label class="form-check-label" for="restaurantIsActive">
-                                        Active Restaurant
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 form-check">
-                                    <input type="checkbox" class="form-check-input" id="restaurantIsFeatured">
-                                    <label class="form-check-label" for="restaurantIsFeatured">
-                                        Featured Restaurant
-                                    </label>
-                                </div>
-                            </div>
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="submitRestaurantForm()">
-                        <i class="fas fa-save"></i> Save Restaurant
+                    <button type="button" class="btn btn-gradient" onclick="createAdmin()">
+                        <i class="fas fa-plus"></i> Create Admin
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Admin Performance Modal -->
+    <div class="modal fade" id="performanceModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-line"></i> Admin Performance Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="performanceModalBody">
+                    <!-- Performance details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="super_admin_dashboard.js"></script>
 </body>
 </html>

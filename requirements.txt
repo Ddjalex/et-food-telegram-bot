@@ -383,3 +383,7 @@ requests
 sqlalchemy
 telegram
 werkzeug
+flask-dance
+flask-login
+oauthlib
+pyjwt

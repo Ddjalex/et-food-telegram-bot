@@ -118,9 +118,51 @@ class Order(db.Model):
 
 class AdminUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    telegram_user_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    telegram_user_id = db.Column(db.BigInteger, unique=True, nullable=True)
     username = db.Column(db.String(100))
+    email = db.Column(db.String(120))
+    full_name = db.Column(db.String(200))
+    phone = db.Column(db.String(20))
+    role = db.Column(db.String(20), default='admin')  # super_admin, admin, kitchen_staff
     is_active = db.Column(db.Boolean, default=True)
+    is_blocked = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(256))
+    last_login = db.Column(db.DateTime)
+    created_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
+    permissions = db.Column(db.JSON)  # Store permissions as JSON
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Performance tracking
+    orders_processed = db.Column(db.Integer, default=0)
+    orders_completed = db.Column(db.Integer, default=0)
+    average_response_time = db.Column(db.Float, default=0.0)  # in minutes
+    total_revenue_managed = db.Column(db.Float, default=0.0)
+    
+    # Self-referential relationship for admin hierarchy
+    created_admins = db.relationship('AdminUser', backref=db.backref('creator', remote_side=[id]))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'telegram_user_id': self.telegram_user_id,
+            'username': self.username,
+            'email': self.email,
+            'full_name': self.full_name,
+            'phone': self.phone,
+            'role': self.role,
+            'is_active': self.is_active,
+            'is_blocked': self.is_blocked,
+            'last_login': self.last_login.isoformat() if self.last_login else None,
+            'restaurant_id': self.restaurant_id,
+            'orders_processed': self.orders_processed,
+            'orders_completed': self.orders_completed,
+            'average_response_time': self.average_response_time,
+            'total_revenue_managed': self.total_revenue_managed,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -143,13 +185,31 @@ class SystemSettings(db.Model):
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     icon = db.Column(db.String(10), default='🍽️')
     image_url = db.Column(db.String(500))  # Optional category image
     is_active = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=0)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'icon': self.icon,
+            'image_url': self.image_url,
+            'is_active': self.is_active,
+            'sort_order': self.sort_order,
+            'restaurant_id': self.restaurant_id,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 class Driver(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -197,3 +257,76 @@ class UserProfile(db.Model):
     live_location_period = db.Column(db.Integer, default=0)  # Live location tracking period
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class AdminActivity(db.Model):
+    """Track admin activities for performance monitoring"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)  # order_processed, menu_updated, driver_approved, etc.
+    entity_type = db.Column(db.String(50))  # order, menu_item, driver, etc.
+    entity_id = db.Column(db.Integer)
+    description = db.Column(db.Text)
+    response_time = db.Column(db.Float)  # Time taken to complete action in minutes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    admin = db.relationship('AdminUser', backref='activities')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'admin_id': self.admin_id,
+            'action_type': self.action_type,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'description': self.description,
+            'response_time': self.response_time,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class AdminSession(db.Model):
+    """Track admin login sessions for security and performance"""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False)
+    login_time = db.Column(db.DateTime, default=datetime.utcnow)
+    logout_time = db.Column(db.DateTime)
+    ip_address = db.Column(db.String(45))  # Support both IPv4 and IPv6
+    user_agent = db.Column(db.Text)
+    session_duration = db.Column(db.Integer)  # in minutes
+    actions_performed = db.Column(db.Integer, default=0)
+    
+    admin = db.relationship('AdminUser', backref='sessions')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'admin_id': self.admin_id,
+            'login_time': self.login_time.isoformat() if self.login_time else None,
+            'logout_time': self.logout_time.isoformat() if self.logout_time else None,
+            'ip_address': self.ip_address,
+            'session_duration': self.session_duration,
+            'actions_performed': self.actions_performed
+        }
+
+class MenuItemModification(db.Model):
+    """Track menu item changes for audit trail"""
+    id = db.Column(db.Integer, primary_key=True)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_item.id'), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False)
+    action = db.Column(db.String(20), nullable=False)  # created, updated, deleted, activated, deactivated
+    old_values = db.Column(db.JSON)  # Previous values
+    new_values = db.Column(db.JSON)  # New values
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    menu_item = db.relationship('MenuItem', backref='modifications')
+    admin = db.relationship('AdminUser', backref='menu_modifications')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'menu_item_id': self.menu_item_id,
+            'admin_id': self.admin_id,
+            'action': self.action,
+            'old_values': self.old_values,
+            'new_values': self.new_values,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }

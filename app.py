@@ -89,8 +89,15 @@ def create_tables():
             print("Default restaurants created")
         
         # Initialize default categories if needed
-        if Category.query.count() == 0:
-            # Create default categories
+        try:
+            category_count = Category.query.count()
+        except Exception as e:
+            print(f"Creating category table: {e}")
+            category_count = 0
+        
+        if category_count == 0:
+            # Create default categories for all restaurants
+            restaurants = Restaurant.query.all()
             categories = [
                 {'name': 'Burgers', 'description': 'Delicious burgers and sandwiches', 'icon': '🍔'},
                 {'name': 'Snacks', 'description': 'Light snacks and appetizers', 'icon': '🍟'},
@@ -98,13 +105,15 @@ def create_tables():
                 {'name': 'Drinks', 'description': 'Beverages and drinks', 'icon': '🥤'},
             ]
             
-            for cat_data in categories:
-                category = Category(
-                    name=cat_data['name'],
-                    description=cat_data['description'],
-                    icon=cat_data['icon']
-                )
-                db.session.add(category)
+            for restaurant in restaurants:
+                for cat_data in categories:
+                    category = Category(
+                        name=cat_data['name'],
+                        description=cat_data['description'],
+                        icon=cat_data['icon'],
+                        restaurant_id=restaurant.id
+                    )
+                    db.session.add(category)
             
             db.session.commit()
             print("Default categories created")
@@ -115,6 +124,7 @@ create_tables()
 # Import routes to register them
 from routes import *  # noqa: F401
 from restaurant_routes import *  # noqa: F401
+from admin_routes import *  # noqa: F401
 
 # Initialize bot with webhook
 try:
