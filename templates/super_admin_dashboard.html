@@ -941,38 +941,232 @@
 
         // Restaurant Management Functions
         function addRestaurant() {
-            const name = prompt('Enter restaurant name:');
-            const address = prompt('Enter restaurant address:');
-            const phone = prompt('Enter restaurant phone:');
-            const latitude = parseFloat(prompt('Enter restaurant latitude:'));
-            const longitude = parseFloat(prompt('Enter restaurant longitude:'));
+            document.getElementById('restaurantModalTitle').textContent = 'Add New Restaurant';
+            document.getElementById('restaurantForm').reset();
+            document.getElementById('restaurantId').value = '';
+            document.getElementById('logoPreview').style.display = 'none';
+            document.getElementById('coverPreview').style.display = 'none';
+            const modal = new bootstrap.Modal(document.getElementById('restaurantModal'));
+            modal.show();
+        }
+
+        function viewRestaurants() {
+            loadRestaurants();
+        }
+
+        function restaurantSettings() {
+            alert('Restaurant settings feature coming soon!');
+        }
+
+        function loadRestaurants() {
+            fetch('/api/admin/restaurants')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('restaurantsTable');
+                    tbody.innerHTML = '';
+                    
+                    data.restaurants.forEach(restaurant => {
+                        const row = `
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="${restaurant.logo_url || '/static/images/default-restaurant.png'}" 
+                                             alt="${restaurant.name}" 
+                                             style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+                                        <div>
+                                            <strong>${restaurant.name}</strong>
+                                            <br>
+                                            <small class="text-muted">${restaurant.description || 'No description'}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${restaurant.address}</td>
+                                <td>${restaurant.phone}</td>
+                                <td>
+                                    <span class="badge ${restaurant.is_active ? 'bg-success' : 'bg-danger'}">
+                                        ${restaurant.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        ${restaurant.menu_items_count || 0} items
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="editRestaurant(${restaurant.id})">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading restaurants:', error);
+                    showNotification('Error loading restaurants', 'error');
+                });
+        }
+
+        function submitRestaurantForm() {
+            const formData = new FormData();
+            const form = document.getElementById('restaurantForm');
             
-            if (name && address && phone && latitude && longitude) {
-                const restaurantData = {
-                    name: name,
-                    address: address,
-                    phone: phone,
-                    latitude: latitude,
-                    longitude: longitude,
-                    is_active: true
+            // Get form values
+            const name = document.getElementById('restaurantName').value;
+            const description = document.getElementById('restaurantDescription').value;
+            const address = document.getElementById('restaurantAddress').value;
+            const phone = document.getElementById('restaurantPhone').value;
+            const latitude = document.getElementById('restaurantLatitude').value;
+            const longitude = document.getElementById('restaurantLongitude').value;
+            const deliveryFee = document.getElementById('restaurantDeliveryFee').value;
+            const minOrder = document.getElementById('restaurantMinOrder').value;
+            const estimatedTime = document.getElementById('restaurantEstimatedTime').value;
+            const isActive = document.getElementById('restaurantIsActive').checked;
+            const isFeatured = document.getElementById('restaurantIsFeatured').checked;
+            
+            // Validate required fields
+            if (!name || !description || !address || !phone) {
+                showNotification('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            // Append form data
+            formData.append('name', name);
+            formData.append('description', description);
+            formData.append('address', address);
+            formData.append('phone', phone);
+            formData.append('latitude', latitude || '9.0579');
+            formData.append('longitude', longitude || '38.7914');
+            formData.append('delivery_fee', deliveryFee || '0');
+            formData.append('minimum_order', minOrder || '0');
+            formData.append('estimated_delivery_time', estimatedTime || '30-45 minutes');
+            formData.append('is_active', isActive ? '1' : '0');
+            formData.append('is_featured', isFeatured ? '1' : '0');
+            
+            // Handle image uploads
+            const logoFile = document.getElementById('logoUpload').files[0];
+            const coverFile = document.getElementById('coverUpload').files[0];
+            
+            if (logoFile) {
+                formData.append('logo_image', logoFile);
+            }
+            if (coverFile) {
+                formData.append('cover_image', coverFile);
+            }
+            
+            // Submit form
+            fetch('/api/admin/restaurants', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Restaurant added successfully!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('restaurantModal')).hide();
+                    loadRestaurants();
+                } else {
+                    showNotification('Error adding restaurant: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting restaurant:', error);
+                showNotification('Error submitting restaurant', 'error');
+            });
+        }
+
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            const file = input.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
                 };
-                
-                fetch('/api/restaurants/super-admin', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(restaurantData)
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        function deleteRestaurant(restaurantId) {
+            if (confirm('Are you sure you want to delete this restaurant?')) {
+                fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+                    method: 'DELETE'
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showNotification('Restaurant added successfully!', 'success');
+                        showNotification('Restaurant deleted successfully!', 'success');
                         loadRestaurants();
                     } else {
-                        showNotification('Error adding restaurant', 'error');
+                        showNotification('Error deleting restaurant', 'error');
                     }
                 })
+                .catch(error => {
+                    console.error('Error deleting restaurant:', error);
+                    showNotification('Error deleting restaurant', 'error');
+                });
+            }
+        }
+
+        function editRestaurant(restaurantId) {
+            // Load restaurant data and populate form
+            fetch(`/api/admin/restaurants/${restaurantId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const restaurant = data.restaurant;
+                        document.getElementById('restaurantModalTitle').textContent = 'Edit Restaurant';
+                        document.getElementById('restaurantId').value = restaurant.id;
+                        document.getElementById('restaurantName').value = restaurant.name;
+                        document.getElementById('restaurantDescription').value = restaurant.description || '';
+                        document.getElementById('restaurantAddress').value = restaurant.address;
+                        document.getElementById('restaurantPhone').value = restaurant.phone;
+                        document.getElementById('restaurantLatitude').value = restaurant.latitude;
+                        document.getElementById('restaurantLongitude').value = restaurant.longitude;
+                        document.getElementById('restaurantDeliveryFee').value = restaurant.delivery_fee;
+                        document.getElementById('restaurantMinOrder').value = restaurant.minimum_order;
+                        document.getElementById('restaurantEstimatedTime').value = restaurant.estimated_delivery_time;
+                        document.getElementById('restaurantIsActive').checked = restaurant.is_active;
+                        document.getElementById('restaurantIsFeatured').checked = restaurant.is_featured;
+                        
+                        // Show existing images
+                        if (restaurant.logo_url) {
+                            document.getElementById('logoPreview').src = restaurant.logo_url;
+                            document.getElementById('logoPreview').style.display = 'block';
+                        }
+                        if (restaurant.cover_image_url) {
+                            document.getElementById('coverPreview').src = restaurant.cover_image_url;
+                            document.getElementById('coverPreview').style.display = 'block';
+                        }
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('restaurantModal'));
+                        modal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading restaurant:', error);
+                    showNotification('Error loading restaurant data', 'error');
+                });
+        }
+
+        function loadRestaurantsOnInit() {
+            const restaurantsTab = document.getElementById('restaurants-tab');
+            if (restaurantsTab) {
+                restaurantsTab.addEventListener('click', function() {
+                    setTimeout(() => {
+                        loadRestaurants();
+                    }, 100);
+                });
+            }
+        }
                 .catch(error => {
                     showNotification('Error adding restaurant', 'error');
                 });
@@ -1263,5 +1457,119 @@
             }, 5000);
         }
     </script>
+
+    <!-- Restaurant Modal -->
+    <div class="modal fade" id="restaurantModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="restaurantModalTitle">Add New Restaurant</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="restaurantForm">
+                        <input type="hidden" id="restaurantId">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Restaurant Name *</label>
+                                    <input type="text" class="form-control" id="restaurantName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone *</label>
+                                    <input type="text" class="form-control" id="restaurantPhone" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea class="form-control" id="restaurantDescription" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address *</label>
+                            <textarea class="form-control" id="restaurantAddress" rows="2" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="0.000001" class="form-control" id="restaurantLatitude" placeholder="9.0579">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="0.000001" class="form-control" id="restaurantLongitude" placeholder="38.7914">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Delivery Fee (ETB)</label>
+                                    <input type="number" step="0.01" class="form-control" id="restaurantDeliveryFee" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Minimum Order (ETB)</label>
+                                    <input type="number" step="0.01" class="form-control" id="restaurantMinOrder" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Estimated Delivery Time</label>
+                                    <input type="text" class="form-control" id="restaurantEstimatedTime" placeholder="30-45 minutes">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Logo Image</label>
+                                    <input type="file" class="form-control" id="logoUpload" accept="image/*" onchange="previewImage(this, 'logoPreview')">
+                                    <img id="logoPreview" class="mt-2" style="max-width: 100px; display: none;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Cover Image</label>
+                                    <input type="file" class="form-control" id="coverUpload" accept="image/*" onchange="previewImage(this, 'coverPreview')">
+                                    <img id="coverPreview" class="mt-2" style="max-width: 100px; display: none;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="restaurantIsActive" checked>
+                                    <label class="form-check-label" for="restaurantIsActive">
+                                        Active Restaurant
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="restaurantIsFeatured">
+                                    <label class="form-check-label" for="restaurantIsFeatured">
+                                        Featured Restaurant
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitRestaurantForm()">
+                        <i class="fas fa-save"></i> Save Restaurant
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

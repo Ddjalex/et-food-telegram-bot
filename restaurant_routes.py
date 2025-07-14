@@ -19,10 +19,7 @@ def get_restaurants():
         logger.error(f"Error fetching restaurants: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/select-restaurant')
-def select_restaurant():
-    """Restaurant selection page"""
-    return render_template('select_restaurant.html')
+# Restaurant selection route moved to routes.py to avoid duplication
 
 @app.route('/api/restaurants/<int:restaurant_id>/menu', methods=['GET'])
 def get_restaurant_menu(restaurant_id):
@@ -57,9 +54,54 @@ def admin_get_restaurants():
 
 @app.route('/api/admin/restaurants', methods=['POST'])
 def admin_create_restaurant():
-    """Admin endpoint to create a new restaurant"""
+    """Admin endpoint to create a new restaurant with image upload support"""
     try:
-        data = request.get_json()
+        from werkzeug.utils import secure_filename
+        import os
+        
+        # Handle both form data and JSON data
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # Form data with file uploads
+            data = request.form.to_dict()
+            
+            # Handle file uploads
+            upload_folder = os.path.join('static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            logo_url = None
+            cover_image_url = None
+            
+            # Handle logo upload
+            if 'logo_image' in request.files:
+                logo_file = request.files['logo_image']
+                if logo_file and logo_file.filename:
+                    filename = secure_filename(logo_file.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    logo_filename = f"restaurant_logo_{timestamp}_{filename}"
+                    logo_path = os.path.join(upload_folder, logo_filename)
+                    logo_file.save(logo_path)
+                    logo_url = f"/static/uploads/{logo_filename}"
+            
+            # Handle cover image upload
+            if 'cover_image' in request.files:
+                cover_file = request.files['cover_image']
+                if cover_file and cover_file.filename:
+                    filename = secure_filename(cover_file.filename)
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    cover_filename = f"restaurant_cover_{timestamp}_{filename}"
+                    cover_path = os.path.join(upload_folder, cover_filename)
+                    cover_file.save(cover_path)
+                    cover_image_url = f"/static/uploads/{cover_filename}"
+            
+            # Use uploaded images or fallback to URL inputs
+            final_logo_url = logo_url or data.get('logo_url')
+            final_cover_url = cover_image_url or data.get('cover_image_url')
+            
+        else:
+            # JSON data
+            data = request.get_json()
+            final_logo_url = data.get('logo_url')
+            final_cover_url = data.get('cover_image_url')
         
         # Validate required fields
         required_fields = ['name', 'description', 'address', 'phone']
@@ -73,14 +115,14 @@ def admin_create_restaurant():
             description=data['description'],
             address=data['address'],
             phone=data['phone'],
-            latitude=data.get('latitude', 9.0579),
-            longitude=data.get('longitude', 38.7914),
-            logo_url=data.get('logo_url'),
-            cover_image_url=data.get('cover_image_url'),
-            is_active=data.get('is_active', True),
-            is_featured=data.get('is_featured', False),
-            delivery_fee=data.get('delivery_fee', 0.0),
-            minimum_order=data.get('minimum_order', 0.0),
+            latitude=float(data.get('latitude', 9.0579)),
+            longitude=float(data.get('longitude', 38.7914)),
+            logo_url=final_logo_url,
+            cover_image_url=final_cover_url,
+            is_active=data.get('is_active', '1') == '1' if isinstance(data.get('is_active'), str) else bool(data.get('is_active', True)),
+            is_featured=data.get('is_featured', '0') == '1' if isinstance(data.get('is_featured'), str) else bool(data.get('is_featured', False)),
+            delivery_fee=float(data.get('delivery_fee', 0.0)),
+            minimum_order=float(data.get('minimum_order', 0.0)),
             estimated_delivery_time=data.get('estimated_delivery_time', '30-45 minutes'),
             opening_hours=data.get('opening_hours', {
                 'monday': '09:00-22:00',

@@ -69,6 +69,20 @@ def index():
     """Main page"""
     return render_template('webapp_modern_fixed.html')
 
+@app.route('/menu')
+def menu():
+    """Menu page with restaurant selection"""
+    restaurant_id = request.args.get('restaurant')
+    if restaurant_id:
+        # Store selected restaurant in session for the WebApp
+        session['selected_restaurant'] = restaurant_id
+    return render_template('webapp_modern_fixed.html')
+
+@app.route('/select-restaurant')
+def select_restaurant():
+    """Restaurant selection page"""
+    return render_template('select_restaurant.html')
+
 @app.route('/test')
 def test():
     """Test page"""
