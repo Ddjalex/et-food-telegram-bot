@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ admin.restaurant.name if admin.restaurant else 'Restaurant' }} - Admin Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        .admin-sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .admin-main {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .nav-pills .nav-link {
+            color: rgba(255,255,255,0.8);
+            border-radius: 25px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        .nav-pills .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        .nav-pills .nav-link:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+        }
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 0 0 25px 25px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 admin-sidebar">
+                <div class="p-4">
+                    <div class="text-center mb-4">
+                        <h3 class="text-white mb-1">
+                            <i class="fas fa-utensils"></i>
+                            ET-FOOD
+                        </h3>
+                        <small class="text-white-50">Restaurant Admin</small>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-3 d-inline-flex mb-2">
+                            <i class="fas fa-user-tie fa-2x text-white"></i>
+                        </div>
+                        <h5 class="text-white mb-1">{{ admin.full_name }}</h5>
+                        <small class="text-white-50">{{ admin.restaurant.name if admin.restaurant else 'No Restaurant' }}</small>
+                    </div>
+                    
+                    <nav class="nav nav-pills flex-column" id="adminTabs">
+                        <a class="nav-link active" data-tab="dashboard" href="#dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            Dashboard
+                        </a>
+                        <a class="nav-link" data-tab="orders" href="#orders">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            Orders
+                        </a>
+                        <a class="nav-link" data-tab="menu" href="#menu">
+                            <i class="fas fa-utensils me-2"></i>
+                            Menu
+                        </a>
+                        <a class="nav-link" data-tab="categories" href="#categories">
+                            <i class="fas fa-th-large me-2"></i>
+                            Categories
+                        </a>
+                        <a class="nav-link" data-tab="kitchen" href="#kitchen">
+                            <i class="fas fa-fire me-2"></i>
+                            Kitchen
+                        </a>
+                    </nav>
+                    
+                    <div class="mt-auto pt-4">
+                        <a href="/admin/logout" class="btn btn-outline-light btn-sm w-100">
+                            <i class="fas fa-sign-out-alt me-2"></i>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 admin-main">
+                <!-- Header -->
+                <div class="admin-header p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-1">{{ admin.restaurant.name if admin.restaurant else 'Restaurant' }} Dashboard</h2>
+                            <p class="mb-0 opacity-75">Restaurant Management System</p>
+                        </div>
+                        <div class="text-end">
+                            <small class="d-block">Welcome back, {{ admin.full_name }}!</small>
+                            <small class="opacity-75">{{ admin.role|title }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Content -->
+                <div class="p-4">
+                    <!-- Dashboard Tab -->
+                    <div class="tab-content active" id="dashboard">
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                                        <h3 class="mb-0" id="todayOrders">0</h3>
+                                        <small>Today's Orders</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-utensils fa-2x mb-2"></i>
+                                        <h3 class="mb-0" id="menuItems">0</h3>
+                                        <small>Menu Items</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                                        <h3 class="mb-0" id="todayRevenue">0</h3>
+                                        <small>Today's Revenue</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <h3 class="mb-0" id="pendingOrders">0</h3>
+                                        <small>Pending Orders</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="table-container">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-chart-line me-2"></i>
+                                            Recent Orders
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Order ID</th>
+                                                        <th>Customer</th>
+                                                        <th>Status</th>
+                                                        <th>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="recentOrdersTable">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">Loading...</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="table-container">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-utensils me-2"></i>
+                                            Popular Items
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Item</th>
+                                                        <th>Category</th>
+                                                        <th>Orders</th>
+                                                        <th>Revenue</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="popularItemsTable">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">Loading...</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Orders Tab -->
+                    <div class="tab-content" id="orders">
+                        <div class="table-container">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-clipboard-list me-2"></i>
+                                    Orders Management
+                                </h5>
+                                <button class="btn btn-light btn-sm" onclick="loadOrders()">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Items</th>
+                                                <th>Total</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ordersTable">
+                                            <tr>
+                                                <td colspan="7" class="text-center">Loading orders...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Menu Tab -->
+                    <div class="tab-content" id="menu">
+                        <div class="table-container">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-utensils me-2"></i>
+                                    Menu Management
+                                </h5>
+                                <button class="btn btn-light btn-sm" onclick="showAddMenuItemModal()">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Add Item
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Name</th>
+                                                <th>Category</th>
+                                                <th>Price</th>
+                                                <th>Available</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="menuItemsTable">
+                                            <tr>
+                                                <td colspan="6" class="text-center">Loading menu items...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Categories Tab -->
+                    <div class="tab-content" id="categories">
+                        <div class="table-container">
+                            <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-th-large me-2"></i>
+                                    Categories Management
+                                </h5>
+                                <button class="btn btn-light btn-sm" onclick="showAddCategoryModal()">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Add Category
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Icon</th>
+                                                <th>Name</th>
+                                                <th>Description</th>
+                                                <th>Items</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="categoriesTable">
+                                            <tr>
+                                                <td colspan="5" class="text-center">Loading categories...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Kitchen Tab -->
+                    <div class="tab-content" id="kitchen">
+                        <div class="table-container">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-fire me-2"></i>
+                                    Kitchen Dashboard
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Active Orders</h6>
+                                        <div id="activeOrdersList">
+                                            <p class="text-muted">Loading active orders...</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Kitchen Statistics</h6>
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="bg-primary text-white p-3 rounded text-center">
+                                                    <h4 id="prepareCount">0</h4>
+                                                    <small>Preparing</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="bg-success text-white p-3 rounded text-center">
+                                                    <h4 id="readyCount">0</h4>
+                                                    <small>Ready</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
+            loadDashboardData();
+        });
+
+        // Tab navigation
+        function initializeTabs() {
+            const tabLinks = document.querySelectorAll('#adminTabs a');
+            
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links and contents
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Show corresponding tab content
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // Load tab-specific data
+                    switch(tabId) {
+                        case 'dashboard':
+                            loadDashboardData();
+                            break;
+                        case 'orders':
+                            loadOrders();
+                            break;
+                        case 'menu':
+                            loadMenuItems();
+                            break;
+                        case 'categories':
+                            loadCategories();
+                            break;
+                        case 'kitchen':
+                            loadKitchenData();
+                            break;
+                    }
+                });
+            });
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/admin/dashboard-stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('todayOrders').textContent = data.todayOrders || 0;
+                    document.getElementById('menuItems').textContent = data.menuItems || 0;
+                    document.getElementById('todayRevenue').textContent = (data.todayRevenue || 0) + ' ETB';
+                    document.getElementById('pendingOrders').textContent = data.pendingOrders || 0;
+                    
+                    // Load recent orders
+                    loadRecentOrders();
+                    loadPopularItems();
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Load recent orders
+        async function loadRecentOrders() {
+            try {
+                const response = await fetch('/api/admin/recent-orders');
+                if (response.ok) {
+                    const orders = await response.json();
+                    const tableBody = document.getElementById('recentOrdersTable');
+                    
+                    if (orders.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No recent orders</td></tr>';
+                    } else {
+                        tableBody.innerHTML = orders.map(order => `
+                            <tr>
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                                <td>${order.total_amount} ETB</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recent orders:', error);
+            }
+        }
+
+        // Load popular items
+        async function loadPopularItems() {
+            try {
+                const response = await fetch('/api/admin/popular-items');
+                if (response.ok) {
+                    const items = await response.json();
+                    const tableBody = document.getElementById('popularItemsTable');
+                    
+                    if (items.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No data available</td></tr>';
+                    } else {
+                        tableBody.innerHTML = items.map(item => `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.category}</td>
+                                <td>${item.order_count}</td>
+                                <td>${item.revenue} ETB</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading popular items:', error);
+            }
+        }
+
+        // Load orders
+        async function loadOrders() {
+            try {
+                const response = await fetch('/api/admin/orders');
+                if (response.ok) {
+                    const orders = await response.json();
+                    const tableBody = document.getElementById('ordersTable');
+                    
+                    if (orders.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No orders found</td></tr>';
+                    } else {
+                        tableBody.innerHTML = orders.map(order => `
+                            <tr>
+                                <td>#${order.id}</td>
+                                <td>${order.customer_name}</td>
+                                <td>${order.items ? order.items.length : 0} items</td>
+                                <td>${order.total_amount} ETB</td>
+                                <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                                <td>${formatDate(order.created_at)}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewOrder(${order.id})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+
+        // Load menu items
+        async function loadMenuItems() {
+            try {
+                const response = await fetch('/api/admin/menu-items');
+                if (response.ok) {
+                    const items = await response.json();
+                    const tableBody = document.getElementById('menuItemsTable');
+                    
+                    if (items.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No menu items found</td></tr>';
+                    } else {
+                        tableBody.innerHTML = items.map(item => `
+                            <tr>
+                                <td>
+                                    <img src="${item.image_url || '/static/images/default-food.jpg'}" 
+                                         alt="${item.name}" 
+                                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                                </td>
+                                <td>${item.name}</td>
+                                <td>${item.category_name}</td>
+                                <td>${item.price} ETB</td>
+                                <td>
+                                    <span class="badge bg-${item.is_available ? 'success' : 'danger'}">
+                                        ${item.is_available ? 'Available' : 'Unavailable'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editMenuItem(${item.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteMenuItem(${item.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading menu items:', error);
+            }
+        }
+
+        // Load categories
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/admin/categories');
+                if (response.ok) {
+                    const categories = await response.json();
+                    const tableBody = document.getElementById('categoriesTable');
+                    
+                    if (categories.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No categories found</td></tr>';
+                    } else {
+                        tableBody.innerHTML = categories.map(category => `
+                            <tr>
+                                <td style="font-size: 1.5rem;">${category.icon || '📁'}</td>
+                                <td>${category.name}</td>
+                                <td>${category.description || 'No description'}</td>
+                                <td>${category.item_count || 0} items</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="editCategory(${category.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteCategory(${category.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Load kitchen data
+        async function loadKitchenData() {
+            try {
+                const response = await fetch('/api/admin/kitchen-stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('prepareCount').textContent = data.preparing || 0;
+                    document.getElementById('readyCount').textContent = data.ready || 0;
+                }
+            } catch (error) {
+                console.error('Error loading kitchen data:', error);
+            }
+        }
+
+        // Utility functions
+        function getStatusColor(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'confirmed': return 'info';
+                case 'preparing': return 'primary';
+                case 'ready': return 'success';
+                case 'out_for_delivery': return 'dark';
+                case 'delivered': return 'success';
+                case 'cancelled': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        // Placeholder functions for modals and actions
+        function showAddMenuItemModal() {
+            alert('Add menu item functionality will be implemented here.');
+        }
+
+        function showAddCategoryModal() {
+            alert('Add category functionality will be implemented here.');
+        }
+
+        function viewOrder(orderId) {
+            alert(`View order #${orderId} functionality will be implemented here.`);
+        }
+
+        function editMenuItem(itemId) {
+            alert(`Edit menu item #${itemId} functionality will be implemented here.`);
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Are you sure you want to delete this menu item?')) {
+                alert(`Delete menu item #${itemId} functionality will be implemented here.`);
+            }
+        }
+
+        function editCategory(categoryId) {
+            alert(`Edit category #${categoryId} functionality will be implemented here.`);
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Are you sure you want to delete this category?')) {
+                alert(`Delete category #${categoryId} functionality will be implemented here.`);
+            }
+        }
+    </script>
+</body>
+</html>

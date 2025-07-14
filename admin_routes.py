@@ -395,7 +395,7 @@ def get_admin_performance(admin_id):
 # Menu Management Routes
 @app.route('/api/admin/menu/categories', methods=['GET'])
 @admin_required
-def get_admin_categories():
+def get_admin_menu_categories():
     """Get categories for admin's restaurant"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
