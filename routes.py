@@ -94,15 +94,9 @@ def kitchen():
     return render_template('kitchen.html')
 
 @app.route('/super-admin')
-def super_admin():
-    """Super Admin Dashboard - Complete control panel"""
-    # Create a default admin user for the demo
-    admin_data = {
-        'full_name': 'Super Admin',
-        'username': 'superadmin',
-        'email': 'admin@etfood.com'
-    }
-    return render_template('super_admin_dashboard.html', admin=admin_data)
+def super_admin_redirect():
+    """Redirect to secure admin login for super admin access"""
+    return redirect(url_for('admin_login'))
 
 
 
