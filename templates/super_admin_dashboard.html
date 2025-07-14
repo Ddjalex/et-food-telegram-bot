@@ -292,6 +292,11 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="restaurants-tab" data-bs-toggle="tab" data-bs-target="#restaurants-panel">
+                        <i class="fas fa-store"></i> Restaurant Management
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system-panel">
                         <i class="fas fa-cogs"></i> System Settings
                     </button>
@@ -493,6 +498,44 @@
                     </div>
                 </div>
 
+                <!-- Restaurant Management Panel -->
+                <div class="tab-pane fade" id="restaurants-panel">
+                    <div class="control-section">
+                        <h4>Restaurant Management</h4>
+                        <button class="btn btn-success btn-control" onclick="addRestaurant()">
+                            <i class="fas fa-plus"></i> Add Restaurant
+                        </button>
+                        <button class="btn btn-primary btn-control" onclick="viewRestaurants()">
+                            <i class="fas fa-list"></i> View All Restaurants
+                        </button>
+                        <button class="btn btn-warning btn-control" onclick="restaurantSettings()">
+                            <i class="fas fa-cog"></i> Restaurant Settings
+                        </button>
+                    </div>
+
+                    <!-- Restaurants Table -->
+                    <div class="table-container">
+                        <h5>Active Restaurants</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Restaurant Name</th>
+                                        <th>Address</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Menu Items</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="restaurantsTable">
+                                    <!-- Restaurants will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Analytics Panel -->
                 <div class="tab-pane fade" id="analytics-panel">
                     <div class="row">
@@ -614,6 +657,7 @@
             loadDashboardData();
             initializeCharts();
             loadPaymentVerificationOrders(); // Load payment verification orders
+            loadRestaurants(); // Load restaurants
             setInterval(updateLastUpdateTime, 1000);
             setInterval(loadDashboardData, 30000); // Update every 30 seconds
             setInterval(loadPaymentVerificationOrders, 60000); // Update payment verification every minute
@@ -893,6 +937,112 @@
 
         function editDriver(driverId) {
             alert(`Edit driver #${driverId}`);
+        }
+
+        // Restaurant Management Functions
+        function addRestaurant() {
+            const name = prompt('Enter restaurant name:');
+            const address = prompt('Enter restaurant address:');
+            const phone = prompt('Enter restaurant phone:');
+            const latitude = parseFloat(prompt('Enter restaurant latitude:'));
+            const longitude = parseFloat(prompt('Enter restaurant longitude:'));
+            
+            if (name && address && phone && latitude && longitude) {
+                const restaurantData = {
+                    name: name,
+                    address: address,
+                    phone: phone,
+                    latitude: latitude,
+                    longitude: longitude,
+                    is_active: true
+                };
+                
+                fetch('/api/restaurants/super-admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(restaurantData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Restaurant added successfully!', 'success');
+                        loadRestaurants();
+                    } else {
+                        showNotification('Error adding restaurant', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error adding restaurant', 'error');
+                });
+            }
+        }
+
+        function viewRestaurants() {
+            loadRestaurants();
+        }
+
+        function restaurantSettings() {
+            alert('Restaurant Settings');
+        }
+
+        function loadRestaurants() {
+            fetch('/api/restaurants/super-admin')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('restaurantsTable');
+                    tbody.innerHTML = '';
+                    
+                    data.restaurants.forEach(restaurant => {
+                        const row = `
+                            <tr>
+                                <td>${restaurant.name}</td>
+                                <td>${restaurant.address}</td>
+                                <td>${restaurant.phone}</td>
+                                <td><span class="status-badge ${restaurant.is_active ? 'status-online' : 'status-offline'}">${restaurant.is_active ? 'Active' : 'Inactive'}</span></td>
+                                <td>${restaurant.menu_items_count || 0}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewRestaurant(${restaurant.id})">View</button>
+                                    <button class="btn btn-sm btn-warning" onclick="editRestaurant(${restaurant.id})">Edit</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRestaurant(${restaurant.id})">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading restaurants:', error);
+                });
+        }
+
+        function viewRestaurant(restaurantId) {
+            alert(`View restaurant #${restaurantId}`);
+        }
+
+        function editRestaurant(restaurantId) {
+            alert(`Edit restaurant #${restaurantId}`);
+        }
+
+        function deleteRestaurant(restaurantId) {
+            if (confirm('Are you sure you want to delete this restaurant?')) {
+                fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Restaurant deleted successfully!', 'success');
+                        loadRestaurants();
+                    } else {
+                        showNotification('Error deleting restaurant', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error deleting restaurant', 'error');
+                });
+            }
         }
 
         // Payment Verification Functions

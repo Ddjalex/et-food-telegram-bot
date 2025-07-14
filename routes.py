@@ -7,7 +7,7 @@ from flask import render_template, request, jsonify, send_file, session, redirec
 from werkzeug.utils import secure_filename
 from app import app
 from extensions import db
-from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings
+from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change
 import logging
@@ -1310,6 +1310,271 @@ def reject_payment(order_id):
         logger.error(f"Error rejecting payment: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to reject payment'}), 500
+
+# Restaurant Management API Endpoints for Super Admin
+@app.route('/api/restaurants/super-admin', methods=['GET'])
+def get_restaurants_super_admin():
+    """Get all restaurants for super admin"""
+    try:
+        restaurants = Restaurant.query.all()
+        # Add menu items count to each restaurant
+        for restaurant in restaurants:
+            restaurant.menu_items_count = len(restaurant.menu_items)
+        
+        return jsonify({
+            'success': True,
+            'restaurants': [r.to_dict() for r in restaurants]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching restaurants: {e}")
+        return jsonify({'error': 'Failed to fetch restaurants'}), 500
+
+@app.route('/api/restaurants/super-admin', methods=['POST'])
+def add_restaurant_super_admin():
+    """Add a new restaurant (super admin)"""
+    try:
+        data = request.get_json()
+        restaurant = Restaurant(
+            name=data['name'],
+            description=data.get('description', ''),
+            address=data['address'],
+            phone=data['phone'],
+            latitude=data['latitude'],
+            longitude=data['longitude'],
+            is_active=data.get('is_active', True)
+        )
+        
+        db.session.add(restaurant)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Restaurant added successfully',
+            'restaurant': restaurant.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Error adding restaurant: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add restaurant'}), 500
+
+@app.route('/api/restaurants/super-admin/<int:restaurant_id>', methods=['DELETE'])
+def delete_restaurant_super_admin(restaurant_id):
+    """Delete a restaurant (super admin)"""
+    try:
+        restaurant = Restaurant.query.get_or_404(restaurant_id)
+        db.session.delete(restaurant)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Restaurant deleted successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error deleting restaurant: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete restaurant'}), 500
+
+# Kitchen Menu Management API Endpoints
+@app.route('/api/kitchen/menu-items', methods=['GET'])
+def get_kitchen_menu_items():
+    """Get all menu items for kitchen management"""
+    try:
+        menu_items = MenuItem.query.all()
+        categories = Category.query.all()
+        
+        return jsonify({
+            'success': True,
+            'menu_items': [item.to_dict() for item in menu_items],
+            'categories': [cat.to_dict() for cat in categories]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching kitchen menu items: {e}")
+        return jsonify({'error': 'Failed to fetch kitchen menu items'}), 500
+
+@app.route('/api/kitchen/menu-items', methods=['POST'])
+def add_kitchen_menu_item():
+    """Add new menu item (kitchen staff)"""
+    try:
+        data = request.get_json()
+        
+        # Create new menu item
+        menu_item = MenuItem(
+            name=data['name'],
+            price=float(data['price']),
+            description=data.get('description', ''),
+            category=data.get('category', 'general'),
+            image_url=data.get('image_url', ''),
+            available=data.get('available', True),
+            restaurant_id=data.get('restaurant_id', 1)
+        )
+        
+        db.session.add(menu_item)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Menu item added successfully',
+            'menu_item': menu_item.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Error adding kitchen menu item: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add menu item'}), 500
+
+@app.route('/api/kitchen/menu-items/<int:item_id>', methods=['PUT'])
+def update_kitchen_menu_item(item_id):
+    """Update menu item (kitchen staff)"""
+    try:
+        menu_item = MenuItem.query.get_or_404(item_id)
+        data = request.get_json()
+        
+        # Update menu item fields
+        if 'name' in data:
+            menu_item.name = data['name']
+        if 'price' in data:
+            menu_item.price = float(data['price'])
+        if 'description' in data:
+            menu_item.description = data['description']
+        if 'category' in data:
+            menu_item.category = data['category']
+        if 'image_url' in data:
+            menu_item.image_url = data['image_url']
+        if 'available' in data:
+            menu_item.available = data['available']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Menu item updated successfully',
+            'menu_item': menu_item.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Error updating kitchen menu item: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update menu item'}), 500
+
+@app.route('/api/kitchen/menu-items/<int:item_id>', methods=['DELETE'])
+def delete_kitchen_menu_item(item_id):
+    """Delete menu item (kitchen staff)"""
+    try:
+        menu_item = MenuItem.query.get_or_404(item_id)
+        db.session.delete(menu_item)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Menu item deleted successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error deleting kitchen menu item: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete menu item'}), 500
+
+# Fix Payment Verification API Endpoint
+@app.route('/api/admin/payment-verification', methods=['GET'])
+def get_admin_payment_verification():
+    """Get payment verification orders for admin dashboard"""
+    try:
+        # Get all orders with payment screenshots that need verification
+        orders = Order.query.filter(
+            Order.transaction_image_url.isnot(None),
+            Order.status.in_(['confirmed', 'preparing', 'ready', 'out_for_delivery'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'orders': [order.to_dict() for order in orders],
+            'total': len(orders)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching admin payment verification orders: {e}")
+        return jsonify({'error': 'Failed to fetch payment verification orders'}), 500
+
+# Location-based Restaurant Detection
+@app.route('/api/restaurants/nearby', methods=['POST'])
+def get_nearby_restaurants():
+    """Get nearby restaurants based on user location"""
+    try:
+        data = request.get_json()
+        user_lat = data.get('latitude')
+        user_lng = data.get('longitude')
+        radius = data.get('radius', 10)  # Default 10km radius
+        
+        if not user_lat or not user_lng:
+            return jsonify({'error': 'Location coordinates required'}), 400
+        
+        # Get all active restaurants
+        restaurants = Restaurant.query.filter_by(is_active=True).all()
+        
+        # Calculate distances and filter by radius
+        nearby_restaurants = []
+        for restaurant in restaurants:
+            if restaurant.latitude and restaurant.longitude:
+                distance = calculate_distance(
+                    user_lat, user_lng, 
+                    restaurant.latitude, restaurant.longitude
+                )
+                if distance <= radius:
+                    restaurant_data = restaurant.to_dict()
+                    restaurant_data['distance'] = round(distance, 2)
+                    nearby_restaurants.append(restaurant_data)
+        
+        # Sort by distance
+        nearby_restaurants.sort(key=lambda x: x['distance'])
+        
+        return jsonify({
+            'success': True,
+            'restaurants': nearby_restaurants,
+            'user_location': {'latitude': user_lat, 'longitude': user_lng}
+        })
+    except Exception as e:
+        logger.error(f"Error finding nearby restaurants: {e}")
+        return jsonify({'error': 'Failed to find nearby restaurants'}), 500
+
+@app.route('/api/restaurants/auto-detect', methods=['POST'])
+def auto_detect_restaurant():
+    """Auto-detect closest restaurant and set as default"""
+    try:
+        data = request.get_json()
+        user_lat = data.get('latitude')
+        user_lng = data.get('longitude')
+        
+        if not user_lat or not user_lng:
+            return jsonify({'error': 'Location coordinates required'}), 400
+        
+        # Get all active restaurants
+        restaurants = Restaurant.query.filter_by(is_active=True).all()
+        
+        # Find closest restaurant
+        closest_restaurant = None
+        min_distance = float('inf')
+        
+        for restaurant in restaurants:
+            if restaurant.latitude and restaurant.longitude:
+                distance = calculate_distance(
+                    user_lat, user_lng, 
+                    restaurant.latitude, restaurant.longitude
+                )
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_restaurant = restaurant
+        
+        if closest_restaurant:
+            restaurant_data = closest_restaurant.to_dict()
+            restaurant_data['distance'] = round(min_distance, 2)
+            
+            return jsonify({
+                'success': True,
+                'restaurant': restaurant_data,
+                'message': f'Closest restaurant found: {closest_restaurant.name} ({min_distance:.2f} km away)'
+            })
+        else:
+            return jsonify({'error': 'No restaurants found in your area'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error auto-detecting restaurant: {e}")
+        return jsonify({'error': 'Failed to auto-detect restaurant'}), 500
 
 
 
