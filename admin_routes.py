@@ -930,7 +930,8 @@ def get_overview_data():
         logger.error(f"Error fetching overview data: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/admin/restaurants', methods=['GET'])
+# Super Admin Restaurant Management Routes
+@app.route('/api/super-admin/restaurants', methods=['GET'])
 @super_admin_required
 def get_all_restaurants():
     """Get all restaurants for super admin"""
@@ -943,6 +944,61 @@ def get_all_restaurants():
         })
     except Exception as e:
         logger.error(f"Error fetching restaurants: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/restaurants', methods=['POST'])
+@super_admin_required
+def create_restaurant():
+    """Create new restaurant (super admin only)"""
+    try:
+        data = request.get_json()
+        
+        # Validation
+        required_fields = ['name', 'address', 'phone']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        # Check if restaurant name already exists
+        existing_restaurant = Restaurant.query.filter_by(name=data['name']).first()
+        if existing_restaurant:
+            return jsonify({'success': False, 'message': 'Restaurant name already exists'}), 400
+        
+        # Create restaurant
+        restaurant = Restaurant(
+            name=data['name'],
+            address=data['address'],
+            phone=data['phone'],
+            latitude=data.get('latitude', 9.0),
+            longitude=data.get('longitude', 38.0),
+            delivery_fee=data.get('delivery_fee', 50.0),
+            minimum_order=data.get('minimum_order', 100.0),
+            estimated_delivery_time=data.get('estimated_delivery_time', '30-45 minutes'),
+            description=data.get('description', ''),
+            is_active=data.get('is_active', True),
+            is_featured=data.get('is_featured', False)
+        )
+        
+        db.session.add(restaurant)
+        db.session.commit()
+        
+        # Log activity
+        log_admin_activity(
+            session['admin_user_id'],
+            'restaurant_created',
+            'restaurant',
+            restaurant.id,
+            f'Created restaurant: {restaurant.name}'
+        )
+        
+        return jsonify({
+            'success': True,
+            'restaurant': restaurant.to_dict(),
+            'message': 'Restaurant created successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error creating restaurant: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/admin/payment-notifications', methods=['GET'])
