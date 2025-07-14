@@ -404,6 +404,11 @@ def handle_message(message):
         handle_location_share(chat_id, message['location'], user_id)
         return
     
+    # Handle skip location
+    if text == "⏭️ Skip Location":
+        handle_skip_location(chat_id, user_id)
+        return
+    
     # Handle photo/image attachments (payment receipts)
     if 'photo' in message:
         handle_photo_attachment(chat_id, message['photo'], user_id, message.get('message_id'))
@@ -1152,32 +1157,44 @@ def handle_contact_share(chat_id, contact, user_id):
             user_profile.first_name = first_name
             db.session.commit()
             
-        # Send success message and go directly to menu
+        # Send success message
         send_message(chat_id, f"✅ Phone number saved: {phone_number}")
         
-        # Show menu WebApp directly
-        from config import Config
-        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
-        
-        keyboard = {
-            "inline_keyboard": [[{
-                "text": "🍽️ Open Menu",
-                "web_app": {"url": webapp_url}
-            }]]
+        # Request location sharing for nearby restaurant detection
+        location_keyboard = {
+            "keyboard": [
+                [{
+                    "text": "📍 Share My Location",
+                    "request_location": True
+                }],
+                [{
+                    "text": "⏭️ Skip Location"
+                }]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": True
         }
-        send_message(chat_id, "🍽️ Welcome! Ready to order some delicious food?", keyboard)
+        
+        send_message(chat_id, 
+                    "📍 Please share your location to find nearby restaurants and get better delivery estimates.\n\n"
+                    "This helps us:\n"
+                    "• Find restaurants closest to you\n"
+                    "• Calculate accurate delivery times\n"
+                    "• Show distance-based recommendations\n\n"
+                    "You can share your location or skip this step:", 
+                    location_keyboard)
         
     except Exception as e:
         logger.error(f"Failed to save contact: {e}")
         send_message(chat_id, "❌ Failed to save contact. Please try again.")
 
 def handle_location_share(chat_id, location, user_id):
-    """Handle location sharing (optional - save for delivery)"""
+    """Handle location sharing and find nearby restaurants"""
     lat = location.get('latitude')
     lng = location.get('longitude')
     
     try:
-        from models import UserProfile, db
+        from models import UserProfile, db, Restaurant
         from app import app
         
         with app.app_context():
@@ -1190,9 +1207,53 @@ def handle_location_share(chat_id, location, user_id):
             user_profile.location_lng = lng
             db.session.commit()
             
-        send_message(chat_id, f"📍 Location saved for delivery!")
+            # Find nearby restaurants
+            restaurants = Restaurant.query.filter_by(is_active=True).all()
+            nearby_restaurants = []
+            
+            for restaurant in restaurants:
+                if restaurant.latitude and restaurant.longitude:
+                    # Calculate distance using Haversine formula
+                    from math import radians, cos, sin, asin, sqrt
+                    
+                    lat1, lon1 = radians(lat), radians(lng)
+                    lat2, lon2 = radians(restaurant.latitude), radians(restaurant.longitude)
+                    
+                    dlat = lat2 - lat1
+                    dlon = lon2 - lon1
+                    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+                    c = 2 * asin(sqrt(a))
+                    distance = 6371 * c  # Earth's radius in kilometers
+                    
+                    if distance <= 10:  # Within 10km
+                        nearby_restaurants.append({
+                            'name': restaurant.name,
+                            'distance': round(distance, 2),
+                            'address': restaurant.address
+                        })
+            
+            # Sort by distance
+            nearby_restaurants.sort(key=lambda x: x['distance'])
+            
+            # Create location confirmation message
+            location_msg = f"✅ Location saved successfully!\n📍 GPS: {lat:.4f}, {lng:.4f}\n\n"
+            
+            if nearby_restaurants:
+                location_msg += f"🏪 Found {len(nearby_restaurants)} nearby restaurants:\n\n"
+                for i, restaurant in enumerate(nearby_restaurants[:3], 1):
+                    location_msg += f"{i}. {restaurant['name']}\n"
+                    location_msg += f"   📍 {restaurant['distance']} km away\n"
+                    location_msg += f"   🏠 {restaurant['address']}\n\n"
+                
+                if len(nearby_restaurants) > 3:
+                    location_msg += f"... and {len(nearby_restaurants) - 3} more restaurants nearby"
+            else:
+                location_msg += "🔍 No restaurants found within 10km radius\n"
+                location_msg += "💡 You can still browse all available restaurants"
+            
+            send_message(chat_id, location_msg)
         
-        # Show menu WebApp after location (if user shares location later)
+        # Show menu WebApp after location
         from config import Config
         webapp_url = f"{Config.WEBHOOK_URL}/webapp"
         
@@ -1202,11 +1263,38 @@ def handle_location_share(chat_id, location, user_id):
                 "web_app": {"url": webapp_url}
             }]]
         }
-        send_message(chat_id, "🍽️ Ready to order!", keyboard)
+        send_message(chat_id, "🍽️ Ready to order! Your location will help us show nearby restaurants first.", keyboard)
         
     except Exception as e:
         logger.error(f"Failed to save location: {e}")
         send_message(chat_id, "❌ Failed to save location. Please try again.")
+
+def handle_skip_location(chat_id, user_id):
+    """Handle when user skips location sharing"""
+    try:
+        # Show menu WebApp without location
+        from config import Config
+        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
+        
+        keyboard = {
+            "inline_keyboard": [[{
+                "text": "🍽️ Open Menu",
+                "web_app": {"url": webapp_url}
+            }]]
+        }
+        
+        send_message(chat_id, 
+                    "⏭️ Location sharing skipped.\n\n"
+                    "You can still browse all restaurants, but:\n"
+                    "• Restaurant distance won't be shown\n"
+                    "• Delivery time estimates may be less accurate\n"
+                    "• You'll see all restaurants instead of nearby ones\n\n"
+                    "🍽️ Ready to order!", 
+                    keyboard)
+        
+    except Exception as e:
+        logger.error(f"Failed to handle skip location: {e}")
+        send_message(chat_id, "❌ Something went wrong. Please try again.")
 
 def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
     """Handle photo/image attachments (payment receipts)"""
