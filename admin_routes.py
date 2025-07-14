@@ -154,12 +154,19 @@ def get_admins():
                 AdminSession.session_duration.isnot(None)
             ).scalar()
             
+            # Get restaurant name if admin has restaurant_id
+            restaurant_name = None
+            if admin.restaurant_id:
+                from models import Restaurant
+                restaurant = Restaurant.query.get(admin.restaurant_id)
+                restaurant_name = restaurant.name if restaurant else None
+            
             admin_info = admin.to_dict()
             admin_info.update({
                 'recent_activities': recent_activities,
                 'sessions_this_week': sessions_this_week,
                 'avg_session_duration': round(avg_session or 0, 2),
-                'restaurant_name': admin.restaurant.name if admin.restaurant else None
+                'restaurant_name': restaurant_name
             })
             
             admin_data.append(admin_info)
@@ -625,4 +632,19 @@ def get_overview_data():
         })
     except Exception as e:
         logger.error(f"Error fetching overview data: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/restaurants', methods=['GET'])
+@super_admin_required
+def get_all_restaurants():
+    """Get all restaurants for super admin"""
+    try:
+        restaurants = Restaurant.query.all()
+        
+        return jsonify({
+            'success': True,
+            'restaurants': [restaurant.to_dict() for restaurant in restaurants]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching restaurants: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
