@@ -942,3 +942,92 @@ def get_all_restaurants():
     except Exception as e:
         logger.error(f"Error fetching restaurants: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/payment-notifications', methods=['GET'])
+@admin_required
+def get_admin_payment_notifications():
+    """Get payment verification orders for admin dashboard"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        # Get orders with payment images that need verification
+        orders = Order.query.filter(
+            Order.restaurant_id == admin.restaurant_id,
+            Order.transaction_image_url.isnot(None),
+            Order.status.in_(['pending', 'confirmed'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        notifications = []
+        for order in orders:
+            notifications.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'total_amount': order.total_amount,
+                'payment_method': order.payment_method,
+                'transaction_id': order.transaction_id,
+                'transaction_image_url': order.transaction_image_url,
+                'created_at': order.created_at.isoformat(),
+                'status': order.status
+            })
+        
+        return jsonify({
+            'success': True,
+            'notifications': notifications
+        })
+    except Exception as e:
+        logger.error(f"Error loading payment notifications: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/verify-payment/<int:order_id>', methods=['POST'])
+@admin_required
+def verify_payment_admin(order_id):
+    """Verify payment for an order (admin only)"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        order = Order.query.filter_by(id=order_id, restaurant_id=admin.restaurant_id).first()
+        
+        if not order:
+            return jsonify({'success': False, 'message': 'Order not found'}), 404
+        
+        # Update order status to confirmed
+        order.status = 'confirmed'
+        db.session.commit()
+        
+        # Log activity
+        log_admin_activity(admin.id, 'payment_verified', 'order', order_id, f'Payment verified for order #{order_id}')
+        
+        return jsonify({'success': True, 'message': 'Payment verified successfully'})
+    except Exception as e:
+        logger.error(f"Error verifying payment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/reject-payment/<int:order_id>', methods=['POST'])
+@admin_required
+def reject_payment_admin(order_id):
+    """Reject payment for an order (admin only)"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        data = request.get_json()
+        reason = data.get('reason', 'Payment rejected')
+        
+        from models import Order
+        order = Order.query.filter_by(id=order_id, restaurant_id=admin.restaurant_id).first()
+        
+        if not order:
+            return jsonify({'success': False, 'message': 'Order not found'}), 404
+        
+        # Update order status to cancelled
+        order.status = 'cancelled'
+        order.cancellation_reason = reason
+        db.session.commit()
+        
+        # Log activity
+        log_admin_activity(admin.id, 'payment_rejected', 'order', order_id, f'Payment rejected for order #{order_id}: {reason}')
+        
+        return jsonify({'success': True, 'message': 'Payment rejected successfully'})
+    except Exception as e:
+        logger.error(f"Error rejecting payment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

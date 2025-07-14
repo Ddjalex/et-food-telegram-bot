@@ -289,8 +289,8 @@ def webapp():
 
 @app.route('/admin')
 def admin():
-    """Admin dashboard"""
-    return render_template('admin.html')
+    """Legacy admin dashboard - redirect to proper dashboard"""
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin-panel')
 def admin_panel():
@@ -1485,25 +1485,7 @@ def delete_kitchen_menu_item(item_id):
         db.session.rollback()
         return jsonify({'error': 'Failed to delete menu item'}), 500
 
-# Fix Payment Verification API Endpoint
-@app.route('/api/admin/payment-verification', methods=['GET'])
-def get_admin_payment_verification():
-    """Get payment verification orders for admin dashboard"""
-    try:
-        # Get all orders with payment screenshots that need verification
-        orders = Order.query.filter(
-            Order.transaction_image_url.isnot(None),
-            Order.status.in_(['confirmed', 'preparing', 'ready', 'out_for_delivery'])
-        ).order_by(Order.created_at.desc()).all()
-        
-        return jsonify({
-            'success': True,
-            'orders': [order.to_dict() for order in orders],
-            'total': len(orders)
-        })
-    except Exception as e:
-        logger.error(f"Error fetching admin payment verification orders: {e}")
-        return jsonify({'error': 'Failed to fetch payment verification orders'}), 500
+# Payment Verification API Endpoint moved to admin_routes.py
 
 # Location-based Restaurant Detection
 @app.route('/api/restaurants/nearby', methods=['POST'])

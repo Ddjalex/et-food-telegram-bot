@@ -59,6 +59,12 @@
             border-radius: 0 0 25px 25px;
             margin-bottom: 30px;
         }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -83,30 +89,39 @@
                         <small class="text-white-50">{{ admin.restaurant.name if admin.restaurant else 'No Restaurant' }}</small>
                     </div>
                     
-                    <nav class="nav nav-pills flex-column" id="adminTabs">
-                        <a class="nav-link active" data-tab="dashboard" href="#dashboard">
+                    <nav class="nav nav-pills flex-column">
+                        <a class="nav-link active" data-bs-toggle="pill" href="#dashboard">
                             <i class="fas fa-tachometer-alt me-2"></i>
                             Dashboard
                         </a>
-                        <a class="nav-link" data-tab="orders" href="#orders">
-                            <i class="fas fa-clipboard-list me-2"></i>
+                        <a class="nav-link" data-bs-toggle="pill" href="#orders">
+                            <i class="fas fa-shopping-bag me-2"></i>
                             Orders
                         </a>
-                        <a class="nav-link" data-tab="menu" href="#menu">
-                            <i class="fas fa-utensils me-2"></i>
-                            Menu
+                        <a class="nav-link" data-bs-toggle="pill" href="#payments">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Payment Verification
+                            <span class="badge bg-danger ms-1" id="paymentNotificationCount" style="display: none;">0</span>
                         </a>
-                        <a class="nav-link" data-tab="categories" href="#categories">
-                            <i class="fas fa-th-large me-2"></i>
+                        <a class="nav-link" data-bs-toggle="pill" href="#menu">
+                            <i class="fas fa-utensils me-2"></i>
+                            Menu Management
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#categories">
+                            <i class="fas fa-tags me-2"></i>
                             Categories
                         </a>
-                        <a class="nav-link" data-tab="kitchen" href="#kitchen">
-                            <i class="fas fa-fire me-2"></i>
-                            Kitchen
-                        </a>
-                        <a class="nav-link" data-tab="drivers" href="#drivers">
-                            <i class="fas fa-car me-2"></i>
+                        <a class="nav-link" data-bs-toggle="pill" href="#drivers">
+                            <i class="fas fa-motorcycle me-2"></i>
                             Drivers
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#analytics">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Analytics
+                        </a>
+                        <a class="nav-link" data-bs-toggle="pill" href="#settings">
+                            <i class="fas fa-cog me-2"></i>
+                            Settings
                         </a>
                     </nav>
                     
@@ -126,303 +141,383 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h2 class="mb-1">{{ admin.restaurant.name if admin.restaurant else 'Restaurant' }} Dashboard</h2>
-                            <p class="mb-0 opacity-75">Restaurant Management System</p>
+                            <p class="mb-0 opacity-75" id="currentDateTime"></p>
                         </div>
-                        <div class="text-end">
-                            <small class="d-block">Welcome back, {{ admin.full_name }}!</small>
-                            <small class="opacity-75">{{ admin.role|title }}</small>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light" id="exportOrdersBtn">
+                                <i class="fas fa-download me-1"></i> Export
+                            </button>
+                            <button class="btn btn-light" id="refreshBtn">
+                                <i class="fas fa-sync me-1"></i> Refresh
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user-circle me-1"></i> {{ admin.full_name }}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/admin/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Dashboard Content -->
+
+                <!-- Content Area -->
                 <div class="p-4">
-                    <!-- Dashboard Tab -->
-                    <div class="tab-content active" id="dashboard">
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-3">
-                                <div class="card stat-card">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-shopping-cart fa-2x mb-2"></i>
-                                        <h3 class="mb-0" id="todayOrders">0</h3>
-                                        <small>Today's Orders</small>
+                    <div class="tab-content" id="adminTabsContent">
+                        <!-- Dashboard Tab -->
+                        <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+                            <!-- Stats Cards -->
+                            <div class="row mb-4">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-shopping-bag fa-2x mb-3"></i>
+                                            <h3 class="mb-1" id="totalOrders">0</h3>
+                                            <p class="mb-0">Total Orders</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card stat-card">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-utensils fa-2x mb-2"></i>
-                                        <h3 class="mb-0" id="menuItems">0</h3>
-                                        <small>Menu Items</small>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-dollar-sign fa-2x mb-3"></i>
+                                            <h3 class="mb-1" id="totalRevenue">ETB 0</h3>
+                                            <p class="mb-0">Total Revenue</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card stat-card">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
-                                        <h3 class="mb-0" id="todayRevenue">0</h3>
-                                        <small>Today's Revenue</small>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-clock fa-2x mb-3"></i>
+                                            <h3 class="mb-1" id="pendingOrders">0</h3>
+                                            <p class="mb-0">Pending Orders</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card stat-card">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-clock fa-2x mb-2"></i>
-                                        <h3 class="mb-0" id="pendingOrders">0</h3>
-                                        <small>Pending Orders</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <div class="table-container">
-                                    <div class="card-header bg-primary text-white">
-                                        <h5 class="mb-0">
-                                            <i class="fas fa-chart-line me-2"></i>
-                                            Recent Orders
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Order ID</th>
-                                                        <th>Customer</th>
-                                                        <th>Status</th>
-                                                        <th>Total</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="recentOrdersTable">
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">Loading...</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-motorcycle fa-2x mb-3"></i>
+                                            <h3 class="mb-1" id="activeDrivers">0</h3>
+                                            <p class="mb-0">Active Drivers</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="table-container">
-                                    <div class="card-header bg-success text-white">
-                                        <h5 class="mb-0">
-                                            <i class="fas fa-utensils me-2"></i>
-                                            Popular Items
-                                        </h5>
+
+                            <!-- Charts Row -->
+                            <div class="row mb-4">
+                                <div class="col-md-8 mb-3">
+                                    <div class="card table-container h-100">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">Sales Overview</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="salesChart" height="300"></canvas>
+                                        </div>
                                     </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Item</th>
-                                                        <th>Category</th>
-                                                        <th>Orders</th>
-                                                        <th>Revenue</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="popularItemsTable">
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">Loading...</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card table-container h-100">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">Order Status</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="statusChart" height="300"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Orders -->
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Recent Orders</h5>
+                                    <button class="btn btn-primary btn-sm" onclick="switchToTab('orders')">
+                                        View All Orders
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Customer</th>
+                                                    <th>Items</th>
+                                                    <th>Status</th>
+                                                    <th>Total</th>
+                                                    <th>Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="recentOrdersTable">
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-4">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Orders Management Tab -->
+                        <div class="tab-pane fade" id="orders" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Orders Management</h5>
+                                    <div class="d-flex gap-2">
+                                        <select class="form-select" id="statusFilter" onchange="loadOrders(1, this.value)">
+                                            <option value="all">All Status</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="preparing">Preparing</option>
+                                            <option value="ready">Ready</option>
+                                            <option value="out_for_delivery">Out for Delivery</option>
+                                            <option value="delivered">Delivered</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                        <button class="btn btn-primary btn-sm" onclick="loadOrders(1, 'all')">
+                                            <i class="fas fa-sync me-1"></i> Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Customer</th>
+                                                    <th>Items</th>
+                                                    <th>Status</th>
+                                                    <th>Payment</th>
+                                                    <th>Total</th>
+                                                    <th>Time</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ordersTable">
+                                                <tr>
+                                                    <td colspan="8" class="text-center py-4">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Verification Tab -->
+                        <div class="tab-pane fade" id="payments" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Payment Verification</h5>
+                                    <button class="btn btn-primary btn-sm" onclick="loadPaymentNotifications()">
+                                        <i class="fas fa-sync me-1"></i> Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="paymentNotifications">
+                                        <div class="text-center py-4">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Orders Tab -->
-                    <div class="tab-content" id="orders">
-                        <div class="table-container">
-                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-clipboard-list me-2"></i>
-                                    Orders Management
-                                </h5>
-                                <button class="btn btn-light btn-sm" onclick="loadOrders()">
-                                    <i class="fas fa-sync-alt me-1"></i>
-                                    Refresh
-                                </button>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Order ID</th>
-                                                <th>Customer</th>
-                                                <th>Items</th>
-                                                <th>Total</th>
-                                                <th>Status</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="ordersTable">
-                                            <tr>
-                                                <td colspan="7" class="text-center">Loading orders...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+
+                        <!-- Menu Management Tab -->
+                        <div class="tab-pane fade" id="menu" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Menu Management</h5>
+                                    <button class="btn btn-primary btn-sm" onclick="showAddMenuItemModal()">
+                                        <i class="fas fa-plus me-1"></i> Add New Item
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Image</th>
+                                                    <th>Name</th>
+                                                    <th>Category</th>
+                                                    <th>Price</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="menuItemsTable">
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-4">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Menu Tab -->
-                    <div class="tab-content" id="menu">
-                        <div class="table-container">
-                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-utensils me-2"></i>
-                                    Menu Management
-                                </h5>
-                                <button class="btn btn-light btn-sm" onclick="showAddMenuItemModal()">
-                                    <i class="fas fa-plus me-1"></i>
-                                    Add Item
-                                </button>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Image</th>
-                                                <th>Name</th>
-                                                <th>Category</th>
-                                                <th>Price</th>
-                                                <th>Available</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="menuItemsTable">
-                                            <tr>
-                                                <td colspan="6" class="text-center">Loading menu items...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+
+                        <!-- Categories Tab -->
+                        <div class="tab-pane fade" id="categories" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Categories Management</h5>
+                                    <button class="btn btn-primary btn-sm" id="addCategoryBtn">
+                                        <i class="fas fa-plus me-1"></i> Add Category
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Icon</th>
+                                                    <th>Name</th>
+                                                    <th>Description</th>
+                                                    <th>Items Count</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="categoriesTable">
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-4">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Categories Tab -->
-                    <div class="tab-content" id="categories">
-                        <div class="table-container">
-                            <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-th-large me-2"></i>
-                                    Categories Management
-                                </h5>
-                                <button class="btn btn-light btn-sm" onclick="showAddCategoryModal()">
-                                    <i class="fas fa-plus me-1"></i>
-                                    Add Category
-                                </button>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Icon</th>
-                                                <th>Name</th>
-                                                <th>Description</th>
-                                                <th>Items</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="categoriesTable">
-                                            <tr>
-                                                <td colspan="5" class="text-center">Loading categories...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+
+                        <!-- Drivers Tab -->
+                        <div class="tab-pane fade" id="drivers" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Drivers Management</h5>
+                                    <button class="btn btn-primary btn-sm" id="addDriverBtn">
+                                        <i class="fas fa-plus me-1"></i> Add Driver
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Phone</th>
+                                                    <th>Vehicle</th>
+                                                    <th>Status</th>
+                                                    <th>Active</th>
+                                                    <th>Orders</th>
+                                                    <th>Documents</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="driversTable">
+                                                <tr>
+                                                    <td colspan="8" class="text-center py-4">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Kitchen Tab -->
-                    <div class="tab-content" id="kitchen">
-                        <div class="table-container">
-                            <div class="card-header bg-danger text-white">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-fire me-2"></i>
-                                    Kitchen Dashboard
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6>Active Orders</h6>
-                                        <div id="activeOrdersList">
-                                            <p class="text-muted">Loading active orders...</p>
+
+                        <!-- Analytics Tab -->
+                        <div class="tab-pane fade" id="analytics" role="tabpanel">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card table-container">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">Daily Sales</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="dailySalesChart"></canvas>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <h6>Kitchen Statistics</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card table-container">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">Popular Items</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="popularItemsChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Settings Tab -->
+                        <div class="tab-pane fade" id="settings" role="tabpanel">
+                            <div class="card table-container">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Restaurant Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="settingsForm">
                                         <div class="row">
-                                            <div class="col-6">
-                                                <div class="bg-primary text-white p-3 rounded text-center">
-                                                    <h4 id="prepareCount">0</h4>
-                                                    <small>Preparing</small>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Delivery Radius (km)</label>
+                                                    <input type="number" class="form-control" id="deliveryRadius" value="10">
                                                 </div>
                                             </div>
-                                            <div class="col-6">
-                                                <div class="bg-success text-white p-3 rounded text-center">
-                                                    <h4 id="readyCount">0</h4>
-                                                    <small>Ready</small>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Minimum Order Amount (ETB)</label>
+                                                    <input type="number" class="form-control" id="minOrderAmount" value="50">
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Drivers Tab -->
-                    <div class="tab-content" id="drivers">
-                        <div class="table-container">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-car me-2"></i>
-                                    Driver Management
-                                </h5>
-                                <button class="btn btn-light btn-sm" onclick="showAddDriverModal()">
-                                    <i class="fas fa-plus me-1"></i>
-                                    Add Driver
-                                </button>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Phone</th>
-                                                <th>Vehicle</th>
-                                                <th>Status</th>
-                                                <th>Available</th>
-                                                <th>Location</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="driversTable">
-                                            <tr>
-                                                <td colspan="7" class="text-center">Loading drivers...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Delivery Fee (ETB)</label>
+                                                    <input type="number" class="form-control" id="deliveryFee" value="15">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Service Hours</label>
+                                                    <input type="text" class="form-control" id="serviceHours" value="8:00 AM - 11:00 PM">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -432,477 +527,485 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Initialize dashboard
+        // Initialize dashboard data
+        let ordersData = [];
+        let currentPage = 1;
+        let currentStatus = 'all';
+        
+        // Update current date/time
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString();
+        }
+        
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeTabs();
-            loadDashboardData();
+            initializeDashboard();
+            setupEventListeners();
+            setupTabSwitching();
+            loadMenuItems();
+            loadCategories();
+            loadDrivers();
         });
 
-        // Tab navigation
-        function initializeTabs() {
-            const tabLinks = document.querySelectorAll('#adminTabs a');
+        function initializeDashboard() {
+            loadDashboardStats();
+            loadRecentOrders();
+            loadPaymentNotifications();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('refreshBtn').addEventListener('click', initializeDashboard);
+            document.getElementById('exportOrdersBtn').addEventListener('click', exportOrders);
             
+            // Settings form
+            document.getElementById('settingsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSettings();
+            });
+        }
+
+        function setupTabSwitching() {
+            const tabLinks = document.querySelectorAll('[data-bs-toggle="pill"]');
             tabLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Remove active class from all links and contents
-                    tabLinks.forEach(l => l.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.remove('active');
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.tab-pane').forEach(tab => {
+                        tab.classList.remove('show', 'active');
                     });
                     
-                    // Add active class to clicked link
-                    this.classList.add('active');
+                    // Remove active class from all nav links
+                    document.querySelectorAll('.nav-link').forEach(navLink => {
+                        navLink.classList.remove('active');
+                    });
                     
-                    // Show corresponding tab content
-                    const tabId = this.getAttribute('data-tab');
-                    document.getElementById(tabId).classList.add('active');
+                    // Add active class to clicked nav link
+                    e.target.classList.add('active');
                     
-                    // Load tab-specific data
-                    switch(tabId) {
-                        case 'dashboard':
-                            loadDashboardData();
-                            break;
-                        case 'orders':
-                            loadOrders();
-                            break;
-                        case 'menu':
-                            loadMenuItems();
-                            break;
-                        case 'categories':
-                            loadCategories();
-                            break;
-                        case 'kitchen':
-                            loadKitchenData();
-                            break;
-                        case 'drivers':
-                            loadDrivers();
-                            break;
+                    // Show target tab
+                    const targetTab = e.target.getAttribute('href');
+                    const targetElement = document.querySelector(targetTab);
+                    if (targetElement) {
+                        targetElement.classList.add('show', 'active');
+                    }
+                    
+                    // Load specific data for tabs
+                    if (targetTab === '#menu') {
+                        setTimeout(() => loadMenuItems(), 100);
+                    } else if (targetTab === '#categories') {
+                        setTimeout(() => loadCategories(), 100);
+                    } else if (targetTab === '#drivers') {
+                        setTimeout(() => loadDrivers(), 100);
+                    } else if (targetTab === '#orders') {
+                        setTimeout(() => loadOrders(1, 'all'), 100);
+                    } else if (targetTab === '#payments') {
+                        setTimeout(() => loadPaymentNotifications(), 100);
                     }
                 });
             });
         }
 
-        // Load dashboard data
-        async function loadDashboardData() {
-            try {
-                const response = await fetch('/api/admin/dashboard-stats');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('todayOrders').textContent = data.todayOrders || 0;
-                    document.getElementById('menuItems').textContent = data.menuItems || 0;
-                    document.getElementById('todayRevenue').textContent = (data.todayRevenue || 0) + ' ETB';
-                    document.getElementById('pendingOrders').textContent = data.pendingOrders || 0;
-                    
-                    // Load recent orders
-                    loadRecentOrders();
-                    loadPopularItems();
-                }
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-            }
+        function loadDashboardStats() {
+            fetch('/api/admin/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalOrders').textContent = data.total_orders || 0;
+                    document.getElementById('totalRevenue').textContent = `ETB ${data.today_revenue || 0}`;
+                    document.getElementById('pendingOrders').textContent = data.active_sessions || 0;
+                    document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
+                })
+                .catch(error => console.error('Error loading dashboard stats:', error));
         }
 
-        // Load recent orders
-        async function loadRecentOrders() {
-            try {
-                const response = await fetch('/api/admin/recent-orders');
-                if (response.ok) {
-                    const orders = await response.json();
+        function loadRecentOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
                     const tableBody = document.getElementById('recentOrdersTable');
                     
                     if (orders.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No recent orders</td></tr>';
-                    } else {
-                        tableBody.innerHTML = orders.map(order => `
-                            <tr>
-                                <td>#${order.id}</td>
-                                <td>${order.customer_name}</td>
-                                <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
-                                <td>${order.total_amount} ETB</td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading recent orders:', error);
-            }
-        }
-
-        // Load popular items
-        async function loadPopularItems() {
-            try {
-                const response = await fetch('/api/admin/popular-items');
-                if (response.ok) {
-                    const items = await response.json();
-                    const tableBody = document.getElementById('popularItemsTable');
-                    
-                    if (items.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No data available</td></tr>';
-                    } else {
-                        tableBody.innerHTML = items.map(item => `
-                            <tr>
-                                <td>${item.name}</td>
-                                <td>${item.category}</td>
-                                <td>${item.order_count}</td>
-                                <td>${item.revenue} ETB</td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading popular items:', error);
-            }
-        }
-
-        // Load orders
-        async function loadOrders() {
-            try {
-                const response = await fetch('/api/admin/orders');
-                if (response.ok) {
-                    const orders = await response.json();
-                    const tableBody = document.getElementById('ordersTable');
-                    
-                    if (orders.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No orders found</td></tr>';
-                    } else {
-                        tableBody.innerHTML = orders.map(order => `
-                            <tr>
-                                <td>#${order.id}</td>
-                                <td>${order.customer_name}</td>
-                                <td>${order.items ? order.items.length : 0} items</td>
-                                <td>${order.total_amount} ETB</td>
-                                <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
-                                <td>${formatDate(order.created_at)}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="viewOrder(${order.id})">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading orders:', error);
-            }
-        }
-
-        // Load menu items
-        async function loadMenuItems() {
-            try {
-                const response = await fetch('/api/admin/menu-items');
-                if (response.ok) {
-                    const items = await response.json();
-                    const tableBody = document.getElementById('menuItemsTable');
-                    
-                    if (items.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No menu items found</td></tr>';
-                    } else {
-                        tableBody.innerHTML = items.map(item => `
-                            <tr>
-                                <td>
-                                    <img src="${item.image_url || '/static/images/default-food.jpg'}" 
-                                         alt="${item.name}" 
-                                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
-                                </td>
-                                <td>${item.name}</td>
-                                <td>${item.category_name}</td>
-                                <td>${item.price} ETB</td>
-                                <td>
-                                    <span class="badge bg-${item.is_available ? 'success' : 'danger'}">
-                                        ${item.is_available ? 'Available' : 'Unavailable'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="editMenuItem(${item.id})">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteMenuItem(${item.id})">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading menu items:', error);
-            }
-        }
-
-        // Load categories
-        async function loadCategories() {
-            try {
-                const response = await fetch('/api/admin/categories');
-                if (response.ok) {
-                    const categories = await response.json();
-                    const tableBody = document.getElementById('categoriesTable');
-                    
-                    if (categories.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No categories found</td></tr>';
-                    } else {
-                        tableBody.innerHTML = categories.map(category => `
-                            <tr>
-                                <td style="font-size: 1.5rem;">${category.icon || '📁'}</td>
-                                <td>${category.name}</td>
-                                <td>${category.description || 'No description'}</td>
-                                <td>${category.item_count || 0} items</td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="editCategory(${category.id})">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteCategory(${category.id})">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading categories:', error);
-            }
-        }
-
-        // Load kitchen data
-        async function loadKitchenData() {
-            try {
-                const response = await fetch('/api/admin/kitchen-stats');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('prepareCount').textContent = data.preparing || 0;
-                    document.getElementById('readyCount').textContent = data.ready || 0;
-                }
-            } catch (error) {
-                console.error('Error loading kitchen data:', error);
-            }
-        }
-
-        // Utility functions
-        function getStatusColor(status) {
-            switch(status) {
-                case 'pending': return 'warning';
-                case 'confirmed': return 'info';
-                case 'preparing': return 'primary';
-                case 'ready': return 'success';
-                case 'out_for_delivery': return 'dark';
-                case 'delivered': return 'success';
-                case 'cancelled': return 'danger';
-                default: return 'secondary';
-            }
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-        }
-
-        // Placeholder functions for modals and actions
-        function showAddMenuItemModal() {
-            alert('Add menu item functionality will be implemented here.');
-        }
-
-        function showAddCategoryModal() {
-            alert('Add category functionality will be implemented here.');
-        }
-
-        function viewOrder(orderId) {
-            alert(`View order #${orderId} functionality will be implemented here.`);
-        }
-
-        function editMenuItem(itemId) {
-            alert(`Edit menu item #${itemId} functionality will be implemented here.`);
-        }
-
-        function deleteMenuItem(itemId) {
-            if (confirm('Are you sure you want to delete this menu item?')) {
-                alert(`Delete menu item #${itemId} functionality will be implemented here.`);
-            }
-        }
-
-        function editCategory(categoryId) {
-            alert(`Edit category #${categoryId} functionality will be implemented here.`);
-        }
-
-        function deleteCategory(categoryId) {
-            if (confirm('Are you sure you want to delete this category?')) {
-                alert(`Delete category #${categoryId} functionality will be implemented here.`);
-            }
-        }
-
-        // Driver Management Functions
-        async function loadDrivers() {
-            try {
-                const response = await fetch('/api/admin/drivers');
-                if (response.ok) {
-                    const drivers = await response.json();
-                    const driversTable = document.getElementById('driversTable');
-                    
-                    if (drivers.length === 0) {
-                        driversTable.innerHTML = '<tr><td colspan="7" class="text-center">No drivers found</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No recent orders found</td></tr>';
                         return;
                     }
                     
-                    driversTable.innerHTML = drivers.map(driver => `
+                    tableBody.innerHTML = orders.slice(0, 10).map(order => `
                         <tr>
-                            <td>${driver.full_name}</td>
-                            <td>${driver.phone}</td>
-                            <td><span class="badge bg-secondary">${driver.vehicle_type}</span></td>
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>${order.items ? order.items.length : 0} items</td>
+                            <td><span class="badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
+                            <td>ETB ${order.total_amount}</td>
+                            <td>${formatTime(order.created_at)}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading recent orders:', error);
+                    document.getElementById('recentOrdersTable').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading orders</td></tr>';
+                });
+        }
+
+        function loadOrders(page = 1, status = 'all') {
+            const params = new URLSearchParams({ page, status });
+            
+            fetch(`/api/orders?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tableBody = document.getElementById('ordersTable');
+                    
+                    if (orders.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No orders found</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = orders.map(order => `
+                        <tr>
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>${order.items ? order.items.length : 0} items</td>
+                            <td><span class="badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
+                            <td><span class="badge ${getPaymentBadgeClass(order.payment_method)}">${order.payment_method}</span></td>
+                            <td>ETB ${order.total_amount}</td>
+                            <td>${formatTime(order.created_at)}</td>
                             <td>
-                                <span class="badge ${driver.status === 'approved' ? 'bg-success' : 'bg-warning'}">
-                                    ${driver.status}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge ${driver.is_available ? 'bg-success' : 'bg-danger'}">
-                                    ${driver.is_available ? 'Available' : 'Busy'}
-                                </span>
-                            </td>
-                            <td>
-                                ${driver.current_latitude && driver.current_longitude ? 
-                                    `<button class="btn btn-sm btn-outline-primary" onclick="viewLocation(${driver.current_latitude}, ${driver.current_longitude})">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                    </button>` : 
-                                    '<span class="text-muted">No location</span>'
-                                }
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDriver(${driver.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${order.id})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `).join('');
-                } else {
-                    throw new Error('Failed to load drivers');
-                }
-            } catch (error) {
-                console.error('Error loading drivers:', error);
-                document.getElementById('driversTable').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading drivers</td></tr>';
-            }
-        }
-
-        function showAddDriverModal() {
-            const modal = document.createElement('div');
-            modal.className = 'modal fade';
-            modal.innerHTML = `
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Add New Driver</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="addDriverForm">
-                                <div class="mb-3">
-                                    <label for="fullName" class="form-label">Full Name</label>
-                                    <input type="text" class="form-control" id="fullName" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="vehicleType" class="form-label">Vehicle Type</label>
-                                    <select class="form-select" id="vehicleType" required>
-                                        <option value="">Select vehicle type</option>
-                                        <option value="bicycle">Bicycle</option>
-                                        <option value="motorcycle">Motorcycle</option>
-                                        <option value="car">Car</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="telegramId" class="form-label">Telegram ID (Optional)</label>
-                                    <input type="text" class="form-control" id="telegramId">
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="autoApprove" checked>
-                                    <label class="form-check-label" for="autoApprove">
-                                        Auto-approve driver
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" onclick="addDriver()">Add Driver</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            const bootstrapModal = new bootstrap.Modal(modal);
-            bootstrapModal.show();
-        }
-
-        async function addDriver() {
-            const formData = {
-                full_name: document.getElementById('fullName').value,
-                phone: document.getElementById('phone').value,
-                vehicle_type: document.getElementById('vehicleType').value,
-                telegram_user_id: document.getElementById('telegramId').value,
-                auto_approve: document.getElementById('autoApprove').checked
-            };
-
-            try {
-                const response = await fetch('/api/admin/drivers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                    document.getElementById('ordersTable').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading orders</td></tr>';
                 });
+        }
 
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                        alert('Driver added successfully!');
-                        loadDrivers();
-                        const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
-                        modal.hide();
-                    } else {
-                        alert('Error: ' + result.message);
+        function loadPaymentNotifications() {
+            fetch('/api/admin/payment-notifications')
+                .then(response => response.json())
+                .then(data => {
+                    const notifications = data.notifications || [];
+                    const container = document.getElementById('paymentNotifications');
+                    
+                    updatePaymentBadge(notifications.length);
+                    
+                    if (notifications.length === 0) {
+                        container.innerHTML = '<div class="text-center py-4">No pending payment verifications</div>';
+                        return;
                     }
-                } else {
-                    alert('Failed to add driver');
-                }
-            } catch (error) {
-                console.error('Error adding driver:', error);
-                alert('Error adding driver');
+                    
+                    container.innerHTML = notifications.map(order => `
+                        <div class="card mb-3" id="payment-${order.id}">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Order #${order.id}</h6>
+                                        <p>Customer: ${order.customer_name}</p>
+                                        <p>Amount: ETB ${order.total_amount}</p>
+                                        <p>Payment Method: ${order.payment_method}</p>
+                                        <p>Transaction ID: ${order.transaction_id || 'N/A'}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        ${order.transaction_image_url ? `
+                                            <img src="${order.transaction_image_url}" 
+                                                 class="img-fluid rounded mb-2" 
+                                                 style="max-height: 100px; cursor: pointer;" 
+                                                 onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
+                                        ` : '<p>No receipt image</p>'}
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-success btn-sm" onclick="verifyPayment(${order.id})">
+                                                <i class="fas fa-check"></i> Verify
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="rejectPayment(${order.id})">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading payment notifications:', error);
+                    document.getElementById('paymentNotifications').innerHTML = '<div class="text-center py-4 text-danger">Error loading notifications</div>';
+                });
+        }
+
+        function loadMenuItems() {
+            fetch('/api/admin/menu-items')
+                .then(response => response.json())
+                .then(data => {
+                    const items = data.items || [];
+                    const tableBody = document.getElementById('menuItemsTable');
+                    
+                    if (items.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No menu items found</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = items.map(item => `
+                        <tr>
+                            <td>
+                                <img src="${item.image_url || '/static/images/default-food.png'}" 
+                                     class="img-fluid rounded" 
+                                     style="width: 50px; height: 50px; object-fit: cover;">
+                            </td>
+                            <td>${item.name}</td>
+                            <td>${item.category_name}</td>
+                            <td>ETB ${item.price}</td>
+                            <td>
+                                <span class="badge ${item.is_available ? 'bg-success' : 'bg-danger'}">
+                                    ${item.is_available ? 'Available' : 'Unavailable'}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading menu items:', error);
+                    document.getElementById('menuItemsTable').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading menu items</td></tr>';
+                });
+        }
+
+        function loadCategories() {
+            fetch('/api/admin/categories')
+                .then(response => response.json())
+                .then(data => {
+                    const categories = data.categories || [];
+                    const tableBody = document.getElementById('categoriesTable');
+                    
+                    if (categories.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No categories found</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = categories.map(category => `
+                        <tr>
+                            <td><span style="font-size: 1.5rem;">${category.icon || '🍽️'}</span></td>
+                            <td>${category.name}</td>
+                            <td>${category.description || 'No description'}</td>
+                            <td>${category.items_count || 0}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                    document.getElementById('categoriesTable').innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Error loading categories</td></tr>';
+                });
+        }
+
+        function loadDrivers() {
+            fetch('/api/admin/drivers')
+                .then(response => response.json())
+                .then(data => {
+                    const drivers = data.drivers || [];
+                    const tableBody = document.getElementById('driversTable');
+                    
+                    if (drivers.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No drivers found</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = drivers.map(driver => `
+                        <tr>
+                            <td>${driver.name}</td>
+                            <td>${driver.phone}</td>
+                            <td>${driver.vehicle_type}</td>
+                            <td>
+                                <span class="badge ${driver.approval_status === 'approved' ? 'bg-success' : 
+                                    driver.approval_status === 'pending' ? 'bg-warning' : 'bg-danger'}">
+                                    ${driver.approval_status}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${driver.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${driver.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${driver.current_orders > 0 ? 'bg-primary' : 'bg-light text-dark'}">
+                                    ${driver.current_orders || 0}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                                    <i class="fas fa-file-alt"></i> View
+                                </button>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editDriver(${driver.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading drivers:', error);
+                    document.getElementById('driversTable').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading drivers</td></tr>';
+                });
+        }
+
+        // Helper functions
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'pending': 'bg-warning',
+                'confirmed': 'bg-info',
+                'preparing': 'bg-primary',
+                'ready': 'bg-success',
+                'out_for_delivery': 'bg-warning',
+                'delivered': 'bg-success',
+                'cancelled': 'bg-danger'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        function getPaymentBadgeClass(method) {
+            const classes = {
+                'cash': 'bg-success',
+                'card': 'bg-primary',
+                'mobile': 'bg-info',
+                'bank': 'bg-warning'
+            };
+            return classes[method] || 'bg-secondary';
+        }
+
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function updatePaymentBadge(count) {
+            const badge = document.getElementById('paymentNotificationCount');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
             }
         }
 
-        async function deleteDriver(driverId) {
-            if (confirm('Are you sure you want to delete this driver?')) {
-                try {
-                    const response = await fetch(`/api/admin/drivers/${driverId}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (response.ok) {
-                        const result = await response.json();
-                        if (result.success) {
-                            alert('Driver deleted successfully!');
-                            loadDrivers();
-                        } else {
-                            alert('Error: ' + result.message);
-                        }
-                    } else {
-                        alert('Failed to delete driver');
-                    }
-                } catch (error) {
-                    console.error('Error deleting driver:', error);
-                    alert('Error deleting driver');
-                }
+        function switchToTab(tabName) {
+            const tabLink = document.querySelector(`[href="#${tabName}"]`);
+            if (tabLink) {
+                tabLink.click();
             }
         }
 
-        function viewLocation(lat, lng) {
-            window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+        // Stub functions for actions
+        function viewOrder(orderId) {
+            alert(`View order #${orderId}`);
         }
+
+        function updateOrderStatus(orderId, status) {
+            alert(`Update order #${orderId} to ${status}`);
+        }
+
+        function verifyPayment(orderId) {
+            alert(`Verify payment for order #${orderId}`);
+        }
+
+        function rejectPayment(orderId) {
+            alert(`Reject payment for order #${orderId}`);
+        }
+
+        function viewPaymentScreenshot(imageUrl) {
+            window.open(imageUrl, '_blank');
+        }
+
+        function showAddMenuItemModal() {
+            alert('Add menu item modal');
+        }
+
+        function editMenuItem(itemId) {
+            alert(`Edit menu item #${itemId}`);
+        }
+
+        function deleteMenuItem(itemId) {
+            alert(`Delete menu item #${itemId}`);
+        }
+
+        function editCategory(categoryId) {
+            alert(`Edit category #${categoryId}`);
+        }
+
+        function deleteCategory(categoryId) {
+            alert(`Delete category #${categoryId}`);
+        }
+
+        function editDriver(driverId) {
+            alert(`Edit driver #${driverId}`);
+        }
+
+        function deleteDriver(driverId) {
+            alert(`Delete driver #${driverId}`);
+        }
+
+        function viewDriverDocuments(driverId) {
+            alert(`View documents for driver #${driverId}`);
+        }
+
+        function exportOrders() {
+            alert('Export orders');
+        }
+
+        function saveSettings() {
+            alert('Save settings');
+        }
+
+        function addCategory() {
+            alert('Add category');
+        }
+
+        function addDriver() {
+            alert('Add driver');
+        }
+
+        // Auto-refresh functionality
+        setInterval(() => {
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                loadDashboardStats();
+                loadRecentOrders();
+            }
+        }, 60000); // Refresh every minute
     </script>
 </body>
 </html>
