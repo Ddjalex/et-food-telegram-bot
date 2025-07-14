@@ -625,61 +625,7 @@
     <script>
         // Additional admin functionality
         
-        // Show order details modal
-        function showOrderDetails(orderId) {
-            fetch(`/api/orders/${orderId}`)
-                .then(response => response.json())
-                .then(order => {
-                    const modalBody = document.getElementById('orderDetailsBody');
-                    modalBody.innerHTML = `
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Customer Information</h6>
-                                <p><strong>Name:</strong> ${order.customer_name}</p>
-                                <p><strong>Phone:</strong> ${order.customer_phone}</p>
-                                <p><strong>Address:</strong> ${order.customer_address}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Order Information</h6>
-                                <p><strong>Order ID:</strong> #${order.id}</p>
-                                <p><strong>Status:</strong> ${getStatusBadge(order.status)}</p>
-                                <p><strong>Payment:</strong> ${order.payment_method}</p>
-                                <p><strong>Total:</strong> $${order.total_amount.toFixed(2)}</p>
-                            </div>
-                        </div>
-                        <hr>
-                        <h6>Order Items</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Quantity</th>
-                                        <th>Price</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${order.items.map(item => `
-                                        <tr>
-                                            <td>${item.name}</td>
-                                            <td>${item.quantity}</td>
-                                            <td>$${item.price.toFixed(2)}</td>
-                                            <td>$${(item.price * item.quantity).toFixed(2)}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                    
-                    const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-                    modal.show();
-                })
-                .catch(error => {
-                    console.error('Error loading order details:', error);
-                });
-        }
+        // Removed duplicate showOrderDetails function - using the one defined earlier
 
         // Load menu items
         function loadMenuItems() {
@@ -742,9 +688,74 @@
         function initializeDashboard() {
             // Load dashboard statistics
             loadDashboardStats();
-            loadOrders(1, 'today'); // Load recent orders
             loadRecentOrders(); // Load for dashboard display
             loadPaymentNotifications(); // Load payment notifications
+        }
+
+        // Load orders for orders tab
+        function loadOrders(page = 1, filter = 'all') {
+            currentPage = page;
+            currentFilter = filter;
+            
+            fetch(`/api/orders?page=${page}&filter=${filter}&limit=50`)
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const totalPages = data.total_pages || 1;
+                    const tbody = document.getElementById('ordersTable');
+                    
+                    if (!tbody) {
+                        console.error('Orders table body not found');
+                        return;
+                    }
+                    
+                    tbody.innerHTML = '';
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No orders found</td></tr>';
+                        return;
+                    }
+                    
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>${order.customer_phone}</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>${getStatusBadge(order.status)}</td>
+                            <td>${order.payment_method || 'N/A'}</td>
+                            <td>${order.minutes_ago} min ago</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showOrderDetails(${order.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'confirmed')" title="Confirm">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="showMap(${order.id}, '${order.customer_name}', '${order.customer_phone}', '${order.customer_address}', ${order.customer_lat || 0}, ${order.customer_lng || 0})" title="Show Map">
+                                        <i class="fas fa-map"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="assignDriver(${order.id})" title="Assign Driver">
+                                        <i class="fas fa-user"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    // Update pagination
+                    displayPagination(totalPages, page);
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                    const tbody = document.getElementById('ordersTable');
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading orders</td></tr>';
+                    }
+                });
         }
 
         // Load dashboard statistics
@@ -828,6 +839,108 @@
             });
         }
 
+        // Get status badge HTML
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'confirmed': '<span class="badge bg-info">Confirmed</span>',
+                'preparing': '<span class="badge bg-primary">Preparing</span>',
+                'ready': '<span class="badge bg-success">Ready</span>',
+                'out_for_delivery': '<span class="badge bg-warning">Out for Delivery</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+        }
+
+        // Update order status
+        function updateOrderStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadOrders(currentPage, currentFilter);
+                    loadDashboardStats();
+                } else {
+                    alert('Error updating order status: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating order status:', error);
+                alert('Error updating order status');
+            });
+        }
+
+        // Show order details modal
+        function showOrderDetails(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    document.getElementById('orderDetailsBody').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Customer Information</h6>
+                                <p><strong>Name:</strong> ${order.customer_name}</p>
+                                <p><strong>Phone:</strong> ${order.customer_phone}</p>
+                                <p><strong>Address:</strong> ${order.customer_address}</p>
+                                <p><strong>Payment Method:</strong> ${order.payment_method}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Order Information</h6>
+                                <p><strong>Order ID:</strong> #${order.id}</p>
+                                <p><strong>Status:</strong> ${getStatusBadge(order.status)}</p>
+                                <p><strong>Total Amount:</strong> ETB ${order.total_amount.toFixed(2)}</p>
+                                <p><strong>Created:</strong> ${new Date(order.created_at).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6>Order Items</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Quantity</th>
+                                                <th>Price</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${order.items.map(item => `
+                                                <tr>
+                                                    <td>${item.name}</td>
+                                                    <td>${item.quantity}</td>
+                                                    <td>ETB ${item.price.toFixed(2)}</td>
+                                                    <td>ETB ${(item.quantity * item.price).toFixed(2)}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading order details:', error);
+                    alert('Error loading order details');
+                });
+        }
+
+        // Global variables for pagination and filtering
+        let currentPage = 1;
+        let currentFilter = 'all';
+
         // Update analytics
         function updateAnalytics(orders) {
             const totalOrders = orders.length;
@@ -836,25 +949,39 @@
             const deliveredOrders = orders.filter(order => order.status === 'delivered').length;
 
             document.getElementById('totalOrders').textContent = totalOrders;
-            document.getElementById('totalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
+            document.getElementById('totalRevenue').textContent = `ETB ${totalRevenue.toFixed(2)}`;
             document.getElementById('pendingOrders').textContent = pendingOrders;
             document.getElementById('deliveredOrders').textContent = deliveredOrders;
         }
 
-        // Event listeners
-        document.getElementById('statusFilter').addEventListener('change', (e) => {
-            currentFilter = e.target.value;
-            loadOrders(1, currentFilter);
-        });
+        // Event listeners setup
+        function setupEventListeners() {
+            // Status filter
+            const statusFilter = document.getElementById('statusFilter');
+            if (statusFilter) {
+                statusFilter.addEventListener('change', (e) => {
+                    currentFilter = e.target.value;
+                    loadOrders(1, currentFilter);
+                });
+            }
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            loadOrders(currentPage, currentFilter);
-            loadMenuItems();
-        });
+            // Refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    loadOrders(currentPage, currentFilter);
+                    loadMenuItems();
+                });
+            }
 
-        document.getElementById('exportOrdersBtn').addEventListener('click', () => {
-            window.location.href = '/api/orders/export';
-        });
+            // Export orders button
+            const exportOrdersBtn = document.getElementById('exportOrdersBtn');
+            if (exportOrdersBtn) {
+                exportOrdersBtn.addEventListener('click', () => {
+                    window.location.href = '/api/orders/export';
+                });
+            }
+        }
 
         // Map functionality
         let currentOrderLocation = null;
@@ -1755,6 +1882,9 @@
             // Initialize payment tab
             initializePaymentTab();
             
+            // Setup event listeners
+            setupEventListeners();
+            
             // Initialize tab switching
             setupTabSwitching();
             
@@ -1763,7 +1893,7 @@
             loadCategories();
             loadDrivers();
             
-            // Add event listeners
+            // Add event listeners for category and driver buttons
             const addCategoryBtn = document.getElementById('addCategoryBtn');
             if (addCategoryBtn) {
                 addCategoryBtn.addEventListener('click', addCategory);
@@ -1787,6 +1917,10 @@
                         setTimeout(() => loadCategories(), 100);
                     } else if (targetTab === '#drivers') {
                         setTimeout(() => loadDrivers(), 100);
+                    } else if (targetTab === '#orders') {
+                        setTimeout(() => loadOrders(1, 'all'), 100);
+                    } else if (targetTab === '#payments') {
+                        setTimeout(() => loadPaymentNotifications(), 100);
                     }
                 });
             });
