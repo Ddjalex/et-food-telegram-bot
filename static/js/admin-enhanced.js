@@ -12,7 +12,12 @@ let dashboardData = {
 function initializeDashboard() {
     loadDashboardData();
     loadOrdersTab();
-    setupCharts();
+    
+    // Delay chart setup to ensure Chart.js is loaded
+    setTimeout(() => {
+        setupCharts();
+    }, 500);
+    
     updateDateTime();
     setInterval(updateDateTime, 60000);
     
@@ -112,6 +117,12 @@ function updateDashboardStats() {
 
 // Setup Charts
 function setupCharts() {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js library not loaded yet, skipping chart setup');
+        return;
+    }
+    
     // Sales Chart
     const salesCtx = document.getElementById('salesChart');
     if (salesCtx) {

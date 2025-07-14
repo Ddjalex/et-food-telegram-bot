@@ -1792,9 +1792,97 @@
             }
         }, 30000);
 
-        // Initialize (removed duplicate - using admin-enhanced.js instead)
-        // Initialize settings
-        initializeSettings();
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize settings
+            initializeSettings();
+            
+            // Initialize tab switching
+            setupTabSwitching();
+            
+            // Load initial data for each tab
+            loadMenuItems();
+            loadCategories();
+            loadDrivers();
+        });
+        
+        function setupTabSwitching() {
+            // Tab switching functionality
+            const tabLinks = document.querySelectorAll('[data-bs-toggle="pill"]');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const targetTab = e.target.getAttribute('href');
+                    if (targetTab === '#menu') {
+                        setTimeout(() => loadMenuItems(), 100);
+                    } else if (targetTab === '#categories') {
+                        setTimeout(() => loadCategories(), 100);
+                    } else if (targetTab === '#drivers') {
+                        setTimeout(() => loadDrivers(), 100);
+                    }
+                });
+            });
+        }
+        
+        function loadDrivers() {
+            // Load drivers data
+            fetch('/api/drivers')
+                .then(response => response.json())
+                .then(drivers => {
+                    const tableBody = document.getElementById('driversTable');
+                    if (tableBody) {
+                        if (drivers.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No drivers found</td></tr>';
+                            return;
+                        }
+                        
+                        tableBody.innerHTML = drivers.map(driver => `
+                            <tr>
+                                <td>${driver.name}</td>
+                                <td>${driver.phone}</td>
+                                <td>${driver.vehicle_type}</td>
+                                <td>
+                                    <span class="badge ${driver.approval_status === 'approved' ? 'bg-success' : 
+                                        driver.approval_status === 'pending' ? 'bg-warning' : 'bg-danger'}">
+                                        ${driver.approval_status}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge ${driver.is_active ? 'bg-success' : 'bg-secondary'}">
+                                        ${driver.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge ${driver.current_orders > 0 ? 'bg-primary' : 'bg-light text-dark'}">
+                                        ${driver.current_orders || 0}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                                        <i class="fas fa-file-alt"></i> View
+                                    </button>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editDriver(${driver.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading drivers:', error);
+                    const tableBody = document.getElementById('driversTable');
+                    if (tableBody) {
+                        tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading drivers</td></tr>';
+                    }
+                });
+        }
     </script>
 </body>
 </html>
