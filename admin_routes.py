@@ -120,6 +120,299 @@ def admin_dashboard():
     
     return redirect(url_for('admin_login'))
 
+# Restaurant Admin API Routes
+@app.route('/api/admin/dashboard-stats', methods=['GET'])
+@admin_required
+def get_admin_dashboard_stats():
+    """Get dashboard statistics for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        # Get orders for this admin's restaurant
+        from models import Order
+        today = datetime.utcnow().date()
+        
+        orders_query = Order.query.filter_by(restaurant_id=admin.restaurant_id)
+        today_orders = orders_query.filter(func.date(Order.created_at) == today).count()
+        pending_orders = orders_query.filter_by(status='pending').count()
+        
+        # Get menu items count
+        menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).count()
+        
+        # Calculate today's revenue
+        today_revenue = db.session.query(
+            func.sum(Order.total_amount)
+        ).filter(
+            Order.restaurant_id == admin.restaurant_id,
+            func.date(Order.created_at) == today
+        ).scalar() or 0
+        
+        return jsonify({
+            'success': True,
+            'todayOrders': today_orders,
+            'menuItems': menu_items,
+            'todayRevenue': float(today_revenue),
+            'pendingOrders': pending_orders
+        })
+    except Exception as e:
+        logger.error(f"Error getting dashboard stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/recent-orders', methods=['GET'])
+@admin_required
+def get_recent_orders():
+    """Get recent orders for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        recent_orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id
+        ).order_by(Order.created_at.desc()).limit(10).all()
+        
+        orders_data = []
+        for order in recent_orders:
+            orders_data.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'status': order.status,
+                'total_amount': float(order.total_amount),
+                'created_at': order.created_at.isoformat()
+            })
+        
+        return jsonify(orders_data)
+    except Exception as e:
+        logger.error(f"Error getting recent orders: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/popular-items', methods=['GET'])
+@admin_required
+def get_popular_items():
+    """Get popular menu items for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).limit(5).all()
+        
+        items_data = []
+        for item in menu_items:
+            items_data.append({
+                'name': item.name,
+                'category': item.category.name if item.category else 'No Category',
+                'order_count': 0,
+                'revenue': 0
+            })
+        
+        return jsonify(items_data)
+    except Exception as e:
+        logger.error(f"Error getting popular items: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/orders', methods=['GET'])
+@admin_required
+def get_restaurant_admin_orders():
+    """Get all orders for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            # Parse items if they're stored as JSON string
+            items = order.items
+            if isinstance(items, str):
+                try:
+                    import json
+                    items = json.loads(items)
+                except:
+                    items = []
+            
+            orders_data.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'total_amount': float(order.total_amount),
+                'status': order.status,
+                'created_at': order.created_at.isoformat(),
+                'items': items
+            })
+        
+        return jsonify(orders_data)
+    except Exception as e:
+        logger.error(f"Error getting orders: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/menu-items', methods=['GET'])
+@admin_required
+def get_restaurant_menu_items():
+    """Get menu items for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        
+        items_data = []
+        for item in menu_items:
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'description': item.description,
+                'price': float(item.price),
+                'image_url': item.image_url,
+                'category_name': item.category.name if item.category else 'No Category',
+                'is_available': item.is_available
+            })
+        
+        return jsonify(items_data)
+    except Exception as e:
+        logger.error(f"Error getting menu items: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/categories', methods=['GET'])
+@admin_required
+def get_restaurant_categories():
+    """Get categories for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        categories = Category.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        
+        categories_data = []
+        for category in categories:
+            # Count items in this category
+            item_count = MenuItem.query.filter_by(
+                category_id=category.id,
+                restaurant_id=admin.restaurant_id
+            ).count()
+            
+            categories_data.append({
+                'id': category.id,
+                'name': category.name,
+                'description': category.description,
+                'icon': category.icon,
+                'item_count': item_count
+            })
+        
+        return jsonify(categories_data)
+    except Exception as e:
+        logger.error(f"Error getting categories: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-stats', methods=['GET'])
+@admin_required
+def get_kitchen_stats():
+    """Get kitchen statistics for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Order
+        preparing_count = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='preparing'
+        ).count()
+        
+        ready_count = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id,
+            status='ready'
+        ).count()
+        
+        return jsonify({
+            'preparing': preparing_count,
+            'ready': ready_count
+        })
+    except Exception as e:
+        logger.error(f"Error getting kitchen stats: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/drivers', methods=['GET'])
+@admin_required
+def get_restaurant_drivers():
+    """Get drivers for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Driver
+        drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        
+        drivers_data = []
+        for driver in drivers:
+            drivers_data.append({
+                'id': driver.id,
+                'full_name': driver.full_name,
+                'phone': driver.phone,
+                'vehicle_type': driver.vehicle_type,
+                'status': driver.status,
+                'is_active': driver.is_active,
+                'is_available': driver.is_available,
+                'current_latitude': driver.current_latitude,
+                'current_longitude': driver.current_longitude,
+                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None
+            })
+        
+        return jsonify(drivers_data)
+    except Exception as e:
+        logger.error(f"Error getting drivers: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/drivers', methods=['POST'])
+@admin_required
+def add_restaurant_driver():
+    """Add new driver for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        data = request.get_json()
+        
+        from models import Driver
+        
+        # Check if driver with same phone already exists
+        existing_driver = Driver.query.filter_by(phone=data['phone']).first()
+        if existing_driver:
+            return jsonify({'success': False, 'message': 'Driver with this phone number already exists'}), 400
+        
+        driver = Driver(
+            full_name=data['full_name'],
+            phone=data['phone'],
+            vehicle_type=data['vehicle_type'],
+            restaurant_id=admin.restaurant_id,
+            status='approved' if data.get('auto_approve') else 'pending',
+            is_active=True,
+            is_available=True,
+            telegram_user_id=data.get('telegram_user_id')
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'driver_id': driver.id})
+    except Exception as e:
+        logger.error(f"Error adding driver: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/drivers/<int:driver_id>', methods=['DELETE'])
+@admin_required
+def delete_restaurant_driver(driver_id):
+    """Delete driver for restaurant admin"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        
+        from models import Driver
+        driver = Driver.query.filter_by(id=driver_id, restaurant_id=admin.restaurant_id).first()
+        
+        if not driver:
+            return jsonify({'success': False, 'message': 'Driver not found'}), 404
+        
+        db.session.delete(driver)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting driver: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Super Admin Routes
 @app.route('/api/super-admin/admins', methods=['GET'])
 @super_admin_required
