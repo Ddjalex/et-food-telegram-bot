@@ -605,10 +605,11 @@ function renderRestaurantsTable(restaurants) {
             <tr>
                 <td>
                     <div class="d-flex align-items-center">
-                        <img src="${restaurant.logo_url || '/static/uploads/default-restaurant.png'}" 
+                        <img src="${restaurant.logo_url || '/static/uploads/default-restaurant.svg'}" 
                              alt="${restaurant.name}" 
                              class="rounded me-3" 
-                             style="width: 40px; height: 40px; object-fit: cover;">
+                             style="width: 40px; height: 40px; object-fit: cover;"
+                             onerror="this.src='/static/uploads/default-restaurant.svg'">
                         <div>
                             <div class="fw-bold">${restaurant.name}</div>
                             <small class="text-muted">${restaurant.description || 'No description'}</small>
@@ -647,9 +648,11 @@ function renderRestaurantsTable(restaurants) {
 // Load analytics data
 async function loadAnalyticsData() {
     try {
-        // Initialize analytics charts
-        initializeAnalyticsCharts();
-        console.log('Analytics data loaded');
+        // Delay to ensure tab is visible before initializing charts
+        setTimeout(() => {
+            initializeAnalyticsCharts();
+            console.log('Analytics data loaded');
+        }, 100);
     } catch (error) {
         console.error('Error loading analytics:', error);
         showError('Network error while loading analytics');
@@ -658,6 +661,11 @@ async function loadAnalyticsData() {
 
 // Initialize analytics charts
 function initializeAnalyticsCharts() {
+    // Destroy existing charts to prevent canvas reuse error
+    Chart.helpers.each(Chart.instances, function(instance) {
+        instance.destroy();
+    });
+    
     // Revenue Chart
     const revenueCtx = document.getElementById('revenueChart');
     if (revenueCtx) {
