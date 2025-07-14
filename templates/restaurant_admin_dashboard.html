@@ -792,7 +792,7 @@
             fetch('/api/admin/menu-items')
                 .then(response => response.json())
                 .then(data => {
-                    const items = data.items || [];
+                    const items = Array.isArray(data) ? data : (data.items || []);
                     const tableBody = document.getElementById('menuItemsTable');
                     
                     if (items.length === 0) {
@@ -838,7 +838,7 @@
             fetch('/api/admin/categories')
                 .then(response => response.json())
                 .then(data => {
-                    const categories = data.categories || [];
+                    const categories = Array.isArray(data) ? data : (data.categories || []);
                     const tableBody = document.getElementById('categoriesTable');
                     
                     if (categories.length === 0) {
@@ -851,7 +851,7 @@
                             <td><span style="font-size: 1.5rem;">${category.icon || '🍽️'}</span></td>
                             <td>${category.name}</td>
                             <td>${category.description || 'No description'}</td>
-                            <td>${category.items_count || 0}</td>
+                            <td>${category.item_count || 0}</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
