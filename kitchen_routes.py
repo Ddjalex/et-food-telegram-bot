@@ -19,6 +19,47 @@ def kitchen_menu_management():
     """Kitchen staff menu management page"""
     return render_template('kitchen_menu_management.html')
 
+@app.route('/kitchen/orders', methods=['GET'])
+def kitchen_get_orders():
+    """Get orders for kitchen staff"""
+    try:
+        restaurant_id = request.args.get('restaurant_id', 1)
+        
+        orders = Order.query.filter_by(restaurant_id=restaurant_id).filter(
+            Order.status.in_(['pending', 'confirmed', 'preparing', 'ready'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            # Calculate minutes ago
+            minutes_ago = int((datetime.utcnow() - order.created_at).total_seconds() / 60)
+            
+            # Parse items if they're stored as JSON string
+            items = order.items
+            if isinstance(items, str):
+                try:
+                    import json
+                    items = json.loads(items)
+                except:
+                    items = []
+            
+            orders_data.append({
+                'id': order.id,
+                'customer_name': order.customer_name,
+                'customer_phone': order.customer_phone,
+                'total_amount': float(order.total_amount),
+                'status': order.status,
+                'payment_method': order.payment_method,
+                'created_at': order.created_at.isoformat(),
+                'minutes_ago': minutes_ago,
+                'items': items
+            })
+        
+        return jsonify(orders_data)
+    except Exception as e:
+        logger.error(f"Error getting kitchen orders: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Kitchen API endpoints for menu management
 @app.route('/api/kitchen/menu-items', methods=['GET'])
 def kitchen_get_menu_items():
