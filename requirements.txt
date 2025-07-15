@@ -438,3 +438,8 @@ flask-sqlalchemy
 gunicorn
 psycopg2-binary
 twilio
+email_validator
+flask
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
