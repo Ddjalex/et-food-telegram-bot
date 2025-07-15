@@ -57,7 +57,7 @@ def admin_login_legacy():
             if not admin.is_active:
                 return jsonify({'success': False, 'message': 'Account is deactivated'}), 403
             
-            session['admin_user_id'] = admin.id
+            session['admin_id'] = admin.id
             session['admin_role'] = admin.role
             
             # Log session
@@ -85,7 +85,7 @@ def admin_login_legacy():
 @admin_required
 def admin_logout():
     """Admin logout"""
-    admin_id = session.get('admin_user_id')
+    admin_id = session.get('admin_id')
     if admin_id:
         # Update session end time
         admin_session = AdminSession.query.filter_by(
@@ -109,7 +109,7 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     """Admin dashboard - different views based on role"""
-    admin = AdminUser.query.options(db.joinedload(AdminUser.restaurant)).get(session['admin_user_id'])
+    admin = AdminUser.query.options(db.joinedload(AdminUser.restaurant)).get(session['admin_id'])
     
     if admin.role == 'super_admin':
         return render_template('super_admin_dashboard.html', admin=admin)
@@ -126,7 +126,7 @@ def admin_dashboard():
 def get_admin_dashboard_stats():
     """Get dashboard statistics for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         # Get orders for this admin's restaurant
         from models import Order
@@ -163,7 +163,7 @@ def get_admin_dashboard_stats():
 def get_recent_orders():
     """Get recent orders for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         logger.info(f"Getting recent orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
@@ -204,7 +204,7 @@ def get_recent_orders():
 def get_popular_items():
     """Get popular menu items for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).limit(5).all()
         
@@ -227,7 +227,7 @@ def get_popular_items():
 def get_restaurant_admin_orders():
     """Get all orders for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         logger.info(f"Getting orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
@@ -277,7 +277,7 @@ def get_restaurant_admin_orders():
 def get_restaurant_menu_items():
     """Get menu items for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         logger.info(f"Getting menu items for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
@@ -305,7 +305,7 @@ def get_restaurant_menu_items():
 def get_restaurant_categories():
     """Get categories for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         # Get unique categories from menu items
         from sqlalchemy import distinct
@@ -337,7 +337,7 @@ def get_restaurant_categories():
 def get_kitchen_stats():
     """Get kitchen statistics for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Order
         preparing_count = Order.query.filter_by(
@@ -363,7 +363,7 @@ def get_kitchen_stats():
 def get_restaurant_drivers():
     """Get drivers for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Driver
         # Get all drivers since they don't have restaurant_id field
@@ -394,7 +394,7 @@ def get_restaurant_drivers():
 def add_restaurant_driver():
     """Add new driver for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         
         from models import Driver
@@ -428,7 +428,7 @@ def add_restaurant_driver():
 def delete_restaurant_driver(driver_id):
     """Delete driver for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Driver
         driver = Driver.query.filter_by(id=driver_id).first()
@@ -490,7 +490,7 @@ def approve_driver_super_admin(driver_id):
         from admin_approval_system import approve_driver
         from driver_bot import send_driver_message
         
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         success = approve_driver(driver_id, admin_telegram_id=admin.telegram_user_id)
         
         if success:
@@ -558,7 +558,7 @@ def reject_driver_super_admin(driver_id):
     try:
         from admin_approval_system import reject_driver
         
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         reason = data.get('reason', 'Application does not meet requirements')
         
@@ -745,7 +745,7 @@ def create_admin():
             role=data.get('role', 'admin'),
             password_hash=password_hash,
             restaurant_id=data.get('restaurant_id'),
-            created_by=session['admin_user_id'],
+            created_by=session['admin_id'],
             permissions=data.get('permissions', {})
         )
         
@@ -754,7 +754,7 @@ def create_admin():
         
         # Log activity
         log_admin_activity(
-            session['admin_user_id'],
+            session['admin_id'],
             'admin_created',
             'admin',
             admin.id,
@@ -796,7 +796,7 @@ def update_admin(admin_id):
         
         # Log activity
         log_admin_activity(
-            session['admin_user_id'],
+            session['admin_id'],
             'admin_updated',
             'admin',
             admin.id,
@@ -827,7 +827,7 @@ def block_admin(admin_id):
         
         action = 'blocked' if admin.is_blocked else 'unblocked'
         log_admin_activity(
-            session['admin_user_id'],
+            session['admin_id'],
             'admin_blocked' if admin.is_blocked else 'admin_unblocked',
             'admin',
             admin.id,
@@ -860,7 +860,7 @@ def reset_admin_password(admin_id):
         db.session.commit()
         
         log_admin_activity(
-            session['admin_user_id'],
+            session['admin_id'],
             'password_reset',
             'admin',
             admin.id,
@@ -937,7 +937,7 @@ def get_admin_performance(admin_id):
 def get_admin_menu_categories():
     """Get categories for admin's restaurant"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         if admin.role == 'super_admin':
             # Super admin can see all categories
@@ -960,7 +960,7 @@ def get_admin_menu_categories():
 def create_admin_category():
     """Create new category"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         
         restaurant_id = data.get('restaurant_id') or admin.restaurant_id
@@ -1006,7 +1006,7 @@ def create_admin_category():
 def get_admin_menu_items():
     """Get menu items for admin's restaurant"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         if admin.role == 'super_admin':
             # Super admin can see all items
@@ -1029,7 +1029,7 @@ def get_admin_menu_items():
 def create_admin_menu_item():
     """Create new menu item"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         
         restaurant_id = data.get('restaurant_id') or admin.restaurant_id
@@ -1227,7 +1227,7 @@ def create_restaurant():
         
         # Log activity
         log_admin_activity(
-            session['admin_user_id'],
+            session['admin_id'],
             'restaurant_created',
             'restaurant',
             restaurant.id,
@@ -1249,7 +1249,7 @@ def create_restaurant():
 def get_admin_payment_notifications():
     """Get payment verification orders for admin dashboard"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Order
         # Get orders with payment images that need verification
@@ -1285,7 +1285,7 @@ def get_admin_payment_notifications():
 def verify_payment_admin(order_id):
     """Verify payment for an order (admin only)"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Order
         order = Order.query.filter_by(id=order_id, restaurant_id=admin.restaurant_id).first()
@@ -1310,7 +1310,7 @@ def verify_payment_admin(order_id):
 def reject_payment_admin(order_id):
     """Reject payment for an order (admin only)"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         reason = data.get('reason', 'Payment rejected')
         
@@ -1338,7 +1338,7 @@ def reject_payment_admin(order_id):
 def get_kitchen_staff_admin():
     """Get kitchen staff for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         logger.info(f"Getting kitchen staff for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         # Get kitchen staff users for this restaurant
@@ -1373,7 +1373,7 @@ def get_kitchen_staff_admin():
 def add_kitchen_staff_admin():
     """Add kitchen staff for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         
         # Check if username already exists
@@ -1416,7 +1416,7 @@ def add_kitchen_staff_admin():
 def delete_kitchen_staff_admin(staff_id):
     """Delete kitchen staff for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         # Get kitchen staff user
         kitchen_staff = AdminUser.query.filter_by(
@@ -1441,7 +1441,7 @@ def delete_kitchen_staff_admin(staff_id):
 def get_admin_analytics():
     """Get analytics data for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         from models import Order
         from datetime import datetime, timedelta
@@ -1509,7 +1509,7 @@ def get_admin_analytics():
 def get_admin_settings():
     """Get settings for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         
         # Get restaurant settings
         restaurant = Restaurant.query.get(admin.restaurant_id)
@@ -1535,7 +1535,7 @@ def get_admin_settings():
 def update_admin_settings():
     """Update settings for restaurant admin"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         data = request.get_json()
         
         # Update restaurant settings
@@ -1571,7 +1571,7 @@ def update_admin_settings():
 def get_admin_nearby_drivers():
     """Get nearby drivers for restaurant admin based on restaurant location"""
     try:
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         restaurant = Restaurant.query.get(admin.restaurant_id)
         
         if not restaurant or not restaurant.latitude or not restaurant.longitude:
