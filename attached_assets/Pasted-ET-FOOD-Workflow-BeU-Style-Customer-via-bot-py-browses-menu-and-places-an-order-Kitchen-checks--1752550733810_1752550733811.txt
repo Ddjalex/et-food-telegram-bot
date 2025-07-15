@@ -1,0 +1,81 @@
+ET-FOOD Workflow (BeU-Style)
+Customer (via bot.py) browses menu and places an order
+
+Kitchen checks item availability
+
+If available → system notifies the customer to deposit the payment
+
+Admin (via admin_routes.py) reviews and approves payment from the dashboard
+
+After approval, Kitchen is notified to start preparing food
+
+When food is ready, Driver Bot (driver_bot.py) is notified to pick up
+
+Driver updates delivery status (picked up, on the way, delivered)
+
+Admin Dashboard (real_time_admin_system.py) shows real-time delivery progress
+
+Customer gets updates at every stage (food confirmed, payment approved, out for delivery, delivered)
+
+Superadmin monitors the entire system flow in real-time
+
+👥 Role Responsibilities
+👑 Superadmin (Dashboard)
+Can create Admin users
+
+Has full real-time visibility of all system operations
+
+Manages the entire platform (admins, logs, kitchens)
+
+🧑‍💼 Admin (Dashboard)
+Can create multiple Kitchen users
+
+Manages food products, food categories
+
+Approves customer payments
+
+Sees real-time driver and kitchen activities
+
+👩‍🍳 Kitchen (Dashboard)
+Sees only orders assigned to them
+
+Marks items available/unavailable
+
+Starts preparing food once payment is approved
+
+Notifies driver when food is ready
+
+📦 Customer (Telegram Bot)
+Browses menu, places order
+
+Waits for kitchen availability
+
+Gets notified to pay and tracks order live
+
+🛵 Driver (Telegram Bot)
+Receives pickup task after kitchen prep
+
+Updates delivery status
+
+Tracked in real-time by Admin and Superadmin
+
+🔧 What You Should Do (Keep Existing Files):
+Do NOT rebuild — just update/upgrade the current codebase
+
+Add missing logic for:
+
+Superadmin: admin creation, monitoring
+
+Admin: kitchen/user/menu management
+
+Kitchen: item availability, order prep after approval
+
+Customer: notification + order/pay flow
+
+Driver: delivery updates tied to kitchen completion
+
+Fix real-time updates between all roles
+
+Centralize or clean config if needed (optional)
+
+📌 Only improve the current logic — do not create a new structure. Fix broken parts, connect the workflow, and follow the BeU delivery system style.
