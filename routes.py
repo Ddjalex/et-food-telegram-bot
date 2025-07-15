@@ -142,25 +142,17 @@ def kitchen():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Check kitchen staff credentials
-        try:
-            kitchen_staff = KitchenStaff.query.filter_by(username=username).first()
-            if kitchen_staff and kitchen_staff.check_password(password):
-                session['kitchen_staff_id'] = kitchen_staff.id
-                session['kitchen_username'] = kitchen_staff.username
-                session['restaurant_id'] = kitchen_staff.restaurant_id
-                return render_template('kitchen_dashboard.html')
-            else:
-                return render_template('kitchen_login.html', error='Invalid credentials')
-        except:
-            # Fallback to simple password check for kitchen staff
-            if username == 'kitchen' and password == 'kitchen123':
-                session['kitchen_staff_id'] = 1
-                session['kitchen_username'] = username
-                session['restaurant_id'] = 1
-                return render_template('kitchen_dashboard.html')
-            else:
-                return render_template('kitchen_login.html', error='Invalid credentials')
+        # Check kitchen staff credentials using AdminUser system
+        admin = AdminUser.query.filter_by(username=username, role='kitchen_staff').first()
+        if admin and admin.check_password(password):
+            session['kitchen_staff_id'] = admin.id
+            session['kitchen_username'] = admin.username
+            session['restaurant_id'] = admin.restaurant_id if admin.restaurant_id else 1
+            session['admin_id'] = admin.id  # For unified session handling
+            session['admin_role'] = admin.role
+            return render_template('kitchen_dashboard.html')
+        else:
+            return render_template('kitchen_login.html', error='Invalid credentials')
     
     return render_template('kitchen_login.html')
 
