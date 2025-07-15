@@ -59,10 +59,10 @@
             border-radius: 0 0 25px 25px;
             margin-bottom: 30px;
         }
-        .tab-content {
+        .tab-pane {
             display: none;
         }
-        .tab-content.active {
+        .tab-pane.active {
             display: block;
         }
     </style>
@@ -614,26 +614,8 @@
         function setupTabSwitching() {
             const tabLinks = document.querySelectorAll('[data-bs-toggle="pill"]');
             tabLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    // Remove active class from all tabs
-                    document.querySelectorAll('.tab-pane').forEach(tab => {
-                        tab.classList.remove('show', 'active');
-                    });
-                    
-                    // Remove active class from all nav links
-                    document.querySelectorAll('.nav-link').forEach(navLink => {
-                        navLink.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked nav link
-                    e.target.classList.add('active');
-                    
-                    // Show target tab
+                link.addEventListener('shown.bs.tab', function(e) {
                     const targetTab = e.target.getAttribute('href');
-                    const targetElement = document.querySelector(targetTab);
-                    if (targetElement) {
-                        targetElement.classList.add('show', 'active');
-                    }
                     
                     // Load specific data for tabs
                     if (targetTab === '#menu') {
@@ -648,21 +630,41 @@
                         setTimeout(() => loadPaymentNotifications(), 100);
                     } else if (targetTab === '#kitchen-staff') {
                         setTimeout(() => loadKitchenStaff(), 100);
+                    } else if (targetTab === '#dashboard') {
+                        setTimeout(() => {
+                            loadDashboardStats();
+                            loadRecentOrders();
+                        }, 100);
                     }
                 });
             });
         }
 
         function loadDashboardStats() {
+            console.log('Loading dashboard stats...');
             fetch('/api/admin/dashboard-stats')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Dashboard stats response:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Dashboard stats data:', data);
                     document.getElementById('totalOrders').textContent = data.todayOrders || 0;
                     document.getElementById('totalRevenue').textContent = `ETB ${data.todayRevenue || 0}`;
                     document.getElementById('pendingOrders').textContent = data.pendingOrders || 0;
                     document.getElementById('activeDrivers').textContent = data.menuItems || 0;
                 })
-                .catch(error => console.error('Error loading dashboard stats:', error));
+                .catch(error => {
+                    console.error('Error loading dashboard stats:', error);
+                    // Show error in UI
+                    document.getElementById('totalOrders').textContent = 'Error';
+                    document.getElementById('totalRevenue').textContent = 'Error';
+                    document.getElementById('pendingOrders').textContent = 'Error';
+                    document.getElementById('activeDrivers').textContent = 'Error';
+                });
         }
 
         function loadRecentOrders() {
@@ -789,9 +791,17 @@
         }
 
         function loadMenuItems() {
+            console.log('Loading menu items...');
             fetch('/api/admin/menu-items')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Menu items response:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Menu items data:', data);
                     const items = Array.isArray(data) ? data : (data.items || []);
                     const tableBody = document.getElementById('menuItemsTable');
                     
@@ -969,7 +979,8 @@
         function switchToTab(tabName) {
             const tabLink = document.querySelector(`[href="#${tabName}"]`);
             if (tabLink) {
-                tabLink.click();
+                const tabTrigger = new bootstrap.Tab(tabLink);
+                tabTrigger.show();
             }
         }
 
