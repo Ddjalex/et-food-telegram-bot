@@ -81,6 +81,11 @@
                                 <i class="fas fa-motorcycle"></i> Drivers
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#nearby-drivers" data-tab="nearby-drivers">
+                                <i class="fas fa-map-marker-alt"></i> Nearby Drivers
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
@@ -373,6 +378,92 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Nearby Drivers Tab -->
+                <div id="nearby-drivers-tab" class="tab-content">
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-map-marker-alt"></i> Nearby Drivers Tracking</h5>
+                                    <p class="text-muted mb-0">Track drivers within 10km radius of your restaurant</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-map-marker-alt fa-2x text-primary mb-2"></i>
+                                                    <h5>Total Nearby</h5>
+                                                    <h3 id="nearbyDriversCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                                    <h5>Available</h5>
+                                                    <h3 id="nearbyAvailableCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                                    <h5>Busy</h5>
+                                                    <h3 id="nearbyBusyCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-sync-alt fa-2x text-info mb-2"></i>
+                                                    <h5>Last Updated</h5>
+                                                    <h6 id="nearbyLastUpdate">Never</h6>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6>Nearby Drivers List</h6>
+                                        <button class="btn btn-primary btn-sm" onclick="loadNearbyDrivers()">
+                                            <i class="fas fa-sync"></i> Refresh
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Driver Name</th>
+                                                    <th>Vehicle</th>
+                                                    <th>Phone</th>
+                                                    <th>Distance</th>
+                                                    <th>Status</th>
+                                                    <th>Last Update</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="nearbyDriversTableBody">
+                                                <!-- Nearby drivers will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div id="noNearbyDrivers" class="text-center p-4" style="display: none;">
+                                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                        <h5>No Nearby Drivers Found</h5>
+                                        <p class="text-muted">No drivers with recent location updates found within 10km radius.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -433,6 +524,9 @@
                     break;
                 case 'drivers':
                     initializeLiveTracking();
+                    break;
+                case 'nearby-drivers':
+                    loadNearbyDrivers();
                     break;
             }
         }
@@ -1291,7 +1385,124 @@
                 if (document.getElementById('drivers-tab').classList.contains('active')) {
                     refreshDriverMap();
                 }
+                if (document.getElementById('nearby-drivers-tab').classList.contains('active')) {
+                    loadNearbyDrivers();
+                }
             }, 30000); // 30 seconds
+        }
+
+        // Load nearby drivers for restaurant admin
+        function loadNearbyDrivers() {
+            fetch('/api/admin/drivers/nearby')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateNearbyDriversDisplay(data);
+                    } else {
+                        console.error('Error loading nearby drivers:', data.error);
+                        showNoNearbyDriversMessage();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading nearby drivers:', error);
+                    showNoNearbyDriversMessage();
+                });
+        }
+
+        function updateNearbyDriversDisplay(data) {
+            // Update statistics
+            document.getElementById('nearbyDriversCount').textContent = data.total_nearby;
+            document.getElementById('nearbyAvailableCount').textContent = data.available_drivers;
+            document.getElementById('nearbyBusyCount').textContent = data.total_nearby - data.available_drivers;
+            document.getElementById('nearbyLastUpdate').textContent = new Date().toLocaleTimeString();
+
+            const tableBody = document.getElementById('nearbyDriversTableBody');
+            const noDriversDiv = document.getElementById('noNearbyDrivers');
+
+            if (data.drivers.length === 0) {
+                tableBody.innerHTML = '';
+                noDriversDiv.style.display = 'block';
+                return;
+            }
+
+            noDriversDiv.style.display = 'none';
+            
+            tableBody.innerHTML = data.drivers.map(driver => `
+                <tr>
+                    <td>
+                        <strong>${driver.name}</strong>
+                        <br>
+                        <small class="text-muted">ID: ${driver.id}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">${driver.vehicle_type}</span>
+                    </td>
+                    <td>
+                        <a href="tel:${driver.phone_number}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-phone"></i> ${driver.phone_number}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">${driver.distance} km</span>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: ${driver.status_color}">
+                            ${driver.status}
+                        </span>
+                        <br>
+                        <small class="text-muted">${driver.time_since_update}min ago</small>
+                    </td>
+                    <td>
+                        <small>${driver.last_location_update}</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                            <i class="fas fa-map-marker-alt"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="requestDriverLocation(${driver.id})">
+                            <i class="fas fa-location-arrow"></i> Request
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showNoNearbyDriversMessage() {
+            document.getElementById('nearbyDriversCount').textContent = '0';
+            document.getElementById('nearbyAvailableCount').textContent = '0';
+            document.getElementById('nearbyBusyCount').textContent = '0';
+            document.getElementById('nearbyLastUpdate').textContent = 'Error';
+            document.getElementById('nearbyDriversTableBody').innerHTML = '';
+            document.getElementById('noNearbyDrivers').style.display = 'block';
+        }
+
+        function viewDriverLocation(lat, lng, driverName) {
+            // Open Google Maps in new tab
+            const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=15&t=m`;
+            window.open(googleMapsUrl, '_blank');
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Location request sent to driver');
+                    // Refresh the nearby drivers list after a short delay
+                    setTimeout(() => loadNearbyDrivers(), 3000);
+                } else {
+                    alert('Error requesting location: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting location:', error);
+                alert('Error requesting location');
+            });
         }
 
         function stopDriversAutoRefresh() {

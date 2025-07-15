@@ -1319,3 +1319,88 @@ def update_admin_settings():
     except Exception as e:
         logger.error(f"Error updating settings: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/drivers/nearby', methods=['GET'])
+@admin_required
+def get_admin_nearby_drivers():
+    """Get nearby drivers for restaurant admin based on restaurant location"""
+    try:
+        admin = AdminUser.query.get(session['admin_user_id'])
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+        
+        if not restaurant or not restaurant.latitude or not restaurant.longitude:
+            return jsonify({'error': 'Restaurant location not set'}), 400
+        
+        # Get nearby drivers using the restaurant's location
+        from datetime import datetime, timedelta
+        recent_time = datetime.utcnow() - timedelta(minutes=10)
+        
+        drivers = Driver.query.filter(
+            Driver.is_approved == True,
+            Driver.is_active == True,
+            Driver.current_lat.isnot(None),
+            Driver.current_lng.isnot(None),
+            Driver.last_location_update >= recent_time
+        ).all()
+        
+        # Calculate distances from restaurant location
+        nearby_drivers = []
+        for driver in drivers:
+            from routes import calculate_distance
+            distance = calculate_distance(
+                restaurant.latitude, restaurant.longitude,
+                driver.current_lat, driver.current_lng
+            )
+            
+            # Only include drivers within 10km radius
+            if distance <= 10:
+                # Determine driver status
+                time_since_update = (datetime.utcnow() - driver.last_location_update).total_seconds()
+                location_fresh = time_since_update < 300  # Less than 5 minutes
+                
+                if not driver.is_available:
+                    status = 'Busy'
+                    status_color = '#fd7e14'  # Orange
+                elif not location_fresh:
+                    status = 'Location Outdated'
+                    status_color = '#dc3545'  # Red
+                else:
+                    status = 'Available'
+                    status_color = '#198754'  # Green
+                
+                driver_data = {
+                    'id': driver.id,
+                    'name': driver.name,
+                    'phone_number': driver.phone_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'current_lat': driver.current_lat,
+                    'current_lng': driver.current_lng,
+                    'distance': round(distance, 2),
+                    'last_location_update': driver.last_location_update.strftime('%H:%M:%S'),
+                    'status': status,
+                    'status_color': status_color,
+                    'is_available': driver.is_available,
+                    'telegram_user_id': driver.telegram_user_id,
+                    'time_since_update': round(time_since_update / 60, 1)  # Minutes
+                }
+                nearby_drivers.append(driver_data)
+        
+        # Sort by distance (closest first)
+        nearby_drivers.sort(key=lambda x: x['distance'])
+        
+        return jsonify({
+            'success': True,
+            'drivers': nearby_drivers,
+            'total_nearby': len(nearby_drivers),
+            'available_drivers': len([d for d in nearby_drivers if d['status'] == 'Available']),
+            'restaurant_name': restaurant.name,
+            'restaurant_location': {
+                'latitude': restaurant.latitude,
+                'longitude': restaurant.longitude
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching nearby drivers for admin: {e}")
+        return jsonify({'error': 'Failed to fetch nearby drivers'}), 500

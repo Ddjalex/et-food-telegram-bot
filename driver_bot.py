@@ -1616,8 +1616,13 @@ def send_driver_registration_form(chat_id, phone_number, first_name):
         message += f"📋 **Complete your driver registration using the form below:**\n\n"
         message += f"✅ Personal information\n"
         message += f"🚗 Vehicle details\n"
-        message += f"📄 Document upload\n"
-        message += f"📍 Location preferences\n\n"
+        message += f"📄 Document upload (based on vehicle type)\n"
+        message += f"📍 Work across all ET-FOOD restaurants\n\n"
+        message += f"🌟 **Benefits:**\n"
+        message += f"• Work for all restaurants in the network\n"
+        message += f"• Receive nearby orders automatically\n"
+        message += f"• Real-time GPS tracking system\n"
+        message += f"• Competitive earnings\n\n"
         message += f"⏰ Registration takes 2-3 minutes to complete."
         
         keyboard = {

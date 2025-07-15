@@ -1812,6 +1812,90 @@ def request_driver_location(driver_id):
         logger.error(f"Error requesting driver location: {e}")
         return jsonify({'error': 'Failed to request driver location'}), 500
 
+@app.route('/api/drivers/nearby', methods=['POST'])
+def get_nearby_drivers():
+    """Get nearby drivers for restaurant admins based on restaurant location"""
+    try:
+        data = request.get_json()
+        restaurant_lat = data.get('restaurant_lat')
+        restaurant_lng = data.get('restaurant_lng')
+        radius = data.get('radius', 10)  # Default 10km radius
+        
+        if not restaurant_lat or not restaurant_lng:
+            return jsonify({'error': 'Restaurant location coordinates required'}), 400
+        
+        # Get all approved and active drivers with recent location updates
+        from datetime import datetime, timedelta
+        recent_time = datetime.utcnow() - timedelta(minutes=10)
+        
+        drivers = Driver.query.filter(
+            Driver.is_approved == True,
+            Driver.is_active == True,
+            Driver.current_lat.isnot(None),
+            Driver.current_lng.isnot(None),
+            Driver.last_location_update >= recent_time
+        ).all()
+        
+        # Calculate distances and filter by radius
+        nearby_drivers = []
+        for driver in drivers:
+            distance = calculate_distance(
+                restaurant_lat, restaurant_lng,
+                driver.current_lat, driver.current_lng
+            )
+            
+            if distance <= radius:
+                # Determine driver status
+                time_since_update = (datetime.utcnow() - driver.last_location_update).total_seconds()
+                location_fresh = time_since_update < 300  # Less than 5 minutes
+                
+                if not driver.is_available:
+                    status = 'Busy'
+                    status_color = '#fd7e14'  # Orange
+                elif not location_fresh:
+                    status = 'Location Outdated'
+                    status_color = '#dc3545'  # Red
+                else:
+                    status = 'Available'
+                    status_color = '#198754'  # Green
+                
+                driver_data = {
+                    'id': driver.id,
+                    'name': driver.name,
+                    'phone_number': driver.phone_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'current_lat': driver.current_lat,
+                    'current_lng': driver.current_lng,
+                    'distance': round(distance, 2),
+                    'last_location_update': driver.last_location_update.strftime('%H:%M:%S'),
+                    'status': status,
+                    'status_color': status_color,
+                    'is_available': driver.is_available,
+                    'telegram_user_id': driver.telegram_user_id,
+                    'time_since_update': round(time_since_update / 60, 1)  # Minutes
+                }
+                nearby_drivers.append(driver_data)
+        
+        # Sort by distance (closest first)
+        nearby_drivers.sort(key=lambda x: x['distance'])
+        
+        return jsonify({
+            'success': True,
+            'drivers': nearby_drivers,
+            'total_nearby': len(nearby_drivers),
+            'available_drivers': len([d for d in nearby_drivers if d['status'] == 'Available']),
+            'search_radius': radius,
+            'restaurant_location': {
+                'latitude': restaurant_lat,
+                'longitude': restaurant_lng
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching nearby drivers: {e}")
+        return jsonify({'error': 'Failed to fetch nearby drivers'}), 500
+
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
     """Upload image file"""
