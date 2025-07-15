@@ -525,3 +525,8 @@ python-telegram-bot
 requests
 SQLAlchemy
 Werkzeug
+email_validator
+flask
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
