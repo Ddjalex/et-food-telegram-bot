@@ -78,8 +78,8 @@ def login_portal():
     return render_template('login_home.html')
 
 # Separate login routes for different user roles
-@app.route('/superadmin/login/dashboard', methods=['GET', 'POST'])
-def superadmin_login_dashboard():
+@app.route('/superadmin', methods=['GET', 'POST'])
+def superadmin():
     """Super Admin login page"""
     if request.method == 'POST':
         username = request.form.get('username')
@@ -97,9 +97,18 @@ def superadmin_login_dashboard():
     
     return render_template('superadmin_login.html')
 
-@app.route('/admin/login/dashboard', methods=['GET', 'POST'])
-def admin_login_dashboard():
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
     """Restaurant Admin login page"""
+    # If already logged in, redirect to dashboard
+    if 'admin_id' in session:
+        admin_user = AdminUser.query.get(session['admin_id'])
+        if admin_user:
+            if admin_user.role == 'super_admin':
+                return render_template('super_admin_dashboard.html', admin=admin_user)
+            else:
+                return render_template('restaurant_admin_dashboard.html', admin=admin_user)
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -111,15 +120,24 @@ def admin_login_dashboard():
             session['admin_username'] = admin.username
             session['admin_role'] = admin.role
             session['restaurant_id'] = admin.restaurant_id if hasattr(admin, 'restaurant_id') else 1
-            return redirect('/admin')
+            
+            # Redirect to dashboard based on role
+            if admin.role == 'super_admin':
+                return render_template('super_admin_dashboard.html', admin=admin)
+            else:
+                return render_template('restaurant_admin_dashboard.html', admin=admin)
         else:
             return render_template('admin_login.html', error='Invalid credentials')
     
     return render_template('admin_login.html')
 
-@app.route('/kitchen/login/dashboard', methods=['GET', 'POST'])
-def kitchen_login_dashboard():
+@app.route('/kitchen', methods=['GET', 'POST'])
+def kitchen():
     """Kitchen Staff login page"""
+    # If already logged in as kitchen staff, show dashboard
+    if 'kitchen_staff_id' in session:
+        return render_template('kitchen_dashboard.html')
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -131,7 +149,7 @@ def kitchen_login_dashboard():
                 session['kitchen_staff_id'] = kitchen_staff.id
                 session['kitchen_username'] = kitchen_staff.username
                 session['restaurant_id'] = kitchen_staff.restaurant_id
-                return redirect('/kitchen')
+                return render_template('kitchen_dashboard.html')
             else:
                 return render_template('kitchen_login.html', error='Invalid credentials')
         except:
@@ -140,7 +158,7 @@ def kitchen_login_dashboard():
                 session['kitchen_staff_id'] = 1
                 session['kitchen_username'] = username
                 session['restaurant_id'] = 1
-                return redirect('/kitchen')
+                return render_template('kitchen_dashboard.html')
             else:
                 return render_template('kitchen_login.html', error='Invalid credentials')
     
@@ -355,10 +373,7 @@ def test():
     """Test page"""
     return render_template('test.html')
 
-@app.route('/kitchen')
-def kitchen():
-    """Kitchen staff interface"""
-    return render_template('kitchen.html')
+
 
 @app.route('/super-admin')
 def super_admin_redirect():
@@ -554,10 +569,7 @@ def webapp():
     """Telegram WebApp page"""
     return render_template('webapp_modern_fixed.html')
 
-@app.route('/admin')
-def admin():
-    """Legacy admin dashboard - redirect to proper dashboard"""
-    return redirect(url_for('admin_dashboard'))
+
 
 @app.route('/admin-panel')
 def admin_panel():
