@@ -43,6 +43,9 @@ function initializeTabs() {
                 case 'restaurants':
                     loadRestaurantsData();
                     break;
+                case 'driver-approval':
+                    loadDriverApprovalData();
+                    break;
                 case 'analytics':
                     loadAnalyticsData();
                     break;
@@ -519,6 +522,356 @@ function formatRole(role) {
 
 function formatDate(dateString) {
     return new Date(dateString).toLocaleDateString();
+}
+
+// Driver Approval Functions
+async function loadDriverApprovalData() {
+    loadPendingDrivers();
+    loadApprovedDrivers();
+    loadDriverStats();
+}
+
+// Load pending drivers
+async function loadPendingDrivers() {
+    try {
+        const response = await fetch('/api/super-admin/drivers/pending');
+        if (response.ok) {
+            const data = await response.json();
+            renderPendingDrivers(data.drivers);
+        }
+    } catch (error) {
+        console.error('Error loading pending drivers:', error);
+    }
+}
+
+// Load approved drivers
+async function loadApprovedDrivers() {
+    try {
+        const response = await fetch('/api/super-admin/drivers/approved');
+        if (response.ok) {
+            const data = await response.json();
+            renderApprovedDrivers(data.drivers);
+        }
+    } catch (error) {
+        console.error('Error loading approved drivers:', error);
+    }
+}
+
+// Load driver statistics
+async function loadDriverStats() {
+    try {
+        const [pendingResponse, approvedResponse] = await Promise.all([
+            fetch('/api/super-admin/drivers/pending'),
+            fetch('/api/super-admin/drivers/approved')
+        ]);
+        
+        if (pendingResponse.ok && approvedResponse.ok) {
+            const pendingData = await pendingResponse.json();
+            const approvedData = await approvedResponse.json();
+            
+            const activeDrivers = approvedData.drivers.filter(d => d.location_status === 'active').length;
+            const availableDrivers = approvedData.drivers.filter(d => d.is_available && d.location_status === 'active').length;
+            
+            document.getElementById('pendingDrivers').textContent = pendingData.drivers.length;
+            document.getElementById('approvedDrivers').textContent = approvedData.drivers.length;
+            document.getElementById('activeDrivers').textContent = activeDrivers;
+            document.getElementById('availableDrivers').textContent = availableDrivers;
+        }
+    } catch (error) {
+        console.error('Error loading driver stats:', error);
+    }
+}
+
+// Render pending drivers table
+function renderPendingDrivers(drivers) {
+    const tbody = document.getElementById('pendingDriversTable');
+    
+    if (drivers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-inbox"></i> No pending driver applications
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = drivers.map(driver => `
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle bg-primary text-white me-2">
+                        ${getInitials(driver.name)}
+                    </div>
+                    <div>
+                        <div class="fw-bold">${driver.name}</div>
+                        <small class="text-muted">ID: ${driver.id}</small>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <i class="fas fa-phone text-primary me-1"></i>
+                ${driver.phone_number}
+            </td>
+            <td>
+                <span class="badge bg-info">
+                    <i class="fas fa-${getVehicleIcon(driver.vehicle_type)}"></i>
+                    ${driver.vehicle_type}
+                </span>
+            </td>
+            <td>
+                <small class="text-muted">
+                    ${formatDate(driver.created_at)}
+                </small>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                    <i class="fas fa-file-alt"></i> View
+                </button>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-success" onclick="approveDriver(${driver.id})">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="rejectDriver(${driver.id})">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Render approved drivers table
+function renderApprovedDrivers(drivers) {
+    const tbody = document.getElementById('approvedDriversTable');
+    
+    if (drivers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-inbox"></i> No approved drivers
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = drivers.map(driver => `
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle bg-success text-white me-2">
+                        ${getInitials(driver.name)}
+                    </div>
+                    <div>
+                        <div class="fw-bold">${driver.name}</div>
+                        <small class="text-muted">ID: ${driver.id}</small>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <i class="fas fa-phone text-primary me-1"></i>
+                ${driver.phone_number}
+            </td>
+            <td>
+                <span class="badge bg-info">
+                    <i class="fas fa-${getVehicleIcon(driver.vehicle_type)}"></i>
+                    ${driver.vehicle_type}
+                </span>
+            </td>
+            <td>
+                <span class="badge bg-${getLocationStatusColor(driver.location_status)}">
+                    <i class="fas fa-map-marker-alt"></i>
+                    ${driver.location_status.toUpperCase()}
+                </span>
+            </td>
+            <td>
+                <small class="text-muted">
+                    ${driver.last_location_update ? formatDate(driver.last_location_update) : 'Never'}
+                </small>
+            </td>
+            <td>
+                <div class="d-flex gap-1">
+                    <span class="badge bg-${driver.is_active ? 'success' : 'secondary'}">
+                        ${driver.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span class="badge bg-${driver.is_available ? 'primary' : 'warning'}">
+                        ${driver.is_available ? 'Available' : 'Busy'}
+                    </span>
+                </div>
+            </td>
+            <td>
+                <div class="btn-group">
+                    ${driver.current_lat && driver.current_lng ? `
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng})">
+                            <i class="fas fa-map-marker-alt"></i> View
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                        <i class="fas fa-file-alt"></i> Docs
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Approve driver function
+async function approveDriver(driverId) {
+    if (!confirm('Are you sure you want to approve this driver?')) return;
+    
+    try {
+        const response = await fetch(`/api/super-admin/drivers/${driverId}/approve`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            alert('Driver approved successfully! They will receive a congratulations notification.');
+            loadDriverApprovalData();
+        } else {
+            alert('Failed to approve driver');
+        }
+    } catch (error) {
+        console.error('Error approving driver:', error);
+        alert('Error approving driver');
+    }
+}
+
+// Reject driver function
+async function rejectDriver(driverId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+    
+    try {
+        const response = await fetch(`/api/super-admin/drivers/${driverId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            alert('Driver rejected successfully! They will receive a notification.');
+            loadDriverApprovalData();
+        } else {
+            alert('Failed to reject driver');
+        }
+    } catch (error) {
+        console.error('Error rejecting driver:', error);
+        alert('Error rejecting driver');
+    }
+}
+
+// View driver documents
+async function viewDriverDocuments(driverId) {
+    try {
+        const response = await fetch(`/api/super-admin/drivers/${driverId}/documents`);
+        if (response.ok) {
+            const data = await response.json();
+            showDriverDocumentsModal(data.documents);
+        }
+    } catch (error) {
+        console.error('Error loading driver documents:', error);
+    }
+}
+
+// Show driver documents modal
+function showDriverDocumentsModal(documents) {
+    const modalHtml = `
+        <div class="modal fade" id="driverDocumentsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Driver Documents - ${documents.driver_name}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Driver Information</h6>
+                                <p><strong>Name:</strong> ${documents.driver_name}</p>
+                                <p><strong>Phone:</strong> ${documents.phone_number}</p>
+                                <p><strong>Vehicle:</strong> ${documents.vehicle_type}</p>
+                                <p><strong>Status:</strong> ${documents.approval_status}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Documents</h6>
+                                ${documents.license_document ? `
+                                    <p><strong>License:</strong> 
+                                        <a href="${documents.license_document}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </p>
+                                ` : '<p>License: Not provided</p>'}
+                                
+                                ${documents.id_document ? `
+                                    <p><strong>ID Document:</strong> 
+                                        <a href="${documents.id_document}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </p>
+                                ` : '<p>ID Document: Not provided</p>'}
+                                
+                                ${documents.vehicle_document ? `
+                                    <p><strong>Vehicle Document:</strong> 
+                                        <a href="${documents.vehicle_document}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </p>
+                                ` : '<p>Vehicle Document: Not provided</p>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('driverDocumentsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('driverDocumentsModal')).show();
+}
+
+// View driver location
+function viewDriverLocation(lat, lng) {
+    window.open(`https://maps.google.com/maps?q=${lat},${lng}&z=15`, '_blank');
+}
+
+// Utility functions for driver management
+function getVehicleIcon(vehicleType) {
+    const icons = {
+        bicycle: 'bicycle',
+        motorcycle: 'motorcycle',
+        car: 'car'
+    };
+    return icons[vehicleType] || 'car';
+}
+
+function getLocationStatusColor(status) {
+    const colors = {
+        active: 'success',
+        recent: 'warning',
+        inactive: 'secondary'
+    };
+    return colors[status] || 'secondary';
 }
 
 function getPerformanceClass(responseTime) {

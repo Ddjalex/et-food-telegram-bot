@@ -416,6 +416,221 @@ def delete_restaurant_driver(driver_id):
         logger.error(f"Error deleting driver: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Super Admin Driver Management Routes
+@app.route('/api/super-admin/drivers/pending', methods=['GET'])
+@super_admin_required
+def get_super_admin_pending_drivers():
+    """Get all pending driver applications for super admin approval"""
+    try:
+        from admin_approval_system import get_pending_drivers
+        pending_drivers = get_pending_drivers()
+        
+        drivers_data = []
+        for driver in pending_drivers:
+            driver_data = {
+                'id': driver.id,
+                'name': driver.name,
+                'phone_number': driver.phone_number,
+                'telegram_user_id': driver.telegram_user_id,
+                'vehicle_type': driver.vehicle_type,
+                'approval_status': driver.approval_status,
+                'created_at': driver.created_at.isoformat() if driver.created_at else None,
+                'license_document': driver.license_document,
+                'id_document': driver.id_document,
+                'vehicle_document': driver.vehicle_document,
+                'current_lat': driver.current_lat,
+                'current_lng': driver.current_lng,
+                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None
+            }
+            drivers_data.append(driver_data)
+        
+        return jsonify({
+            'success': True,
+            'drivers': drivers_data,
+            'total_pending': len(drivers_data)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching pending drivers: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/<int:driver_id>/approve', methods=['POST'])
+@super_admin_required
+def approve_driver_super_admin(driver_id):
+    """Approve a pending driver application (Super Admin only)"""
+    try:
+        from admin_approval_system import approve_driver
+        from driver_bot import send_driver_message
+        
+        admin = AdminUser.query.get(session['admin_user_id'])
+        success = approve_driver(driver_id, admin_telegram_id=admin.telegram_user_id)
+        
+        if success:
+            # Log admin activity
+            log_admin_activity(
+                admin.id,
+                'driver_approved',
+                'driver',
+                driver_id,
+                f'Approved driver application ID: {driver_id}'
+            )
+            
+            # Get driver for additional notification
+            driver = Driver.query.get(driver_id)
+            if driver and driver.telegram_user_id:
+                # Send enhanced live location request message
+                location_message = f"""📍 *LIVE LOCATION REQUIRED*\n\n"""
+                location_message += f"🎯 **{driver.name}**, to start receiving delivery orders, you MUST share your live location.\n\n"""
+                location_message += f"🚚 **How to Enable Live Location:**\n"
+                location_message += f"1. Click 'Share Location' below\n"
+                location_message += f"2. Select 'Live Location' (not just current location)\n"
+                location_message += f"3. Set duration to 8 hours\n"
+                location_message += f"4. Confirm sharing\n\n"
+                location_message += f"⚠️ **Important:** Without live location, you won't receive any delivery orders!\n\n"
+                location_message += f"✅ **Once enabled, all restaurants will see you in real-time for order assignments.**"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "📍 Share Live Location Now",
+                                "callback_data": "request_location"
+                            }
+                        ],
+                        [
+                            {
+                                "text": "📱 Check Status",
+                                "callback_data": "driver_status"
+                            },
+                            {
+                                "text": "❓ Need Help?",
+                                "callback_data": "location_help"
+                            }
+                        ]
+                    ]
+                }
+                
+                send_driver_message(driver.telegram_user_id, location_message, keyboard=keyboard)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Driver approved successfully and notified about live location requirement'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to approve driver'}), 500
+    
+    except Exception as e:
+        logger.error(f"Error approving driver: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/<int:driver_id>/reject', methods=['POST'])
+@super_admin_required
+def reject_driver_super_admin(driver_id):
+    """Reject a pending driver application (Super Admin only)"""
+    try:
+        from admin_approval_system import reject_driver
+        
+        admin = AdminUser.query.get(session['admin_user_id'])
+        data = request.get_json()
+        reason = data.get('reason', 'Application does not meet requirements')
+        
+        success = reject_driver(driver_id, admin_telegram_id=admin.telegram_user_id, reason=reason)
+        
+        if success:
+            # Log admin activity
+            log_admin_activity(
+                admin.id,
+                'driver_rejected',
+                'driver',
+                driver_id,
+                f'Rejected driver application ID: {driver_id} - Reason: {reason}'
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': f'Driver application rejected and notification sent'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to reject driver'}), 500
+    
+    except Exception as e:
+        logger.error(f"Error rejecting driver: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/<int:driver_id>/documents', methods=['GET'])
+@super_admin_required
+def get_driver_documents_super_admin(driver_id):
+    """Get driver documents for super admin review"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        documents = {
+            'driver_id': driver.id,
+            'driver_name': driver.name,
+            'phone_number': driver.phone_number,
+            'vehicle_type': driver.vehicle_type,
+            'license_document': driver.license_document,
+            'id_document': driver.id_document,
+            'vehicle_document': driver.vehicle_document,
+            'approval_status': driver.approval_status,
+            'created_at': driver.created_at.isoformat() if driver.created_at else None
+        }
+        
+        return jsonify({
+            'success': True,
+            'documents': documents
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching driver documents: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/approved', methods=['GET'])
+@super_admin_required
+def get_approved_drivers_super_admin():
+    """Get all approved drivers with live location status"""
+    try:
+        from datetime import datetime, timedelta
+        
+        approved_drivers = Driver.query.filter_by(approval_status='approved').all()
+        
+        drivers_data = []
+        for driver in approved_drivers:
+            # Check if location is recent (within 10 minutes)
+            location_status = 'inactive'
+            if driver.last_location_update:
+                time_diff = datetime.utcnow() - driver.last_location_update
+                if time_diff < timedelta(minutes=10):
+                    location_status = 'active'
+                elif time_diff < timedelta(hours=1):
+                    location_status = 'recent'
+            
+            driver_data = {
+                'id': driver.id,
+                'name': driver.name,
+                'phone_number': driver.phone_number,
+                'telegram_user_id': driver.telegram_user_id,
+                'vehicle_type': driver.vehicle_type,
+                'is_active': driver.is_active,
+                'is_available': driver.is_available,
+                'current_lat': driver.current_lat,
+                'current_lng': driver.current_lng,
+                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                'location_status': location_status,
+                'approved_at': driver.approved_at.isoformat() if driver.approved_at else None
+            }
+            drivers_data.append(driver_data)
+        
+        return jsonify({
+            'success': True,
+            'drivers': drivers_data,
+            'total_approved': len(drivers_data)
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching approved drivers: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Super Admin Routes
 @app.route('/api/super-admin/admins', methods=['GET'])
 @super_admin_required
