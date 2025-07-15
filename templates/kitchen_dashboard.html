@@ -526,10 +526,10 @@
         
         async function loadOrders() {
             try {
-                const response = await fetch('/kitchen/orders');
+                const response = await fetch('/api/kitchen/orders');
                 const orders = await response.json();
                 
-                displayOrders(orders);
+                displayOrders(orders.orders || orders);
             } catch (error) {
                 console.error('Error loading orders:', error);
                 document.getElementById('ordersContainer').innerHTML = `
@@ -610,9 +610,9 @@
             switch (order.status) {
                 case 'pending':
                     return `
-                        <button class="action-btn btn-primary" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                        <button class="action-btn btn-success" onclick="confirmAvailability(${order.id}, true)">
                             <i class="fas fa-check me-1"></i>
-                            Confirm
+                            Available - Send Payment
                         </button>
                         <button class="action-btn btn-danger" onclick="showUnavailableModal(${order.id})">
                             <i class="fas fa-times me-1"></i>
@@ -674,21 +674,47 @@
             }
         }
         
-        async function markOrderUnavailable(orderId, reason) {
+        async function confirmAvailability(orderId, available) {
             try {
-                const response = await fetch(`/api/orders/${orderId}/unavailable`, {
+                const response = await fetch(`/api/kitchen/confirm-availability/${orderId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ reason: reason })
+                    body: JSON.stringify({ available: available })
                 });
                 
-                if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
                     loadOrders();
                     loadStatistics();
                 } else {
-                    alert('Failed to mark order as unavailable');
+                    alert('Failed to confirm availability: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error confirming availability:', error);
+                alert('Error confirming availability');
+            }
+        }
+
+        async function markOrderUnavailable(orderId, reason) {
+            try {
+                const response = await fetch(`/api/kitchen/confirm-availability/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ available: false, reason: reason })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    loadOrders();
+                    loadStatistics();
+                } else {
+                    alert('Failed to mark order as unavailable: ' + result.error);
                 }
             } catch (error) {
                 console.error('Error marking order unavailable:', error);

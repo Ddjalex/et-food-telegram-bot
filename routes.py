@@ -878,7 +878,7 @@ def get_kitchen_orders():
                 Order.status.in_(active_statuses)
             ).order_by(Order.created_at.asc()).all()
         
-        # Format orders for kitchen interface
+        # Format orders for kitchen
         kitchen_orders = []
         for order in orders:
             order_dict = order.to_dict()
@@ -918,9 +918,58 @@ def get_kitchen_orders():
             'orders': kitchen_orders,
             'count': len(kitchen_orders)
         })
+        
     except Exception as e:
         logger.error(f"Error fetching kitchen orders: {e}")
-        return jsonify({'error': 'Failed to fetch kitchen orders'}), 500
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/kitchen/confirm-availability/<int:order_id>', methods=['POST'])
+def kitchen_confirm_availability(order_id):
+    """Kitchen staff confirms order availability and triggers payment notification"""
+    try:
+        data = request.get_json()
+        is_available = data.get('available', True)
+        reason = data.get('reason', '')
+        
+        from enhanced_order_workflow import handle_kitchen_availability_response
+        success = handle_kitchen_availability_response(order_id, is_available, reason)
+        
+        if success:
+            if is_available:
+                return jsonify({
+                    'success': True,
+                    'message': 'Order availability confirmed. Customer notified for payment.'
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'message': 'Order marked as unavailable. Customer notified.'
+                })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to process availability response'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error confirming kitchen availability: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/payment/auto-approve/<int:order_id>', methods=['POST'])
+def auto_approve_payment(order_id):
+    """Auto-approve payment and start kitchen preparation"""
+    try:
+        from enhanced_order_workflow import auto_approve_payment_and_start_kitchen
+        success = auto_approve_payment_and_start_kitchen(order_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Payment auto-approved. Kitchen notified to start preparation.'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to auto-approve payment'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error auto-approving payment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/orders/<int:order_id>/status', methods=['POST'])
 def kitchen_update_order_status(order_id):
