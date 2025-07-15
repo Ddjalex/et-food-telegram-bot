@@ -1685,22 +1685,7 @@ def add_restaurant_super_admin():
         db.session.rollback()
         return jsonify({'error': 'Failed to add restaurant'}), 500
 
-@app.route('/api/restaurants/super-admin/<int:restaurant_id>', methods=['DELETE'])
-def delete_restaurant_super_admin(restaurant_id):
-    """Delete a restaurant (super admin)"""
-    try:
-        restaurant = Restaurant.query.get_or_404(restaurant_id)
-        db.session.delete(restaurant)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Restaurant deleted successfully'
-        })
-    except Exception as e:
-        logger.error(f"Error deleting restaurant: {e}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to delete restaurant'}), 500
+# Restaurant deletion moved to admin_routes.py
 
 # Kitchen Menu Management API Endpoints
 @app.route('/api/kitchen/menu-items', methods=['GET'])

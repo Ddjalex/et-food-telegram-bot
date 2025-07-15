@@ -439,10 +439,192 @@ function loadAdmins() {
     console.log('Loading admins...');
 }
 
-// Load restaurants (placeholder - implement based on existing functionality)
+// Load restaurants with enhanced functionality
 function loadRestaurants() {
-    // Implementation will be similar to existing restaurant loading
-    console.log('Loading restaurants...');
+    fetch('/api/restaurants/super-admin')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateRestaurantsTable(data.restaurants);
+            } else {
+                console.error('Error loading restaurants:', data.error);
+                showRestaurantError('Failed to load restaurants');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading restaurants:', error);
+            showRestaurantError('Failed to load restaurants');
+        });
+}
+
+function updateRestaurantsTable(restaurants) {
+    const tableBody = document.getElementById('restaurantTable');
+    
+    if (restaurants.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No restaurants found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = restaurants.map(restaurant => {
+        const statusBadge = restaurant.is_active ? 
+            '<span class="badge bg-success">Active</span>' : 
+            '<span class="badge bg-secondary">Inactive</span>';
+        
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-primary text-white me-2">
+                            ${restaurant.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="fw-bold">${restaurant.name}</div>
+                            <small class="text-muted">${restaurant.menu_items_count || 0} menu items</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="text-muted small">
+                        ${restaurant.address}
+                    </div>
+                </td>
+                <td>
+                    <div class="text-muted small">
+                        ${restaurant.admin_name || 'No admin assigned'}
+                    </div>
+                </td>
+                <td>
+                    <div class="fw-bold text-primary">${restaurant.orders_today || 0}</div>
+                </td>
+                <td>
+                    <div class="fw-bold text-success">ETB ${restaurant.revenue_today || 0}</div>
+                </td>
+                <td>
+                    ${statusBadge}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewRestaurantDetails(${restaurant.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="editRestaurant(${restaurant.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteRestaurant(${restaurant.id}, '${restaurant.name}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function deleteRestaurant(restaurantId, restaurantName) {
+    if (confirm(`Are you sure you want to delete "${restaurantName}"? This action cannot be undone and will remove all associated menu items and categories.`)) {
+        fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                loadRestaurants(); // Reload the table
+            } else {
+                showAlert('error', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting restaurant:', error);
+            showAlert('error', 'Failed to delete restaurant');
+        });
+    }
+}
+
+function viewRestaurantDetails(restaurantId) {
+    // Implementation for viewing restaurant details
+    console.log('Viewing restaurant details for ID:', restaurantId);
+}
+
+function editRestaurant(restaurantId) {
+    // Implementation for editing restaurant
+    console.log('Editing restaurant with ID:', restaurantId);
+}
+
+function showRestaurantError(message) {
+    const tableBody = document.getElementById('restaurantTable');
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>${message}
+            </td>
+        </tr>
+    `;
+}
+
+function createRestaurant() {
+    const form = document.getElementById('addRestaurantForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to JSON
+    const data = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        latitude: parseFloat(formData.get('latitude')) || 9.047658,
+        longitude: parseFloat(formData.get('longitude')) || 38.741143,
+        delivery_fee: parseFloat(formData.get('delivery_fee')) || 50.0,
+        minimum_order: parseFloat(formData.get('minimum_order')) || 100.0,
+        estimated_delivery_time: formData.get('estimated_delivery_time') || '30-45 minutes',
+        description: formData.get('description') || '',
+        is_active: formData.get('is_active') === 'on',
+        is_featured: formData.get('is_featured') === 'on'
+    };
+    
+    // Basic validation
+    if (!data.name || !data.phone || !data.address) {
+        showAlert('error', 'Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/restaurants/super-admin', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addRestaurantModal'));
+            modal.hide();
+            
+            // Reset form
+            form.reset();
+            
+            // Reload restaurants table
+            loadRestaurants();
+        } else {
+            showAlert('error', data.message || data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error creating restaurant:', error);
+        showAlert('error', 'Failed to create restaurant');
+    });
 }
 
 // Load driver approvals

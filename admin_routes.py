@@ -1647,12 +1647,72 @@ def get_all_restaurants():
     try:
         restaurants = Restaurant.query.all()
         
+        restaurants_data = []
+        for restaurant in restaurants:
+            # Count associated data
+            menu_items_count = len(restaurant.menu_items)
+            orders_count = Order.query.filter_by(restaurant_id=restaurant.id).count()
+            admins_count = AdminUser.query.filter_by(restaurant_id=restaurant.id).count()
+            
+            restaurant_data = restaurant.to_dict()
+            restaurant_data.update({
+                'menu_items_count': menu_items_count,
+                'orders_count': orders_count,
+                'admins_count': admins_count
+            })
+            restaurants_data.append(restaurant_data)
+        
         return jsonify({
             'success': True,
-            'restaurants': [restaurant.to_dict() for restaurant in restaurants]
+            'restaurants': restaurants_data
         })
     except Exception as e:
         logger.error(f"Error fetching restaurants: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/restaurants/<int:restaurant_id>', methods=['DELETE'])
+@super_admin_required
+def delete_restaurant_super_admin(restaurant_id):
+    """Delete a restaurant (Super Admin only)"""
+    try:
+        restaurant = Restaurant.query.get_or_404(restaurant_id)
+        
+        # Check if restaurant has orders
+        orders_count = Order.query.filter_by(restaurant_id=restaurant_id).count()
+        if orders_count > 0:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot delete restaurant with {orders_count} orders. Please handle orders first.'
+            }), 400
+        
+        # Check if restaurant has admins
+        admins_count = AdminUser.query.filter_by(restaurant_id=restaurant_id).count()
+        if admins_count > 0:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot delete restaurant with {admins_count} admin users. Please reassign or remove admins first.'
+            }), 400
+        
+        # Delete associated menu items and categories
+        from models import MenuItem, Category
+        MenuItem.query.filter_by(restaurant_id=restaurant_id).delete()
+        Category.query.filter_by(restaurant_id=restaurant_id).delete()
+        
+        # Delete the restaurant
+        restaurant_name = restaurant.name
+        db.session.delete(restaurant)
+        db.session.commit()
+        
+        logger.info(f"Restaurant '{restaurant_name}' (ID: {restaurant_id}) deleted by super admin")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Restaurant "{restaurant_name}" deleted successfully'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error deleting restaurant: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/restaurants', methods=['POST'])
