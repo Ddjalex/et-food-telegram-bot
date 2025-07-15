@@ -177,6 +177,23 @@ function updateDriverLocationTable(drivers) {
 }
 
 function getLocationStatus(driver) {
+    // Use location_status from API if available
+    if (driver.location_status) {
+        switch(driver.location_status) {
+            case 'live':
+                return { text: 'Live Location', color: '#28a745' };
+            case 'active':
+                return { text: 'Active Location', color: '#28a745' };
+            case 'recent':
+                return { text: 'Recent Location', color: '#ffc107' };
+            case 'inactive':
+                return { text: 'Location Inactive', color: '#dc3545' };
+            default:
+                return { text: 'No Location', color: '#dc3545' };
+        }
+    }
+    
+    // Fallback to client-side calculation
     if (!driver.last_location_update) {
         return { text: 'No Location', color: '#dc3545' };
     }
@@ -547,7 +564,7 @@ function updateApprovedDriversTable(drivers) {
     approvedTableBody.innerHTML = drivers.map(driver => {
         const locationStatus = getLocationStatus(driver);
         const overallStatus = getOverallStatus(driver);
-        const lastUpdate = getLastUpdateText(driver.last_location_update);
+        const lastUpdate = driver.last_update_text || getLastUpdateText(driver.last_location_update);
         
         return `
             <tr>

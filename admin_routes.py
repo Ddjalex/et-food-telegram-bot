@@ -704,14 +704,33 @@ def get_approved_drivers_super_admin():
         
         drivers_data = []
         for driver in approved_drivers:
-            # Check if location is recent (within 10 minutes)
+            # Enhanced location status calculation
             location_status = 'inactive'
+            last_update_text = "Never"
+            minutes_ago = None
+            
             if driver.last_location_update:
                 time_diff = datetime.utcnow() - driver.last_location_update
-                if time_diff < timedelta(minutes=10):
+                minutes_ago = time_diff.total_seconds() / 60
+                
+                if minutes_ago < 2:
+                    location_status = 'live'
+                elif minutes_ago < 10:
                     location_status = 'active'
-                elif time_diff < timedelta(hours=1):
+                elif minutes_ago < 60:
                     location_status = 'recent'
+                else:
+                    location_status = 'inactive'
+                
+                if minutes_ago < 60:
+                    last_update_text = f"{int(minutes_ago)} minutes ago"
+                else:
+                    hours_ago = minutes_ago / 60
+                    if hours_ago < 24:
+                        last_update_text = f"{int(hours_ago)} hours ago"
+                    else:
+                        days_ago = hours_ago / 24
+                        last_update_text = f"{int(days_ago)} days ago"
             
             driver_data = {
                 'id': driver.id,
@@ -725,6 +744,8 @@ def get_approved_drivers_super_admin():
                 'current_lng': driver.current_lng,
                 'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
                 'location_status': location_status,
+                'last_update_text': last_update_text,
+                'minutes_ago': int(minutes_ago) if minutes_ago else None,
                 'approved_at': driver.approved_at.isoformat() if driver.approved_at else None
             }
             drivers_data.append(driver_data)
