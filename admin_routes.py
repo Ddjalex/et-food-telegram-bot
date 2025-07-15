@@ -663,6 +663,47 @@ def approve_driver_super_admin(driver_id):
         logger.error(f"Error approving driver: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/super-admin/drivers/stats', methods=['GET'])
+@super_admin_required
+def get_super_admin_driver_stats():
+    """Get driver statistics for super admin dashboard"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Get all drivers
+        all_drivers = Driver.query.all()
+        total_drivers = len(all_drivers)
+        
+        # Count drivers by status
+        approved_drivers = Driver.query.filter_by(approval_status='approved').count()
+        pending_drivers = Driver.query.filter_by(approval_status='pending').count()
+        active_drivers = Driver.query.filter_by(is_active=True).count()
+        available_drivers = Driver.query.filter_by(is_active=True, is_available=True).count()
+        
+        # Count drivers with recent location updates (within 10 minutes)
+        ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
+        online_drivers = Driver.query.filter(
+            Driver.is_active == True,
+            Driver.last_location_update >= ten_minutes_ago
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total': total_drivers,
+                'approved': approved_drivers,
+                'pending': pending_drivers,
+                'active': active_drivers,
+                'available': available_drivers,
+                'online': online_drivers,
+                'offline': total_drivers - online_drivers
+            }
+        })
+    
+    except Exception as e:
+        logger.error(f"Error fetching driver stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/super-admin/drivers/<int:driver_id>/reject', methods=['POST'])
 @super_admin_required
 def reject_driver_super_admin(driver_id):
