@@ -611,6 +611,9 @@ function updateAdminsTable(admins) {
                                 onclick="toggleAdminBlock(${admin.id}, ${admin.is_blocked})">
                             <i class="fas fa-${admin.is_blocked ? 'unlock' : 'lock'}"></i>
                         </button>
+                        <button class="btn btn-outline-danger" onclick="deleteAdmin(${admin.id}, '${admin.username}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -644,11 +647,14 @@ function toggleAdminBlock(adminId, isBlocked) {
     const confirmText = isBlocked ? 'unblock' : 'block';
     
     if (confirm(`Are you sure you want to ${confirmText} this admin?`)) {
-        fetch(`/api/super-admin/admins/${adminId}/${action}`, {
+        fetch(`/api/super-admin/admins/${adminId}/block`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({
+                blocked: !isBlocked
+            })
         })
         .then(response => response.json())
         .then(data => {
@@ -662,6 +668,30 @@ function toggleAdminBlock(adminId, isBlocked) {
         .catch(error => {
             console.error('Error toggling admin block:', error);
             showAlert('error', 'Failed to update admin status');
+        });
+    }
+}
+
+function deleteAdmin(adminId, adminUsername) {
+    if (confirm(`Are you sure you want to delete admin "${adminUsername}"? This action cannot be undone and will remove all associated data including sessions and activities.`)) {
+        fetch(`/api/super-admin/admins/${adminId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                loadAdmins(); // Reload the table
+            } else {
+                showAlert('error', data.message || 'Failed to delete admin');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting admin:', error);
+            showAlert('error', 'Failed to delete admin');
         });
     }
 }

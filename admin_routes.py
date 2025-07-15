@@ -1240,6 +1240,53 @@ def block_admin(admin_id):
         logger.error(f"Error blocking admin: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/super-admin/admins/<int:admin_id>', methods=['DELETE'])
+@super_admin_required
+def delete_admin(admin_id):
+    """Delete admin (Super Admin only)"""
+    try:
+        admin = AdminUser.query.get_or_404(admin_id)
+        
+        if admin.role == 'super_admin':
+            return jsonify({'success': False, 'message': 'Cannot delete super admin'}), 400
+        
+        # Check if admin has active sessions
+        active_sessions = AdminSession.query.filter_by(admin_id=admin_id, logout_time=None).count()
+        if active_sessions > 0:
+            return jsonify({
+                'success': False,
+                'message': f'Cannot delete admin. Admin has {active_sessions} active sessions. Please ensure admin is logged out first.'
+            }), 400
+        
+        # Log admin activity before deletion
+        log_admin_activity(
+            session['admin_id'],
+            'admin_deleted',
+            'admin',
+            admin_id,
+            f'Deleted admin: {admin.username} ({admin.full_name})'
+        )
+        
+        # Store admin info for response
+        admin_name = admin.username
+        
+        # Delete related records first
+        AdminActivity.query.filter_by(admin_id=admin_id).delete()
+        AdminSession.query.filter_by(admin_id=admin_id).delete()
+        
+        # Delete admin
+        db.session.delete(admin)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Admin "{admin_name}" deleted successfully'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error deleting admin: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/super-admin/admins/<int:admin_id>/reset-password', methods=['POST'])
 @super_admin_required
 def reset_admin_password(admin_id):
