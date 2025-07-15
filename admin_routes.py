@@ -40,9 +40,9 @@ def super_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    """Admin login page"""
+@app.route('/admin/login-legacy', methods=['GET', 'POST'])
+def admin_login_legacy():
+    """Admin login page (legacy)"""
     if request.method == 'POST':
         data = request.get_json()
         username = data.get('username')
@@ -105,7 +105,7 @@ def admin_logout():
     session.clear()
     return redirect(url_for('admin_login'))
 
-@app.route('/admin/dashboard')
+@app.route('/admin/dashboard-legacy')
 @admin_required
 def admin_dashboard():
     """Admin dashboard - different views based on role"""

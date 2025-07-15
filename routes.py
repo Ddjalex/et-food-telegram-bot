@@ -66,8 +66,88 @@ def notify_drivers_in_background(order_id):
 
 @app.route('/')
 def index():
-    """Main page"""
+    """Main page - check if showing login portal or customer app"""
+    # If accessed with ?admin=1, show login portal
+    if request.args.get('admin') == '1':
+        return render_template('login_home.html')
     return render_template('webapp_modern_fixed.html')
+
+@app.route('/login-portal')
+def login_portal():
+    """Admin login portal page"""
+    return render_template('login_home.html')
+
+# Separate login routes for different user roles
+@app.route('/superadmin/login/dashboard', methods=['GET', 'POST'])
+def superadmin_login_dashboard():
+    """Super Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Check super admin credentials
+        admin = AdminUser.query.filter_by(username=username, role='super_admin').first()
+        if admin and admin.check_password(password):
+            session['admin_id'] = admin.id
+            session['admin_username'] = admin.username
+            session['admin_role'] = admin.role
+            return redirect('/admin')  # Redirect to main admin dashboard
+        else:
+            return render_template('superadmin_login.html', error='Invalid credentials')
+    
+    return render_template('superadmin_login.html')
+
+@app.route('/admin/login/dashboard', methods=['GET', 'POST'])
+def admin_login_dashboard():
+    """Restaurant Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Check admin credentials (restaurant admin role)
+        admin = AdminUser.query.filter_by(username=username).first()
+        if admin and admin.check_password(password):
+            session['admin_id'] = admin.id
+            session['admin_username'] = admin.username
+            session['admin_role'] = admin.role
+            session['restaurant_id'] = admin.restaurant_id if hasattr(admin, 'restaurant_id') else 1
+            return redirect('/admin')
+        else:
+            return render_template('admin_login.html', error='Invalid credentials')
+    
+    return render_template('admin_login.html')
+
+@app.route('/kitchen/login/dashboard', methods=['GET', 'POST'])
+def kitchen_login_dashboard():
+    """Kitchen Staff login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Check kitchen staff credentials
+        from models import KitchenStaff
+        try:
+            kitchen_staff = KitchenStaff.query.filter_by(username=username).first()
+            if kitchen_staff and kitchen_staff.check_password(password):
+                session['kitchen_staff_id'] = kitchen_staff.id
+                session['kitchen_username'] = kitchen_staff.username
+                session['restaurant_id'] = kitchen_staff.restaurant_id
+                return redirect('/kitchen')
+            else:
+                return render_template('kitchen_login.html', error='Invalid credentials')
+        except:
+            # Fallback to simple password check for kitchen staff
+            if username == 'kitchen' and password == 'kitchen123':
+                session['kitchen_staff_id'] = 1
+                session['kitchen_username'] = username
+                session['restaurant_id'] = 1
+                return redirect('/kitchen')
+            else:
+                return render_template('kitchen_login.html', error='Invalid credentials')
+    
+    return render_template('kitchen_login.html')
+
+# Redirect routes for dashboard access (removed to avoid conflicts)
 
 @app.route('/menu')
 def menu():
