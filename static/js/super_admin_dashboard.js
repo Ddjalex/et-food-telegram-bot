@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeDashboard() {
     loadDashboardStats();
-    loadRealTimeStats();
+    loadDriverStats();
     loadAdmins();
     loadRestaurants();
     loadDriverApprovals();
