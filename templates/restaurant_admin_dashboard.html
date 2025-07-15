@@ -1059,18 +1059,31 @@
         }
 
         function loadRecentOrders() {
+            console.log('Loading recent orders...');
             fetch('/api/admin/recent-orders')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Recent orders response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const orders = data.orders || [];
+                    console.log('Recent orders data received:', data);
+                    // The API returns an array directly, not wrapped in an object
+                    const orders = Array.isArray(data) ? data : (data.orders || []);
                     const tableBody = document.getElementById('recentOrdersTable');
+                    
+                    console.log('Processing recent orders:', orders.length);
                     
                     if (orders.length === 0) {
                         tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No recent orders found</td></tr>';
                         return;
                     }
                     
-                    tableBody.innerHTML = orders.slice(0, 10).map(order => `
+                    tableBody.innerHTML = orders.slice(0, 10).map(order => {
+                        console.log('Processing recent order:', order);
+                        return `
                         <tr>
                             <td>#${order.id}</td>
                             <td>${order.customer_name}</td>
@@ -1079,7 +1092,8 @@
                             <td>ETB ${order.total_amount}</td>
                             <td>${formatTime(order.created_at)}</td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 })
                 .catch(error => {
                     console.error('Error loading recent orders:', error);
@@ -1088,20 +1102,33 @@
         }
 
         function loadOrders(page = 1, status = 'all') {
+            console.log('Loading orders with status:', status);
             const params = new URLSearchParams({ page, status });
             
             fetch(`/api/admin/orders?${params}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Orders response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const orders = data.orders || [];
+                    console.log('Orders data received:', data);
+                    // The API returns an array directly, not wrapped in an object
+                    const orders = Array.isArray(data) ? data : (data.orders || []);
                     const tableBody = document.getElementById('ordersTable');
+                    
+                    console.log('Processing orders:', orders.length);
                     
                     if (orders.length === 0) {
                         tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No orders found</td></tr>';
                         return;
                     }
                     
-                    tableBody.innerHTML = orders.map(order => `
+                    tableBody.innerHTML = orders.map(order => {
+                        console.log('Processing order:', order);
+                        return `
                         <tr>
                             <td>#${order.id}</td>
                             <td>${order.customer_name}</td>
@@ -1121,7 +1148,8 @@
                                 </div>
                             </td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 })
                 .catch(error => {
                     console.error('Error loading orders:', error);

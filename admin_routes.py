@@ -164,22 +164,36 @@ def get_recent_orders():
     """Get recent orders for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
+        logger.info(f"Getting recent orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
         recent_orders = Order.query.filter_by(
             restaurant_id=admin.restaurant_id
         ).order_by(Order.created_at.desc()).limit(10).all()
         
+        logger.info(f"Found {len(recent_orders)} recent orders for restaurant {admin.restaurant_id}")
+        
         orders_data = []
         for order in recent_orders:
+            # Parse items if they're stored as JSON string
+            items = order.items
+            if isinstance(items, str):
+                try:
+                    import json
+                    items = json.loads(items)
+                except:
+                    items = []
+            
             orders_data.append({
                 'id': order.id,
                 'customer_name': order.customer_name,
                 'status': order.status,
                 'total_amount': float(order.total_amount),
-                'created_at': order.created_at.isoformat()
+                'created_at': order.created_at.isoformat(),
+                'items': items
             })
         
+        logger.info(f"Returning {len(orders_data)} recent orders to admin dashboard")
         return jsonify(orders_data)
     except Exception as e:
         logger.error(f"Error getting recent orders: {e}")
@@ -214,11 +228,14 @@ def get_restaurant_admin_orders():
     """Get all orders for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
+        logger.info(f"Getting orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
         orders = Order.query.filter_by(
             restaurant_id=admin.restaurant_id
         ).order_by(Order.created_at.desc()).all()
+        
+        logger.info(f"Found {len(orders)} orders for restaurant {admin.restaurant_id}")
         
         orders_data = []
         for order in orders:
@@ -231,16 +248,25 @@ def get_restaurant_admin_orders():
                 except:
                     items = []
             
+            # Calculate minutes ago for time display
+            minutes_ago = int((datetime.utcnow() - order.created_at).total_seconds() / 60)
+            
             orders_data.append({
                 'id': order.id,
                 'customer_name': order.customer_name,
                 'customer_phone': order.customer_phone,
+                'customer_address': order.customer_address,
                 'total_amount': float(order.total_amount),
                 'status': order.status,
+                'payment_method': order.payment_method,
+                'transaction_id': order.transaction_id,
+                'transaction_image_url': order.transaction_image_url,
                 'created_at': order.created_at.isoformat(),
+                'minutes_ago': minutes_ago,
                 'items': items
             })
         
+        logger.info(f"Returning {len(orders_data)} orders to admin dashboard")
         return jsonify(orders_data)
     except Exception as e:
         logger.error(f"Error getting orders: {e}")
