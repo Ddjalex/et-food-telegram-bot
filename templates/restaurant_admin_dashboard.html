@@ -654,19 +654,19 @@
         }
 
         function loadDashboardStats() {
-            fetch('/api/admin/statistics')
+            fetch('/api/admin/dashboard-stats')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('totalOrders').textContent = data.total_orders || 0;
-                    document.getElementById('totalRevenue').textContent = `ETB ${data.today_revenue || 0}`;
-                    document.getElementById('pendingOrders').textContent = data.active_sessions || 0;
-                    document.getElementById('activeDrivers').textContent = data.active_drivers || 0;
+                    document.getElementById('totalOrders').textContent = data.todayOrders || 0;
+                    document.getElementById('totalRevenue').textContent = `ETB ${data.todayRevenue || 0}`;
+                    document.getElementById('pendingOrders').textContent = data.pendingOrders || 0;
+                    document.getElementById('activeDrivers').textContent = data.menuItems || 0;
                 })
                 .catch(error => console.error('Error loading dashboard stats:', error));
         }
 
         function loadRecentOrders() {
-            fetch('/api/orders')
+            fetch('/api/admin/recent-orders')
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];
@@ -697,7 +697,7 @@
         function loadOrders(page = 1, status = 'all') {
             const params = new URLSearchParams({ page, status });
             
-            fetch(`/api/orders?${params}`)
+            fetch(`/api/admin/orders?${params}`)
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];
