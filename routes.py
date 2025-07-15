@@ -80,7 +80,17 @@ def login_portal():
 # Separate login routes for different user roles
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():
-    """Super Admin login page"""
+    """Super Admin login page and dashboard"""
+    # If already logged in and is super admin, show dashboard
+    if 'admin_id' in session:
+        admin_user = AdminUser.query.get(session['admin_id'])
+        if admin_user and admin_user.role == 'super_admin':
+            return render_template('super_admin_dashboard.html', admin=admin_user)
+        else:
+            # Not a super admin, logout and redirect to login
+            session.clear()
+            return redirect('/superadmin')
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -91,7 +101,7 @@ def superadmin():
             session['admin_id'] = admin.id
             session['admin_username'] = admin.username
             session['admin_role'] = admin.role
-            return redirect('/admin')  # Redirect to main admin dashboard
+            return render_template('super_admin_dashboard.html', admin=admin)
         else:
             return render_template('superadmin_login.html', error='Invalid credentials')
     
@@ -99,21 +109,25 @@ def superadmin():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    """Restaurant Admin login page"""
-    # If already logged in, redirect to dashboard
+    """Restaurant Admin login page and dashboard"""
+    # If already logged in, show appropriate dashboard based on role
     if 'admin_id' in session:
         admin_user = AdminUser.query.get(session['admin_id'])
         if admin_user:
+            # Super admin should be redirected to /superadmin
             if admin_user.role == 'super_admin':
-                return render_template('super_admin_dashboard.html', admin=admin_user)
+                return redirect('/superadmin')
+            elif admin_user.role == 'kitchen_staff':
+                return redirect('/kitchen')
             else:
+                # Show restaurant admin dashboard
                 return render_template('restaurant_admin_dashboard.html', admin=admin_user)
     
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Check admin credentials (all roles can login through /admin)
+        # Check admin credentials (only regular admin and kitchen staff can login through /admin)
         admin = AdminUser.query.filter_by(username=username).first()
         if admin and admin.check_password(password):
             session['admin_id'] = admin.id
@@ -121,12 +135,13 @@ def admin():
             session['admin_role'] = admin.role
             session['restaurant_id'] = admin.restaurant_id if hasattr(admin, 'restaurant_id') else 1
             
-            # Redirect to dashboard based on role
+            # Redirect based on role
             if admin.role == 'super_admin':
-                return render_template('super_admin_dashboard.html', admin=admin)
+                return redirect('/superadmin')
             elif admin.role == 'kitchen_staff':
-                return render_template('kitchen_dashboard.html', admin=admin)
+                return redirect('/kitchen')
             else:
+                # Show restaurant admin dashboard
                 return render_template('restaurant_admin_dashboard.html', admin=admin)
         else:
             return render_template('admin_login.html', error='Invalid credentials')

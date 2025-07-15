@@ -5,7 +5,7 @@
 All three login systems have been successfully restored and verified. Here are the working credentials:
 
 ### 1. Super Admin Login
-- **URL**: `/superadmin/login`
+- **URL**: `/superadmin` 
 - **Credentials**: 
   - Username: `superadmin`
   - Password: `admin123`
@@ -13,7 +13,7 @@ All three login systems have been successfully restored and verified. Here are t
 - **Dashboard**: System-wide controls and analytics
 
 ### 2. Regular Admin Login
-- **URL**: `/admin/login`
+- **URL**: `/admin`
 - **Credentials**: 
   - Username: `ADDISU` / Password: `admin123`
   - Username: `admin` / Password: `admin123`
