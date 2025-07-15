@@ -708,14 +708,53 @@
                     <div id="system" class="tab-content">
                         <h2 class="mb-4">System Settings</h2>
                         
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>Change Password</h5>
+                                    <p class="text-muted mb-3">Update your administrator password</p>
+                                    <form id="changePasswordForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="currentPassword" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="newPassword" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirmPassword" required />
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-key"></i> Change Password
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>System Information</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">System Name</label>
+                                        <input type="text" class="form-control" value="ET-FOOD" readonly />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Version</label>
+                                        <input type="text" class="form-control" value="1.0.0" readonly />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Last Updated</label>
+                                        <input type="text" class="form-control" value="July 15, 2025" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="stat-card">
                                     <h5>Application Settings</h5>
-                                    <div class="mb-3">
-                                        <label class="form-label">System Name</label>
-                                        <input type="text" class="form-control" value="ET-FOOD" />
-                                    </div>
                                     <div class="mb-3">
                                         <label class="form-label">Default Currency</label>
                                         <select class="form-select">
@@ -726,6 +765,10 @@
                                     <div class="mb-3">
                                         <label class="form-label">Default Delivery Fee</label>
                                         <input type="number" class="form-control" value="30" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Order Timeout (minutes)</label>
+                                        <input type="number" class="form-control" value="15" />
                                     </div>
                                 </div>
                             </div>
@@ -739,15 +782,15 @@
                                         </label>
                                     </div>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="smsNotifications">
-                                        <label class="form-check-label" for="smsNotifications">
-                                            SMS Notifications
+                                        <input class="form-check-input" type="checkbox" id="telegramNotifications" checked>
+                                        <label class="form-check-label" for="telegramNotifications">
+                                            Telegram Notifications
                                         </label>
                                     </div>
                                     <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="pushNotifications" checked>
-                                        <label class="form-check-label" for="pushNotifications">
-                                            Push Notifications
+                                        <input class="form-check-input" type="checkbox" id="driverNotifications" checked>
+                                        <label class="form-check-label" for="driverNotifications">
+                                            Driver Auto-Assignment
                                         </label>
                                     </div>
                                 </div>

@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
     setupTabNavigation();
     startAutoRefresh();
+    setupChangePasswordForm();
 });
 
 function initializeDashboard() {
@@ -163,6 +164,9 @@ function updateDriverLocationTable(drivers) {
                         }
                         <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})">
                             <i class="fas fa-location-arrow"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteDriver(${driver.id}, '${driver.name}')">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </td>
@@ -422,10 +426,318 @@ function loadRestaurants() {
     console.log('Loading restaurants...');
 }
 
-// Load driver approvals (placeholder - implement based on existing functionality)
+// Load driver approvals
 function loadDriverApprovals() {
-    // Implementation will be similar to existing driver approval loading
     console.log('Loading driver approvals...');
+    loadPendingDrivers();
+    loadApprovedDrivers();
+}
+
+function loadPendingDrivers() {
+    fetch('/api/super-admin/drivers/pending')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updatePendingDriversTable(data.drivers);
+                document.getElementById('pendingDrivers').textContent = data.drivers.length;
+            } else {
+                console.error('Error loading pending drivers:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading pending drivers:', error);
+        });
+}
+
+function loadApprovedDrivers() {
+    fetch('/api/super-admin/drivers/approved')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const approvedCount = data.drivers.length;
+                const activeCount = data.drivers.filter(d => d.is_active && d.last_location_update).length;
+                const availableCount = data.drivers.filter(d => d.is_active && d.is_available).length;
+                
+                document.getElementById('approvedDrivers').textContent = approvedCount;
+                document.getElementById('activeDrivers').textContent = activeCount;
+                document.getElementById('availableDrivers').textContent = availableCount;
+                
+                updateApprovedDriversTable(data.drivers);
+            } else {
+                console.error('Error loading approved drivers:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading approved drivers:', error);
+        });
+}
+
+function updatePendingDriversTable(drivers) {
+    const tableBody = document.getElementById('pendingDriversTable');
+    
+    if (drivers.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No pending driver applications
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = drivers.map(driver => {
+        return `
+            <tr>
+                <td>
+                    <div class="fw-bold">${driver.name}</div>
+                </td>
+                <td>
+                    <span class="text-muted">${driver.phone_number}</span>
+                </td>
+                <td>
+                    <i class="fas fa-${getVehicleIcon(driver.vehicle_type)} me-1"></i>
+                    ${driver.vehicle_type}
+                </td>
+                <td>
+                    <span class="text-muted">${formatDate(driver.created_at)}</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-success" onclick="approveDriver(${driver.id})">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger" onclick="rejectDriver(${driver.id})">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateApprovedDriversTable(drivers) {
+    // This will be called from the driver approval management section
+    const approvedTableBody = document.getElementById('approvedDriversTable');
+    
+    if (!approvedTableBody) {
+        // Table doesn't exist yet, will be created when needed
+        return;
+    }
+    
+    if (drivers.length === 0) {
+        approvedTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No approved drivers found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    approvedTableBody.innerHTML = drivers.map(driver => {
+        const locationStatus = getLocationStatus(driver);
+        const overallStatus = getOverallStatus(driver);
+        const lastUpdate = getLastUpdateText(driver.last_location_update);
+        
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-success text-white me-2">
+                            ${driver.name.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="fw-bold">${driver.name}</div>
+                            <small class="text-muted">${driver.phone_number}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge" style="background-color: ${overallStatus.color}">
+                        <i class="fas fa-circle me-1"></i>${overallStatus.text}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge" style="background-color: ${locationStatus.color}">
+                        <i class="fas fa-map-marker-alt me-1"></i>${locationStatus.text}
+                    </span>
+                </td>
+                <td>
+                    <span class="text-muted">${lastUpdate}</span>
+                </td>
+                <td>
+                    <i class="fas fa-${getVehicleIcon(driver.vehicle_type)} me-1"></i>
+                    ${driver.vehicle_type}
+                </td>
+                <td>
+                    <span class="badge ${driver.is_active ? 'bg-success' : 'bg-danger'}">
+                        ${driver.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        ${driver.current_lat && driver.current_lng ? 
+                            `<button class="btn btn-outline-primary btn-sm" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                                <i class="fas fa-map"></i>
+                            </button>` : ''
+                        }
+                        <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteDriver(${driver.id}, '${driver.name}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function deleteDriver(driverId, driverName) {
+    if (confirm(`Are you sure you want to delete driver "${driverName}"? This action cannot be undone.`)) {
+        fetch(`/api/super-admin/drivers/${driverId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', `Driver "${driverName}" deleted successfully`);
+                loadDriverApprovals();
+                loadDriverLocationDetails();
+            } else {
+                showAlert('error', data.message || 'Failed to delete driver');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting driver:', error);
+            showAlert('error', 'Failed to delete driver');
+        });
+    }
+}
+
+function approveDriver(driverId) {
+    fetch(`/api/super-admin/drivers/${driverId}/approve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', 'Driver approved successfully');
+            loadDriverApprovals();
+        } else {
+            showAlert('error', data.message || 'Failed to approve driver');
+        }
+    })
+    .catch(error => {
+        console.error('Error approving driver:', error);
+        showAlert('error', 'Failed to approve driver');
+    });
+}
+
+function rejectDriver(driverId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+        fetch(`/api/super-admin/drivers/${driverId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Driver rejected successfully');
+                loadDriverApprovals();
+            } else {
+                showAlert('error', data.message || 'Failed to reject driver');
+            }
+        })
+        .catch(error => {
+            console.error('Error rejecting driver:', error);
+            showAlert('error', 'Failed to reject driver');
+        });
+    }
+}
+
+function viewDriverDocuments(driverId) {
+    fetch(`/api/super-admin/drivers/${driverId}/documents`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showDriverDocumentsModal(data.documents);
+            } else {
+                showAlert('error', data.message || 'Failed to load driver documents');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading driver documents:', error);
+            showAlert('error', 'Failed to load driver documents');
+        });
+}
+
+function showDriverDocumentsModal(documents) {
+    const modalHtml = `
+        <div class="modal fade" id="driverDocumentsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Driver Documents</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            ${documents.map(doc => `
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">${doc.document_type}</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <img src="${doc.document_url}" class="img-fluid" alt="${doc.document_type}">
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('driverDocumentsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('driverDocumentsModal'));
+    modal.show();
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
 }
 
 // Load analytics (placeholder - implement based on existing functionality)
@@ -462,3 +774,53 @@ function showAlert(type, message) {
 window.addEventListener('load', function() {
     updateLastRefreshTime();
 });
+
+// Setup change password form handler
+function setupChangePasswordForm() {
+    const form = document.getElementById('changePasswordForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validate passwords
+            if (newPassword !== confirmPassword) {
+                showAlert('error', 'New passwords do not match');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showAlert('error', 'Password must be at least 6 characters long');
+                return;
+            }
+            
+            // Submit password change
+            fetch('/api/super-admin/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Password changed successfully');
+                    form.reset();
+                } else {
+                    showAlert('error', data.message || 'Failed to change password');
+                }
+            })
+            .catch(error => {
+                console.error('Error changing password:', error);
+                showAlert('error', 'Failed to change password');
+            });
+        });
+    }
+}

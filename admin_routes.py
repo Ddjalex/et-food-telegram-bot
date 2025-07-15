@@ -916,6 +916,93 @@ def get_system_health():
         logger.error(f"Error fetching system health: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/super-admin/change-password', methods=['POST'])
+@super_admin_required
+def change_admin_password():
+    """Change admin password"""
+    try:
+        from werkzeug.security import check_password_hash, generate_password_hash
+        
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'message': 'Current password and new password are required'}), 400
+        
+        # Get current admin
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'success': False, 'message': 'Admin not found'}), 404
+        
+        # Verify current password
+        if not check_password_hash(admin.password_hash, current_password):
+            return jsonify({'success': False, 'message': 'Current password is incorrect'}), 400
+        
+        # Validate new password
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'New password must be at least 6 characters long'}), 400
+        
+        # Update password
+        admin.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        # Log activity
+        log_admin_activity(
+            admin.id,
+            'password_changed',
+            'admin',
+            admin.id,
+            'Admin password changed successfully'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password changed successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/<int:driver_id>', methods=['DELETE'])
+@super_admin_required
+def delete_driver_super_admin(driver_id):
+    """Delete a driver (Super Admin only)"""
+    try:
+        from models import Driver
+        
+        driver = Driver.query.get_or_404(driver_id)
+        
+        # Check if driver has active orders
+        active_orders = Order.query.filter_by(driver_id=driver_id, status='out_for_delivery').count()
+        
+        if active_orders > 0:
+            return jsonify({
+                'success': False,
+                'message': f'Cannot delete driver. Driver has {active_orders} active orders.'
+            }), 400
+        
+        # Log activity before deletion
+        log_admin_activity(
+            session['admin_id'],
+            'driver_deleted',
+            'driver',
+            driver_id,
+            f'Deleted driver: {driver.name}'
+        )
+        
+        # Delete driver
+        db.session.delete(driver)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Driver deleted successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error deleting driver: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Super Admin Routes
 @app.route('/api/super-admin/admins', methods=['GET'])
 @super_admin_required
