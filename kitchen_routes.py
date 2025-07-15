@@ -1,10 +1,11 @@
-from flask import request, jsonify, render_template, session, redirect, url_for
+from flask import request, jsonify, render_template, session, redirect, url_for, flash
 from app import app, db
-from models import MenuItem, Category, Restaurant, Order, AdminUser
+from models import MenuItem, Category, Restaurant, Order, AdminUser, AdminSession, AdminActivity
 from datetime import datetime
 import logging
 import os
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -14,19 +15,62 @@ def kitchen_staff_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
-            return redirect(url_for('admin'))
+            return redirect(url_for('kitchen_login'))
         
         admin = AdminUser.query.get(session['admin_id'])
         if not admin or not admin.is_active:
             session.clear()
-            return redirect(url_for('admin'))
+            return redirect(url_for('kitchen_login'))
         
         # Allow kitchen staff and admins to access kitchen dashboard
         if admin.role not in ['kitchen_staff', 'admin', 'super_admin']:
-            return redirect(url_for('admin'))
+            return redirect(url_for('kitchen_login'))
         
         return f(*args, **kwargs)
     return decorated_function
+
+# Kitchen login route
+@app.route('/kitchen/login', methods=['GET', 'POST'])
+def kitchen_login():
+    """Kitchen staff login page"""
+    if request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        admin = AdminUser.query.filter_by(username=username).first()
+        
+        if admin and check_password_hash(admin.password_hash, password):
+            if admin.is_blocked:
+                return jsonify({'success': False, 'message': 'Account is blocked'}), 403
+            
+            if not admin.is_active:
+                return jsonify({'success': False, 'message': 'Account is deactivated'}), 403
+            
+            # Check if user has kitchen access
+            if admin.role not in ['kitchen_staff', 'admin', 'super_admin']:
+                return jsonify({'success': False, 'message': 'No kitchen access permissions'}), 403
+            
+            session['admin_id'] = admin.id
+            session['admin_role'] = admin.role
+            
+            # Log session
+            admin_session = AdminSession(
+                admin_id=admin.id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(admin_session)
+            
+            # Update last login
+            admin.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({'success': True, 'role': admin.role, 'redirect': '/kitchen'})
+        
+        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+    
+    return render_template('kitchen_login.html')
 
 # Kitchen staff access routes
 @app.route('/kitchen')

@@ -16,12 +16,12 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
-            return redirect(url_for('admin'))
+            return redirect(url_for('admin_login'))
         
         admin = AdminUser.query.get(session['admin_id'])
         if not admin or not admin.is_active or admin.is_blocked:
             session.clear()
-            return redirect(url_for('admin'))
+            return redirect(url_for('admin_login'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -31,18 +31,18 @@ def super_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
-            return redirect(url_for('superadmin'))
+            return redirect(url_for('superadmin_login'))
         
         admin = AdminUser.query.get(session['admin_id'])
         if not admin or admin.role != 'super_admin' or not admin.is_active or admin.is_blocked:
             session.clear()
-            return redirect(url_for('superadmin'))
+            return redirect(url_for('superadmin_login'))
         
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/admin/login-legacy', methods=['GET', 'POST'])
-def admin_login_legacy():
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
     """Admin login page (legacy)"""
     if request.method == 'POST':
         data = request.get_json()
@@ -81,6 +81,48 @@ def admin_login_legacy():
         return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
     
     return render_template('admin_login.html')
+
+@app.route('/superadmin/login', methods=['GET', 'POST'])
+def superadmin_login():
+    """Super Admin login page"""
+    if request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        admin = AdminUser.query.filter_by(username=username).first()
+        
+        if admin and check_password_hash(admin.password_hash, password):
+            if admin.is_blocked:
+                return jsonify({'success': False, 'message': 'Account is blocked'}), 403
+            
+            if not admin.is_active:
+                return jsonify({'success': False, 'message': 'Account is deactivated'}), 403
+            
+            # Check if user is super admin
+            if admin.role != 'super_admin':
+                return jsonify({'success': False, 'message': 'No super admin access permissions'}), 403
+            
+            session['admin_id'] = admin.id
+            session['admin_role'] = admin.role
+            
+            # Log session
+            admin_session = AdminSession(
+                admin_id=admin.id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(admin_session)
+            
+            # Update last login
+            admin.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            return jsonify({'success': True, 'role': admin.role, 'redirect': '/superadmin'})
+        
+        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+    
+    return render_template('superadmin_login.html')
 
 @app.route('/admin/logout')
 @admin_required
