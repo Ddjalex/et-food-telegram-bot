@@ -47,7 +47,7 @@ def setup_admin_users():
         else:
             print("✓ Restaurant admin already exists")
 
-        # Check if kitchen staff exists
+        # Check if kitchen staff exists (managed through restaurant admin)
         kitchen = AdminUser.query.filter_by(username='kitchen', role='kitchen_staff').first()
         if not kitchen:
             kitchen = AdminUser(
@@ -62,6 +62,7 @@ def setup_admin_users():
             kitchen.set_password('kitchen123')  # Default password
             db.session.add(kitchen)
             print("✓ Created kitchen staff: username='kitchen', password='kitchen123'")
+            print("✓ Note: Kitchen staff is managed through restaurant admin at /admin")
         else:
             print("✓ Kitchen staff already exists")
 
@@ -77,9 +78,9 @@ def setup_admin_users():
         print("  Username: admin") 
         print("  Password: admin123")
         print()
-        print("Kitchen Staff Login (/kitchen):")
-        print("  Username: kitchen")
-        print("  Password: kitchen123")
+        print("Kitchen Staff (managed by Restaurant Admin):")
+        print("  Access through: /admin")
+        print("  Note: Kitchen staff is managed through restaurant admin dashboard")
         print("="*50)
 
 if __name__ == '__main__':

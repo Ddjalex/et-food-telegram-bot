@@ -113,7 +113,7 @@ def admin():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Check admin credentials (restaurant admin role)
+        # Check admin credentials (all roles can login through /admin)
         admin = AdminUser.query.filter_by(username=username).first()
         if admin and admin.check_password(password):
             session['admin_id'] = admin.id
@@ -124,6 +124,8 @@ def admin():
             # Redirect to dashboard based on role
             if admin.role == 'super_admin':
                 return render_template('super_admin_dashboard.html', admin=admin)
+            elif admin.role == 'kitchen_staff':
+                return render_template('kitchen_dashboard.html', admin=admin)
             else:
                 return render_template('restaurant_admin_dashboard.html', admin=admin)
         else:
@@ -133,28 +135,9 @@ def admin():
 
 @app.route('/kitchen', methods=['GET', 'POST'])
 def kitchen():
-    """Kitchen Staff login page"""
-    # If already logged in as kitchen staff, show dashboard
-    if 'kitchen_staff_id' in session:
-        return render_template('kitchen_dashboard.html')
-    
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Check kitchen staff credentials using AdminUser system
-        admin = AdminUser.query.filter_by(username=username, role='kitchen_staff').first()
-        if admin and admin.check_password(password):
-            session['kitchen_staff_id'] = admin.id
-            session['kitchen_username'] = admin.username
-            session['restaurant_id'] = admin.restaurant_id if admin.restaurant_id else 1
-            session['admin_id'] = admin.id  # For unified session handling
-            session['admin_role'] = admin.role
-            return render_template('kitchen_dashboard.html')
-        else:
-            return render_template('kitchen_login.html', error='Invalid credentials')
-    
-    return render_template('kitchen_login.html')
+    """Kitchen Staff access - redirect to admin login"""
+    # Kitchen staff should login through restaurant admin system
+    return redirect(url_for('admin'))
 
 # Password change functionality
 @app.route('/change-password', methods=['GET', 'POST'])
