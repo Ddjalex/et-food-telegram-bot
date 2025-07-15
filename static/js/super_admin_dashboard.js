@@ -284,7 +284,7 @@ function updateSystemStatus(status) {
 
 // Load dashboard statistics
 function loadDashboardStats() {
-    fetch('/api/super-admin/dashboard-stats')
+    fetch('/api/dashboard-stats')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -292,11 +292,84 @@ function loadDashboardStats() {
                 document.getElementById('totalRestaurants').textContent = data.totalRestaurants;
                 document.getElementById('todayOrders').textContent = data.todayOrders;
                 document.getElementById('totalRevenue').textContent = data.totalRevenue.toFixed(2);
+                
+                // Also initialize charts with overview data
+                loadOverviewCharts();
             }
         })
         .catch(error => {
             console.error('Error loading dashboard stats:', error);
         });
+}
+
+function loadOverviewCharts() {
+    fetch('/api/overview-data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCharts(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading overview data:', error);
+        });
+}
+
+function updateCharts(data) {
+    // Update revenue chart if canvas exists
+    const revenueCanvas = document.getElementById('revenueChart');
+    if (revenueCanvas && typeof Chart !== 'undefined') {
+        const ctx = revenueCanvas.getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.revenue_data.map(item => item.date),
+                datasets: [{
+                    label: 'Daily Revenue (ETB)',
+                    data: data.revenue_data.map(item => item.amount),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Update status chart if canvas exists
+    const statusCanvas = document.getElementById('orderStatusChart');
+    if (statusCanvas && typeof Chart !== 'undefined') {
+        const ctx = statusCanvas.getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data.status_data),
+                datasets: [{
+                    data: Object.values(data.status_data),
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+    }
 }
 
 // Tab navigation setup

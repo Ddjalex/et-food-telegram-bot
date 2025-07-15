@@ -1274,6 +1274,39 @@ def log_admin_activity(admin_id, action_type, entity_type=None, entity_id=None, 
     except Exception as e:
         logger.error(f"Error logging activity: {e}")
 
+# Public dashboard stats endpoint for overview
+@app.route('/api/dashboard-stats', methods=['GET'])
+def get_public_dashboard_stats():
+    """Get public dashboard statistics"""
+    try:
+        # Count total admins (excluding super admin)
+        total_admins = AdminUser.query.filter(AdminUser.role != 'super_admin').count()
+        
+        # Count active restaurants
+        total_restaurants = Restaurant.query.filter_by(is_active=True).count()
+        
+        # Count today's orders
+        today = datetime.utcnow().date()
+        today_orders = Order.query.filter(
+            func.date(Order.created_at) == today
+        ).count()
+        
+        # Calculate total revenue
+        total_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+            Order.status == 'delivered'
+        ).scalar() or 0
+        
+        return jsonify({
+            'success': True,
+            'totalAdmins': total_admins,
+            'totalRestaurants': total_restaurants,
+            'todayOrders': today_orders,
+            'totalRevenue': float(total_revenue)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching public dashboard stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Additional API endpoints for super admin dashboard
 @app.route('/api/super-admin/dashboard-stats', methods=['GET'])
 @super_admin_required
@@ -1306,6 +1339,42 @@ def get_dashboard_stats():
         })
     except Exception as e:
         logger.error(f"Error fetching dashboard stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Public overview data endpoint
+@app.route('/api/overview-data', methods=['GET'])
+def get_public_overview_data():
+    """Get public overview data for charts"""
+    try:
+        # Get recent orders for chart data
+        recent_orders = Order.query.order_by(Order.created_at.desc()).limit(30).all()
+        
+        # Group by date for revenue chart
+        revenue_data = {}
+        for order in recent_orders:
+            date_str = order.created_at.strftime('%Y-%m-%d')
+            if date_str not in revenue_data:
+                revenue_data[date_str] = 0
+            if order.status == 'delivered':
+                revenue_data[date_str] += order.total_amount
+        
+        # Order status distribution
+        status_data = {
+            'pending': Order.query.filter_by(status='pending').count(),
+            'confirmed': Order.query.filter_by(status='confirmed').count(),
+            'preparing': Order.query.filter_by(status='preparing').count(),
+            'ready': Order.query.filter_by(status='ready').count(),
+            'out_for_delivery': Order.query.filter_by(status='out_for_delivery').count(),
+            'delivered': Order.query.filter_by(status='delivered').count(),
+        }
+        
+        return jsonify({
+            'success': True,
+            'revenue_data': [{'date': date, 'amount': amount} for date, amount in revenue_data.items()],
+            'status_data': status_data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching public overview data: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/overview', methods=['GET'])
