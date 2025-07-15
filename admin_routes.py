@@ -14,13 +14,13 @@ def admin_required(f):
     """Decorator to require admin authentication"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'admin_user_id' not in session:
-            return redirect(url_for('admin_login'))
+        if 'admin_id' not in session:
+            return redirect(url_for('admin'))
         
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         if not admin or not admin.is_active or admin.is_blocked:
             session.clear()
-            return redirect(url_for('admin_login'))
+            return redirect(url_for('admin'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -29,13 +29,13 @@ def super_admin_required(f):
     """Decorator to require super admin authentication"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'admin_user_id' not in session:
-            return redirect(url_for('admin_login'))
+        if 'admin_id' not in session:
+            return redirect(url_for('superadmin'))
         
-        admin = AdminUser.query.get(session['admin_user_id'])
+        admin = AdminUser.query.get(session['admin_id'])
         if not admin or admin.role != 'super_admin' or not admin.is_active or admin.is_blocked:
             session.clear()
-            return redirect(url_for('admin_login'))
+            return redirect(url_for('superadmin'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -103,7 +103,7 @@ def admin_logout():
         log_admin_activity(admin_id, 'logout', 'session', description='Admin logged out')
     
     session.clear()
-    return redirect(url_for('admin_login'))
+    return redirect(url_for('admin'))
 
 @app.route('/admin/dashboard-legacy')
 @admin_required
@@ -118,7 +118,7 @@ def admin_dashboard():
     elif admin.role == 'kitchen_staff':
         return render_template('kitchen_dashboard.html', admin=admin)
     
-    return redirect(url_for('admin_login'))
+    return redirect(url_for('admin'))
 
 # Restaurant Admin API Routes
 @app.route('/api/admin/dashboard-stats', methods=['GET'])

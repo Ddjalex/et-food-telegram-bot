@@ -370,7 +370,7 @@ def test():
 @app.route('/super-admin')
 def super_admin_redirect():
     """Redirect to secure admin login for super admin access"""
-    return redirect(url_for('admin_login'))
+    return redirect(url_for('admin'))
 
 
 
