@@ -1,25 +1,49 @@
 from flask import request, jsonify, render_template, session, redirect, url_for
 from app import app, db
-from models import MenuItem, Category, Restaurant, Order
+from models import MenuItem, Category, Restaurant, Order, AdminUser
 from datetime import datetime
 import logging
 import os
 from werkzeug.utils import secure_filename
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
+def kitchen_staff_required(f):
+    """Decorator to require kitchen staff or admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_id' not in session:
+            return redirect(url_for('admin'))
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or not admin.is_active:
+            session.clear()
+            return redirect(url_for('admin'))
+        
+        # Allow kitchen staff and admins to access kitchen dashboard
+        if admin.role not in ['kitchen_staff', 'admin', 'super_admin']:
+            return redirect(url_for('admin'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Kitchen staff access routes
 @app.route('/kitchen')
+@kitchen_staff_required
 def kitchen_dashboard():
-    """Kitchen staff dashboard"""
-    return render_template('kitchen_dashboard.html')
+    """Kitchen staff dashboard - requires authentication"""
+    admin = AdminUser.query.get(session['admin_id'])
+    return render_template('kitchen_dashboard.html', admin=admin)
 
 @app.route('/kitchen/menu')
+@kitchen_staff_required
 def kitchen_menu_management():
     """Kitchen staff menu management page"""
     return render_template('kitchen_menu_management.html')
 
 @app.route('/kitchen/orders', methods=['GET'])
+@kitchen_staff_required
 def kitchen_get_orders():
     """Get orders for kitchen staff"""
     try:
@@ -62,6 +86,7 @@ def kitchen_get_orders():
 
 # Kitchen API endpoints for menu management
 @app.route('/api/kitchen/menu-items', methods=['GET'])
+@kitchen_staff_required
 def kitchen_get_menu_items():
     """Get all menu items for kitchen staff"""
     try:
@@ -76,6 +101,7 @@ def kitchen_get_menu_items():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/menu-items', methods=['POST'])
+@kitchen_staff_required
 def kitchen_create_menu_item():
     """Create new menu item (kitchen staff)"""
     try:
@@ -112,6 +138,7 @@ def kitchen_create_menu_item():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/menu-items/<int:item_id>', methods=['PUT'])
+@kitchen_staff_required
 def kitchen_update_menu_item(item_id):
     """Update menu item (kitchen staff)"""
     try:
@@ -145,6 +172,7 @@ def kitchen_update_menu_item(item_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/menu-items/<int:item_id>', methods=['DELETE'])
+@kitchen_staff_required
 def kitchen_delete_menu_item(item_id):
     """Delete menu item (kitchen staff)"""
     try:
@@ -162,6 +190,7 @@ def kitchen_delete_menu_item(item_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/categories', methods=['GET'])
+@kitchen_staff_required
 def kitchen_get_categories():
     """Get all categories for kitchen staff"""
     try:
@@ -175,6 +204,7 @@ def kitchen_get_categories():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/categories', methods=['POST'])
+@kitchen_staff_required
 def kitchen_create_category():
     """Create new category (kitchen staff)"""
     try:
@@ -207,6 +237,7 @@ def kitchen_create_category():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/categories/<int:category_id>', methods=['PUT'])
+@kitchen_staff_required
 def kitchen_update_category(category_id):
     """Update category (kitchen staff)"""
     try:
@@ -238,6 +269,7 @@ def kitchen_update_category(category_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/categories/<int:category_id>', methods=['DELETE'])
+@kitchen_staff_required
 def kitchen_delete_category(category_id):
     """Delete category (kitchen staff)"""
     try:
@@ -264,6 +296,7 @@ def kitchen_delete_category(category_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/upload-image', methods=['POST'])
+@kitchen_staff_required
 def kitchen_upload_image():
     """Upload image for menu items or categories"""
     try:
@@ -305,6 +338,7 @@ def kitchen_upload_image():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/kitchen/restaurants', methods=['GET'])
+@kitchen_staff_required
 def kitchen_get_restaurants():
     """Get all restaurants for kitchen staff"""
     try:
