@@ -1438,9 +1438,17 @@
         }
 
         function loadKitchenStaff() {
+            console.log('Loading kitchen staff...');
             fetch('/api/admin/kitchen-staff')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Kitchen staff response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Kitchen staff data:', data);
                     const staff = data.kitchen_staff || [];
                     const tableBody = document.getElementById('kitchenStaffTable');
                     

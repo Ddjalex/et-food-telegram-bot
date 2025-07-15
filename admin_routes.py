@@ -1311,12 +1311,15 @@ def get_kitchen_staff():
     """Get kitchen staff for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
+        logger.info(f"Getting kitchen staff for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         # Get kitchen staff users for this restaurant
         kitchen_staff = AdminUser.query.filter_by(
             restaurant_id=admin.restaurant_id,
             role='kitchen_staff'
         ).all()
+        
+        logger.info(f"Found {len(kitchen_staff)} kitchen staff members")
         
         staff_data = []
         for staff in kitchen_staff:
