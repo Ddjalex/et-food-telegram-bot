@@ -659,7 +659,7 @@
         async function assignDriver(orderId) {
             try {
                 // Get available drivers
-                const response = await fetch('/api/drivers');
+                const response = await fetch('/api/admin/drivers');
                 const drivers = await response.json();
                 
                 const availableDrivers = drivers.filter(driver => 
@@ -1121,7 +1121,7 @@
         // Load drivers with live location tracking
         function loadDrivers() {
             Promise.all([
-                fetch('/api/drivers').then(r => r.json()),
+                fetch('/api/admin/drivers').then(r => r.json()),
                 fetch('/api/drivers/live-locations').then(r => r.json())
             ])
             .then(([driversData, liveData]) => {
