@@ -133,11 +133,7 @@ def admin():
     
     return render_template('admin_login.html')
 
-@app.route('/kitchen', methods=['GET', 'POST'])
-def kitchen():
-    """Kitchen Staff access - redirect to admin login"""
-    # Kitchen staff should login through restaurant admin system
-    return redirect(url_for('admin'))
+
 
 # Password change functionality
 @app.route('/change-password', methods=['GET', 'POST'])
