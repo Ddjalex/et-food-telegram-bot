@@ -1333,9 +1333,9 @@ def reject_payment_admin(order_id):
         logger.error(f"Error rejecting payment: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/admin/kitchen-staff', methods=['GET'])
+@app.route('/api/admin/kitchen-staff-management', methods=['GET'])
 @admin_required
-def get_kitchen_staff():
+def get_kitchen_staff_admin():
     """Get kitchen staff for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
@@ -1368,9 +1368,9 @@ def get_kitchen_staff():
         logger.error(f"Error getting kitchen staff: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/admin/kitchen-staff', methods=['POST'])
+@app.route('/api/admin/kitchen-staff-management', methods=['POST'])
 @admin_required
-def add_kitchen_staff():
+def add_kitchen_staff_admin():
     """Add kitchen staff for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
@@ -1411,9 +1411,9 @@ def add_kitchen_staff():
         logger.error(f"Error adding kitchen staff: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/admin/kitchen-staff/<int:staff_id>', methods=['DELETE'])
+@app.route('/api/admin/kitchen-staff-management/<int:staff_id>', methods=['DELETE'])
 @admin_required
-def delete_kitchen_staff(staff_id):
+def delete_kitchen_staff_admin(staff_id):
     """Delete kitchen staff for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])

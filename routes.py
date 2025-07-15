@@ -7,7 +7,7 @@ from flask import render_template, request, jsonify, send_file, session, redirec
 from werkzeug.utils import secure_filename
 from app import app
 from extensions import db
-from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant
+from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant, KitchenStaff
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change
 import logging
@@ -125,7 +125,6 @@ def kitchen_login_dashboard():
         password = request.form.get('password')
         
         # Check kitchen staff credentials
-        from models import KitchenStaff
         try:
             kitchen_staff = KitchenStaff.query.filter_by(username=username).first()
             if kitchen_staff and kitchen_staff.check_password(password):
@@ -147,7 +146,195 @@ def kitchen_login_dashboard():
     
     return render_template('kitchen_login.html')
 
-# Redirect routes for dashboard access (removed to avoid conflicts)
+# Password change functionality
+@app.route('/change-password', methods=['GET', 'POST'])
+def change_password():
+    """Change password for logged-in admin"""
+    if 'admin_id' not in session:
+        return redirect('/login-portal')
+    
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validate passwords match
+        if new_password != confirm_password:
+            return render_template('change_password.html', error='New passwords do not match')
+        
+        # Validate password strength
+        if len(new_password) < 8:
+            return render_template('change_password.html', error='Password must be at least 8 characters long')
+        
+        # Get current admin
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return redirect('/login-portal')
+        
+        # Check current password
+        if not admin.check_password(current_password):
+            return render_template('change_password.html', error='Current password is incorrect')
+        
+        # Update password
+        admin.set_password(new_password)
+        db.session.commit()
+        
+        return render_template('change_password.html', success='Password changed successfully!')
+    
+    return render_template('change_password.html')
+
+# Kitchen Staff Management API Routes
+@app.route('/api/kitchen-staff', methods=['GET'])
+def get_kitchen_staff():
+    """Get all kitchen staff members"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    admin = AdminUser.query.get(session['admin_id'])
+    if not admin:
+        return jsonify({'error': 'Admin not found'}), 404
+    
+    # Get kitchen staff for this restaurant
+    restaurant_id = getattr(admin, 'restaurant_id', 1)
+    staff_members = KitchenStaff.query.filter_by(restaurant_id=restaurant_id).all()
+    
+    return jsonify({
+        'success': True,
+        'staff': [staff.to_dict() for staff in staff_members]
+    })
+
+@app.route('/api/kitchen-staff', methods=['POST'])
+def add_kitchen_staff():
+    """Add new kitchen staff member"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    admin = AdminUser.query.get(session['admin_id'])
+    if not admin:
+        return jsonify({'error': 'Admin not found'}), 404
+    
+    try:
+        data = request.form if request.content_type.startswith('multipart/form-data') else request.get_json()
+        
+        # Check if username already exists
+        existing_staff = KitchenStaff.query.filter_by(username=data.get('username')).first()
+        if existing_staff:
+            return jsonify({'error': 'Username already exists'}), 400
+        
+        # Handle image upload
+        avatar_url = None
+        if 'avatar' in request.files:
+            file = request.files['avatar']
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(datetime.utcnow().timestamp()))
+                filename = f"staff_{timestamp}_{filename}"
+                file_path = os.path.join('static/uploads', filename)
+                file.save(file_path)
+                avatar_url = f'/static/uploads/{filename}'
+        
+        # Create new kitchen staff
+        staff = KitchenStaff(
+            name=data.get('name'),
+            username=data.get('username'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            position=data.get('position', 'Kitchen Staff'),
+            salary=float(data.get('salary', 0)) if data.get('salary') else None,
+            notes=data.get('notes'),
+            avatar_url=avatar_url,
+            restaurant_id=getattr(admin, 'restaurant_id', 1)
+        )
+        
+        # Set password
+        if data.get('password'):
+            staff.set_password(data.get('password'))
+        
+        db.session.add(staff)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Kitchen staff member added successfully',
+            'staff': staff.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kitchen-staff/<int:staff_id>', methods=['PUT'])
+def update_kitchen_staff(staff_id):
+    """Update kitchen staff member"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    staff = KitchenStaff.query.get_or_404(staff_id)
+    
+    try:
+        data = request.form if request.content_type.startswith('multipart/form-data') else request.get_json()
+        
+        # Update fields
+        if data.get('name'):
+            staff.name = data.get('name')
+        if data.get('phone'):
+            staff.phone = data.get('phone')
+        if data.get('email'):
+            staff.email = data.get('email')
+        if data.get('position'):
+            staff.position = data.get('position')
+        if data.get('salary'):
+            staff.salary = float(data.get('salary'))
+        if data.get('notes'):
+            staff.notes = data.get('notes')
+        
+        # Handle password change
+        if data.get('new_password'):
+            staff.set_password(data.get('new_password'))
+        
+        # Handle avatar update
+        if 'avatar' in request.files:
+            file = request.files['avatar']
+            if file and file.filename and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                timestamp = str(int(datetime.utcnow().timestamp()))
+                filename = f"staff_{timestamp}_{filename}"
+                file_path = os.path.join('static/uploads', filename)
+                file.save(file_path)
+                staff.avatar_url = f'/static/uploads/{filename}'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Kitchen staff member updated successfully',
+            'staff': staff.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/kitchen-staff/<int:staff_id>', methods=['DELETE'])
+def delete_kitchen_staff(staff_id):
+    """Delete kitchen staff member"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    staff = KitchenStaff.query.get_or_404(staff_id)
+    
+    try:
+        db.session.delete(staff)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Kitchen staff member deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/menu')
 def menu():

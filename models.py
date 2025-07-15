@@ -310,6 +310,53 @@ class AdminSession(db.Model):
             'actions_performed': self.actions_performed
         }
 
+class KitchenStaff(db.Model):
+    """Kitchen staff management"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+    avatar_url = db.Column(db.String(500))  # Profile image/avatar
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, default=1)
+    is_active = db.Column(db.Boolean, default=True)
+    position = db.Column(db.String(50), default='Kitchen Staff')  # Chef, Cook, Assistant, etc.
+    hire_date = db.Column(db.Date, default=datetime.utcnow)
+    salary = db.Column(db.Float)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    restaurant = db.relationship('Restaurant', backref='kitchen_staff')
+    
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, password)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'username': self.username,
+            'phone': self.phone,
+            'email': self.email,
+            'avatar_url': self.avatar_url,
+            'restaurant_id': self.restaurant_id,
+            'is_active': self.is_active,
+            'position': self.position,
+            'hire_date': self.hire_date.isoformat() if self.hire_date else None,
+            'salary': self.salary,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class MenuItemModification(db.Model):
     """Track menu item changes for audit trail"""
     id = db.Column(db.Integer, primary_key=True)
