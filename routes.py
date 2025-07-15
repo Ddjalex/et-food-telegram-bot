@@ -7,6 +7,7 @@ from flask import render_template, request, jsonify, send_file, session, redirec
 from werkzeug.utils import secure_filename
 from app import app
 from extensions import db
+from sqlalchemy import func
 from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant, KitchenStaff
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change
@@ -1645,13 +1646,41 @@ def get_restaurants_super_admin():
     """Get all restaurants for super admin"""
     try:
         restaurants = Restaurant.query.all()
-        # Add menu items count to each restaurant
+        restaurants_data = []
+        
         for restaurant in restaurants:
-            restaurant.menu_items_count = len(restaurant.menu_items)
+            # Count menu items and other associated data
+            menu_items_count = MenuItem.query.filter_by(restaurant_id=restaurant.id).count()
+            orders_count = Order.query.filter_by(restaurant_id=restaurant.id).count()
+            orders_today = Order.query.filter(
+                Order.restaurant_id == restaurant.id,
+                func.date(Order.created_at) == func.date(datetime.utcnow())
+            ).count()
+            
+            # Calculate today's revenue
+            today_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+                Order.restaurant_id == restaurant.id,
+                func.date(Order.created_at) == func.date(datetime.utcnow()),
+                Order.status == 'delivered'
+            ).scalar() or 0
+            
+            # Get admin name
+            admin = AdminUser.query.filter_by(restaurant_id=restaurant.id, role='admin').first()
+            admin_name = admin.full_name if admin else None
+            
+            restaurant_dict = restaurant.to_dict()
+            restaurant_dict.update({
+                'menu_items_count': menu_items_count,
+                'orders_count': orders_count,
+                'orders_today': orders_today,
+                'revenue_today': today_revenue,
+                'admin_name': admin_name
+            })
+            restaurants_data.append(restaurant_dict)
         
         return jsonify({
             'success': True,
-            'restaurants': [r.to_dict() for r in restaurants]
+            'restaurants': restaurants_data
         })
     except Exception as e:
         logger.error(f"Error fetching restaurants: {e}")
