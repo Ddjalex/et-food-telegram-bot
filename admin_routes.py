@@ -124,6 +124,13 @@ def superadmin_login():
     
     return render_template('superadmin_login.html')
 
+@app.route('/superadmin')
+@super_admin_required
+def superadmin_dashboard():
+    """Super Admin dashboard"""
+    admin = AdminUser.query.get(session['admin_id'])
+    return render_template('super_admin_dashboard.html', admin=admin)
+
 @app.route('/admin/logout')
 @admin_required
 def admin_logout():
