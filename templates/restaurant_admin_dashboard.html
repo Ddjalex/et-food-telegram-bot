@@ -4,66 +4,336 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ admin.restaurant.name if admin.restaurant else 'Restaurant' }} - Admin Dashboard</title>
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: #f8fafc;
+            color: #334155;
+        }
+        
         .admin-sidebar {
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            box-shadow: 0 0 40px rgba(0,0,0,0.15);
+            position: relative;
         }
+        
+        .admin-sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+            opacity: 0.1;
+        }
+        
         .admin-main {
-            background-color: #f8f9fa;
+            background: #f8fafc;
             min-height: 100vh;
         }
+        
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             border: none;
             color: white;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
         }
+        
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
         }
+        
+        .stat-card-secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        .stat-card-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+        }
+        
+        .stat-card-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        }
+        
         .nav-pills .nav-link {
             color: rgba(255,255,255,0.8);
-            border-radius: 25px;
-            margin-bottom: 10px;
+            border-radius: 15px;
+            margin-bottom: 8px;
             transition: all 0.3s ease;
+            padding: 12px 20px;
+            font-weight: 500;
+            position: relative;
+            z-index: 2;
         }
+        
         .nav-pills .nav-link.active {
-            background-color: rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             color: white;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
         }
+        
         .nav-pills .nav-link:hover {
-            background-color: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.1);
             color: white;
+            transform: translateX(5px);
         }
+        
         .table-container {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            border-radius: 0 0 30px 30px;
+            margin-bottom: 30px;
+            position: relative;
             overflow: hidden;
         }
-        .status-badge {
-            font-size: 0.8rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
+        
+        .admin-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+            opacity: 0.1;
         }
-        .admin-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 0 0 25px 25px;
-            margin-bottom: 30px;
+        
+        .admin-header > * {
+            position: relative;
+            z-index: 2;
         }
+        
         .tab-pane {
             display: none;
         }
+        
         .tab-pane.active {
             display: block;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 10px;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-light {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .btn-light:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        
+        .table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            border: none;
+            padding: 15px;
+        }
+        
+        .table td {
+            padding: 15px;
+            border-color: #f1f5f9;
+        }
+        
+        .table-hover tbody tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .badge {
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+        
+        .analytics-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .analytics-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            padding: 20px;
+        }
+        
+        .brand-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 1.5rem;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .sidebar-brand {
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .sidebar-user {
+            padding: 0 20px 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .sidebar-nav {
+            padding: 0 20px;
+        }
+        
+        .sidebar-footer {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active { background: #10b981; }
+        .status-pending { background: #f59e0b; }
+        .status-danger { background: #ef4444; }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .quick-action {
+            flex: 1;
+            padding: 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            text-align: center;
+            text-decoration: none;
+            color: #64748b;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action:hover {
+            background: #f8fafc;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-2px);
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .performance-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .performance-indicator.positive { background: #f0fdf4; color: #166534; }
+        .performance-indicator.negative { background: #fef2f2; color: #991b1b; }
+        
+        .metric-change {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 15px;
+        }
+        
+        .dropdown-item {
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-item:hover {
+            background: #f8fafc;
+            color: #3b82f6;
         }
     </style>
 </head>
@@ -72,69 +342,71 @@
         <div class="row g-0">
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 admin-sidebar">
-                <div class="p-4">
-                    <div class="text-center mb-4">
-                        <h3 class="text-white mb-1">
-                            <i class="fas fa-utensils"></i>
-                            ET-FOOD
-                        </h3>
-                        <small class="text-white-50">Restaurant Admin</small>
+                <div class="sidebar-brand">
+                    <div class="brand-logo">
+                        <i class="fas fa-utensils me-2"></i>
+                        ET-FOOD
                     </div>
-                    
-                    <div class="text-center mb-4">
-                        <div class="bg-white bg-opacity-20 rounded-circle p-3 d-inline-flex mb-2">
-                            <i class="fas fa-user-tie fa-2x text-white"></i>
-                        </div>
-                        <h5 class="text-white mb-1">{{ admin.full_name }}</h5>
-                        <small class="text-white-50">{{ admin.restaurant.name if admin.restaurant else 'No Restaurant' }}</small>
+                    <div class="text-white-50 mt-2">Restaurant Admin</div>
+                </div>
+                
+                <div class="sidebar-user">
+                    <div class="user-avatar">
+                        {{ admin.full_name[0] if admin.full_name else 'A' }}
                     </div>
-                    
-                    <nav class="nav nav-pills flex-column">
-                        <a class="nav-link active" data-bs-toggle="pill" href="#dashboard">
-                            <i class="fas fa-tachometer-alt me-2"></i>
-                            Dashboard
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#orders">
-                            <i class="fas fa-shopping-bag me-2"></i>
-                            Orders
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#payments">
-                            <i class="fas fa-credit-card me-2"></i>
-                            Payment Verification
-                            <span class="badge bg-danger ms-1" id="paymentNotificationCount" style="display: none;">0</span>
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#menu">
-                            <i class="fas fa-utensils me-2"></i>
-                            Menu Management
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#categories">
-                            <i class="fas fa-tags me-2"></i>
-                            Categories
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#drivers">
-                            <i class="fas fa-motorcycle me-2"></i>
-                            Drivers
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#analytics">
-                            <i class="fas fa-chart-line me-2"></i>
-                            Analytics
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#kitchen-staff">
-                            <i class="fas fa-users me-2"></i>
-                            Kitchen Staff
-                        </a>
-                        <a class="nav-link" data-bs-toggle="pill" href="#settings">
-                            <i class="fas fa-cog me-2"></i>
-                            Settings
-                        </a>
-                    </nav>
-                    
-                    <div class="mt-auto pt-4">
-                        <a href="/admin/logout" class="btn btn-outline-light btn-sm w-100">
-                            <i class="fas fa-sign-out-alt me-2"></i>
-                            Logout
-                        </a>
+                    <h6 class="text-white mb-1">{{ admin.full_name }}</h6>
+                    <small class="text-white-50">{{ admin.restaurant.name if admin.restaurant else 'No Restaurant' }}</small>
+                    <div class="performance-indicator positive mt-2">
+                        <div class="status-indicator status-active"></div>
+                        <small>Online</small>
                     </div>
+                </div>
+                
+                <nav class="nav nav-pills flex-column sidebar-nav">
+                    <a class="nav-link active" data-bs-toggle="pill" href="#dashboard">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Dashboard
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#orders">
+                        <i class="fas fa-shopping-bag me-2"></i>
+                        Orders
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#payments">
+                        <i class="fas fa-credit-card me-2"></i>
+                        Payment Verification
+                        <span class="badge bg-danger ms-1" id="paymentNotificationCount" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#menu">
+                        <i class="fas fa-utensils me-2"></i>
+                        Menu Management
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#categories">
+                        <i class="fas fa-tags me-2"></i>
+                        Categories
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#drivers">
+                        <i class="fas fa-motorcycle me-2"></i>
+                        Drivers
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#analytics">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Analytics
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#kitchen-staff">
+                        <i class="fas fa-users me-2"></i>
+                        Kitchen Staff
+                    </a>
+                    <a class="nav-link" data-bs-toggle="pill" href="#settings">
+                        <i class="fas fa-cog me-2"></i>
+                        Settings
+                    </a>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <a href="/admin/logout" class="btn btn-outline-light btn-sm w-100">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </a>
                 </div>
             </div>
             
@@ -174,66 +446,104 @@
                     <div class="tab-content" id="adminTabsContent">
                         <!-- Dashboard Tab -->
                         <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+                            <!-- Quick Actions -->
+                            <div class="quick-actions">
+                                <a href="#" class="quick-action" onclick="switchToTab('orders')">
+                                    <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                    <div>New Order</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="switchToTab('menu')">
+                                    <i class="fas fa-utensils fa-2x mb-2"></i>
+                                    <div>Menu</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="switchToTab('analytics')">
+                                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                    <div>Analytics</div>
+                                </a>
+                                <a href="#" class="quick-action" onclick="switchToTab('drivers')">
+                                    <i class="fas fa-motorcycle fa-2x mb-2"></i>
+                                    <div>Drivers</div>
+                                </a>
+                            </div>
+                            
                             <!-- Stats Cards -->
                             <div class="row mb-4">
                                 <div class="col-md-3 mb-3">
                                     <div class="card stat-card h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-shopping-bag fa-2x mb-3"></i>
-                                            <h3 class="mb-1" id="totalOrders">0</h3>
-                                            <p class="mb-0">Total Orders</p>
+                                            <i class="fas fa-shopping-bag fa-3x mb-3"></i>
+                                            <h2 class="mb-1" id="totalOrders">0</h2>
+                                            <p class="mb-0">Today's Orders</p>
+                                            <div class="performance-indicator positive">
+                                                <i class="fas fa-arrow-up"></i>
+                                                <span class="metric-change">+12%</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <div class="card stat-card h-100">
+                                    <div class="card stat-card stat-card-secondary h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-dollar-sign fa-2x mb-3"></i>
-                                            <h3 class="mb-1" id="totalRevenue">ETB 0</h3>
-                                            <p class="mb-0">Total Revenue</p>
+                                            <i class="fas fa-dollar-sign fa-3x mb-3"></i>
+                                            <h2 class="mb-1" id="totalRevenue">ETB 0</h2>
+                                            <p class="mb-0">Today's Revenue</p>
+                                            <div class="performance-indicator positive">
+                                                <i class="fas fa-arrow-up"></i>
+                                                <span class="metric-change">+8%</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <div class="card stat-card h-100">
+                                    <div class="card stat-card stat-card-warning h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-clock fa-2x mb-3"></i>
-                                            <h3 class="mb-1" id="pendingOrders">0</h3>
+                                            <i class="fas fa-clock fa-3x mb-3"></i>
+                                            <h2 class="mb-1" id="pendingOrders">0</h2>
                                             <p class="mb-0">Pending Orders</p>
+                                            <div class="performance-indicator negative">
+                                                <i class="fas fa-arrow-down"></i>
+                                                <span class="metric-change">-5%</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <div class="card stat-card h-100">
+                                    <div class="card stat-card stat-card-danger h-100">
                                         <div class="card-body text-center">
-                                            <i class="fas fa-motorcycle fa-2x mb-3"></i>
-                                            <h3 class="mb-1" id="activeDrivers">0</h3>
+                                            <i class="fas fa-motorcycle fa-3x mb-3"></i>
+                                            <h2 class="mb-1" id="activeDrivers">0</h2>
                                             <p class="mb-0">Active Drivers</p>
+                                            <div class="performance-indicator positive">
+                                                <i class="fas fa-arrow-up"></i>
+                                                <span class="metric-change">+2 New</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Charts Row -->
-                            <div class="row mb-4">
-                                <div class="col-md-8 mb-3">
-                                    <div class="card table-container h-100">
-                                        <div class="card-header">
-                                            <h5 class="mb-0">Sales Overview</h5>
-                                        </div>
-                                        <div class="card-body">
-                                            <canvas id="salesChart" height="300"></canvas>
-                                        </div>
+                            <div class="dashboard-grid">
+                                <div class="analytics-card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-chart-line me-2"></i>
+                                            Sales Overview
+                                        </h5>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="salesChart"></canvas>
                                     </div>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card table-container h-100">
-                                        <div class="card-header">
-                                            <h5 class="mb-0">Order Status</h5>
-                                        </div>
-                                        <div class="card-body">
-                                            <canvas id="statusChart" height="300"></canvas>
-                                        </div>
+                                <div class="analytics-card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-chart-pie me-2"></i>
+                                            Order Status
+                                        </h5>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas id="statusChart"></canvas>
                                     </div>
                                 </div>
                             </div>
@@ -568,7 +878,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Initialize dashboard data
         let ordersData = [];
@@ -598,6 +908,80 @@
             loadDashboardStats();
             loadRecentOrders();
             loadPaymentNotifications();
+            initializeCharts();
+        }
+        
+        function initializeCharts() {
+            // Initialize Sales Chart
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Sales (ETB)',
+                        data: [1200, 1900, 1500, 2100, 1800, 2500, 2200],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Initialize Status Chart
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Preparing', 'Ready', 'Delivered'],
+                    datasets: [{
+                        data: [12, 8, 5, 25],
+                        backgroundColor: [
+                            'rgb(245, 158, 11)',
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)',
+                            'rgb(34, 197, 94)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function setupEventListeners() {
