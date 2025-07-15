@@ -8,6 +8,14 @@ document.addEventListener('DOMContentLoaded', function() {
     setupTabNavigation();
     startAutoRefresh();
     setupChangePasswordForm();
+    
+    // Setup modal event listeners
+    const addAdminModal = document.getElementById('addAdminModal');
+    if (addAdminModal) {
+        addAdminModal.addEventListener('show.bs.modal', function() {
+            loadRestaurantsDropdown();
+        });
+    }
 });
 
 function initializeDashboard() {
@@ -757,6 +765,89 @@ function loadDriverApprovals() {
     console.log('Loading driver approvals...');
     loadPendingDrivers();
     loadApprovedDrivers();
+}
+
+// Load restaurants into dropdown when modal opens
+function loadRestaurantsDropdown() {
+    fetch('/api/restaurants/super-admin')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const restaurantSelect = document.getElementById('restaurantSelect');
+                restaurantSelect.innerHTML = '<option value="">Select Restaurant</option>';
+                
+                data.restaurants.forEach(restaurant => {
+                    const option = document.createElement('option');
+                    option.value = restaurant.id;
+                    option.textContent = restaurant.name;
+                    restaurantSelect.appendChild(option);
+                });
+            } else {
+                console.error('Error loading restaurants for dropdown:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading restaurants for dropdown:', error);
+        });
+}
+
+// Create new admin
+function createAdmin() {
+    const form = document.getElementById('addAdminForm');
+    const formData = new FormData(form);
+    
+    // Validate passwords match
+    if (formData.get('password') !== formData.get('confirm_password')) {
+        showAlert('error', 'Passwords do not match');
+        return;
+    }
+    
+    // Prepare data
+    const data = {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        full_name: formData.get('full_name'),
+        phone: formData.get('phone'),
+        role: formData.get('role'),
+        restaurant_id: formData.get('restaurant_id') || null,
+        password: formData.get('password')
+    };
+    
+    // Basic validation
+    if (!data.username || !data.password || !data.full_name) {
+        showAlert('error', 'Please fill in all required fields');
+        return;
+    }
+    
+    fetch('/api/super-admin/admins', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addAdminModal'));
+            modal.hide();
+            
+            // Reset form
+            form.reset();
+            
+            // Reload admins table
+            loadAdmins();
+        } else {
+            showAlert('error', data.message || data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error creating admin:', error);
+        showAlert('error', 'Failed to create admin');
+    });
 }
 
 function loadPendingDrivers() {
