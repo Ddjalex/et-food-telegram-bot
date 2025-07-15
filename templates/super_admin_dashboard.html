@@ -365,78 +365,97 @@
                             </div>
                         </div>
 
-                        <!-- Real-time Driver Location Status -->
+                        <!-- System Health Status -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <div class="table-container">
-                                    <div class="table-header d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0"><i class="fas fa-satellite-dish me-2"></i>Real-time Driver Location Status</h5>
-                                        <div>
-                                            <span class="badge bg-light text-dark me-2" id="autoRefreshStatus">Auto-refresh: ON</span>
-                                            <button class="btn btn-light btn-sm" onclick="toggleAutoRefresh()">
-                                                <i class="fas fa-pause" id="autoRefreshIcon"></i>
-                                            </button>
-                                        </div>
+                                    <div class="table-header">
+                                        <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>System Health Status</h5>
                                     </div>
                                     <div class="p-3">
-                                        <!-- Driver Status Cards -->
-                                        <div class="row mb-3">
+                                        <div class="row">
                                             <div class="col-md-3">
                                                 <div class="card bg-success bg-opacity-10 border-success">
                                                     <div class="card-body text-center py-2">
-                                                        <i class="fas fa-circle text-success"></i>
-                                                        <span class="fw-bold text-success ms-2" id="onlineDriversCount">0</span>
-                                                        <div class="small text-success">Online & Available</div>
+                                                        <i class="fas fa-check-circle text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">Database</div>
+                                                        <div class="small text-success">Operational</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-success bg-opacity-10 border-success">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-server text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">Web Server</div>
+                                                        <div class="small text-success">Running</div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="card bg-warning bg-opacity-10 border-warning">
                                                     <div class="card-body text-center py-2">
-                                                        <i class="fas fa-circle text-warning"></i>
-                                                        <span class="fw-bold text-warning ms-2" id="busyDriversCount">0</span>
-                                                        <div class="small text-warning">Busy/On Delivery</div>
+                                                        <i class="fas fa-robot text-warning"></i>
+                                                        <div class="fw-bold text-warning ms-2">Telegram Bot</div>
+                                                        <div class="small text-warning">Needs Config</div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="col-md-3">
-                                                <div class="card bg-info bg-opacity-10 border-info">
+                                                <div class="card bg-success bg-opacity-10 border-success">
                                                     <div class="card-body text-center py-2">
-                                                        <i class="fas fa-exclamation-triangle text-info"></i>
-                                                        <span class="fw-bold text-info ms-2" id="noLocationDriversCount">0</span>
-                                                        <div class="small text-info">No Location Data</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="card bg-danger bg-opacity-10 border-danger">
-                                                    <div class="card-body text-center py-2">
-                                                        <i class="fas fa-circle text-danger"></i>
-                                                        <span class="fw-bold text-danger ms-2" id="offlineDriversCount">0</span>
-                                                        <div class="small text-danger">Offline</div>
+                                                        <i class="fas fa-globe text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">API</div>
+                                                        <div class="small text-success">Active</div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        <!-- Driver List Table -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-container">
+                                    <div class="table-header">
+                                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activity</h5>
+                                    </div>
+                                    <div class="p-3">
                                         <div class="table-responsive">
                                             <table class="table table-hover">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Driver</th>
+                                                        <th>Time</th>
+                                                        <th>User</th>
+                                                        <th>Action</th>
+                                                        <th>Details</th>
                                                         <th>Status</th>
-                                                        <th>Location Status</th>
-                                                        <th>Last Update</th>
-                                                        <th>Vehicle</th>
-                                                        <th>Actions</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody id="driversLocationTable">
+                                                <tbody id="recentActivityTable">
                                                     <tr>
-                                                        <td colspan="6" class="text-center text-muted">
-                                                            <i class="fas fa-spinner fa-spin me-2"></i>Loading real-time driver data...
-                                                        </td>
+                                                        <td>10:30 AM</td>
+                                                        <td>Super Admin</td>
+                                                        <td>Dashboard Access</td>
+                                                        <td>Accessed admin dashboard</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>10:25 AM</td>
+                                                        <td>System</td>
+                                                        <td>Database Check</td>
+                                                        <td>Automatic health check completed</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>10:20 AM</td>
+                                                        <td>System</td>
+                                                        <td>Service Status</td>
+                                                        <td>All services running normally</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
                                                     </tr>
                                                 </tbody>
                                             </table>

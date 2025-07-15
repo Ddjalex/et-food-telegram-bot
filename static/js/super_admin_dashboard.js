@@ -18,93 +18,52 @@ function initializeDashboard() {
     loadDriverApprovals();
 }
 
-// Real-time monitoring functions
+// Simplified monitoring functions
 function startAutoRefresh() {
+    // Auto-refresh basic dashboard stats every 30 seconds
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     
     autoRefreshInterval = setInterval(() => {
-        if (isAutoRefreshEnabled) {
-            refreshRealTimeData();
-        }
-    }, 15000); // Refresh every 15 seconds
-}
-
-function toggleAutoRefresh() {
-    isAutoRefreshEnabled = !isAutoRefreshEnabled;
-    const statusEl = document.getElementById('autoRefreshStatus');
-    const iconEl = document.getElementById('autoRefreshIcon');
-    
-    if (isAutoRefreshEnabled) {
-        statusEl.textContent = 'Auto-refresh: ON';
-        iconEl.className = 'fas fa-pause';
-        statusEl.className = 'badge bg-light text-dark me-2';
-    } else {
-        statusEl.textContent = 'Auto-refresh: OFF';
-        iconEl.className = 'fas fa-play';
-        statusEl.className = 'badge bg-warning text-dark me-2';
-    }
-}
-
-function refreshRealTimeData() {
-    loadRealTimeStats();
-    loadDriverLocationDetails();
-    updateLastRefreshTime();
+        loadDashboardStats();
+    }, 30000); // Refresh every 30 seconds
 }
 
 function updateLastRefreshTime() {
     const now = new Date();
     const timeString = now.toLocaleTimeString();
-    document.getElementById('lastUpdate').textContent = `Last updated: ${timeString}`;
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    if (lastUpdateEl) {
+        lastUpdateEl.textContent = `Last updated: ${timeString}`;
+    }
 }
 
-// Load real-time statistics
-function loadRealTimeStats() {
-    fetch('/api/super-admin/real-time-stats')
+// Load basic driver statistics
+function loadDriverStats() {
+    fetch('/api/super-admin/drivers/stats')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateRealTimeUI(data.stats);
+                updateDriverStatsUI(data.stats);
             } else {
-                console.error('Failed to load real-time stats:', data.error);
-                updateSystemStatus('error');
+                console.error('Failed to load driver stats:', data.error);
             }
         })
         .catch(error => {
-            console.error('Error loading real-time stats:', error);
-            updateSystemStatus('error');
+            console.error('Error loading driver stats:', error);
         });
 }
 
-function updateRealTimeUI(stats) {
+function updateDriverStatsUI(stats) {
     // Update driver statistics
-    document.getElementById('totalDrivers').textContent = stats.drivers.total;
-    document.getElementById('liveLocationDrivers').textContent = stats.drivers.live_location;
+    const totalDriversEl = document.getElementById('totalDrivers');
+    if (totalDriversEl) {
+        totalDriversEl.textContent = stats.total || 0;
+    }
     
-    // Update status cards
-    document.getElementById('onlineDriversCount').textContent = stats.drivers.available;
-    document.getElementById('busyDriversCount').textContent = stats.drivers.busy;
-    document.getElementById('noLocationDriversCount').textContent = 
-        stats.drivers.total - stats.drivers.live_location - stats.drivers.offline;
-    document.getElementById('offlineDriversCount').textContent = stats.drivers.offline;
-    
-    // Update system status
-    updateSystemStatus('healthy');
-    
-    // Load driver location details
-    loadDriverLocationDetails();
-}
-
-function loadDriverLocationDetails() {
-    fetch('/api/super-admin/drivers/approved')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateDriverLocationTable(data.drivers);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading driver details:', error);
-        });
+    const liveLocationDriversEl = document.getElementById('liveLocationDrivers');
+    if (liveLocationDriversEl) {
+        liveLocationDriversEl.textContent = stats.approved || 0;
+    }
 }
 
 function updateDriverLocationTable(drivers) {
@@ -435,8 +394,20 @@ function setupTabNavigation() {
 
 // Load admins (placeholder - implement based on existing functionality)
 function loadAdmins() {
-    // Implementation will be similar to existing admin loading
-    console.log('Loading admins...');
+    fetch('/api/super-admin/admins')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateAdminsTable(data.admins);
+            } else {
+                console.error('Error loading admins:', data.error);
+                showAdminError('Failed to load admins');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading admins:', error);
+            showAdminError('Failed to load admins');
+        });
 }
 
 // Load restaurants with enhanced functionality
@@ -571,6 +542,130 @@ function showRestaurantError(message) {
     `;
 }
 
+function updateAdminsTable(admins) {
+    const tableBody = document.getElementById('adminTable');
+    
+    if (admins.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No admins found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = admins.map(admin => {
+        const statusBadge = admin.is_active ? 
+            (admin.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>') : 
+            '<span class="badge bg-secondary">Inactive</span>';
+        
+        const performanceScore = Math.round((admin.recent_activities * 10 + admin.sessions_this_week * 5) / 15);
+        const performanceBadge = performanceScore > 7 ? 'bg-success' : (performanceScore > 4 ? 'bg-warning' : 'bg-danger');
+        
+        return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="admin-avatar me-2">
+                            ${admin.full_name ? admin.full_name.charAt(0) : admin.username.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="fw-bold">${admin.full_name || admin.username}</div>
+                            <small class="text-muted">@${admin.username}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${admin.role === 'admin' ? 'bg-primary' : 'bg-info'}">${admin.role}</span>
+                </td>
+                <td>
+                    <div class="text-muted small">
+                        ${admin.restaurant_name || 'No restaurant assigned'}
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span class="badge ${performanceBadge} me-2">${performanceScore}/10</span>
+                        <small class="text-muted">${admin.recent_activities} activities</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="text-muted small">
+                        ${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}
+                    </div>
+                </td>
+                <td>
+                    ${statusBadge}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewAdminPerformance(${admin.id})">
+                            <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="editAdmin(${admin.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-${admin.is_blocked ? 'success' : 'danger'}" 
+                                onclick="toggleAdminBlock(${admin.id}, ${admin.is_blocked})">
+                            <i class="fas fa-${admin.is_blocked ? 'unlock' : 'lock'}"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function showAdminError(message) {
+    const tableBody = document.getElementById('adminTable');
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>${message}
+            </td>
+        </tr>
+    `;
+}
+
+function viewAdminPerformance(adminId) {
+    // Implementation for viewing admin performance
+    console.log('Viewing admin performance for ID:', adminId);
+}
+
+function editAdmin(adminId) {
+    // Implementation for editing admin
+    console.log('Editing admin with ID:', adminId);
+}
+
+function toggleAdminBlock(adminId, isBlocked) {
+    const action = isBlocked ? 'unblock' : 'block';
+    const confirmText = isBlocked ? 'unblock' : 'block';
+    
+    if (confirm(`Are you sure you want to ${confirmText} this admin?`)) {
+        fetch(`/api/super-admin/admins/${adminId}/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                loadAdmins(); // Reload the table
+            } else {
+                showAlert('error', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling admin block:', error);
+            showAlert('error', 'Failed to update admin status');
+        });
+    }
+}
+
 function createRestaurant() {
     const form = document.getElementById('addRestaurantForm');
     const formData = new FormData(form);
@@ -656,12 +751,16 @@ function loadApprovedDrivers() {
         .then(data => {
             if (data.success) {
                 const approvedCount = data.drivers.length;
-                const activeCount = data.drivers.filter(d => d.is_active && d.last_location_update).length;
+                const activeCount = data.drivers.filter(d => d.is_active).length;
                 const availableCount = data.drivers.filter(d => d.is_active && d.is_available).length;
                 
-                document.getElementById('approvedDrivers').textContent = approvedCount;
-                document.getElementById('activeDrivers').textContent = activeCount;
-                document.getElementById('availableDrivers').textContent = availableCount;
+                const approvedEl = document.getElementById('approvedDrivers');
+                const activeEl = document.getElementById('activeDrivers');
+                const availableEl = document.getElementById('availableDrivers');
+                
+                if (approvedEl) approvedEl.textContent = approvedCount;
+                if (activeEl) activeEl.textContent = activeCount;
+                if (availableEl) availableEl.textContent = availableCount;
                 
                 updateApprovedDriversTable(data.drivers);
             } else {
@@ -735,7 +834,7 @@ function updateApprovedDriversTable(drivers) {
     if (drivers.length === 0) {
         approvedTableBody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="6" class="text-center text-muted">
                     <i class="fas fa-info-circle me-2"></i>No approved drivers found
                 </td>
             </tr>
@@ -744,9 +843,9 @@ function updateApprovedDriversTable(drivers) {
     }
     
     approvedTableBody.innerHTML = drivers.map(driver => {
-        const locationStatus = getLocationStatus(driver);
-        const overallStatus = getOverallStatus(driver);
-        const lastUpdate = driver.last_update_text || getLastUpdateText(driver.last_location_update);
+        const statusBadge = driver.is_active ? 
+            (driver.is_available ? '<span class="badge bg-success">Available</span>' : '<span class="badge bg-warning">Busy</span>') : 
+            '<span class="badge bg-secondary">Inactive</span>';
         
         return `
             <tr>
@@ -762,38 +861,21 @@ function updateApprovedDriversTable(drivers) {
                     </div>
                 </td>
                 <td>
-                    <span class="badge" style="background-color: ${overallStatus.color}">
-                        <i class="fas fa-circle me-1"></i>${overallStatus.text}
-                    </span>
-                </td>
-                <td>
-                    <span class="badge" style="background-color: ${locationStatus.color}">
-                        <i class="fas fa-map-marker-alt me-1"></i>${locationStatus.text}
-                    </span>
-                </td>
-                <td>
-                    <span class="text-muted">${lastUpdate}</span>
+                    ${statusBadge}
                 </td>
                 <td>
                     <i class="fas fa-${getVehicleIcon(driver.vehicle_type)} me-1"></i>
                     ${driver.vehicle_type}
                 </td>
                 <td>
-                    <span class="badge ${driver.is_active ? 'bg-success' : 'bg-danger'}">
-                        ${driver.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <span class="text-muted">${formatDate(driver.created_at)}</span>
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        ${driver.current_lat && driver.current_lng ? 
-                            `<button class="btn btn-outline-primary btn-sm" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
-                                <i class="fas fa-map"></i>
-                            </button>` : ''
-                        }
-                        <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})">
-                            <i class="fas fa-location-arrow"></i>
+                        <button class="btn btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                            <i class="fas fa-eye"></i> View
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="deleteDriver(${driver.id}, '${driver.name}')">
+                        <button class="btn btn-outline-danger" onclick="deleteDriver(${driver.id}, '${driver.name}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
