@@ -800,7 +800,19 @@
                                 <div class="col-12">
                                     <div class="card">
                                         <div class="card-header d-flex justify-content-between align-items-center">
-                                            <h5><i class="fas fa-users me-2"></i>Kitchen Staff Management</h5>
+                                            <div class="d-flex align-items-center">
+                                                <div class="kitchen-logo-container me-3">
+                                                    <img id="kitchenLogo" src="/static/uploads/kitchen_logo.jpg" alt="Kitchen" 
+                                                         class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" 
+                                                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNmOGY5ZmEiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNjQ3NDhiIi8+Cjwvc3ZnPgo8L3N2Zz4K'">
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute" 
+                                                            style="top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; padding: 0; font-size: 10px;"
+                                                            onclick="uploadKitchenLogo()" title="Change Kitchen Logo">
+                                                        <i class="fas fa-camera"></i>
+                                                    </button>
+                                                </div>
+                                                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Kitchen Staff Management</h5>
+                                            </div>
                                             <button class="btn btn-primary" onclick="showAddKitchenStaffModal()">
                                                 <i class="fas fa-plus me-2"></i>Add Kitchen Staff
                                             </button>
@@ -1505,10 +1517,13 @@
                             <td>${formatTime(member.created_at)}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editKitchenStaff(${member.id})">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editKitchenStaff(${member.id})" title="Edit Details">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteKitchenStaff(${member.id})">
+                                    <button class="btn btn-sm btn-outline-warning" onclick="changeStaffPassword(${member.id}, '${member.full_name || member.username}')" title="Change Password">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteKitchenStaff(${member.id})" title="Delete Staff">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -1563,7 +1578,11 @@
         }
 
         function editKitchenStaff(staffId) {
-            alert(`Edit kitchen staff #${staffId}`);
+            showEditKitchenStaffModal(staffId);
+        }
+
+        function changeStaffPassword(staffId, staffName) {
+            showChangePasswordModal(staffId, staffName);
         }
 
         function deleteKitchenStaff(staffId) {
@@ -1585,6 +1604,297 @@
                     alert('Error deleting kitchen staff');
                 });
             }
+        }
+
+        // Professional Password Change Modal
+        function showChangePasswordModal(staffId, staffName) {
+            const modalHtml = `
+                <div class="modal fade" id="changePasswordModal" tabindex="-1" data-bs-backdrop="static">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-warning text-dark">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-key me-2"></i>Change Password for ${staffName}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Changing the password will require the staff member to use the new password for kitchen dashboard access.
+                                </div>
+                                <form id="changePasswordForm">
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">New Password *</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="newPassword" required minlength="6">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('newPassword', this)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Minimum 6 characters required</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Confirm New Password *</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="confirmPassword" required minlength="6">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmPassword', this)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="notifyStaff" checked>
+                                        <label class="form-check-label" for="notifyStaff">
+                                            Notify staff member about password change
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-warning" onclick="updateStaffPassword(${staffId})">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('changePasswordModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+            modal.show();
+        }
+
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function updateStaffPassword(staffId) {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const notifyStaff = document.getElementById('notifyStaff').checked;
+            
+            if (!newPassword || !confirmPassword) {
+                alert('Please fill in all password fields');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+            
+            fetch(`/api/admin/kitchen-staff/${staffId}/change-password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    new_password: newPassword,
+                    notify_staff: notifyStaff
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password changed successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    loadKitchenStaff();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error changing password:', error);
+                alert('Error changing password');
+            });
+        }
+
+        // Kitchen Logo Upload Functionality
+        function uploadKitchenLogo() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('kitchen_logo', file);
+                
+                // Show loading state
+                const logoImg = document.getElementById('kitchenLogo');
+                const originalSrc = logoImg.src;
+                logoImg.style.opacity = '0.5';
+                
+                fetch('/api/admin/upload-kitchen-logo', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    logoImg.style.opacity = '1';
+                    if (data.success) {
+                        logoImg.src = data.image_url + '?t=' + Date.now(); // Cache bust
+                        alert('Kitchen logo updated successfully!');
+                    } else {
+                        logoImg.src = originalSrc;
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    logoImg.style.opacity = '1';
+                    logoImg.src = originalSrc;
+                    console.error('Error uploading kitchen logo:', error);
+                    alert('Error uploading kitchen logo');
+                });
+            };
+            
+            document.body.appendChild(input);
+            input.click();
+            document.body.removeChild(input);
+        }
+
+        // Edit Kitchen Staff Modal
+        function showEditKitchenStaffModal(staffId) {
+            // First fetch current staff data
+            fetch(`/api/admin/kitchen-staff/${staffId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const staff = data.staff;
+                    const modalHtml = `
+                        <div class="modal fade" id="editKitchenStaffModal" tabindex="-1" data-bs-backdrop="static">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-primary text-white">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-user-edit me-2"></i>Edit Kitchen Staff: ${staff.full_name || staff.username}
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="editKitchenStaffForm">
+                                            <div class="mb-3">
+                                                <label for="editStaffName" class="form-label">Full Name *</label>
+                                                <input type="text" class="form-control" id="editStaffName" value="${staff.full_name || ''}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStaffUsername" class="form-label">Username *</label>
+                                                <input type="text" class="form-control" id="editStaffUsername" value="${staff.username}" required readonly>
+                                                <div class="form-text">Username cannot be changed</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStaffPhone" class="form-label">Phone Number</label>
+                                                <input type="text" class="form-control" id="editStaffPhone" value="${staff.phone || ''}">
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="editStaffActive" ${staff.is_active ? 'checked' : ''}>
+                                                <label class="form-check-label" for="editStaffActive">
+                                                    Active (can access kitchen dashboard)
+                                                </label>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" onclick="updateKitchenStaff(${staffId})">
+                                            <i class="fas fa-save me-2"></i>Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Remove existing modal if any
+                    const existingModal = document.getElementById('editKitchenStaffModal');
+                    if (existingModal) existingModal.remove();
+                    
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    const modal = new bootstrap.Modal(document.getElementById('editKitchenStaffModal'));
+                    modal.show();
+                } else {
+                    alert('Error loading staff details');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching staff details:', error);
+                alert('Error loading staff details');
+            });
+        }
+
+        function updateKitchenStaff(staffId) {
+            const fullName = document.getElementById('editStaffName').value;
+            const phone = document.getElementById('editStaffPhone').value;
+            const isActive = document.getElementById('editStaffActive').checked;
+            
+            if (!fullName.trim()) {
+                alert('Full name is required');
+                return;
+            }
+            
+            fetch(`/api/admin/kitchen-staff/${staffId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    full_name: fullName,
+                    phone: phone,
+                    is_active: isActive
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Kitchen staff updated successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('editKitchenStaffModal')).hide();
+                    loadKitchenStaff();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating kitchen staff:', error);
+                alert('Error updating kitchen staff');
+            });
         }
 
         // Auto-refresh functionality

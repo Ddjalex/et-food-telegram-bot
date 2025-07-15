@@ -3,6 +3,7 @@ from app import app, db
 from models import AdminUser, AdminActivity, AdminSession, Restaurant, MenuItem, Category, Driver, Order, MenuItemModification
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from functools import wraps
 import os
 import logging
@@ -1438,6 +1439,187 @@ def delete_kitchen_staff_admin(staff_id):
     except Exception as e:
         logger.error(f"Error deleting kitchen staff: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff/<int:staff_id>', methods=['GET'])
+@admin_required
+def get_kitchen_staff_details(staff_id):
+    """Get details of specific kitchen staff member"""
+    try:
+        admin = AdminUser.query.get(session['admin_id'])
+        staff = AdminUser.query.filter_by(
+            id=staff_id,
+            restaurant_id=admin.restaurant_id,
+            role='kitchen_staff'
+        ).first()
+        
+        if not staff:
+            return jsonify({'success': False, 'message': 'Kitchen staff not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'staff': {
+                'id': staff.id,
+                'username': staff.username,
+                'full_name': staff.full_name,
+                'phone': staff.phone,
+                'is_active': staff.is_active,
+                'created_at': staff.created_at.isoformat() if staff.created_at else None
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error fetching kitchen staff details: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff/<int:staff_id>/update', methods=['PUT'])
+@admin_required
+def update_kitchen_staff_details(staff_id):
+    """Update kitchen staff details"""
+    try:
+        admin = AdminUser.query.get(session['admin_id'])
+        data = request.get_json()
+        
+        staff = AdminUser.query.filter_by(
+            id=staff_id,
+            restaurant_id=admin.restaurant_id,
+            role='kitchen_staff'
+        ).first()
+        
+        if not staff:
+            return jsonify({'success': False, 'message': 'Kitchen staff not found'}), 404
+        
+        # Update staff details
+        if 'full_name' in data:
+            staff.full_name = data['full_name']
+        if 'phone' in data:
+            staff.phone = data['phone']
+        if 'is_active' in data:
+            staff.is_active = data['is_active']
+        
+        db.session.commit()
+        
+        log_admin_activity(
+            admin.id,
+            'kitchen_staff_updated',
+            'kitchen_staff',
+            staff_id,
+            f'Updated kitchen staff: {staff.username}'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Kitchen staff updated successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error updating kitchen staff: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/kitchen-staff/<int:staff_id>/change-password', methods=['PUT'])
+@admin_required
+def change_kitchen_staff_password(staff_id):
+    """Change password for kitchen staff member"""
+    try:
+        admin = AdminUser.query.get(session['admin_id'])
+        data = request.get_json()
+        
+        staff = AdminUser.query.filter_by(
+            id=staff_id,
+            restaurant_id=admin.restaurant_id,
+            role='kitchen_staff'
+        ).first()
+        
+        if not staff:
+            return jsonify({'success': False, 'message': 'Kitchen staff not found'}), 404
+        
+        new_password = data.get('new_password')
+        notify_staff = data.get('notify_staff', False)
+        
+        if not new_password or len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
+        
+        # Hash and update password
+        from werkzeug.security import generate_password_hash
+        staff.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        log_admin_activity(
+            admin.id,
+            'password_changed',
+            'kitchen_staff',
+            staff_id,
+            f'Changed password for kitchen staff: {staff.username}'
+        )
+        
+        # TODO: If notify_staff is True, send notification to staff member
+        # This would require staff notification system implementation
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password changed successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error changing kitchen staff password: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/upload-kitchen-logo', methods=['POST'])
+@admin_required
+def upload_kitchen_logo():
+    """Upload kitchen logo image"""
+    try:
+        admin = AdminUser.query.get(session['admin_id'])
+        
+        if 'kitchen_logo' not in request.files:
+            return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+        
+        file = request.files['kitchen_logo']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            # Generate unique filename with timestamp
+            import time
+            timestamp = str(int(time.time()))
+            filename = f"kitchen_logo_{timestamp}_{filename}"
+            
+            # Ensure uploads directory exists
+            upload_dir = os.path.join('static', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            file_path = os.path.join(upload_dir, filename)
+            file.save(file_path)
+            
+            # Update restaurant with kitchen logo
+            restaurant = Restaurant.query.get(admin.restaurant_id)
+            if restaurant:
+                restaurant.kitchen_logo_url = f'/static/uploads/{filename}'
+                db.session.commit()
+            
+            log_admin_activity(
+                admin.id,
+                'kitchen_logo_uploaded',
+                'restaurant',
+                admin.restaurant_id,
+                f'Uploaded kitchen logo: {filename}'
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'Kitchen logo uploaded successfully',
+                'image_url': f'/static/uploads/{filename}'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Invalid file type. Please upload an image.'}), 400
+    except Exception as e:
+        logger.error(f"Error uploading kitchen logo: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def allowed_file(filename):
+    """Check if uploaded file has allowed extension"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/api/admin/analytics', methods=['GET'])
 @admin_required
