@@ -116,7 +116,7 @@ def admin_dashboard():
     elif admin.role == 'admin':
         return render_template('restaurant_admin_dashboard.html', admin=admin)
     elif admin.role == 'kitchen_staff':
-        return render_template('kitchen_staff_dashboard.html', admin=admin)
+        return render_template('kitchen_dashboard.html', admin=admin)
     
     return redirect(url_for('admin_login'))
 
