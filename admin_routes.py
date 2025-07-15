@@ -1250,13 +1250,18 @@ def delete_admin(admin_id):
         if admin.role == 'super_admin':
             return jsonify({'success': False, 'message': 'Cannot delete super admin'}), 400
         
-        # Check if admin has active sessions
-        active_sessions = AdminSession.query.filter_by(admin_id=admin_id, logout_time=None).count()
-        if active_sessions > 0:
-            return jsonify({
-                'success': False,
-                'message': f'Cannot delete admin. Admin has {active_sessions} active sessions. Please ensure admin is logged out first.'
-            }), 400
+        # Store admin info for response
+        admin_name = admin.username
+        admin_full_name = admin.full_name
+        
+        # Check if admin has active sessions and force close them
+        active_sessions = AdminSession.query.filter_by(admin_id=admin_id, logout_time=None).all()
+        if active_sessions:
+            # Force logout all active sessions
+            for session_obj in active_sessions:
+                session_obj.logout_time = datetime.utcnow()
+                session_obj.logout_reason = 'Admin account deleted by super admin'
+            db.session.commit()
         
         # Log admin activity before deletion
         log_admin_activity(
@@ -1264,11 +1269,8 @@ def delete_admin(admin_id):
             'admin_deleted',
             'admin',
             admin_id,
-            f'Deleted admin: {admin.username} ({admin.full_name})'
+            f'Deleted admin: {admin.username} ({admin.full_name}) - Force closed {len(active_sessions)} active sessions'
         )
-        
-        # Store admin info for response
-        admin_name = admin.username
         
         # Delete related records first
         AdminActivity.query.filter_by(admin_id=admin_id).delete()
@@ -1278,9 +1280,13 @@ def delete_admin(admin_id):
         db.session.delete(admin)
         db.session.commit()
         
+        message = f'Admin "{admin_name}" deleted successfully'
+        if active_sessions:
+            message += f' (forced logout from {len(active_sessions)} active sessions)'
+        
         return jsonify({
             'success': True,
-            'message': f'Admin "{admin_name}" deleted successfully'
+            'message': message
         })
     
     except Exception as e:

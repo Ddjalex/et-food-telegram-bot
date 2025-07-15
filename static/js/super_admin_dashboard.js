@@ -673,7 +673,7 @@ function toggleAdminBlock(adminId, isBlocked) {
 }
 
 function deleteAdmin(adminId, adminUsername) {
-    if (confirm(`Are you sure you want to delete admin "${adminUsername}"? This action cannot be undone and will remove all associated data including sessions and activities.`)) {
+    if (confirm(`Are you sure you want to delete admin "${adminUsername}"?\n\nThis action will:\n• Permanently delete the admin account\n• Force logout from all active sessions\n• Remove all associated data and activities\n• Cannot be undone\n\nClick OK to proceed with deletion.`)) {
         fetch(`/api/super-admin/admins/${adminId}`, {
             method: 'DELETE',
             headers: {
