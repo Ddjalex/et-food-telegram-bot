@@ -441,16 +441,45 @@ def get_kitchen_stats():
 @app.route('/api/admin/drivers', methods=['GET'])
 @admin_required
 def get_restaurant_drivers():
-    """Get drivers for restaurant admin"""
+    """Get drivers for restaurant admin with real-time location status"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
         
         from models import Driver
+        from datetime import datetime, timedelta
+        
         # Get all drivers since they don't have restaurant_id field
         drivers = Driver.query.all()
         
         drivers_data = []
         for driver in drivers:
+            # Enhanced location status calculation (same as super admin)
+            location_status = 'inactive'
+            last_update_text = "Never"
+            minutes_ago = None
+            
+            if driver.last_location_update:
+                time_diff = datetime.utcnow() - driver.last_location_update
+                minutes_ago = time_diff.total_seconds() / 60
+                
+                if minutes_ago < 2:
+                    location_status = 'live'
+                    last_update_text = "Live (now)"
+                elif minutes_ago < 10:
+                    location_status = 'active'
+                    last_update_text = f"{int(minutes_ago)} minutes ago"
+                elif minutes_ago < 60:
+                    location_status = 'recent'
+                    last_update_text = f"{int(minutes_ago)} minutes ago"
+                else:
+                    location_status = 'inactive'
+                    hours_ago = minutes_ago / 60
+                    if hours_ago < 24:
+                        last_update_text = f"{int(hours_ago)} hours ago"
+                    else:
+                        days_ago = hours_ago / 24
+                        last_update_text = f"{int(days_ago)} days ago"
+            
             drivers_data.append({
                 'id': driver.id,
                 'full_name': driver.name,  # Driver model uses 'name' not 'full_name'
@@ -461,7 +490,10 @@ def get_restaurant_drivers():
                 'is_available': driver.is_available,
                 'current_latitude': driver.current_lat,  # Driver model uses 'current_lat' not 'current_latitude'
                 'current_longitude': driver.current_lng,  # Driver model uses 'current_lng' not 'current_longitude'
-                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None
+                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
+                'location_status': location_status,
+                'last_update_text': last_update_text,
+                'minutes_ago': int(minutes_ago) if minutes_ago else None
             })
         
         return jsonify(drivers_data)

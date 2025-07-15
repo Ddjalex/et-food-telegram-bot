@@ -1175,6 +1175,24 @@
                     `<button class="btn btn-sm btn-outline-secondary" onclick="requestDriverLocation(${driver.id})" title="Request Location">
                         <i class="fas fa-location-arrow"></i>
                     </button>`;
+                
+                // Get real-time location status badge
+                const getLocationStatusBadge = (driver) => {
+                    if (!driver.location_status) return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                    
+                    switch(driver.location_status) {
+                        case 'live':
+                            return `<span class="badge bg-success"><i class="fas fa-circle"></i> Live Location</span>`;
+                        case 'active':
+                            return `<span class="badge bg-info"><i class="fas fa-map-marker-alt"></i> Active Location</span>`;
+                        case 'recent':
+                            return `<span class="badge bg-warning"><i class="fas fa-clock"></i> Recent Location</span>`;
+                        case 'inactive':
+                            return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                        default:
+                            return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                    }
+                };
                     
                 row.innerHTML = `
                     <td>${driver.name}</td>
@@ -1182,18 +1200,11 @@
                     <td><span class="badge bg-secondary">${driver.vehicle_type}</span></td>
                     <td>${approvalBadge}</td>
                     <td>
-                        ${hasLocation ? 
-                            `<span class="badge bg-success">
-                                <i class="fas fa-map-marker-alt"></i> Live
-                            </span>` :
-                            `<span class="badge bg-secondary">
-                                <i class="fas fa-map-marker-slash"></i> No Location
-                            </span>`
-                        }
+                        ${getLocationStatusBadge(driver)}
                     </td>
                     <td>
                         <small class="text-muted">
-                            ${driver.last_location_update ? new Date(driver.last_location_update).toLocaleString() : 'Never'}
+                            ${driver.last_update_text || 'Never'}
                         </small>
                     </td>
                     <td>
@@ -1267,7 +1278,7 @@
                             <p class="mb-1"><i class="fas fa-phone"></i> ${driver.phone_number}</p>
                             <p class="mb-1"><i class="fas fa-motorcycle"></i> ${driver.vehicle_type}</p>
                             <small class="text-muted">
-                                Last Update: ${driver.last_location_update}
+                                Last Update: ${driver.last_update_text || 'Never'}
                             </small>
                             <br>
                             <div class="mt-2">
