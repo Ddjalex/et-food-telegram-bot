@@ -660,6 +660,183 @@ def get_approved_drivers_super_admin():
         logger.error(f"Error fetching approved drivers: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/super-admin/real-time-stats', methods=['GET'])
+@super_admin_required
+def get_real_time_stats():
+    """Get real-time system statistics for super admin"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Driver location statistics
+        approved_drivers = Driver.query.filter_by(approval_status='approved').all()
+        
+        total_drivers = len(approved_drivers)
+        online_drivers = 0
+        live_location_drivers = 0
+        available_drivers = 0
+        busy_drivers = 0
+        
+        for driver in approved_drivers:
+            if driver.is_active:
+                online_drivers += 1
+                
+                if driver.last_location_update:
+                    time_diff = datetime.utcnow() - driver.last_location_update
+                    if time_diff < timedelta(minutes=5):
+                        live_location_drivers += 1
+                
+                if driver.is_available:
+                    available_drivers += 1
+                else:
+                    busy_drivers += 1
+        
+        # Active orders statistics
+        from models import Order
+        active_orders = Order.query.filter(
+            Order.status.in_(['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'])
+        ).count()
+        
+        # Today's order statistics
+        from sqlalchemy import func
+        today = datetime.utcnow().date()
+        today_orders = Order.query.filter(
+            func.date(Order.created_at) == today
+        ).count()
+        
+        # Revenue statistics
+        today_revenue = db.session.query(func.sum(Order.total_amount)).filter(
+            func.date(Order.created_at) == today,
+            Order.status.in_(['delivered', 'confirmed', 'preparing', 'ready', 'out_for_delivery'])
+        ).scalar() or 0
+        
+        # Active restaurants
+        active_restaurants = Restaurant.query.filter_by(is_active=True).count()
+        
+        # Active admins (logged in within last 24 hours)
+        yesterday = datetime.utcnow() - timedelta(hours=24)
+        # Note: AdminSession model needs to be implemented for proper tracking
+        active_admins = AdminUser.query.filter_by(is_active=True).count()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'drivers': {
+                    'total': total_drivers,
+                    'online': online_drivers,
+                    'live_location': live_location_drivers,
+                    'available': available_drivers,
+                    'busy': busy_drivers,
+                    'offline': total_drivers - online_drivers
+                },
+                'orders': {
+                    'active': active_orders,
+                    'today': today_orders,
+                    'today_revenue': float(today_revenue)
+                },
+                'system': {
+                    'active_restaurants': active_restaurants,
+                    'active_admins': active_admins
+                }
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching real-time stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/drivers/<int:driver_id>/request-location', methods=['POST'])
+@super_admin_required
+def request_driver_location_super_admin(driver_id):
+    """Request live location from a specific driver (Super Admin)"""
+    try:
+        driver = Driver.query.get_or_404(driver_id)
+        
+        if not driver.telegram_user_id:
+            return jsonify({'success': False, 'message': 'Driver has no Telegram account linked'}), 400
+        
+        # Import the driver bot function
+        from bot_minimal import request_driver_location
+        
+        # Request location from driver
+        success = request_driver_location(driver.telegram_user_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Location request sent to {driver.name}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to send location request'
+            }), 500
+    except Exception as e:
+        logger.error(f"Error requesting driver location: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/super-admin/system-health', methods=['GET'])
+@super_admin_required
+def get_system_health():
+    """Get real-time system health status"""
+    try:
+        from datetime import datetime, timedelta
+        import os
+        
+        # Database connectivity check
+        db_status = 'healthy'
+        try:
+            db.session.execute('SELECT 1')
+            db_status = 'healthy'
+        except Exception as e:
+            db_status = 'error'
+            logger.error(f"Database health check failed: {e}")
+        
+        # Bot connectivity check
+        bot_status = 'healthy'
+        try:
+            # Check if bot tokens are configured
+            customer_bot_token = os.environ.get('ETFASTFOOD_BOT_TOKEN')
+            driver_bot_token = os.environ.get('DRIVER_BOT_TOKEN')
+            
+            if not customer_bot_token or not driver_bot_token:
+                bot_status = 'warning'
+        except Exception as e:
+            bot_status = 'error'
+            logger.error(f"Bot health check failed: {e}")
+        
+        # Recent error rate
+        last_hour = datetime.utcnow() - timedelta(hours=1)
+        recent_errors = 0  # This could be enhanced with actual error logging
+        
+        # Active connections (simplified)
+        # Note: AdminSession model needs to be implemented for proper session tracking
+        active_sessions = AdminUser.query.filter_by(is_active=True).count()
+        
+        health_data = {
+            'database': {
+                'status': db_status,
+                'message': 'Database connection is healthy' if db_status == 'healthy' else 'Database connection issues detected'
+            },
+            'bots': {
+                'status': bot_status,
+                'message': 'Bot services are operational' if bot_status == 'healthy' else 'Bot configuration issues detected'
+            },
+            'performance': {
+                'active_sessions': active_sessions,
+                'recent_errors': recent_errors,
+                'status': 'healthy' if recent_errors < 10 else 'warning'
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'health': health_data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching system health: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Super Admin Routes
 @app.route('/api/super-admin/admins', methods=['GET'])
 @super_admin_required

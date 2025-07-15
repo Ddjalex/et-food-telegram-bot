@@ -290,8 +290,26 @@
                 <div class="main-content">
                     <!-- Overview Tab -->
                     <div id="overview" class="tab-content active">
-                        <div class="row mb-3">
-                            <div class="col-md-3">
+                        <!-- Real-time Status Banner -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info d-flex align-items-center justify-content-between" id="realTimeStatus">
+                                    <div>
+                                        <i class="fas fa-satellite-dish me-2"></i>
+                                        <strong>Real-time System Monitoring</strong> - 
+                                        <span id="lastUpdate">Loading...</span>
+                                        <span class="badge bg-success ms-2" id="systemStatus">Online</span>
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="refreshRealTimeData()">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enhanced Statistics Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-2">
                                 <div class="stat-card">
                                     <div class="stat-icon bg-primary bg-opacity-10 text-primary">
                                         <i class="fas fa-users-cog"></i>
@@ -300,7 +318,7 @@
                                     <div class="stat-label">Total Admins</div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="stat-card">
                                     <div class="stat-icon bg-success bg-opacity-10 text-success">
                                         <i class="fas fa-store"></i>
@@ -309,7 +327,7 @@
                                     <div class="stat-label">Active Restaurants</div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="stat-card">
                                     <div class="stat-icon bg-warning bg-opacity-10 text-warning">
                                         <i class="fas fa-chart-line"></i>
@@ -318,13 +336,112 @@
                                     <div class="stat-label">Today's Orders</div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="stat-card">
                                     <div class="stat-icon bg-danger bg-opacity-10 text-danger">
                                         <i class="fas fa-dollar-sign"></i>
                                     </div>
                                     <div class="stat-number text-danger" id="totalRevenue">0</div>
                                     <div class="stat-label">Total Revenue</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                        <i class="fas fa-car"></i>
+                                    </div>
+                                    <div class="stat-number text-info" id="totalDrivers">0</div>
+                                    <div class="stat-label">Total Drivers</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </div>
+                                    <div class="stat-number text-success" id="liveLocationDrivers">0</div>
+                                    <div class="stat-label">Live Location</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Driver Location Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-container">
+                                    <div class="table-header d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0"><i class="fas fa-satellite-dish me-2"></i>Real-time Driver Location Status</h5>
+                                        <div>
+                                            <span class="badge bg-light text-dark me-2" id="autoRefreshStatus">Auto-refresh: ON</span>
+                                            <button class="btn btn-light btn-sm" onclick="toggleAutoRefresh()">
+                                                <i class="fas fa-pause" id="autoRefreshIcon"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="p-3">
+                                        <!-- Driver Status Cards -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <div class="card bg-success bg-opacity-10 border-success">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-circle text-success"></i>
+                                                        <span class="fw-bold text-success ms-2" id="onlineDriversCount">0</span>
+                                                        <div class="small text-success">Online & Available</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-warning bg-opacity-10 border-warning">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-circle text-warning"></i>
+                                                        <span class="fw-bold text-warning ms-2" id="busyDriversCount">0</span>
+                                                        <div class="small text-warning">Busy/On Delivery</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-info bg-opacity-10 border-info">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-exclamation-triangle text-info"></i>
+                                                        <span class="fw-bold text-info ms-2" id="noLocationDriversCount">0</span>
+                                                        <div class="small text-info">No Location Data</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-danger bg-opacity-10 border-danger">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-circle text-danger"></i>
+                                                        <span class="fw-bold text-danger ms-2" id="offlineDriversCount">0</span>
+                                                        <div class="small text-danger">Offline</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Driver List Table -->
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Driver</th>
+                                                        <th>Status</th>
+                                                        <th>Location Status</th>
+                                                        <th>Last Update</th>
+                                                        <th>Vehicle</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="driversLocationTable">
+                                                    <tr>
+                                                        <td colspan="6" class="text-center text-muted">
+                                                            <i class="fas fa-spinner fa-spin me-2"></i>Loading real-time driver data...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
