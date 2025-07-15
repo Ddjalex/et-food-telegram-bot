@@ -1357,7 +1357,7 @@ def handle_driver_location_update(chat_id, location):
         if not success:
             # Fallback to basic handling
             from models import Driver
-            from app import db
+            from extensions import db
             from main import app
             
             with app.app_context():
@@ -1368,9 +1368,15 @@ def handle_driver_location_update(chat_id, location):
                     driver.last_location_update = datetime.utcnow()
                     # Activate driver when they share location
                     driver.is_active = True
-                    db.session.commit()
                     
-                    logger.info(f"Location updated for driver {driver.name} (ID: {chat_id}): {driver.current_lat}, {driver.current_lng}")
+                    try:
+                        db.session.commit()
+                        logger.info(f"Fallback location updated for driver {driver.name} (ID: {chat_id}): {driver.current_lat}, {driver.current_lng}")
+                    except Exception as db_error:
+                        logger.error(f"Fallback database commit failed: {db_error}")
+                        db.session.rollback()
+                        send_driver_message(chat_id, "❌ Failed to update location. Please try again.")
+                        return
                     
                     # Don't send repeated location update messages if driver is sharing live location
                     if not driver_location_tracker.is_driver_sharing_live_location(chat_id):

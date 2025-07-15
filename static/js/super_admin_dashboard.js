@@ -47,6 +47,7 @@ function toggleAutoRefresh() {
 
 function refreshRealTimeData() {
     loadRealTimeStats();
+    loadDriverLocationDetails();
     updateLastRefreshTime();
 }
 
@@ -184,12 +185,13 @@ function getLocationStatus(driver) {
     const lastUpdate = new Date(driver.last_location_update);
     const diffMinutes = (now - lastUpdate) / (1000 * 60);
     
-    if (diffMinutes < 5) {
+    // More aggressive real-time detection
+    if (diffMinutes < 2) {
         return { text: 'Live Location', color: '#28a745' };
-    } else if (diffMinutes < 30) {
-        return { text: 'Recent Location', color: '#ffc107' };
-    } else if (diffMinutes < 120) {
-        return { text: 'Outdated Location', color: '#fd7e14' };
+    } else if (diffMinutes < 10) {
+        return { text: 'Recent Location', color: '#28a745' };
+    } else if (diffMinutes < 60) {
+        return { text: 'Outdated Location', color: '#ffc107' };
     } else {
         return { text: 'Location Inactive', color: '#dc3545' };
     }

@@ -134,7 +134,7 @@ class DriverLocationTracker:
         """Handle incoming location update from driver"""
         try:
             from models import Driver
-            from app import db
+            from extensions import db
             from main import app
             
             with app.app_context():
@@ -149,7 +149,14 @@ class DriverLocationTracker:
                 driver.last_location_update = datetime.utcnow()
                 # Activate driver when they share location
                 driver.is_active = True
-                db.session.commit()
+                
+                try:
+                    db.session.commit()
+                    logger.info(f"Database updated successfully for driver {driver.name}")
+                except Exception as db_error:
+                    logger.error(f"Database commit failed: {db_error}")
+                    db.session.rollback()
+                    return False
                 
                 # Update live location session
                 self.update_live_location_session(driver_telegram_id, location)
@@ -168,6 +175,8 @@ class DriverLocationTracker:
                 
         except Exception as e:
             logger.error(f"Error handling location update for {driver_telegram_id}: {e}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
             
     def send_location_confirmation(self, driver_telegram_id, driver_name):
