@@ -252,8 +252,10 @@ def get_restaurant_menu_items():
     """Get menu items for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_user_id'])
+        logger.info(f"Getting menu items for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        logger.info(f"Found {len(menu_items)} menu items for restaurant {admin.restaurant_id}")
         
         items_data = []
         for item in menu_items:
