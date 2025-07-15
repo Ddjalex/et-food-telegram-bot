@@ -45,9 +45,14 @@ def super_admin_required(f):
 def admin_login():
     """Admin login page (legacy)"""
     if request.method == 'POST':
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            username = data.get('username')
+            password = data.get('password')
+        else:
+            username = request.form.get('username')
+            password = request.form.get('password')
         
         admin = AdminUser.query.filter_by(username=username).first()
         
@@ -76,9 +81,21 @@ def admin_login():
             # Log activity
             log_admin_activity(admin.id, 'login', 'session', description='Admin logged in')
             
-            return jsonify({'success': True, 'role': admin.role})
+            # Return JSON for AJAX requests, redirect for form submissions
+            if request.is_json:
+                return jsonify({'success': True, 'role': admin.role})
+            else:
+                # Form submission - redirect to dashboard
+                if admin.role == 'super_admin':
+                    return redirect(url_for('superadmin_dashboard'))
+                else:
+                    return redirect('/admin')
         
-        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        # Handle error response
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        else:
+            return render_template('admin_login.html', error='Invalid credentials')
     
     return render_template('admin_login.html')
 
@@ -86,9 +103,14 @@ def admin_login():
 def superadmin_login():
     """Super Admin login page"""
     if request.method == 'POST':
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            username = data.get('username')
+            password = data.get('password')
+        else:
+            username = request.form.get('username')
+            password = request.form.get('password')
         
         admin = AdminUser.query.filter_by(username=username).first()
         
@@ -118,9 +140,17 @@ def superadmin_login():
             admin.last_login = datetime.utcnow()
             db.session.commit()
             
-            return jsonify({'success': True, 'role': admin.role, 'redirect': '/superadmin'})
+            # Return JSON for AJAX requests, redirect for form submissions
+            if request.is_json:
+                return jsonify({'success': True, 'role': admin.role, 'redirect': '/superadmin'})
+            else:
+                return redirect('/superadmin')
         
-        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        # Handle error response
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+        else:
+            return render_template('superadmin_login.html', error='Invalid credentials')
     
     return render_template('superadmin_login.html')
 
