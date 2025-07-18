@@ -1055,47 +1055,127 @@
 
         function loadUserOrders() {
             try {
+                // Create orders modal first
+                showOrdersModal();
+                
                 const tg = window.Telegram.WebApp;
-                const userId = tg?.initDataUnsafe?.user?.id;
+                let userId = null;
+                
+                // Try to get user ID from various sources
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    userId = tg.initDataUnsafe.user.id;
+                } else if (tg && tg.initData) {
+                    // Try to parse initData manually
+                    try {
+                        const urlParams = new URLSearchParams(tg.initData);
+                        const userParam = urlParams.get('user');
+                        if (userParam) {
+                            const user = JSON.parse(decodeURIComponent(userParam));
+                            userId = user.id;
+                        }
+                    } catch (e) {
+                        console.log('Could not parse initData:', e);
+                    }
+                }
+                
+                console.log('User ID found:', userId);
+                console.log('Telegram WebApp data:', tg);
                 
                 if (!userId) {
-                    alert('Unable to load orders. Please restart the bot.');
+                    // Show demo orders if user ID not available
+                    console.log('No user ID found, showing demo message');
+                    document.getElementById('ordersContent').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <h3>Orders Demo</h3>
+                            <p>Your order history will appear here after placing orders through the bot.</p>
+                            <p style="color: #666; font-size: 14px;">Demo Mode: User ID not available from Telegram WebApp</p>
+                        </div>
+                    `;
                     return;
                 }
 
-                // Create orders modal
-                showOrdersModal();
-                
                 // Load orders from API
                 fetch(`/api/user-orders/${userId}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log('Orders data received:', data);
                         displayOrders(data.orders || []);
                     })
                     .catch(error => {
                         console.error('Error loading orders:', error);
-                        document.getElementById('ordersContent').innerHTML = '<p>Error loading orders</p>';
+                        document.getElementById('ordersContent').innerHTML = `
+                            <div style="text-align: center; padding: 20px;">
+                                <h3>Error Loading Orders</h3>
+                                <p>Could not load your order history.</p>
+                                <p style="color: #666; font-size: 14px;">Error: ${error.message}</p>
+                                <button onclick="loadUserOrders()" style="margin-top: 10px; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Try Again</button>
+                            </div>
+                        `;
                     });
             } catch (error) {
                 console.error('Error in loadUserOrders:', error);
-                alert('Unable to load orders');
+                showOrdersModal();
+                document.getElementById('ordersContent').innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3>Technical Error</h3>
+                        <p>Unable to load orders interface.</p>
+                        <p style="color: #666; font-size: 14px;">Error: ${error.message}</p>
+                    </div>
+                `;
             }
         }
 
         function loadUserProfile() {
             try {
                 const tg = window.Telegram.WebApp;
-                const user = tg?.initDataUnsafe?.user;
+                let user = null;
+                
+                // Try to get user data from various sources
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    user = tg.initDataUnsafe.user;
+                } else if (tg && tg.initData) {
+                    // Try to parse initData manually
+                    try {
+                        const urlParams = new URLSearchParams(tg.initData);
+                        const userParam = urlParams.get('user');
+                        if (userParam) {
+                            user = JSON.parse(decodeURIComponent(userParam));
+                        }
+                    } catch (e) {
+                        console.log('Could not parse initData:', e);
+                    }
+                }
+                
+                console.log('User data found:', user);
                 
                 if (!user) {
-                    alert('Unable to load profile. Please restart the bot.');
-                    return;
+                    // Show demo profile if user data not available
+                    user = {
+                        id: 'demo',
+                        first_name: 'Demo',
+                        last_name: 'User',
+                        username: 'demo_user',
+                        language_code: 'en'
+                    };
                 }
 
                 showProfileModal(user);
             } catch (error) {
                 console.error('Error in loadUserProfile:', error);
-                alert('Unable to load profile');
+                // Show demo profile on error
+                const demoUser = {
+                    id: 'error',
+                    first_name: 'Error',
+                    last_name: 'Loading',
+                    username: 'error_user',
+                    language_code: 'en'
+                };
+                showProfileModal(demoUser);
             }
         }
 
