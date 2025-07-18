@@ -554,7 +554,7 @@ def submit_driver_registration():
 @app.route('/webapp')
 def webapp():
     """Telegram WebApp page"""
-    return render_template('webapp_modern_fixed.html')
+    return render_template('webapp_delivery_modern.html')
 
 
 
