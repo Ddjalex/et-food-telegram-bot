@@ -747,11 +747,11 @@
                 <div class="nav-icon">🏠</div>
                 <div>Home</div>
             </a>
-            <a href="#" class="nav-item" onclick="showOrders(); return false;">
+            <a href="#" class="nav-item" onclick="console.log('Orders clicked'); showOrders(); return false;">
                 <div class="nav-icon">📋</div>
                 <div>Orders</div>
             </a>
-            <a href="#" class="nav-item" onclick="showProfile(); return false;">
+            <a href="#" class="nav-item" onclick="console.log('Profile clicked'); showProfile(); return false;">
                 <div class="nav-icon">👤</div>
                 <div>Profile</div>
             </a>
@@ -1269,6 +1269,7 @@
 
         // Initialize app
         async function initApp() {
+            console.log('Initializing app...');
             loadUserLocation();
             
             // Auto-select the first restaurant (X Factory) to skip restaurant selection
@@ -1281,10 +1282,28 @@
             
             // Auto-focus on the selected restaurant
             showRestaurantMenu(defaultRestaurantId);
+            
+            console.log('App initialized. Functions available:', {
+                showHome: typeof showHome,
+                showOrders: typeof showOrders,
+                showProfile: typeof showProfile
+            });
+        }
+
+        // Test function to verify JavaScript is working
+        function testNavigation() {
+            console.log('Navigation functions test:');
+            console.log('showHome:', typeof showHome);
+            console.log('showOrders:', typeof showOrders);
+            console.log('showProfile:', typeof showProfile);
         }
 
         // Start the app
-        document.addEventListener('DOMContentLoaded', initApp);
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, calling initApp...');
+            testNavigation();
+            initApp();
+        });
     </script>
 </body>
 </html>
