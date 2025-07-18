@@ -348,7 +348,7 @@ def menu():
     if restaurant_id:
         # Store selected restaurant in session for the WebApp
         session['selected_restaurant'] = restaurant_id
-    return render_template('webapp_modern_fixed.html')
+    return render_template('webapp_delivery_modern.html')
 
 @app.route('/select-restaurant')
 def select_restaurant():
