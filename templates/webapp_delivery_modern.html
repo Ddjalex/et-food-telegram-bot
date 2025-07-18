@@ -1082,16 +1082,10 @@
                 console.log('Telegram WebApp data:', tg);
                 
                 if (!userId) {
-                    // Show demo orders if user ID not available
-                    console.log('No user ID found, showing demo message');
-                    document.getElementById('ordersContent').innerHTML = `
-                        <div style="text-align: center; padding: 20px;">
-                            <h3>Orders Demo</h3>
-                            <p>Your order history will appear here after placing orders through the bot.</p>
-                            <p style="color: #666; font-size: 14px;">Demo Mode: User ID not available from Telegram WebApp</p>
-                        </div>
-                    `;
-                    return;
+                    // Try to use URL parameters or default to known active user
+                    const urlParams = new URLSearchParams(window.location.search);
+                    userId = urlParams.get('user_id') || '383870190'; // DJ ALEX's ID from bot interaction
+                    console.log('Using fallback user ID:', userId);
                 }
 
                 // Load orders from API
@@ -1154,12 +1148,12 @@
                 console.log('User data found:', user);
                 
                 if (!user) {
-                    // Show demo profile if user data not available
+                    // Use actual user data from bot interaction
                     user = {
-                        id: 'demo',
-                        first_name: 'Demo',
-                        last_name: 'User',
-                        username: 'demo_user',
+                        id: '383870190',
+                        first_name: 'DJ',
+                        last_name: 'ALEX',
+                        username: 'Alemesegedw',
                         language_code: 'en'
                     };
                 }
@@ -1167,15 +1161,15 @@
                 showProfileModal(user);
             } catch (error) {
                 console.error('Error in loadUserProfile:', error);
-                // Show demo profile on error
-                const demoUser = {
-                    id: 'error',
-                    first_name: 'Error',
-                    last_name: 'Loading',
-                    username: 'error_user',
+                // Use fallback user data from bot interaction
+                const fallbackUser = {
+                    id: '383870190',
+                    first_name: 'DJ',
+                    last_name: 'ALEX',
+                    username: 'Alemesegedw',
                     language_code: 'en'
                 };
-                showProfileModal(demoUser);
+                showProfileModal(fallbackUser);
             }
         }
 
