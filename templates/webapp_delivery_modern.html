@@ -498,6 +498,163 @@
             align-items: center;
             justify-content: center;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* Profile Styles */
+        .profile-info {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            margin: 0 auto 15px;
+        }
+
+        .profile-info h3 {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .profile-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        /* Order Styles */
+        .order-item {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: white;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .order-id {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-preparing {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-ready {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-out_for_delivery {
+            background: #ffeaa7;
+            color: #8d6e00;
+        }
+
+        .status-delivered {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .order-details p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -586,15 +743,15 @@
         
         <!-- Bottom Navigation -->
         <div class="bottom-nav">
-            <a href="#" class="nav-item active">
+            <a href="#" class="nav-item active" onclick="showHome(); return false;">
                 <div class="nav-icon">🏠</div>
                 <div>Home</div>
             </a>
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" onclick="showOrders(); return false;">
                 <div class="nav-icon">📋</div>
                 <div>Orders</div>
             </a>
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" onclick="showProfile(); return false;">
                 <div class="nav-icon">👤</div>
                 <div>Profile</div>
             </a>
@@ -863,6 +1020,171 @@
             // Since we're already showing the modern delivery interface, 
             // we can just update the content to focus on the selected restaurant
             console.log('Showing menu for restaurant:', restaurantId);
+        }
+
+        // Navigation functions
+        function showHome() {
+            // Set active state
+            setActiveNavItem(0);
+            // Show home content
+            document.querySelector('.main-content').style.display = 'block';
+            hideModal('ordersModal');
+            hideModal('profileModal');
+        }
+
+        function showOrders() {
+            // Set active state
+            setActiveNavItem(1);
+            // Show orders modal or navigate to orders page
+            loadUserOrders();
+        }
+
+        function showProfile() {
+            // Set active state  
+            setActiveNavItem(2);
+            // Show profile modal
+            loadUserProfile();
+        }
+
+        function setActiveNavItem(index) {
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            // Add active class to selected item
+            document.querySelectorAll('.nav-item')[index].classList.add('active');
+        }
+
+        function loadUserOrders() {
+            try {
+                const tg = window.Telegram.WebApp;
+                const userId = tg?.initDataUnsafe?.user?.id;
+                
+                if (!userId) {
+                    alert('Unable to load orders. Please restart the bot.');
+                    return;
+                }
+
+                // Create orders modal
+                showOrdersModal();
+                
+                // Load orders from API
+                fetch(`/api/user-orders/${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayOrders(data.orders || []);
+                    })
+                    .catch(error => {
+                        console.error('Error loading orders:', error);
+                        document.getElementById('ordersContent').innerHTML = '<p>Error loading orders</p>';
+                    });
+            } catch (error) {
+                console.error('Error in loadUserOrders:', error);
+                alert('Unable to load orders');
+            }
+        }
+
+        function loadUserProfile() {
+            try {
+                const tg = window.Telegram.WebApp;
+                const user = tg?.initDataUnsafe?.user;
+                
+                if (!user) {
+                    alert('Unable to load profile. Please restart the bot.');
+                    return;
+                }
+
+                showProfileModal(user);
+            } catch (error) {
+                console.error('Error in loadUserProfile:', error);
+                alert('Unable to load profile');
+            }
+        }
+
+        function showOrdersModal() {
+            // Create orders modal if it doesn't exist
+            if (!document.getElementById('ordersModal')) {
+                const modal = document.createElement('div');
+                modal.id = 'ordersModal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>My Orders</h2>
+                            <span class="close" onclick="hideModal('ordersModal')">&times;</span>
+                        </div>
+                        <div class="modal-body" id="ordersContent">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>Loading orders...</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            document.getElementById('ordersModal').style.display = 'block';
+        }
+
+        function showProfileModal(user) {
+            // Create profile modal if it doesn't exist
+            if (!document.getElementById('profileModal')) {
+                const modal = document.createElement('div');
+                modal.id = 'profileModal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>My Profile</h2>
+                            <span class="close" onclick="hideModal('profileModal')">&times;</span>
+                        </div>
+                        <div class="modal-body" id="profileContent"></div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Display user profile
+            document.getElementById('profileContent').innerHTML = `
+                <div class="profile-info">
+                    <div class="profile-avatar">${user.first_name?.[0] || 'U'}</div>
+                    <h3>${user.first_name || ''} ${user.last_name || ''}</h3>
+                    <p>@${user.username || 'N/A'}</p>
+                    <p>User ID: ${user.id}</p>
+                    ${user.language_code ? `<p>Language: ${user.language_code}</p>` : ''}
+                </div>
+            `;
+            
+            document.getElementById('profileModal').style.display = 'block';
+        }
+
+        function displayOrders(orders) {
+            const container = document.getElementById('ordersContent');
+            
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<p>No orders found</p>';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="order-item">
+                    <div class="order-header">
+                        <span class="order-id">Order #${order.id}</span>
+                        <span class="order-status status-${order.status}">${order.status}</span>
+                    </div>
+                    <div class="order-details">
+                        <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+                        <p><strong>Items:</strong> ${JSON.parse(order.items || '[]').length} items</p>
+                        <p><strong>Total:</strong> ${order.total_amount} Br</p>
+                        <p><strong>Payment:</strong> ${order.payment_method}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
 
         // Initialize app
