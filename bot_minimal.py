@@ -1239,9 +1239,9 @@ def handle_location_share(chat_id, location, user_id):
             location_msg = f"✅ Location saved successfully!\n📍 GPS: {lat:.4f}, {lng:.4f}"
             send_message(chat_id, location_msg)
         
-        # Show restaurant selection WebApp after location
+        # Show modern delivery app WebApp after location
         from config import Config
-        webapp_url = f"{Config.WEBHOOK_URL}/select-restaurant"
+        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
         
         keyboard = {
             "inline_keyboard": [[{
@@ -1258,9 +1258,9 @@ def handle_location_share(chat_id, location, user_id):
 def handle_skip_location(chat_id, user_id):
     """Handle when user skips location sharing"""
     try:
-        # Show restaurant selection WebApp without location
+        # Show modern delivery app WebApp without location
         from config import Config
-        webapp_url = f"{Config.WEBHOOK_URL}/select-restaurant"
+        webapp_url = f"{Config.WEBHOOK_URL}/webapp"
         
         keyboard = {
             "inline_keyboard": [[{

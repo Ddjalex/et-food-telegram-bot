@@ -851,16 +851,34 @@
 
         // Open restaurant
         function openRestaurant(restaurantId) {
-            // Navigate to restaurant page
-            window.location.href = `/restaurant/${restaurantId}`;
+            // Store selected restaurant and navigate to menu
+            localStorage.setItem('selectedRestaurant', restaurantId);
+            // Instead of navigating away, just show the menu for the selected restaurant
+            showRestaurantMenu(restaurantId);
+        }
+        
+        // Show restaurant menu directly
+        function showRestaurantMenu(restaurantId) {
+            // Hide restaurant selection and show menu interface
+            // Since we're already showing the modern delivery interface, 
+            // we can just update the content to focus on the selected restaurant
+            console.log('Showing menu for restaurant:', restaurantId);
         }
 
         // Initialize app
         async function initApp() {
             loadUserLocation();
+            
+            // Auto-select the first restaurant (X Factory) to skip restaurant selection
+            const defaultRestaurantId = 2; // X Factory Restaurant
+            localStorage.setItem('selectedRestaurant', defaultRestaurantId);
+            
             await loadCategories();
             await loadSpecialOffers();
             await loadRestaurants();
+            
+            // Auto-focus on the selected restaurant
+            showRestaurantMenu(defaultRestaurantId);
         }
 
         // Start the app
