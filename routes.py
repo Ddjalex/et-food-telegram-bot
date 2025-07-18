@@ -71,7 +71,7 @@ def index():
     # If accessed with ?admin=1, show login portal
     if request.args.get('admin') == '1':
         return render_template('login_home.html')
-    return render_template('webapp_modern_fixed.html')
+    return render_template('webapp_delivery_modern.html')
 
 @app.route('/login-portal')
 def login_portal():

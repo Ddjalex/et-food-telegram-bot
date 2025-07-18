@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Food Delivery</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+        
+        /* Header with location */
+        .header {
+            background: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .location-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        
+        .location-icon {
+            color: #ef4444;
+            font-size: 18px;
+        }
+        
+        .location-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .notification-icon {
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            padding: 8px;
+            color: #374151;
+            cursor: pointer;
+        }
+        
+        /* Search bar */
+        .search-section {
+            padding: 20px;
+            background: white;
+        }
+        
+        .search-bar {
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 1px solid #e5e7eb;
+            border-radius: 25px;
+            background: #f9fafb;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .search-input:focus {
+            border-color: #ef4444;
+            background: white;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 18px;
+        }
+        
+        /* Banner slider */
+        .banner-section {
+            padding: 0 20px 20px;
+        }
+        
+        .banner-slider {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .banner-slider::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .banner-card {
+            min-width: 300px;
+            height: 120px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            color: white;
+            scroll-snap-align: start;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .banner-content h3 {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .banner-content p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .banner-discount {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        /* Categories */
+        .categories-section {
+            padding: 0 20px 20px;
+        }
+        
+        .categories-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .categories-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .categories-scroll {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 70px;
+            cursor: pointer;
+            scroll-snap-align: start;
+            transition: transform 0.2s;
+        }
+        
+        .category-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .category-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #fff2e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 2px solid #ff6b35;
+        }
+        
+        .category-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        /* Special offers */
+        .offers-section {
+            padding: 0 20px 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .filter-btn {
+            background: #fff;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .offer-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+        
+        .offer-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .offer-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            background: #f3f4f6;
+        }
+        
+        .offer-content {
+            padding: 12px;
+        }
+        
+        .offer-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+        
+        .offer-price {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .current-price {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ef4444;
+        }
+        
+        .original-price {
+            font-size: 12px;
+            color: #9ca3af;
+            text-decoration: line-through;
+        }
+        
+        .discount-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: #10b981;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        /* Restaurants section */
+        .restaurants-section {
+            padding: 0 20px 80px;
+        }
+        
+        .restaurant-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .restaurant-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .restaurant-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background: #f3f4f6;
+        }
+        
+        .restaurant-info {
+            padding: 15px;
+        }
+        
+        .restaurant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .restaurant-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .restaurant-rating {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .rating-star {
+            color: #f59e0b;
+            font-size: 12px;
+        }
+        
+        .rating-value {
+            font-size: 12px;
+            font-weight: 500;
+            color: #92400e;
+        }
+        
+        .restaurant-details {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .distance-info, .time-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .distance-badge, .time-badge {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .avg-price {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        /* Bottom navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 10px;
+        }
+        
+        .nav-item.active {
+            color: #ef4444;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+        }
+        
+        /* Loading states */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #ef4444;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Cart */
+        .cart-float {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc2626;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Location -->
+        <div class="header">
+            <div class="location-info">
+                <div class="location-icon">📍</div>
+                <div class="location-text" id="userLocation">Loading location...</div>
+            </div>
+            <button class="notification-icon">🔔</button>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search-section">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="Search your taste" id="searchInput">
+                <div class="search-icon">🔍</div>
+            </div>
+        </div>
+        
+        <!-- Banner Slider -->
+        <div class="banner-section">
+            <div class="banner-slider">
+                <div class="banner-card">
+                    <div class="banner-content">
+                        <h3>Special Pasta</h3>
+                        <p>Delicious Italian cuisine</p>
+                    </div>
+                    <div class="banner-discount">25%<br>OFF</div>
+                </div>
+                <div class="banner-card" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">
+                    <div class="banner-content">
+                        <h3>Burger Combo</h3>
+                        <p>Fresh and tasty</p>
+                    </div>
+                    <div class="banner-discount">20%<br>OFF</div>
+                </div>
+                <div class="banner-card" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                    <div class="banner-content">
+                        <h3>Ethiopian Special</h3>
+                        <p>Traditional flavors</p>
+                    </div>
+                    <div class="banner-discount">15%<br>OFF</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Categories -->
+        <div class="categories-section">
+            <div class="categories-header">
+                <h2>Categories</h2>
+            </div>
+            <div class="categories-scroll" id="categoriesContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Special Offers -->
+        <div class="offers-section">
+            <div class="section-header">
+                <h2 class="section-title">Special Offers</h2>
+                <button class="filter-btn">Filter</button>
+            </div>
+            <div class="offers-grid" id="specialOffersContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Nearby Restaurants -->
+        <div class="restaurants-section">
+            <div class="section-header">
+                <h2 class="section-title">All Restaurants Nearby</h2>
+                <button class="filter-btn">Filter</button>
+            </div>
+            <div id="restaurantsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <a href="#" class="nav-item active">
+                <div class="nav-icon">🏠</div>
+                <div>Home</div>
+            </a>
+            <a href="#" class="nav-item">
+                <div class="nav-icon">📋</div>
+                <div>Orders</div>
+            </a>
+            <a href="#" class="nav-item">
+                <div class="nav-icon">👤</div>
+                <div>Profile</div>
+            </a>
+        </div>
+        
+        <!-- Floating Cart Button -->
+        <button class="cart-float" id="cartButton">
+            🛒
+            <div class="cart-count" id="cartCount">0</div>
+        </button>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        // Global variables
+        let categories = [];
+        let menuItems = [];
+        let cart = [];
+        let userLocationData = null;
+
+        // Load user location from Telegram WebApp
+        function loadUserLocation() {
+            try {
+                const tg = window.Telegram.WebApp;
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    // Try to get location from previous bot interaction
+                    // This would typically come from the bot when user shares location
+                    const savedLocation = localStorage.getItem('userLocation');
+                    if (savedLocation) {
+                        const location = JSON.parse(savedLocation);
+                        document.getElementById('userLocation').textContent = location.address || 'Addis Ababa, Ethiopia';
+                        userLocationData = location;
+                    } else {
+                        document.getElementById('userLocation').textContent = 'Addis Ababa, Ethiopia';
+                    }
+                } else {
+                    document.getElementById('userLocation').textContent = 'Addis Ababa, Ethiopia';
+                }
+            } catch (error) {
+                console.error('Error loading location:', error);
+                document.getElementById('userLocation').textContent = 'Addis Ababa, Ethiopia';
+            }
+        }
+
+        // Load categories from API
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                categories = data;
+                renderCategories();
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                document.getElementById('categoriesContainer').innerHTML = '<p>Failed to load categories</p>';
+            }
+        }
+
+        // Render categories
+        function renderCategories() {
+            const container = document.getElementById('categoriesContainer');
+            
+            const categoryIcons = {
+                'Burgers': '🍔',
+                'Breakfast': '🍳',
+                'Fasting Specials': '🥗',
+                'Books': '📚',
+                'Pizza': '🍕',
+                'Pasta': '🍝',
+                'Sandwiches & Wraps': '🥪',
+                'Shawarma': '🌯',
+                'Rice Dishes': '🍚',
+                'Traditional Ethiopian Breakfast': '☕',
+                'Drinks': '🥤',
+                'Fries & Pancakes': '🍟'
+            };
+            
+            if (categories.length === 0) {
+                container.innerHTML = '<p>No categories available</p>';
+                return;
+            }
+            
+            container.innerHTML = categories.map(category => `
+                <div class="category-item" onclick="filterByCategory('${category.name}')">
+                    <div class="category-icon">${categoryIcons[category.name] || '🍽️'}</div>
+                    <div class="category-name">${category.name}</div>
+                </div>
+            `).join('');
+        }
+
+        // Load menu items for special offers
+        async function loadSpecialOffers() {
+            try {
+                const response = await fetch('/api/menu');
+                const data = await response.json();
+                menuItems = data;
+                renderSpecialOffers();
+            } catch (error) {
+                console.error('Error loading menu items:', error);
+                document.getElementById('specialOffersContainer').innerHTML = '<p>Failed to load offers</p>';
+            }
+        }
+
+        // Render special offers (first 6 items with discount)
+        function renderSpecialOffers() {
+            const container = document.getElementById('specialOffersContainer');
+            const specialItems = menuItems.slice(0, 6);
+            
+            if (specialItems.length === 0) {
+                container.innerHTML = '<p>No special offers available</p>';
+                return;
+            }
+            
+            container.innerHTML = specialItems.map(item => {
+                const discount = Math.floor(Math.random() * 30) + 10; // Random discount 10-40%
+                const originalPrice = item.price;
+                const discountPrice = originalPrice * (1 - discount / 100);
+                
+                return `
+                    <div class="offer-card" onclick="addToCart(${item.id})">
+                        <div class="discount-badge">${discount}% OFF</div>
+                        <img src="${item.image_url || '/static/placeholder-food.jpg'}" alt="${item.name}" class="offer-image" 
+                             onerror="this.src='/static/placeholder-food.jpg'">
+                        <div class="offer-content">
+                            <div class="offer-title">${item.name}</div>
+                            <div class="offer-price">
+                                <span class="current-price">${discountPrice.toFixed(0)} Br</span>
+                                <span class="original-price">${originalPrice.toFixed(0)} Br</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load and render restaurants
+        async function loadRestaurants() {
+            try {
+                const container = document.getElementById('restaurantsContainer');
+                
+                // Mock restaurant data with distance based on user location
+                const restaurants = [
+                    {
+                        id: 1,
+                        name: 'Flavour cafe | E.Fabrica',
+                        image: '/static/restaurant-placeholder.jpg',
+                        rating: 4.0,
+                        distance: '0.5KM',
+                        time: '40 min',
+                        avgPrice: 334
+                    },
+                    {
+                        id: 2,
+                        name: 'X Factory Restaurant',
+                        image: '/static/restaurant-placeholder.jpg',
+                        rating: 4.2,
+                        distance: '0.8KM',
+                        time: '35 min',
+                        avgPrice: 280
+                    },
+                    {
+                        id: 3,
+                        name: 'Y Factory Restaurant',
+                        image: '/static/restaurant-placeholder.jpg',
+                        rating: 4.1,
+                        distance: '1.2KM',
+                        time: '45 min',
+                        avgPrice: 350
+                    }
+                ];
+                
+                container.innerHTML = restaurants.map(restaurant => `
+                    <div class="restaurant-card" onclick="openRestaurant(${restaurant.id})">
+                        <img src="${restaurant.image}" alt="${restaurant.name}" class="restaurant-image" 
+                             onerror="this.src='/static/placeholder-restaurant.jpg'">
+                        <div class="restaurant-info">
+                            <div class="restaurant-header">
+                                <div class="restaurant-name">${restaurant.name}</div>
+                                <div class="restaurant-rating">
+                                    <span class="rating-star">⭐</span>
+                                    <span class="rating-value">${restaurant.rating}</span>
+                                </div>
+                            </div>
+                            <div class="restaurant-details">
+                                <div class="distance-info">
+                                    <span class="distance-badge">Around ${restaurant.distance}</span>
+                                </div>
+                                <div class="time-info">
+                                    <span class="time-badge">Around ${restaurant.time}</span>
+                                </div>
+                                <div class="avg-price">Avg ${restaurant.avgPrice} Br per person</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                document.getElementById('restaurantsContainer').innerHTML = '<p>Failed to load restaurants</p>';
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            if (query.length > 2) {
+                const filtered = menuItems.filter(item => 
+                    item.name.toLowerCase().includes(query) ||
+                    item.description.toLowerCase().includes(query)
+                );
+                // Update UI with filtered results
+                console.log('Search results:', filtered);
+            }
+        });
+
+        // Filter by category
+        function filterByCategory(categoryName) {
+            const filtered = menuItems.filter(item => item.category === categoryName);
+            console.log('Category filter:', categoryName, filtered);
+            // Navigate to category view or update current view
+        }
+
+        // Add to cart
+        function addToCart(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (item) {
+                const existingItem = cart.find(c => c.id === itemId);
+                if (existingItem) {
+                    existingItem.quantity += 1;
+                } else {
+                    cart.push({ ...item, quantity: 1 });
+                }
+                updateCartUI();
+            }
+        }
+
+        // Update cart UI
+        function updateCartUI() {
+            const cartButton = document.getElementById('cartButton');
+            const cartCount = document.getElementById('cartCount');
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            if (totalItems > 0) {
+                cartButton.style.display = 'flex';
+                cartCount.textContent = totalItems;
+            } else {
+                cartButton.style.display = 'none';
+            }
+        }
+
+        // Open restaurant
+        function openRestaurant(restaurantId) {
+            // Navigate to restaurant page
+            window.location.href = `/restaurant/${restaurantId}`;
+        }
+
+        // Initialize app
+        async function initApp() {
+            loadUserLocation();
+            await loadCategories();
+            await loadSpecialOffers();
+            await loadRestaurants();
+        }
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
