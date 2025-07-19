@@ -739,7 +739,6 @@
             <div class="restaurant-info-header">
                 <div class="restaurant-logo" id="restaurantLogo">ET</div>
                 <div class="restaurant-details">
-                    <h1 id="restaurantName">ET-FOOD</h1>
                     <p id="restaurantDescription">Authentic Ethiopian Cuisine</p>
                 </div>
             </div>
@@ -1010,7 +1009,7 @@
                     },
                     {
                         id: 2,
-                        name: 'X Factory Restaurant',
+                        name: 'Ethiopian Restaurant',
                         image: '/static/restaurant-placeholder.jpg',
                         rating: 4.2,
                         distance: '0.8KM',
@@ -1384,8 +1383,7 @@
                 if (data.success && data.restaurant) {
                     const restaurant = data.restaurant;
                     
-                    // Update restaurant name and description in header
-                    document.getElementById('restaurantName').textContent = restaurant.name || 'Restaurant';
+                    // Update restaurant description in header only
                     document.getElementById('restaurantDescription').textContent = restaurant.description || 'Delicious Food';
                     
                     // Update restaurant logo
@@ -1429,8 +1427,8 @@
             // Load restaurant info and images
             await loadRestaurantInfo();
             
-            // Auto-select the first restaurant (X Factory) to skip restaurant selection
-            const defaultRestaurantId = 2; // X Factory Restaurant
+            // Auto-select the first restaurant to skip restaurant selection
+            const defaultRestaurantId = 2;
             localStorage.setItem('selectedRestaurant', defaultRestaurantId);
             
             await loadCategories();
