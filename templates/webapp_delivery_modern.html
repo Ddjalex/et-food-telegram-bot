@@ -991,66 +991,53 @@
             }).join('');
         }
 
-        // Load and render restaurants
+        // Load and render restaurants from API
         async function loadRestaurants() {
             try {
                 const container = document.getElementById('restaurantsContainer');
                 
-                // Mock restaurant data with distance based on user location
-                const restaurants = [
-                    {
-                        id: 1,
-                        name: 'Flavour cafe | E.Fabrica',
-                        image: '/static/restaurant-placeholder.jpg',
-                        rating: 4.0,
-                        distance: '0.5KM',
-                        time: '40 min',
-                        avgPrice: 334
-                    },
-                    {
-                        id: 2,
-                        name: 'Ethiopian Restaurant',
-                        image: '/static/restaurant-placeholder.jpg',
-                        rating: 4.2,
-                        distance: '0.8KM',
-                        time: '35 min',
-                        avgPrice: 280
-                    },
-                    {
-                        id: 3,
-                        name: 'Y Factory Restaurant',
-                        image: '/static/restaurant-placeholder.jpg',
-                        rating: 4.1,
-                        distance: '1.2KM',
-                        time: '45 min',
-                        avgPrice: 350
-                    }
-                ];
+                // Load restaurants from API - only active restaurants with menu items
+                const response = await fetch('/api/restaurants/super-admin');
+                const data = await response.json();
                 
-                container.innerHTML = restaurants.map(restaurant => `
-                    <div class="restaurant-card" onclick="openRestaurant(${restaurant.id})">
-                        <img src="${restaurant.image}" alt="${restaurant.name}" class="restaurant-image" 
-                             onerror="this.src='/static/placeholder-restaurant.jpg'">
-                        <div class="restaurant-info">
-                            <div class="restaurant-header">
-                                <div class="restaurant-name">${restaurant.name}</div>
-                                <div class="restaurant-rating">
-                                    <span class="rating-star">⭐</span>
-                                    <span class="rating-value">${restaurant.rating}</span>
+                if (data.success && data.restaurants.length > 0) {
+                    // Filter restaurants that have menu items only
+                    const activeRestaurants = data.restaurants.filter(restaurant => 
+                        restaurant.is_active
+                    );
+                    
+                    if (activeRestaurants.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; padding: 20px;">No restaurants available</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = activeRestaurants.map(restaurant => `
+                        <div class="restaurant-card" onclick="openRestaurant(${restaurant.id})">
+                            <img src="${restaurant.cover_image_url || '/static/restaurant-placeholder.jpg'}" alt="${restaurant.name}" class="restaurant-image" 
+                                 onerror="this.src='/static/placeholder-restaurant.jpg'">
+                            <div class="restaurant-info">
+                                <div class="restaurant-header">
+                                    <div class="restaurant-name">${restaurant.name}</div>
+                                    <div class="restaurant-rating">
+                                        <span class="rating-star">⭐</span>
+                                        <span class="rating-value">4.0</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="restaurant-details">
-                                <div class="distance-info">
-                                    <span class="distance-badge">Around ${restaurant.distance}</span>
+                                <div class="restaurant-details">
+                                    <div class="distance-info">
+                                        <span class="distance-badge">Around 0.5KM</span>
+                                    </div>
+                                    <div class="time-info">
+                                        <span class="time-badge">40 min</span>
+                                    </div>
+                                    <div class="avg-price">Avg 334 Br per person</div>
                                 </div>
-                                <div class="time-info">
-                                    <span class="time-badge">Around ${restaurant.time}</span>
-                                </div>
-                                <div class="avg-price">Avg ${restaurant.avgPrice} Br per person</div>
                             </div>
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px;">No restaurants available</div>';
+                }
             } catch (error) {
                 console.error('Error loading restaurants:', error);
                 document.getElementById('restaurantsContainer').innerHTML = '<p>Failed to load restaurants</p>';

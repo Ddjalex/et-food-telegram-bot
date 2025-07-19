@@ -819,9 +819,14 @@ def get_menu():
         if restaurant_id is None:
             restaurant_id = session.get('selected_restaurant')
         
-        # If still no restaurant, get first available active restaurant
+        # If still no restaurant, get first available active restaurant with menu items
         if restaurant_id is None:
-            first_restaurant = Restaurant.query.filter_by(is_active=True).first()
+            first_restaurant = db.session.query(Restaurant).filter(
+                Restaurant.is_active == True,
+                Restaurant.id.in_(
+                    db.session.query(MenuItem.restaurant_id).filter(MenuItem.available == True).distinct()
+                )
+            ).first()
             restaurant_id = first_restaurant.id if first_restaurant else 1
         
         # Get all available menu items for the restaurant
@@ -4778,15 +4783,25 @@ def api_restaurant_info():
         # Get restaurant ID from query parameter
         restaurant_id = request.args.get('restaurant_id', type=int)
         
-        # If no specific restaurant requested, get the first available active restaurant
+        # If no specific restaurant requested, get the first available active restaurant with menu items
         if restaurant_id is None:
-            restaurant = Restaurant.query.filter_by(is_active=True).first()
+            restaurant = db.session.query(Restaurant).filter(
+                Restaurant.is_active == True,
+                Restaurant.id.in_(
+                    db.session.query(MenuItem.restaurant_id).filter(MenuItem.available == True).distinct()
+                )
+            ).first()
         else:
             restaurant = Restaurant.query.filter_by(id=restaurant_id).first()
         
-        # If requested restaurant doesn't exist, get first available restaurant
+        # If requested restaurant doesn't exist, get first available restaurant with menu items
         if not restaurant:
-            restaurant = Restaurant.query.filter_by(is_active=True).first()
+            restaurant = db.session.query(Restaurant).filter(
+                Restaurant.is_active == True,
+                Restaurant.id.in_(
+                    db.session.query(MenuItem.restaurant_id).filter(MenuItem.available == True).distinct()
+                )
+            ).first()
         
         if restaurant:
             return jsonify({
