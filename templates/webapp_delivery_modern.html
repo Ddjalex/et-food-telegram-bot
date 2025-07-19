@@ -736,7 +736,7 @@
         <div class="restaurants-section">
             <div class="section-header">
                 <h2 class="section-title">All Restaurants Nearby</h2>
-                <button class="filter-btn">Filter</button>
+                <button onclick="refreshRestaurants()" style="background: #ef4444; color: white; border: none; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 500;">Refresh</button>
             </div>
             <div id="restaurantsContainer">
                 <div class="loading">
@@ -1373,6 +1373,35 @@
             console.log('showHome:', typeof showHome);
             console.log('showOrders:', typeof showOrders);
             console.log('showProfile:', typeof showProfile);
+        }
+
+        // Refresh restaurants manually - useful when super admin makes changes
+        async function refreshRestaurants() {
+            console.log('Manually refreshing restaurants...');
+            const container = document.getElementById('restaurantsContainer');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            await loadRestaurants();
+            console.log('Restaurants refreshed!');
+        }
+        
+        // Debug function to check restaurant data
+        async function debugRestaurants() {
+            try {
+                const response = await fetch('/api/restaurants/super-admin');
+                const data = await response.json();
+                console.log('DEBUG: Raw restaurant data:', data);
+                
+                if (data.success && data.restaurants) {
+                    data.restaurants.forEach(restaurant => {
+                        console.log(`DEBUG: Restaurant "${restaurant.name}" - Active: ${restaurant.is_active}, Menu Items: ${restaurant.menu_items_count}`);
+                    });
+                    
+                    const filtered = data.restaurants.filter(r => r.is_active && r.menu_items_count > 0);
+                    console.log(`DEBUG: Filtered restaurants (${filtered.length}):`, filtered.map(r => r.name));
+                }
+            } catch (error) {
+                console.error('DEBUG: Error loading restaurants:', error);
+            }
         }
 
         // Start the app
