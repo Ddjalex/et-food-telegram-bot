@@ -804,9 +804,19 @@
         // Load categories from API
         async function loadCategories() {
             try {
-                const response = await fetch('/api/categories');
+                const response = await fetch('/api/menu');
                 const data = await response.json();
-                categories = data;
+                
+                // Handle new API format with categories
+                if (data.success && data.categories) {
+                    categories = data.categories.map(cat => ({ name: cat.name }));
+                } else if (Array.isArray(data)) {
+                    // Fallback: extract unique categories from flat items array
+                    const uniqueCategories = [...new Set(data.map(item => item.category))];
+                    categories = uniqueCategories.map(name => ({ name }));
+                } else {
+                    categories = [];
+                }
                 renderCategories();
             } catch (error) {
                 console.error('Error loading categories:', error);
@@ -830,7 +840,12 @@
                 'Rice Dishes': '🍚',
                 'Traditional Ethiopian Breakfast': '☕',
                 'Drinks': '🥤',
-                'Fries & Pancakes': '🍟'
+                'Fries & Pancakes': '🍟',
+                'Snacks': '🍿',
+                'Sauces': '🥄',
+                'Borrito': '🌯',
+                'Egg Dishes & Toast': '🍳',
+                'Extras': '🍽️'
             };
             
             if (categories.length === 0) {
@@ -851,7 +866,16 @@
             try {
                 const response = await fetch('/api/menu');
                 const data = await response.json();
-                menuItems = data;
+                
+                // Handle new API format
+                if (data.success && data.items) {
+                    menuItems = data.items;
+                } else if (Array.isArray(data)) {
+                    menuItems = data;
+                } else {
+                    menuItems = [];
+                }
+                
                 renderSpecialOffers();
             } catch (error) {
                 console.error('Error loading menu items:', error);
