@@ -4766,18 +4766,45 @@ def update_driver_search_radius():
 
 @app.route('/api/restaurants/info')
 def api_restaurant_info():
-    """API endpoint for delivery company branding (not restaurant info)"""
+    """API endpoint for current selected restaurant info"""
     try:
-        # This returns ET-FOOD delivery company branding, not restaurant data
-        return jsonify({
-            'success': True,
-            'company': {
-                'name': 'ET-FOOD',
-                'description': 'Food Delivery Service',
-                'logo_url': None,  # Company logo
-                'cover_image_url': None  # Company cover image
-            }
-        })
+        # Get restaurant ID from query parameter (default to restaurant 2 - X Factory)
+        restaurant_id = request.args.get('restaurant_id', 2, type=int)
+        
+        restaurant = Restaurant.query.filter_by(id=restaurant_id).first()
+        
+        if restaurant:
+            return jsonify({
+                'success': True,
+                'restaurant': {
+                    'id': restaurant.id,
+                    'name': restaurant.name,
+                    'description': restaurant.description,
+                    'logo_url': restaurant.logo_url,
+                    'cover_image_url': restaurant.cover_image_url,
+                    'address': restaurant.address,
+                    'phone': restaurant.phone,
+                    'estimated_delivery_time': restaurant.estimated_delivery_time
+                },
+                'company': {
+                    'name': 'ET-FOOD',
+                    'description': 'Food Delivery Service'
+                }
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'restaurant': {
+                    'name': 'Restaurant',
+                    'description': 'Delicious Food',
+                    'logo_url': None,
+                    'cover_image_url': None
+                },
+                'company': {
+                    'name': 'ET-FOOD',
+                    'description': 'Food Delivery Service'
+                }
+            })
     except Exception as e:
-        logger.error(f"Error fetching company info: {e}")
+        logger.error(f"Error fetching restaurant info: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

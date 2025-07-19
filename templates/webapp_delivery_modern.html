@@ -1121,6 +1121,13 @@
             // Since we're already showing the modern delivery interface, 
             // we can just update the content to focus on the selected restaurant
             console.log('Showing menu for restaurant:', restaurantId);
+            localStorage.setItem('selectedRestaurant', restaurantId);
+            
+            // Update restaurant header info when switching restaurants
+            loadRestaurantInfo(restaurantId);
+            
+            // Load menu items for selected restaurant
+            loadMenuForRestaurant(restaurantId);
         }
 
         // Navigation functions
@@ -1363,31 +1370,40 @@
         }
 
         // Load restaurant information with logo and cover image
-        async function loadRestaurantInfo() {
+        async function loadRestaurantInfo(restaurantId = null) {
             try {
-                const response = await fetch('/api/restaurants/info');
+                // Get selected restaurant from localStorage or use default
+                const selectedRestaurant = restaurantId || localStorage.getItem('selectedRestaurant') || 2;
+                const response = await fetch(`/api/restaurants/info?restaurant_id=${selectedRestaurant}`);
                 const data = await response.json();
                 
-                if (data.success && data.company) {
-                    const company = data.company;
+                if (data.success && data.restaurant) {
+                    const restaurant = data.restaurant;
                     
-                    // Update delivery company branding (not restaurant name)
-                    document.getElementById('restaurantName').textContent = 'ET-FOOD';
-                    document.getElementById('restaurantDescription').textContent = 'Food Delivery Service';
+                    // Update restaurant name and description in header
+                    document.getElementById('restaurantName').textContent = restaurant.name || 'Restaurant';
+                    document.getElementById('restaurantDescription').textContent = restaurant.description || 'Delicious Food';
                     
-                    // Update delivery company logo (ET-FOOD logo, not restaurant logo)
+                    // Update restaurant logo
                     const logoElement = document.getElementById('restaurantLogo');
-                    if (company.logo_url) {
-                        logoElement.style.backgroundImage = `url(${company.logo_url})`;
+                    if (restaurant.logo_url) {
+                        logoElement.style.backgroundImage = `url(${restaurant.logo_url})`;
+                        logoElement.style.backgroundSize = 'cover';
+                        logoElement.style.backgroundPosition = 'center';
                         logoElement.textContent = '';
                     } else {
-                        logoElement.textContent = 'ET';
+                        logoElement.style.backgroundImage = '';
+                        logoElement.textContent = restaurant.name ? restaurant.name.charAt(0) : 'R';
                     }
                     
-                    // Update delivery company cover image
+                    // Update restaurant cover image
                     const coverElement = document.getElementById('restaurantCover');
-                    if (company.cover_image_url) {
-                        coverElement.style.backgroundImage = `url(${company.cover_image_url})`;
+                    if (restaurant.cover_image_url) {
+                        coverElement.style.backgroundImage = `url(${restaurant.cover_image_url})`;
+                        coverElement.style.backgroundSize = 'cover';
+                        coverElement.style.backgroundPosition = 'center';
+                    } else {
+                        coverElement.style.backgroundImage = '';
                     }
                 }
             } catch (error) {
