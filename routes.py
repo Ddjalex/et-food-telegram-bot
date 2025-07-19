@@ -812,10 +812,40 @@ def api_driver_registration_simple():
 
 @app.route('/api/menu')
 def get_menu():
-    """Get menu items"""
+    """Get menu items organized by categories"""
     try:
-        menu_items = MenuItem.query.filter_by(available=True).all()
-        return jsonify([item.to_dict() for item in menu_items])
+        # Get restaurant ID from session or default to 1
+        restaurant_id = session.get('selected_restaurant', 1)
+        
+        # Get all available menu items for the restaurant
+        menu_items = MenuItem.query.filter_by(
+            available=True, 
+            restaurant_id=restaurant_id
+        ).all()
+        
+        # Get unique categories with items count
+        categories_data = {}
+        for item in menu_items:
+            category = item.category
+            if category not in categories_data:
+                categories_data[category] = {
+                    'name': category,
+                    'items': []
+                }
+            categories_data[category]['items'].append(item.to_dict())
+        
+        # Convert to list and sort categories
+        categories_list = list(categories_data.values())
+        categories_list.sort(key=lambda x: x['name'])
+        
+        return jsonify({
+            'success': True,
+            'restaurant_id': restaurant_id,
+            'total_items': len(menu_items),
+            'total_categories': len(categories_list),
+            'categories': categories_list,
+            'items': [item.to_dict() for item in menu_items]  # Flat list for backward compatibility
+        })
     except Exception as e:
         logger.error(f"Error fetching menu: {e}")
         return jsonify({'error': 'Failed to fetch menu'}), 500
