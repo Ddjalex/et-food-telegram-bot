@@ -70,68 +70,7 @@
             cursor: pointer;
         }
         
-        /* Restaurant header */
-        .restaurant-header {
-            background: white;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .restaurant-cover {
-            width: 100%;
-            height: 120px;
-            background: linear-gradient(135deg, #ff6b35, #f7931e);
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-        
-        .restaurant-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.3));
-            height: 60px;
-        }
-        
-        .restaurant-info-header {
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .restaurant-logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            background: #f3f4f6;
-            border: 3px solid white;
-            margin-top: -30px;
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: #666;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .restaurant-details h1 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #111827;
-            margin: 0 0 4px 0;
-        }
-        
-        .restaurant-details p {
-            font-size: 14px;
-            color: #6b7280;
-            margin: 0;
-        }
+
 
         /* Search bar */
         .search-section {
@@ -731,18 +670,7 @@
             <button class="notification-icon">🔔</button>
         </div>
 
-        <!-- Restaurant Header -->
-        <div class="restaurant-header" id="restaurantHeader" style="display: block;">
-            <div class="restaurant-cover" id="restaurantCover">
-                <div class="restaurant-overlay"></div>
-            </div>
-            <div class="restaurant-info-header">
-                <div class="restaurant-logo" id="restaurantLogo">ET</div>
-                <div class="restaurant-details">
-                    <p id="restaurantDescription">Authentic Ethiopian Cuisine</p>
-                </div>
-            </div>
-        </div>
+
         
         <!-- Search Bar -->
         <div class="search-section">
@@ -1356,7 +1284,7 @@
             }
         }
 
-        // Load restaurant information with logo and cover image
+        // Load restaurant information (header removed, function simplified)
         async function loadRestaurantInfo(restaurantId = null) {
             try {
                 // Get selected restaurant from localStorage or get first available restaurant
@@ -1375,41 +1303,10 @@
                 console.log('Restaurant data received:', data);
                 
                 if (data.success && data.restaurant) {
-                    const restaurant = data.restaurant;
-                    
-                    // Update restaurant description in header only
-                    document.getElementById('restaurantDescription').textContent = restaurant.description || 'Delicious Food';
-                    
-                    // Update restaurant logo
-                    const logoElement = document.getElementById('restaurantLogo');
-                    if (restaurant.logo_url) {
-                        console.log('Setting logo URL:', restaurant.logo_url);
-                        logoElement.style.backgroundImage = `url(${restaurant.logo_url})`;
-                        logoElement.style.backgroundSize = 'cover';
-                        logoElement.style.backgroundPosition = 'center';
-                        logoElement.style.borderRadius = '50%';
-                        logoElement.textContent = '';
-                    } else {
-                        logoElement.style.backgroundImage = '';
-                        logoElement.textContent = restaurant.name ? restaurant.name.charAt(0) : 'R';
-                    }
-                    
-                    // Update restaurant cover image
-                    const coverElement = document.getElementById('restaurantCover');
-                    if (restaurant.cover_image_url) {
-                        console.log('Setting cover URL:', restaurant.cover_image_url);
-                        coverElement.style.backgroundImage = `url(${restaurant.cover_image_url})`;
-                        coverElement.style.backgroundSize = 'cover';
-                        coverElement.style.backgroundPosition = 'center';
-                    } else {
-                        coverElement.style.backgroundImage = '';
-                    }
-                    
                     console.log('Restaurant info updated successfully');
                 }
             } catch (error) {
                 console.error('Error loading restaurant info:', error);
-                // Keep default values if loading fails
             }
         }
 
