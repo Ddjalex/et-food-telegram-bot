@@ -931,7 +931,7 @@
                 if (data.success && data.restaurants.length > 0) {
                     // Filter restaurants that have menu items only
                     const activeRestaurants = data.restaurants.filter(restaurant => 
-                        restaurant.is_active
+                        restaurant.is_active && restaurant.menu_items_count > 0
                     );
                     
                     if (activeRestaurants.length === 0) {
@@ -958,7 +958,7 @@
                                     <div class="time-info">
                                         <span class="time-badge">40 min</span>
                                     </div>
-                                    <div class="avg-price">Avg 334 Br per person</div>
+                                    <div class="avg-price">${restaurant.menu_items_count} items available</div>
                                 </div>
                             </div>
                         </div>
@@ -1323,7 +1323,23 @@
             const restaurantsData = await restaurantsResponse.json();
             
             if (restaurantsData.success && restaurantsData.restaurants.length > 0) {
-                const firstRestaurant = restaurantsData.restaurants[0];
+                // Get first restaurant with menu items
+                const activeRestaurants = restaurantsData.restaurants.filter(restaurant => 
+                    restaurant.is_active && restaurant.menu_items_count > 0
+                );
+                
+                if (activeRestaurants.length === 0) {
+                    console.error('No restaurants with menu items available');
+                    document.querySelector('.app-container').innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <h3>No Restaurants Available</h3>
+                            <p>Please contact support or check back later.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const firstRestaurant = activeRestaurants[0];
                 localStorage.setItem('selectedRestaurant', firstRestaurant.id);
                 
                 await loadCategories();
