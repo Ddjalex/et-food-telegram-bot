@@ -4762,3 +4762,43 @@ def update_driver_search_radius():
     except Exception as e:
         logger.error(f"Error updating driver search radius: {e}")
         return jsonify({'error': 'Failed to update search radius'}), 500
+
+
+@app.route('/api/restaurants/info')
+def api_restaurant_info():
+    """API endpoint for current restaurant information"""
+    try:
+        # Get the main restaurant (restaurant_id=1 in most cases)
+        restaurant = Restaurant.query.filter_by(id=1).first()
+        
+        if not restaurant:
+            # Fallback to first active restaurant
+            restaurant = Restaurant.query.filter_by(is_active=True).first()
+        
+        if restaurant:
+            return jsonify({
+                'success': True,
+                'restaurant': {
+                    'id': restaurant.id,
+                    'name': restaurant.name,
+                    'description': restaurant.description,
+                    'logo_url': restaurant.logo_url,
+                    'cover_image_url': restaurant.cover_image_url,
+                    'address': restaurant.address,
+                    'phone': restaurant.phone,
+                    'estimated_delivery_time': restaurant.estimated_delivery_time
+                }
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'restaurant': {
+                    'name': 'ET-FOOD',
+                    'description': 'Authentic Ethiopian Cuisine',
+                    'logo_url': None,
+                    'cover_image_url': None
+                }
+            })
+    except Exception as e:
+        logger.error(f"Error fetching restaurant info: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -1515,6 +1515,81 @@ def get_admin_menu_items():
         logger.error(f"Error fetching menu items: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/super-admin/restaurants/<int:restaurant_id>/upload-images', methods=['POST'])
+@super_admin_required
+def upload_restaurant_images(restaurant_id):
+    """Upload logo and cover image for a restaurant"""
+    try:
+        restaurant = Restaurant.query.get_or_404(restaurant_id)
+        
+        if 'logo' not in request.files and 'cover_image' not in request.files:
+            return jsonify({'success': False, 'message': 'No files uploaded'}), 400
+        
+        uploaded_files = {}
+        
+        # Handle logo upload
+        if 'logo' in request.files:
+            logo_file = request.files['logo']
+            if logo_file and logo_file.filename:
+                if allowed_file(logo_file.filename):
+                    # Generate unique filename
+                    import time
+                    timestamp = str(int(time.time() * 1000))
+                    filename = f"{timestamp}_{secure_filename(logo_file.filename)}"
+                    
+                    # Save file
+                    upload_folder = os.path.join('static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, filename)
+                    logo_file.save(file_path)
+                    
+                    # Update restaurant
+                    restaurant.logo_url = f'/static/uploads/{filename}'
+                    uploaded_files['logo'] = restaurant.logo_url
+        
+        # Handle cover image upload
+        if 'cover_image' in request.files:
+            cover_file = request.files['cover_image']
+            if cover_file and cover_file.filename:
+                if allowed_file(cover_file.filename):
+                    # Generate unique filename
+                    import time
+                    timestamp = str(int(time.time() * 1000))
+                    filename = f"{timestamp}_{secure_filename(cover_file.filename)}"
+                    
+                    # Save file
+                    upload_folder = os.path.join('static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, filename)
+                    cover_file.save(file_path)
+                    
+                    # Update restaurant
+                    restaurant.cover_image_url = f'/static/uploads/{filename}'
+                    uploaded_files['cover_image'] = restaurant.cover_image_url
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Images uploaded successfully',
+            'uploaded_files': uploaded_files,
+            'restaurant': {
+                'id': restaurant.id,
+                'name': restaurant.name,
+                'logo_url': restaurant.logo_url,
+                'cover_image_url': restaurant.cover_image_url
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error uploading restaurant images: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @app.route('/api/admin/menu/items', methods=['POST'])
 @admin_required
 def create_admin_menu_item():

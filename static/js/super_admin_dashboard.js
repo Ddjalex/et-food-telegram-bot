@@ -469,20 +469,22 @@ function updateRestaurantsTable(restaurants) {
                     </div>
                 </td>
                 <td>
+                    ${restaurant.logo_url ? 
+                        `<img src="${restaurant.logo_url}" alt="Logo" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">` : 
+                        '<span class="text-muted small">No logo</span>'}
+                </td>
+                <td>
+                    ${restaurant.cover_image_url ? 
+                        `<img src="${restaurant.cover_image_url}" alt="Cover" style="width: 60px; height: 40px; border-radius: 8px; object-fit: cover;">` : 
+                        '<span class="text-muted small">No cover</span>'}
+                </td>
+                <td>
                     <div class="text-muted small">
                         ${restaurant.address}
                     </div>
                 </td>
                 <td>
-                    <div class="text-muted small">
-                        ${restaurant.admin_name || 'No admin assigned'}
-                    </div>
-                </td>
-                <td>
                     <div class="fw-bold text-primary">${restaurant.orders_today || 0}</div>
-                </td>
-                <td>
-                    <div class="fw-bold text-success">ETB ${restaurant.revenue_today || 0}</div>
                 </td>
                 <td>
                     ${statusBadge}
@@ -491,6 +493,9 @@ function updateRestaurantsTable(restaurants) {
                     <div class="btn-group btn-group-sm">
                         <button class="btn btn-outline-primary" onclick="viewRestaurantDetails(${restaurant.id})">
                             <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-success" onclick="uploadRestaurantImages(${restaurant.id}, '${restaurant.name}')">
+                            <i class="fas fa-images"></i>
                         </button>
                         <button class="btn btn-outline-warning" onclick="editRestaurant(${restaurant.id})">
                             <i class="fas fa-edit"></i>
@@ -527,6 +532,124 @@ function deleteRestaurant(restaurantId, restaurantName) {
             showAlert('error', 'Failed to delete restaurant');
         });
     }
+}
+
+// Restaurant image upload function
+function uploadRestaurantImages(restaurantId, restaurantName) {
+    // Create modal dynamically
+    const modalHTML = `
+        <div class="modal fade" id="uploadImagesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-images"></i> Upload Images for ${restaurantName}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="uploadImagesForm" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Restaurant Logo</label>
+                                        <input type="file" class="form-control" name="logo" accept="image/*" onchange="previewUploadImage(this, 'logoUploadPreview')">
+                                        <div id="logoUploadPreview" class="mt-2" style="display: none;">
+                                            <img id="logoUploadImage" src="" alt="Logo Preview" style="max-width: 100px; max-height: 100px; border-radius: 8px;">
+                                        </div>
+                                        <small class="text-muted">Recommended: Square image, min 200x200px</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Cover Image</label>
+                                        <input type="file" class="form-control" name="cover_image" accept="image/*" onchange="previewUploadImage(this, 'coverUploadPreview')">
+                                        <div id="coverUploadPreview" class="mt-2" style="display: none;">
+                                            <img id="coverUploadImage" src="" alt="Cover Preview" style="max-width: 150px; max-height: 100px; border-radius: 8px;">
+                                        </div>
+                                        <small class="text-muted">Recommended: 16:9 ratio, min 800x450px</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-gradient" onclick="submitImageUpload(${restaurantId})">
+                            <i class="fas fa-upload"></i> Upload Images
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('uploadImagesModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('uploadImagesModal'));
+    modal.show();
+}
+
+function previewUploadImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const imageElement = preview.querySelector('img');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imageElement.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function submitImageUpload(restaurantId) {
+    const form = document.getElementById('uploadImagesForm');
+    const formData = new FormData(form);
+    
+    // Show loading state
+    const uploadBtn = document.querySelector('#uploadImagesModal .btn-gradient');
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    uploadBtn.disabled = true;
+    
+    fetch(`/api/super-admin/restaurants/${restaurantId}/upload-images`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            loadRestaurants(); // Reload the table
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadImagesModal'));
+            modal.hide();
+        } else {
+            showAlert('error', data.message || 'Failed to upload images');
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading images:', error);
+        showAlert('error', 'Failed to upload images');
+    })
+    .finally(() => {
+        // Restore button state
+        uploadBtn.innerHTML = originalText;
+        uploadBtn.disabled = false;
+    });
 }
 
 function viewRestaurantDetails(restaurantId) {
