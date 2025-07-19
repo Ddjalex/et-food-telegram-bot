@@ -512,7 +512,7 @@ function updateRestaurantsTable(restaurants) {
 
 function deleteRestaurant(restaurantId, restaurantName) {
     if (confirm(`Are you sure you want to delete "${restaurantName}"? This action cannot be undone and will remove all associated menu items and categories.`)) {
-        fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+        fetch(`/api/admin/restaurants/${restaurantId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
