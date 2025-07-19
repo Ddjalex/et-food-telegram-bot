@@ -1374,8 +1374,12 @@
             try {
                 // Get selected restaurant from localStorage or use default
                 const selectedRestaurant = restaurantId || localStorage.getItem('selectedRestaurant') || 2;
+                console.log('Loading restaurant info for ID:', selectedRestaurant);
+                
                 const response = await fetch(`/api/restaurants/info?restaurant_id=${selectedRestaurant}`);
                 const data = await response.json();
+                
+                console.log('Restaurant data received:', data);
                 
                 if (data.success && data.restaurant) {
                     const restaurant = data.restaurant;
@@ -1387,9 +1391,11 @@
                     // Update restaurant logo
                     const logoElement = document.getElementById('restaurantLogo');
                     if (restaurant.logo_url) {
+                        console.log('Setting logo URL:', restaurant.logo_url);
                         logoElement.style.backgroundImage = `url(${restaurant.logo_url})`;
                         logoElement.style.backgroundSize = 'cover';
                         logoElement.style.backgroundPosition = 'center';
+                        logoElement.style.borderRadius = '50%';
                         logoElement.textContent = '';
                     } else {
                         logoElement.style.backgroundImage = '';
@@ -1399,12 +1405,15 @@
                     // Update restaurant cover image
                     const coverElement = document.getElementById('restaurantCover');
                     if (restaurant.cover_image_url) {
+                        console.log('Setting cover URL:', restaurant.cover_image_url);
                         coverElement.style.backgroundImage = `url(${restaurant.cover_image_url})`;
                         coverElement.style.backgroundSize = 'cover';
                         coverElement.style.backgroundPosition = 'center';
                     } else {
                         coverElement.style.backgroundImage = '';
                     }
+                    
+                    console.log('Restaurant info updated successfully');
                 }
             } catch (error) {
                 console.error('Error loading restaurant info:', error);
