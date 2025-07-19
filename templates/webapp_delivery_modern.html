@@ -1125,8 +1125,9 @@
             // Update restaurant header info when switching restaurants
             loadRestaurantInfo(restaurantId);
             
-            // Load menu items for selected restaurant
-            loadMenuForRestaurant(restaurantId);
+            // Load menu items for selected restaurant - we'll reload categories and offers for this restaurant
+            loadCategories();
+            loadSpecialOffers();
         }
 
         // Navigation functions
@@ -1371,11 +1372,17 @@
         // Load restaurant information with logo and cover image
         async function loadRestaurantInfo(restaurantId = null) {
             try {
-                // Get selected restaurant from localStorage or use default
-                const selectedRestaurant = restaurantId || localStorage.getItem('selectedRestaurant') || 2;
-                console.log('Loading restaurant info for ID:', selectedRestaurant);
+                // Get selected restaurant from localStorage or get first available restaurant
+                let selectedRestaurant = restaurantId || localStorage.getItem('selectedRestaurant');
                 
-                const response = await fetch(`/api/restaurants/info?restaurant_id=${selectedRestaurant}`);
+                // If no restaurant selected, get first available restaurant
+                let apiUrl = '/api/restaurants/info';
+                if (selectedRestaurant) {
+                    apiUrl += `?restaurant_id=${selectedRestaurant}`;
+                }
+                
+                console.log('Loading restaurant info for ID:', selectedRestaurant || 'first available');
+                const response = await fetch(apiUrl);
                 const data = await response.json();
                 
                 console.log('Restaurant data received:', data);
@@ -1427,16 +1434,31 @@
             // Load restaurant info and images
             await loadRestaurantInfo();
             
-            // Auto-select the first restaurant to skip restaurant selection
-            const defaultRestaurantId = 2;
-            localStorage.setItem('selectedRestaurant', defaultRestaurantId);
+            // Get first available restaurant and set as default
+            const restaurantsResponse = await fetch('/api/restaurants/super-admin');
+            const restaurantsData = await restaurantsResponse.json();
             
-            await loadCategories();
-            await loadSpecialOffers();
-            await loadRestaurants();
-            
-            // Auto-focus on the selected restaurant
-            showRestaurantMenu(defaultRestaurantId);
+            if (restaurantsData.success && restaurantsData.restaurants.length > 0) {
+                const firstRestaurant = restaurantsData.restaurants[0];
+                localStorage.setItem('selectedRestaurant', firstRestaurant.id);
+                
+                await loadCategories();
+                await loadSpecialOffers();
+                await loadRestaurants();
+                
+                // Auto-focus on the selected restaurant
+                showRestaurantMenu(firstRestaurant.id);
+            } else {
+                // Handle case where no restaurants exist
+                console.error('No restaurants available');
+                document.querySelector('.app-container').innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h3>No Restaurants Available</h3>
+                        <p>Please contact support or check back later.</p>
+                    </div>
+                `;
+                return;
+            }
             
             console.log('App initialized. Functions available:', {
                 showHome: typeof showHome,

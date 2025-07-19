@@ -814,8 +814,15 @@ def api_driver_registration_simple():
 def get_menu():
     """Get menu items organized by categories"""
     try:
-        # Get restaurant ID from session or default to 1
-        restaurant_id = session.get('selected_restaurant', 1)
+        # Get restaurant ID from query parameter or session
+        restaurant_id = request.args.get('restaurant_id', type=int)
+        if restaurant_id is None:
+            restaurant_id = session.get('selected_restaurant')
+        
+        # If still no restaurant, get first available active restaurant
+        if restaurant_id is None:
+            first_restaurant = Restaurant.query.filter_by(is_active=True).first()
+            restaurant_id = first_restaurant.id if first_restaurant else 1
         
         # Get all available menu items for the restaurant
         menu_items = MenuItem.query.filter_by(
@@ -4768,10 +4775,18 @@ def update_driver_search_radius():
 def api_restaurant_info():
     """API endpoint for current selected restaurant info"""
     try:
-        # Get restaurant ID from query parameter (default to restaurant 2 - X Factory)
-        restaurant_id = request.args.get('restaurant_id', 2, type=int)
+        # Get restaurant ID from query parameter
+        restaurant_id = request.args.get('restaurant_id', type=int)
         
-        restaurant = Restaurant.query.filter_by(id=restaurant_id).first()
+        # If no specific restaurant requested, get the first available active restaurant
+        if restaurant_id is None:
+            restaurant = Restaurant.query.filter_by(is_active=True).first()
+        else:
+            restaurant = Restaurant.query.filter_by(id=restaurant_id).first()
+        
+        # If requested restaurant doesn't exist, get first available restaurant
+        if not restaurant:
+            restaurant = Restaurant.query.filter_by(is_active=True).first()
         
         if restaurant:
             return jsonify({
@@ -4792,8 +4807,10 @@ def api_restaurant_info():
                 }
             })
         else:
+            # No restaurants available at all
             return jsonify({
-                'success': True,
+                'success': False,
+                'error': 'No restaurants available',
                 'restaurant': {
                     'name': 'Restaurant',
                     'description': 'Delicious Food',
