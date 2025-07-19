@@ -1368,26 +1368,26 @@
                 const response = await fetch('/api/restaurants/info');
                 const data = await response.json();
                 
-                if (data.success && data.restaurant) {
-                    const restaurant = data.restaurant;
+                if (data.success && data.company) {
+                    const company = data.company;
                     
-                    // Update restaurant name and description
-                    document.getElementById('restaurantName').textContent = restaurant.name || 'ET-FOOD';
-                    document.getElementById('restaurantDescription').textContent = restaurant.description || 'Authentic Ethiopian Cuisine';
+                    // Update delivery company branding (not restaurant name)
+                    document.getElementById('restaurantName').textContent = 'ET-FOOD';
+                    document.getElementById('restaurantDescription').textContent = 'Food Delivery Service';
                     
-                    // Update restaurant logo
+                    // Update delivery company logo (ET-FOOD logo, not restaurant logo)
                     const logoElement = document.getElementById('restaurantLogo');
-                    if (restaurant.logo_url) {
-                        logoElement.style.backgroundImage = `url(${restaurant.logo_url})`;
+                    if (company.logo_url) {
+                        logoElement.style.backgroundImage = `url(${company.logo_url})`;
                         logoElement.textContent = '';
                     } else {
-                        logoElement.textContent = restaurant.name ? restaurant.name.charAt(0) : 'ET';
+                        logoElement.textContent = 'ET';
                     }
                     
-                    // Update restaurant cover image
+                    // Update delivery company cover image
                     const coverElement = document.getElementById('restaurantCover');
-                    if (restaurant.cover_image_url) {
-                        coverElement.style.backgroundImage = `url(${restaurant.cover_image_url})`;
+                    if (company.cover_image_url) {
+                        coverElement.style.backgroundImage = `url(${company.cover_image_url})`;
                     }
                 }
             } catch (error) {
