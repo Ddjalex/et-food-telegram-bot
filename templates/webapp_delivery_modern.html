@@ -1096,7 +1096,31 @@
         let userLocationData = null;
         let liveLocationData = null;
 
-        // Load user location from Telegram WebApp
+        // Set default location without requesting permission
+        function setDefaultLocation() {
+            try {
+                const locationElement = document.getElementById('userLocation');
+                if (locationElement) {
+                    // Check if user has previously shared location
+                    const savedLocation = localStorage.getItem('userLocation');
+                    if (savedLocation) {
+                        const location = JSON.parse(savedLocation);
+                        locationElement.textContent = location.address || 'Addis Ababa, Ethiopia';
+                        userLocationData = location;
+                    } else {
+                        locationElement.textContent = 'Addis Ababa, Ethiopia';
+                    }
+                }
+            } catch (error) {
+                console.error('Error setting default location:', error);
+                const locationElement = document.getElementById('userLocation');
+                if (locationElement) {
+                    locationElement.textContent = 'Addis Ababa, Ethiopia';
+                }
+            }
+        }
+
+        // Load user location from Telegram WebApp (only called manually)
         function loadUserLocation() {
             try {
                 const tg = window.Telegram.WebApp;
@@ -2187,7 +2211,8 @@
         // Initialize app
         async function initApp() {
             console.log('Initializing app...');
-            loadUserLocation();
+            // Don't automatically request location - only when user explicitly shares
+            setDefaultLocation();
             
             // Load restaurant info and images
             await loadRestaurantInfo();
