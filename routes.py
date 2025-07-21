@@ -135,8 +135,8 @@ def superadmin():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    """Restaurant Admin login page and dashboard"""
-    # If already logged in, show appropriate dashboard based on role
+    """Generic admin login - redirects to restaurant-specific admin"""
+    # If already logged in, redirect to restaurant-specific admin page
     if 'admin_id' in session:
         admin_user = AdminUser.query.get(session['admin_id'])
         if admin_user:
@@ -146,8 +146,9 @@ def admin():
             elif admin_user.role == 'kitchen_staff':
                 return redirect('/kitchen')
             else:
-                # Show restaurant admin dashboard
-                return render_template('restaurant_admin_dashboard.html', admin=admin_user)
+                # Redirect to restaurant-specific admin page
+                restaurant_id = admin_user.restaurant_id or 1
+                return redirect(f'/admin/restaurant/{restaurant_id}')
     
     if request.method == 'POST':
         username = request.form.get('username')
@@ -167,12 +168,40 @@ def admin():
             elif admin.role == 'kitchen_staff':
                 return redirect('/kitchen')
             else:
-                # Show restaurant admin dashboard
-                return render_template('restaurant_admin_dashboard.html', admin=admin)
+                # Redirect to restaurant-specific admin page
+                restaurant_id = admin.restaurant_id or 1
+                return redirect(f'/admin/restaurant/{restaurant_id}')
         else:
             return render_template('admin_login.html', error='Invalid credentials')
     
     return render_template('admin_login.html')
+
+@app.route('/admin/restaurant/<int:restaurant_id>', methods=['GET', 'POST'])
+def restaurant_admin(restaurant_id):
+    """Restaurant-specific admin dashboard"""
+    # Check if admin is logged in
+    if 'admin_id' not in session:
+        return redirect('/admin')
+    
+    admin_user = AdminUser.query.get(session['admin_id'])
+    if not admin_user:
+        session.clear()
+        return redirect('/admin')
+    
+    # Check if admin has access to this restaurant
+    if admin_user.role != 'super_admin' and admin_user.restaurant_id != restaurant_id:
+        return redirect(f'/admin/restaurant/{admin_user.restaurant_id}')
+    
+    # Verify restaurant exists
+    restaurant = Restaurant.query.filter_by(id=restaurant_id, is_active=True).first()
+    if not restaurant:
+        return redirect('/admin')
+    
+    # Update session with current restaurant
+    session['restaurant_id'] = restaurant_id
+    
+    # Show restaurant admin dashboard
+    return render_template('restaurant_admin_dashboard.html', admin=admin_user, restaurant=restaurant)
 
 
 
