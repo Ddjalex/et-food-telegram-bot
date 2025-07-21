@@ -407,21 +407,20 @@
         }
         
         // Confirm deposit requirement
-        document.getElementById('confirmDepositBtn').addEventListener('click', async function() {
+        document.getElementById('confirmDepositBtn').addEventListener('click', function() {
             if (!currentOrderId) return;
             
-            try {
-                const response = await fetch('/api/kitchen/food-available', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        order_id: currentOrderId
-                    })
-                });
-                
-                const data = await response.json();
+            fetch('/api/kitchen/food-available', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    order_id: currentOrderId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
                 
                 if (data.success) {
                     showSuccess('Food marked as available! Customer will be notified about deposit requirement.');
@@ -437,40 +436,40 @@
                 } else {
                     showError(data.error || 'Failed to mark food as available');
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error marking food available:', error);
                 showError('Failed to mark food as available. Please try again.');
-            }
+            });
         });
         
-        async function markOrderUnavailable(orderId) {
+        function markOrderUnavailable(orderId) {
             const reason = prompt('Please provide a reason why this order is not available:');
             if (!reason) return;
             
-            try {
-                const response = await fetch('/api/kitchen/order-unavailable', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        order_id: orderId,
-                        reason: reason
-                    })
-                });
-                
-                const data = await response.json();
-                
+            fetch('/api/kitchen/order-unavailable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
                     showSuccess('Order marked as unavailable. Customer has been notified.');
                     loadPendingOrders();
                 } else {
                     showError(data.error || 'Failed to mark order as unavailable');
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error marking order unavailable:', error);
                 showError('Failed to mark order as unavailable. Please try again.');
-            }
+            });
         }
         
         function calculateTimeAgo(createdAt) {
