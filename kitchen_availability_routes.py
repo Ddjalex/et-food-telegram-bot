@@ -325,6 +325,231 @@ def get_category_items(category_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Food Product Management API Endpoints
+@kitchen_bp.route('/api/kitchen/products', methods=['POST'])
+def add_product():
+    """Add a new product to the menu"""
+    try:
+        # Get kitchen staff info from session
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin = AdminUser.query.get(admin_id)
+        if not admin or not admin.restaurant_id:
+            return jsonify({'error': 'Admin not found or not associated with restaurant'}), 404
+        
+        # Handle both form data and JSON
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            name = request.form.get('name')
+            category = request.form.get('category')
+            description = request.form.get('description', '')
+            price = request.form.get('price')
+            image_file = request.files.get('image')
+        else:
+            data = request.get_json()
+            name = data.get('name')
+            category = data.get('category')
+            description = data.get('description', '')
+            price = data.get('price')
+            image_file = None
+        
+        if not name or not category or not price:
+            return jsonify({'error': 'Name, category, and price are required'}), 400
+        
+        # Handle image upload
+        image_url = None
+        if image_file and image_file.filename:
+            import os
+            import uuid
+            from werkzeug.utils import secure_filename
+            
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            file_extension = os.path.splitext(secure_filename(image_file.filename))[1]
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            filepath = os.path.join(upload_dir, unique_filename)
+            
+            # Save file
+            image_file.save(filepath)
+            image_url = f"/static/uploads/{unique_filename}"
+        
+        # Create new menu item
+        new_item = MenuItem(
+            name=name,
+            category=category,
+            description=description,
+            price=float(price),
+            image_url=image_url,
+            restaurant_id=admin.restaurant_id,
+            available=True
+        )
+        
+        db.session.add(new_item)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product added successfully',
+            'product_id': new_item.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@kitchen_bp.route('/api/kitchen/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Update an existing product"""
+    try:
+        # Get kitchen staff info from session
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin = AdminUser.query.get(admin_id)
+        if not admin or not admin.restaurant_id:
+            return jsonify({'error': 'Admin not found or not associated with restaurant'}), 404
+        
+        # Find the product
+        product = MenuItem.query.filter_by(id=product_id, restaurant_id=admin.restaurant_id).first()
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Handle both form data and JSON
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            name = request.form.get('name')
+            category = request.form.get('category')
+            description = request.form.get('description', '')
+            price = request.form.get('price')
+            image_file = request.files.get('image')
+        else:
+            data = request.get_json()
+            name = data.get('name')
+            category = data.get('category')
+            description = data.get('description', '')
+            price = data.get('price')
+            image_file = None
+        
+        # Update product fields
+        if name:
+            product.name = name
+        if category:
+            product.category = category
+        if description is not None:
+            product.description = description
+        if price:
+            product.price = float(price)
+        
+        # Handle image upload
+        if image_file and image_file.filename:
+            import os
+            import uuid
+            from werkzeug.utils import secure_filename
+            
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            file_extension = os.path.splitext(secure_filename(image_file.filename))[1]
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            filepath = os.path.join(upload_dir, unique_filename)
+            
+            # Save file
+            image_file.save(filepath)
+            product.image_url = f"/static/uploads/{unique_filename}"
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@kitchen_bp.route('/api/kitchen/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete a product from the menu"""
+    try:
+        # Get kitchen staff info from session
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin = AdminUser.query.get(admin_id)
+        if not admin or not admin.restaurant_id:
+            return jsonify({'error': 'Admin not found or not associated with restaurant'}), 404
+        
+        # Find the product
+        product = MenuItem.query.filter_by(id=product_id, restaurant_id=admin.restaurant_id).first()
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Check if product is used in any orders (optional safety check)
+        from models import Order
+        orders_with_product = Order.query.filter(Order.items.contains(f'"id": {product_id}')).first()
+        if orders_with_product:
+            return jsonify({'error': 'Cannot delete product that has been ordered'}), 400
+        
+        # Delete the product
+        db.session.delete(product)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@kitchen_bp.route('/api/kitchen/products/<int:product_id>/price', methods=['PUT'])
+def update_product_price(product_id):
+    """Update the price of a specific product"""
+    try:
+        # Get kitchen staff info from session
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin = AdminUser.query.get(admin_id)
+        if not admin or not admin.restaurant_id:
+            return jsonify({'error': 'Admin not found or not associated with restaurant'}), 404
+        
+        # Find the product
+        product = MenuItem.query.filter_by(id=product_id, restaurant_id=admin.restaurant_id).first()
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        data = request.get_json()
+        new_price = data.get('price')
+        
+        if new_price is None or new_price < 0:
+            return jsonify({'error': 'Valid price is required'}), 400
+        
+        old_price = product.price
+        product.price = float(new_price)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Price updated from {old_price} ETB to {new_price} ETB',
+            'old_price': old_price,
+            'new_price': new_price
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == "__main__":
     # Test the routes
     print("Kitchen availability routes created successfully!")

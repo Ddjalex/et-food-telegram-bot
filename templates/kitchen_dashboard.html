@@ -562,6 +562,317 @@
             border-color: #3b82f6;
         }
         
+        /* Food Product Management Styles */
+        .product-management-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .product-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+        }
+        
+        .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        
+        .product-info {
+            flex: 1;
+        }
+        
+        .product-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 0.25rem;
+        }
+        
+        .product-category {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+        
+        .product-description {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .product-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .product-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .btn-edit {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+        
+        .btn-delete {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .btn-price {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .product-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .add-product-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .add-product-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            color: #f8fafc;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #f8fafc;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #f8fafc;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.05);
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            color: #8b5cf6;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-text {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .btn-modal {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-save {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+        }
+        
+        .btn-modal:hover {
+            transform: translateY(-1px);
+        }
+        
+        .price-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .currency-label {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+            padding: 0.75rem 1rem;
+            border-radius: 8px 0 0 8px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            font-weight: 600;
+        }
+        
+        .price-input {
+            border-radius: 0 8px 8px 0 !important;
+        }
+        
         .action-btn {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -747,6 +1058,38 @@
             </div>
         </div>
         
+        <!-- Food Product Management Section -->
+        <div class="product-management-section">
+            <div class="section-header">
+                <h2>
+                    <i class="fas fa-utensils me-2"></i>
+                    Food Product Management
+                </h2>
+                <button class="refresh-btn" onclick="loadProducts()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refresh
+                </button>
+            </div>
+            
+            <button class="add-product-btn" onclick="showAddProductModal()">
+                <i class="fas fa-plus me-1"></i>
+                Add New Product
+            </button>
+            
+            <!-- Category Filter for Products -->
+            <div class="category-filter" id="productCategoryFilter">
+                <button class="filter-btn active" data-category="all" onclick="filterProductsByCategory('all')">All Categories</button>
+            </div>
+            
+            <!-- Products Container -->
+            <div id="productsContainer">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading products...</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- Orders Section -->
         <div class="orders-section">
             <div class="section-header">
@@ -769,12 +1112,114 @@
         </div>
     </div>
     
+    <!-- Product Management Modals -->
+    <!-- Add/Edit Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="productModalTitle">Add New Product</h2>
+                <button class="close-btn" onclick="closeProductModal()">&times;</button>
+            </div>
+            
+            <form id="productForm" enctype="multipart/form-data">
+                <input type="hidden" id="productId" name="productId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="productName">Product Name *</label>
+                    <input type="text" id="productName" name="name" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="productCategory">Category *</label>
+                    <select id="productCategory" name="category" class="form-select" required>
+                        <option value="">Select Category</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="productDescription">Description</label>
+                    <textarea id="productDescription" name="description" class="form-textarea" placeholder="Enter product description..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="productPrice">Price *</label>
+                    <div class="price-input-group">
+                        <span class="currency-label">ETB</span>
+                        <input type="number" id="productPrice" name="price" class="form-input price-input" step="0.01" min="0" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Product Image</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">
+                            <p>Drag and drop an image here, or click to select</p>
+                            <small>Supported formats: JPG, PNG, WebP (Max 5MB)</small>
+                        </div>
+                        <input type="file" id="productImage" name="image" accept="image/*" style="display: none;">
+                    </div>
+                    <img id="imagePreview" class="image-preview" style="display: none;">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closeProductModal()">Cancel</button>
+                    <button type="submit" class="btn-modal btn-save">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Price Update Modal -->
+    <div id="priceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Update Price</h2>
+                <button class="close-btn" onclick="closePriceModal()">&times;</button>
+            </div>
+            
+            <form id="priceForm">
+                <input type="hidden" id="priceProductId" name="productId">
+                
+                <div class="form-group">
+                    <label class="form-label">Product Name</label>
+                    <input type="text" id="priceProductName" class="form-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="currentPrice">Current Price</label>
+                    <div class="price-input-group">
+                        <span class="currency-label">ETB</span>
+                        <input type="number" id="currentPrice" class="form-input price-input" readonly>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="newPrice">New Price *</label>
+                    <div class="price-input-group">
+                        <span class="currency-label">ETB</span>
+                        <input type="number" id="newPrice" name="price" class="form-input price-input" step="0.01" min="0" required>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-modal btn-cancel" onclick="closePriceModal()">Cancel</button>
+                    <button type="submit" class="btn-modal btn-save">Update Price</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Global variables
         let allMenuItems = [];
+        let allProducts = [];
         let currentFilter = 'all';
         let currentCategory = 'all';
+        let currentProductCategory = 'all';
         
         // Load dashboard data on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -782,11 +1227,15 @@
             loadStatistics();
             loadMenuItems();
             loadCategories();
+            loadProducts();
+            loadProductCategories();
+            setupFileUpload();
             
             // Auto-refresh every 30 seconds
             setInterval(loadOrders, 30000);
             setInterval(loadStatistics, 60000);
             setInterval(loadMenuItems, 60000);
+            setInterval(loadProducts, 60000);
         });
         
         async function loadOrders() {
@@ -1307,6 +1756,335 @@
                 alert('Error updating availability');
             }
         }
+        
+        // Food Product Management Functions
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/kitchen/menu-items');
+                const data = await response.json();
+                
+                if (data.items) {
+                    allProducts = data.items;
+                    displayProducts();
+                    updateProductCategories();
+                } else {
+                    throw new Error('Failed to load products');
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+                document.getElementById('productsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>Error Loading Products</h3>
+                        <p>Unable to load products. Please check your connection and try again.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayProducts() {
+            const container = document.getElementById('productsContainer');
+            
+            let filteredProducts = allProducts;
+            
+            // Filter by category
+            if (currentProductCategory !== 'all') {
+                filteredProducts = filteredProducts.filter(product => product.category === currentProductCategory);
+            }
+            
+            if (filteredProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <h3>No Products Found</h3>
+                        <p>No products match the current filter criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            filteredProducts.forEach(product => {
+                const productCard = createProductCard(product);
+                container.appendChild(productCard);
+            });
+        }
+        
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            
+            card.innerHTML = `
+                <img src="${product.image_url || '/static/placeholder-food.jpg'}" 
+                     alt="${product.name}" 
+                     class="product-image" 
+                     onerror="this.src='/static/placeholder-food.jpg'">
+                
+                <div class="product-info">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-category">
+                        <i class="fas fa-tag me-1"></i>${product.category}
+                    </div>
+                    <div class="product-description">${product.description || 'No description available'}</div>
+                    <div class="product-price">${product.price} ETB</div>
+                </div>
+                
+                <div class="product-actions">
+                    <button class="product-btn btn-edit" onclick="editProduct(${product.id})">
+                        <i class="fas fa-edit"></i>
+                        Edit
+                    </button>
+                    <button class="product-btn btn-price" onclick="updatePrice(${product.id})">
+                        <i class="fas fa-dollar-sign"></i>
+                        Price
+                    </button>
+                    <button class="product-btn btn-delete" onclick="deleteProduct(${product.id})">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        function updateProductCategories() {
+            const categories = [...new Set(allProducts.map(product => product.category))];
+            const categoryFilter = document.getElementById('productCategoryFilter');
+            
+            categoryFilter.innerHTML = `
+                <button class="filter-btn active" data-category="all" onclick="filterProductsByCategory('all')">All Categories</button>
+            `;
+            
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'filter-btn';
+                button.setAttribute('data-category', category);
+                button.onclick = () => filterProductsByCategory(category);
+                button.innerHTML = `<i class="fas fa-tag me-1"></i>${category}`;
+                categoryFilter.appendChild(button);
+            });
+        }
+        
+        function filterProductsByCategory(category) {
+            currentProductCategory = category;
+            
+            // Update filter buttons
+            document.querySelectorAll('#productCategoryFilter .filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`#productCategoryFilter [data-category="${category}"]`).classList.add('active');
+            
+            displayProducts();
+        }
+        
+        function showAddProductModal() {
+            document.getElementById('productModalTitle').textContent = 'Add New Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            loadProductCategories();
+            document.getElementById('productModal').classList.add('show');
+        }
+        
+        function editProduct(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) return;
+            
+            document.getElementById('productModalTitle').textContent = 'Edit Product';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productDescription').value = product.description || '';
+            document.getElementById('productPrice').value = product.price;
+            
+            // Load categories and set current
+            loadProductCategories().then(() => {
+                document.getElementById('productCategory').value = product.category;
+            });
+            
+            // Show image preview if available
+            if (product.image_url) {
+                document.getElementById('imagePreview').src = product.image_url;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+            
+            document.getElementById('productModal').classList.add('show');
+        }
+        
+        function updatePrice(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) return;
+            
+            document.getElementById('priceProductId').value = product.id;
+            document.getElementById('priceProductName').value = product.name;
+            document.getElementById('currentPrice').value = product.price;
+            document.getElementById('newPrice').value = product.price;
+            
+            document.getElementById('priceModal').classList.add('show');
+        }
+        
+        async function deleteProduct(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) return;
+            
+            if (!confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/kitchen/products/${productId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Product deleted successfully');
+                    loadProducts();
+                } else {
+                    alert('Failed to delete product: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert('Error deleting product');
+            }
+        }
+        
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('show');
+        }
+        
+        function closePriceModal() {
+            document.getElementById('priceModal').classList.remove('show');
+        }
+        
+        async function loadProductCategories() {
+            try {
+                const response = await fetch('/api/kitchen/categories');
+                const data = await response.json();
+                
+                const categorySelect = document.getElementById('productCategory');
+                categorySelect.innerHTML = '<option value="">Select Category</option>';
+                
+                if (data.categories) {
+                    data.categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.name;
+                        option.textContent = category.name;
+                        categorySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+        
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('fileUploadArea');
+            const fileInput = document.getElementById('productImage');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    previewImage(files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    previewImage(e.target.files[0]);
+                }
+            });
+        }
+        
+        function previewImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imagePreview = document.getElementById('imagePreview');
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Form submission handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('productForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const productId = document.getElementById('productId').value;
+                
+                try {
+                    const url = productId ? `/api/kitchen/products/${productId}` : '/api/kitchen/products';
+                    const method = productId ? 'PUT' : 'POST';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(productId ? 'Product updated successfully' : 'Product added successfully');
+                        closeProductModal();
+                        loadProducts();
+                    } else {
+                        alert('Failed to save product: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error saving product:', error);
+                    alert('Error saving product');
+                }
+            });
+            
+            document.getElementById('priceForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const productId = document.getElementById('priceProductId').value;
+                const newPrice = document.getElementById('newPrice').value;
+                
+                try {
+                    const response = await fetch(`/api/kitchen/products/${productId}/price`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ price: parseFloat(newPrice) })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Price updated successfully');
+                        closePriceModal();
+                        loadProducts();
+                    } else {
+                        alert('Failed to update price: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error updating price:', error);
+                    alert('Error updating price');
+                }
+            });
+        });
                 // Load menu items count
                 const menuResponse = await fetch('/api/kitchen/menu-items');
                 const menuData = await menuResponse.json();
