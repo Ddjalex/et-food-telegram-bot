@@ -1921,6 +1921,38 @@ def create_restaurant():
         )
         
         db.session.add(restaurant)
+        db.session.flush()  # Get restaurant ID without committing
+        
+        # Auto-create restaurant admin and kitchen staff
+        restaurant_name_clean = data['name'].replace(' ', '').replace('|', '').lower()
+        
+        # Create restaurant admin
+        admin_username = f"{restaurant_name_clean}_admin"
+        admin = AdminUser(
+            username=admin_username,
+            full_name=f"{data['name']} Administrator",
+            phone=data.get('admin_phone', data['phone']),
+            role='admin',
+            password_hash=generate_password_hash(f"{restaurant_name_clean}123"),
+            restaurant_id=restaurant.id,
+            is_active=True
+        )
+        db.session.add(admin)
+        
+        # Create kitchen staff for the restaurant
+        kitchen_username = f"{restaurant_name_clean}_kitchen"
+        kitchen_staff = AdminUser(
+            username=kitchen_username,
+            full_name=f"{data['name']} Kitchen Team",
+            phone=data.get('kitchen_phone', data['phone']),
+            role='kitchen_staff',
+            password_hash=generate_password_hash(f"{restaurant_name_clean}kitchen123"),
+            restaurant_id=restaurant.id,
+            is_active=True,
+            telegram_user_id=None  # Will be set when they start the bot
+        )
+        db.session.add(kitchen_staff)
+        
         db.session.commit()
         
         # Log activity
