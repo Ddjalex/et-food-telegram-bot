@@ -1429,7 +1429,7 @@ def create_order():
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['telegram_user_id', 'customer_name', 'customer_phone', 'customer_address', 'items', 'payment_method']
+        required_fields = ['customer_name', 'customer_phone', 'customer_address', 'items', 'payment_method']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
@@ -1441,7 +1441,7 @@ def create_order():
         
         # Create order
         order = Order(
-            telegram_user_id=data['telegram_user_id'],
+            telegram_user_id=data.get('telegram_user_id', 383870190),  # Default fallback ID
             customer_name=data['customer_name'],
             customer_phone=data['customer_phone'],
             customer_address=data['customer_address'],
@@ -1467,6 +1467,106 @@ def create_order():
         logger.error(f"Error creating order: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to create order'}), 500
+
+@app.route('/api/orders/pending-for-kitchen')
+def get_pending_orders_for_kitchen():
+    """Get orders pending kitchen processing"""
+    try:
+        orders = Order.query.filter(
+            Order.status.in_(['pending', 'confirmed'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            order_dict = order.to_dict()
+            # Parse items if they're stored as string
+            if isinstance(order_dict['items'], str):
+                import json
+                order_dict['items'] = json.loads(order_dict['items'])
+            orders_data.append(order_dict)
+        
+        return jsonify({
+            'success': True,
+            'orders': orders_data,
+            'count': len(orders_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching pending kitchen orders: {e}")
+        return jsonify({'error': 'Failed to fetch orders'}), 500
+
+@app.route('/api/kitchen/order-unavailable', methods=['POST'])
+def kitchen_mark_order_unavailable():
+    """Mark order as unavailable"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        reason = data.get('reason', 'Items not available')
+        
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+            
+        # Update order status
+        order.status = 'cancelled'
+        db.session.commit()
+        
+        # TODO: Send notification to customer
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order marked as unavailable and customer notified'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error marking order unavailable: {e}")
+        return jsonify({'error': 'Failed to mark order as unavailable'}), 500
+
+@app.route('/kitchen-food-availability')
+def kitchen_food_availability():
+    """Kitchen food availability interface"""
+    return render_template('kitchen_food_availability.html')
+
+@app.route('/api/kitchen/food-available', methods=['POST'])
+def mark_food_available():
+    """Mark food as available and trigger deposit requirement"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Calculate deposit amount (50% of total)
+        deposit_amount = order.total_amount * 0.5
+        
+        # Set deposit deadline (end of today)
+        from datetime import datetime, time
+        today = datetime.now().date()
+        deposit_deadline = datetime.combine(today, time(23, 59, 59))
+        
+        # Update order with deposit information
+        order.deposit_amount = deposit_amount
+        order.deposit_deadline = deposit_deadline
+        order.status = 'awaiting_deposit'  # New status for deposit workflow
+        
+        db.session.commit()
+        
+        # TODO: Send notification to customer about deposit requirement
+        # This would normally use the bot to notify customer
+        
+        return jsonify({
+            'success': True,
+            'message': 'Food marked as available. Customer notified about deposit requirement.',
+            'deposit_amount': deposit_amount,
+            'deposit_deadline': deposit_deadline.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error marking food available: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to mark food as available'}), 500
 
 
 

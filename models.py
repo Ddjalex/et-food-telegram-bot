@@ -90,6 +90,14 @@ class Order(db.Model):
     location_lng = db.Column(db.Float)
     delivery_notes = db.Column(db.Text)
     estimated_delivery_time = db.Column(db.DateTime)
+    
+    # Payment workflow fields
+    deposit_amount = db.Column(db.Float)  # Required deposit amount (50% of total)
+    deposit_deadline = db.Column(db.DateTime)  # Deadline for deposit payment
+    deposit_submitted_at = db.Column(db.DateTime)  # When customer submitted deposit
+    payment_verified_at = db.Column(db.DateTime)  # When admin verified payment
+    preparation_started_at = db.Column(db.DateTime)  # When kitchen started preparing
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -389,5 +397,37 @@ class MenuItemModification(db.Model):
             'action': self.action,
             'old_values': self.old_values,
             'new_values': self.new_values,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class PaymentTransaction(db.Model):
+    """Payment transaction tracking for deposits and full payments"""
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    payment_type = db.Column(db.String(20), nullable=False)  # 'deposit', 'full_payment'
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)  # 'CBE Birr', 'M-Pesa', 'Bank Transfer', 'Cash'
+    transaction_id = db.Column(db.String(100))
+    screenshot_url = db.Column(db.String(500))
+    status = db.Column(db.String(20), default='pending_verification')  # 'pending_verification', 'verified', 'rejected'
+    admin_notes = db.Column(db.Text)
+    verified_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship to order
+    order = db.relationship('Order', backref='payment_transactions')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'order_id': self.order_id,
+            'payment_type': self.payment_type,
+            'amount': self.amount,
+            'payment_method': self.payment_method,
+            'transaction_id': self.transaction_id,
+            'screenshot_url': self.screenshot_url,
+            'status': self.status,
+            'admin_notes': self.admin_notes,
+            'verified_at': self.verified_at.isoformat() if self.verified_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
