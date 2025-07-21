@@ -534,12 +534,18 @@
                 const response = await fetch('/api/kitchen/categories');
                 const data = await response.json();
                 
-                if (data.success) {
-                    allCategories = data.categories;
+                if (data.success && data.categories) {
+                    allCategories = data.categories || [];
+                    populateCategorySelects();
+                } else {
+                    console.error('Failed to load categories:', data);
+                    allCategories = [];
                     populateCategorySelects();
                 }
             } catch (error) {
                 console.error('Error loading categories:', error);
+                allCategories = [];
+                populateCategorySelects();
             }
         }
 
@@ -567,20 +573,43 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    allProducts = data.menu_items;
+                    // Handle the grouped category structure
+                    allProducts = [];
+                    if (data.categories && Array.isArray(data.categories)) {
+                        // Extract all items from categories
+                        data.categories.forEach(category => {
+                            if (category.items && Array.isArray(category.items)) {
+                                allProducts.push(...category.items);
+                            }
+                        });
+                    } else if (data.menu_items && Array.isArray(data.menu_items)) {
+                        // Handle direct menu_items array if available
+                        allProducts = data.menu_items;
+                    }
                     displayProducts(allProducts);
                 } else {
-                    showError('Failed to load products');
+                    console.error('API response:', data);
+                    allProducts = [];
+                    displayProducts(allProducts);
+                    showError('Failed to load products: ' + (data.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error loading products:', error);
-                showError('Error loading products');
+                allProducts = [];
+                displayProducts(allProducts);
+                showError('Error loading products: ' + error.message);
             }
         }
 
         // Display products
         function displayProducts(products) {
             const grid = document.getElementById('productsGrid');
+            
+            // Ensure products is an array
+            if (!Array.isArray(products)) {
+                console.error('Products is not an array:', products);
+                products = [];
+            }
             
             if (products.length === 0) {
                 grid.innerHTML = `
@@ -601,10 +630,10 @@
                         </span>
                     </div>
                     <div class="product-details">
-                        <h3 class="product-name">${product.name}</h3>
-                        <div class="product-category">${product.category}</div>
+                        <h3 class="product-name">${product.name || 'Unnamed Product'}</h3>
+                        <div class="product-category">${product.category || 'Uncategorized'}</div>
                         <p class="product-description">${product.description || 'No description'}</p>
-                        <div class="product-price">${product.price} ETB</div>
+                        <div class="product-price">${product.price || 0} ETB</div>
                         <div class="product-actions">
                             <button class="btn btn-warning btn-sm" onclick="editProduct(${product.id})">
                                 <i class="fas fa-edit me-1"></i>Edit
