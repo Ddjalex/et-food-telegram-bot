@@ -341,6 +341,7 @@ class KitchenStaff(db.Model):
     password_hash = db.Column(db.String(256))
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
+    telegram_user_id = db.Column(db.BigInteger)  # For receiving notifications
     avatar_url = db.Column(db.String(500))  # Profile image/avatar
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, default=1)
     is_active = db.Column(db.Boolean, default=True)
@@ -369,6 +370,7 @@ class KitchenStaff(db.Model):
             'username': self.username,
             'phone': self.phone,
             'email': self.email,
+            'telegram_user_id': self.telegram_user_id,
             'avatar_url': self.avatar_url,
             'restaurant_id': self.restaurant_id,
             'is_active': self.is_active,
