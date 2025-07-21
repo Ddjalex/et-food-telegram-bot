@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Dashboard - Flavour Cafe | E.Fabrica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+            min-height: 100vh;
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .kitchen-navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #3b82f6 !important;
+            text-decoration: none;
+        }
+        
+        .navbar-text {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        
+        .welcome-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+        
+        .welcome-section p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 0;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .dashboard-card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .card-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .food-management .card-icon {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .orders .card-icon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .analytics .card-icon {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        
+        .settings .card-icon {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        .card-description {
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        .stats-bar {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #10b981;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="kitchen-navbar">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="/kitchen" class="navbar-brand">
+                    <i class="fas fa-utensils me-2"></i>
+                    Kitchen Dashboard
+                </a>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="navbar-text">Flavour Cafe | E.Fabrica</span>
+                    <a href="/kitchen/logout" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <!-- Welcome Section -->
+        <div class="welcome-section">
+            <h1><i class="fas fa-chef-hat me-3"></i>Welcome to Kitchen Dashboard</h1>
+            <p>Manage your restaurant's menu, orders, and operations</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-bar">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value" id="totalItems">62</span>
+                    <div class="stat-label">Total Menu Items</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="availableItems">58</span>
+                    <div class="stat-label">Available Items</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="totalCategories">14</span>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="avgPrice">425</span>
+                    <div class="stat-label">Avg Price (ETB)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Food Product Management -->
+            <a href="/kitchen/food-management" class="dashboard-card food-management">
+                <div class="card-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3 class="card-title">Food Product Management</h3>
+                <p class="card-description">
+                    Add, edit, and manage all menu items. Update prices, descriptions, categories, and availability status.
+                </p>
+            </a>
+
+            <!-- Order Management -->
+            <a href="/kitchen/orders" class="dashboard-card orders">
+                <div class="card-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <h3 class="card-title">Order Management</h3>
+                <p class="card-description">
+                    View and manage incoming orders. Track order status and coordinate with delivery.
+                </p>
+            </a>
+
+            <!-- Kitchen Analytics -->
+            <a href="/kitchen/analytics" class="dashboard-card analytics">
+                <div class="card-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h3 class="card-title">Kitchen Analytics</h3>
+                <p class="card-description">
+                    View sales reports, popular items, and kitchen performance metrics.
+                </p>
+            </a>
+
+            <!-- Kitchen Settings -->
+            <a href="/kitchen/settings" class="dashboard-card settings">
+                <div class="card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3 class="card-title">Kitchen Settings</h3>
+                <p class="card-description">
+                    Configure kitchen preferences, opening hours, and system settings.
+                </p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Load dashboard stats
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+        });
+
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('/api/menu');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const items = data.menu_items;
+                    const totalItems = items.length;
+                    const availableItems = items.filter(item => item.available).length;
+                    const categories = [...new Set(items.map(item => item.category))].length;
+                    const avgPrice = Math.round(items.reduce((sum, item) => sum + item.price, 0) / items.length);
+                    
+                    document.getElementById('totalItems').textContent = totalItems;
+                    document.getElementById('availableItems').textContent = availableItems;
+                    document.getElementById('totalCategories').textContent = categories;
+                    document.getElementById('avgPrice').textContent = avgPrice;
+                }
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+    </script>
+</body>
+</html>
