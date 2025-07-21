@@ -748,7 +748,7 @@
                                                     <th>Vehicle</th>
                                                     <th>Status</th>
                                                     <th>Active</th>
-                                                    <th>Orders</th>
+                                                    <th>Location Status</th>
                                                     <th>Documents</th>
                                                     <th>Actions</th>
                                                 </tr>
@@ -1316,7 +1316,7 @@
             fetch('/api/admin/drivers')
                 .then(response => response.json())
                 .then(data => {
-                    const drivers = data.drivers || [];
+                    const drivers = Array.isArray(data) ? data : [];
                     const tableBody = document.getElementById('driversTable');
                     
                     if (drivers.length === 0) {
@@ -1324,15 +1324,40 @@
                         return;
                     }
                     
-                    tableBody.innerHTML = drivers.map(driver => `
+                    tableBody.innerHTML = drivers.map(driver => {
+                        // Format location status properly
+                        let locationStatus = 'No Location';
+                        let locationClass = 'text-danger';
+                        
+                        if (driver.location_status) {
+                            switch(driver.location_status) {
+                                case 'live':
+                                    locationStatus = 'Live';
+                                    locationClass = 'text-success';
+                                    break;
+                                case 'active':
+                                    locationStatus = 'Active';
+                                    locationClass = 'text-primary';
+                                    break;
+                                case 'recent':
+                                    locationStatus = 'Recent';
+                                    locationClass = 'text-warning';
+                                    break;
+                                default:
+                                    locationStatus = 'Inactive';
+                                    locationClass = 'text-danger';
+                            }
+                        }
+                        
+                        return `
                         <tr>
-                            <td>${driver.name}</td>
-                            <td>${driver.phone}</td>
-                            <td>${driver.vehicle_type}</td>
+                            <td>${driver.full_name || driver.name}</td>
+                            <td>${driver.phone || driver.phone_number}</td>
+                            <td>${driver.vehicle_type || 'N/A'}</td>
                             <td>
-                                <span class="badge ${driver.approval_status === 'approved' ? 'bg-success' : 
-                                    driver.approval_status === 'pending' ? 'bg-warning' : 'bg-danger'}">
-                                    ${driver.approval_status}
+                                <span class="badge ${driver.status === 'approved' || driver.approval_status === 'approved' ? 'bg-success' : 
+                                    (driver.status === 'pending' || driver.approval_status === 'pending') ? 'bg-warning' : 'bg-danger'}">
+                                    ${driver.status || driver.approval_status}
                                 </span>
                             </td>
                             <td>
@@ -1341,9 +1366,11 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge ${driver.current_orders > 0 ? 'bg-primary' : 'bg-light text-dark'}">
-                                    ${driver.current_orders || 0}
+                                <span class="${locationClass}">
+                                    <i class="fas fa-circle me-1"></i>${locationStatus}
                                 </span>
+                                <br>
+                                <small class="text-muted">${driver.last_update_text || 'Never'}</small>
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
@@ -1361,7 +1388,8 @@
                                 </div>
                             </td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 })
                 .catch(error => {
                     console.error('Error loading drivers:', error);
