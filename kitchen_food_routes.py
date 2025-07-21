@@ -338,3 +338,47 @@ def kitchen_logout():
     """Kitchen staff logout"""
     session.clear()
     return redirect('/kitchen/login')
+
+# Kitchen Order Status Update Functions
+@app.route('/api/kitchen/orders/<int:order_id>/status', methods=['PUT', 'POST'])
+@kitchen_staff_required
+def kitchen_update_order_status_api(order_id):
+    """Update order status from kitchen"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if new_status not in ['confirmed', 'preparing', 'ready', 'cancelled']:
+            return jsonify({'success': False, 'message': 'Invalid status'}), 400
+        
+        old_status = order.status
+        order.status = new_status
+        order.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Log the status change
+        logger.info(f"Kitchen updated order #{order_id} status from {old_status} to {new_status}")
+        
+        # Notify customer about status change
+        try:
+            from bot_minimal import notify_customer_status_change
+            notify_customer_status_change(order_id, new_status)
+        except Exception as e:
+            logger.error(f"Error notifying customer about status change: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order status updated to {new_status}'
+        })
+    except Exception as e:
+        logger.error(f"Error updating order status: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Alternative endpoint to match JavaScript calls from kitchen dashboard
+@app.route('/api/orders/<int:order_id>/status', methods=['POST'])
+@kitchen_staff_required  
+def kitchen_update_order_status_alternative(order_id):
+    """Alternative endpoint for order status updates from kitchen dashboard"""
+    return kitchen_update_order_status_api(order_id)
