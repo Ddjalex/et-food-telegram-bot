@@ -1530,7 +1530,7 @@ def kitchen_mark_order_unavailable():
 @app.route('/kitchen-food-availability')
 def kitchen_food_availability():
     """Kitchen food availability interface"""
-    return render_template('kitchen_food_availability.html')
+    return render_template('kitchen_food_availability_fixed.html')
 
 @app.route('/api/kitchen/food-available', methods=['POST'])
 def mark_food_available():
