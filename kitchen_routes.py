@@ -510,6 +510,61 @@ def kitchen_update_order_status_api(order_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/kitchen/confirm-availability/<int:order_id>', methods=['POST'])
+@kitchen_staff_required
+def kitchen_confirm_availability(order_id):
+    """Kitchen staff confirms or rejects order availability"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        available = data.get('available', True)
+        reason = data.get('reason', '')
+        
+        logger.info(f"Kitchen confirming availability for order #{order_id}: available={available}")
+        
+        if available:
+            # Kitchen accepts the order - trigger customer payment request
+            order.status = 'kitchen_accepted'
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            # Import and call the enhanced kitchen workflow
+            try:
+                from enhanced_kitchen_workflow import handle_kitchen_acceptance
+                handle_kitchen_acceptance(order_id)
+                logger.info(f"Successfully triggered customer payment request for order #{order_id}")
+            except Exception as e:
+                logger.error(f"Error in enhanced kitchen workflow: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Order accepted! Customer has been notified to make payment.'
+            })
+        else:
+            # Kitchen rejects the order
+            order.status = 'cancelled'
+            order.cancellation_reason = reason
+            order.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            # Notify customer about rejection
+            try:
+                from bot_minimal import notify_customer_order_rejected
+                notify_customer_order_rejected(order_id, reason)
+                logger.info(f"Customer notified about order #{order_id} rejection")
+            except Exception as e:
+                logger.error(f"Error notifying customer about rejection: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Order marked as unavailable. Customer has been notified. Reason: {reason}'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error confirming availability for order {order_id}: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Alternative endpoint to match JavaScript calls from kitchen dashboard
 @app.route('/api/orders/<int:order_id>/status', methods=['POST'])
 @kitchen_staff_required

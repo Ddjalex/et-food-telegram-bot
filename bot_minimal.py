@@ -389,6 +389,31 @@ def notify_customer_status_change(order_id, new_status):
     except Exception as e:
         logger.error(f"Failed to notify customer status change: {e}")
 
+def notify_customer_order_rejected(order_id, reason):
+    """Notify customer when kitchen rejects their order"""
+    try:
+        from models import Order
+        order = Order.query.get(order_id)
+        if not order:
+            logger.error(f"Order {order_id} not found for rejection notification")
+            return
+
+        message = f"❌ *Order Not Available*\n\n"
+        message += f"🏪 Flavour Cafe | E.Fabrica cannot fulfill your order\n\n"
+        message += f"📋 *Order #*{order.id}\n"
+        message += f"⚠️ *Reason:* {reason}\n\n"
+        message += f"We apologize for the inconvenience. Please try:\n"
+        message += f"• Ordering different items from our menu\n"
+        message += f"• Contacting us directly: +251-911-123456\n"
+        message += f"• Trying again later\n\n"
+        message += f"Thank you for understanding!"
+
+        send_message(order.telegram_user_id, message, parse_mode='Markdown')
+        logger.info(f"Rejection notification sent to customer {order.customer_name} for order #{order.id}")
+
+    except Exception as e:
+        logger.error(f"Failed to notify customer about order rejection: {e}")
+
 def handle_message(message):
     chat_id = message["chat"]["id"]
     text = message.get("text", "")

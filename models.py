@@ -92,11 +92,13 @@ class Order(db.Model):
     estimated_delivery_time = db.Column(db.DateTime)
     
     # Payment workflow fields
+    kitchen_accepted_at = db.Column(db.DateTime)  # When kitchen accepted the order
     deposit_amount = db.Column(db.Float)  # Required deposit amount (50% of total)
     deposit_deadline = db.Column(db.DateTime)  # Deadline for deposit payment
     deposit_submitted_at = db.Column(db.DateTime)  # When customer submitted deposit
     payment_verified_at = db.Column(db.DateTime)  # When admin verified payment
     preparation_started_at = db.Column(db.DateTime)  # When kitchen started preparing
+    cancellation_reason = db.Column(db.Text)  # Reason for cancellation
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

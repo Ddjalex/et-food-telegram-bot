@@ -129,6 +129,10 @@ def verify_payment():
             # Send real-time notification to kitchen dashboard
             notify_kitchen_realtime(order)
             
+            # Enhanced real-time kitchen notification
+            from enhanced_kitchen_workflow import notify_kitchen_start_preparation_realtime
+            notify_kitchen_start_preparation_realtime(order)
+            
             # Do NOT notify customer - only kitchen staff should receive notification
             # notify_customer_payment_approved(order)  # REMOVED
             
