@@ -1,9 +1,11 @@
 from flask import request, jsonify, render_template, session, redirect, url_for, flash
 from app import app, db
 from models import MenuItem, Restaurant, Order, AdminUser
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
 import logging
 import os
+import json
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
 from functools import wraps
@@ -264,6 +266,27 @@ def kitchen_delete_menu_item(item_id):
         logger.error(f"Error deleting menu item: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Additional Kitchen Routes
+@app.route('/kitchen/orders')
+@kitchen_staff_required
+def kitchen_orders():
+    """Kitchen staff orders management page"""
+    return render_template('kitchen_orders.html')
+
+@app.route('/kitchen/analytics')
+@kitchen_staff_required
+def kitchen_analytics():
+    """Kitchen staff analytics page"""
+    return render_template('kitchen_analytics.html')
+
+@app.route('/kitchen/settings')
+@kitchen_staff_required
+def kitchen_settings():
+    """Kitchen staff settings page"""
+    return render_template('kitchen_settings.html')
+
+# Kitchen API endpoints moved to kitchen_availability_routes.py to avoid duplicates
 
 # Kitchen dashboard route
 @app.route('/kitchen')
