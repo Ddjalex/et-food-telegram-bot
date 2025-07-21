@@ -102,6 +102,53 @@ def toggle_item_availability():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@kitchen_bp.route('/api/kitchen/bulk-update-availability', methods=['POST'])
+def bulk_update_availability_route():
+    """Bulk update availability of menu items"""
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        category = data.get('category')
+        
+        # Get kitchen staff info from session
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        admin = AdminUser.query.get(admin_id)
+        if not admin or not admin.restaurant_id:
+            return jsonify({'error': 'Admin not found or not associated with restaurant'}), 404
+        
+        # Get menu items based on action
+        if action == 'mark_all_available':
+            items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
+            for item in items:
+                mark_item_available(item.id)
+            message = f'All {len(items)} items marked as available'
+            
+        elif action == 'mark_all_unavailable':
+            items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
+            for item in items:
+                mark_item_unavailable(item.id, 'Bulk update - all unavailable')
+            message = f'All {len(items)} items marked as unavailable'
+            
+        elif action == 'mark_category_unavailable' and category:
+            items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id, category=category).all()
+            for item in items:
+                mark_item_unavailable(item.id, f'Bulk update - {category} category unavailable')
+            message = f'All {len(items)} items in "{category}" category marked as unavailable'
+            
+        else:
+            return jsonify({'error': 'Invalid action or missing category'}), 400
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @kitchen_bp.route('/api/kitchen/bulk-availability', methods=['POST'])
 def bulk_toggle_availability():
     """Bulk toggle availability for multiple items"""

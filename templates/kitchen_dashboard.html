@@ -364,6 +364,204 @@
             justify-content: center;
         }
         
+        /* Food Availability System Styles */
+        .availability-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .availability-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            padding-bottom: 1rem;
+        }
+        
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #94a3b8;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .tab-btn.active, .tab-btn:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .menu-item-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .menu-item-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+        }
+        
+        .menu-item-card.unavailable {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        
+        .menu-item-card.available {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-category {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-price {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #10b981;
+        }
+        
+        .availability-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #64748b;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .toggle-switch.active {
+            background: #10b981;
+        }
+        
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-switch.active::before {
+            transform: translateX(26px);
+        }
+        
+        .availability-status {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-available {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .status-unavailable {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .bulk-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #94a3b8;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .bulk-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        .category-filter {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+        
+        .filter-btn.active, .filter-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
         .action-btn {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -490,6 +688,65 @@
             </div>
         </div>
         
+        <!-- Food Availability Management Section -->
+        <div class="availability-section">
+            <div class="section-header">
+                <h2>
+                    <i class="fas fa-toggle-on me-2"></i>
+                    Food Availability Management
+                </h2>
+                <button class="refresh-btn" onclick="loadMenuItems()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refresh
+                </button>
+            </div>
+            
+            <!-- Availability Tabs -->
+            <div class="availability-tabs">
+                <button class="tab-btn active" onclick="showAvailabilityTab('all')">
+                    <i class="fas fa-list me-1"></i>
+                    All Items
+                </button>
+                <button class="tab-btn" onclick="showAvailabilityTab('available')">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Available
+                </button>
+                <button class="tab-btn" onclick="showAvailabilityTab('unavailable')">
+                    <i class="fas fa-times-circle me-1"></i>
+                    Unavailable
+                </button>
+            </div>
+            
+            <!-- Bulk Actions -->
+            <div class="bulk-actions">
+                <button class="bulk-btn" onclick="markAllAvailable()">
+                    <i class="fas fa-check-double me-1"></i>
+                    Mark All Available
+                </button>
+                <button class="bulk-btn" onclick="markAllUnavailable()">
+                    <i class="fas fa-ban me-1"></i>
+                    Mark All Unavailable
+                </button>
+                <button class="bulk-btn" onclick="markCategoryUnavailable()">
+                    <i class="fas fa-layer-group me-1"></i>
+                    Mark Category Unavailable
+                </button>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="category-filter" id="categoryFilter">
+                <button class="filter-btn active" data-category="all">All Categories</button>
+            </div>
+            
+            <!-- Menu Items Container -->
+            <div id="menuItemsContainer">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading menu items...</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- Orders Section -->
         <div class="orders-section">
             <div class="section-header">
@@ -514,14 +771,22 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Global variables
+        let allMenuItems = [];
+        let currentFilter = 'all';
+        let currentCategory = 'all';
+        
         // Load dashboard data on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadOrders();
             loadStatistics();
+            loadMenuItems();
+            loadCategories();
             
             // Auto-refresh every 30 seconds
             setInterval(loadOrders, 30000);
             setInterval(loadStatistics, 60000);
+            setInterval(loadMenuItems, 60000);
         });
         
         async function loadOrders() {
@@ -776,6 +1041,271 @@
         function viewOrderDetails(orderId) {
             // This would open a modal with detailed order information
             alert(`Order details for Order #${orderId} - Feature coming soon!`);
+        }
+        
+        // Food Availability Management Functions
+        async function loadMenuItems() {
+            try {
+                const response = await fetch('/api/kitchen/menu-items');
+                const data = await response.json();
+                
+                if (data.items) {
+                    allMenuItems = data.items;
+                    displayMenuItems();
+                } else {
+                    throw new Error('Failed to load menu items');
+                }
+            } catch (error) {
+                console.error('Error loading menu items:', error);
+                document.getElementById('menuItemsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>Error Loading Menu Items</h3>
+                        <p>Unable to load menu items. Please check your connection and try again.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadCategories() {
+            try {
+                const categories = [...new Set(allMenuItems.map(item => item.category))];
+                const categoryFilter = document.getElementById('categoryFilter');
+                
+                categoryFilter.innerHTML = `
+                    <button class="filter-btn active" data-category="all" onclick="filterByCategory('all')">All Categories</button>
+                `;
+                
+                categories.forEach(category => {
+                    const button = document.createElement('button');
+                    button.className = 'filter-btn';
+                    button.setAttribute('data-category', category);
+                    button.onclick = () => filterByCategory(category);
+                    button.innerHTML = `<i class="fas fa-tag me-1"></i>${category}`;
+                    categoryFilter.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+        
+        function displayMenuItems() {
+            const container = document.getElementById('menuItemsContainer');
+            
+            let filteredItems = allMenuItems;
+            
+            // Filter by availability status
+            if (currentFilter === 'available') {
+                filteredItems = filteredItems.filter(item => item.available);
+            } else if (currentFilter === 'unavailable') {
+                filteredItems = filteredItems.filter(item => !item.available);
+            }
+            
+            // Filter by category
+            if (currentCategory !== 'all') {
+                filteredItems = filteredItems.filter(item => item.category === currentCategory);
+            }
+            
+            if (filteredItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <h3>No Items Found</h3>
+                        <p>No menu items match the current filter criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            filteredItems.forEach(item => {
+                const itemCard = createMenuItemCard(item);
+                container.appendChild(itemCard);
+            });
+        }
+        
+        function createMenuItemCard(item) {
+            const card = document.createElement('div');
+            card.className = `menu-item-card ${item.available ? 'available' : 'unavailable'}`;
+            
+            card.innerHTML = `
+                <img src="${item.image_url || '/static/placeholder-food.jpg'}" 
+                     alt="${item.name}" 
+                     class="item-image" 
+                     onerror="this.src='/static/placeholder-food.jpg'">
+                
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-category">
+                        <i class="fas fa-tag me-1"></i>${item.category}
+                    </div>
+                    <div class="item-price">${item.price} ETB</div>
+                </div>
+                
+                <div class="availability-toggle">
+                    <div class="toggle-switch ${item.available ? 'active' : ''}" 
+                         onclick="toggleItemAvailability(${item.id}, ${!item.available})">
+                    </div>
+                    <span class="availability-status ${item.available ? 'status-available' : 'status-unavailable'}">
+                        ${item.available ? 'Available' : 'Unavailable'}
+                    </span>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        async function toggleItemAvailability(itemId, available) {
+            try {
+                const response = await fetch('/api/kitchen/toggle-availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        item_id: itemId, 
+                        available: available,
+                        reason: available ? 'Kitchen available' : 'Kitchen unavailable'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    // Update the item in our local array
+                    const itemIndex = allMenuItems.findIndex(item => item.id === itemId);
+                    if (itemIndex !== -1) {
+                        allMenuItems[itemIndex].available = available;
+                    }
+                    
+                    displayMenuItems();
+                } else {
+                    alert('Failed to update availability: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error toggling availability:', error);
+                alert('Error updating availability');
+            }
+        }
+        
+        function showAvailabilityTab(filter) {
+            currentFilter = filter;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            displayMenuItems();
+        }
+        
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+            
+            displayMenuItems();
+        }
+        
+        async function markAllAvailable() {
+            if (!confirm('Are you sure you want to mark ALL menu items as available?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kitchen/bulk-update-availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        action: 'mark_all_available'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadMenuItems();
+                    alert('All items marked as available');
+                } else {
+                    alert('Failed to update availability: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error marking all available:', error);
+                alert('Error updating availability');
+            }
+        }
+        
+        async function markAllUnavailable() {
+            if (!confirm('Are you sure you want to mark ALL menu items as unavailable?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kitchen/bulk-update-availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        action: 'mark_all_unavailable'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadMenuItems();
+                    alert('All items marked as unavailable');
+                } else {
+                    alert('Failed to update availability: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error marking all unavailable:', error);
+                alert('Error updating availability');
+            }
+        }
+        
+        async function markCategoryUnavailable() {
+            const categories = [...new Set(allMenuItems.map(item => item.category))];
+            const category = prompt(`Select category to mark unavailable:\n${categories.join('\n')}\n\nEnter category name:`);
+            
+            if (!category || !categories.includes(category)) {
+                alert('Invalid category selected');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to mark all items in "${category}" category as unavailable?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kitchen/bulk-update-availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        action: 'mark_category_unavailable',
+                        category: category
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    loadMenuItems();
+                    alert(`All items in "${category}" category marked as unavailable`);
+                } else {
+                    alert('Failed to update availability: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error marking category unavailable:', error);
+                alert('Error updating availability');
+            }
         }
                 // Load menu items count
                 const menuResponse = await fetch('/api/kitchen/menu-items');
