@@ -1,5 +1,6 @@
 from app import app  # noqa: F401
 import kitchen_food_routes  # noqa: F401
+import kitchen_routes  # noqa: F401
 
 # Register payment workflow blueprint
 from payment_workflow import payment_workflow

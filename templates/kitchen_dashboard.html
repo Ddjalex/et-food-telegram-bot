@@ -1361,8 +1361,8 @@
         
         async function updateOrderStatus(orderId, newStatus) {
             try {
-                const response = await fetch(`/api/orders/${orderId}/status`, {
-                    method: 'POST',
+                const response = await fetch(`/api/kitchen/orders/${orderId}/status`, {
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -1370,14 +1370,22 @@
                 });
                 
                 if (response.ok) {
-                    loadOrders();
-                    loadStatistics();
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(result.message);
+                        loadOrders();
+                        loadStatistics();
+                    } else {
+                        alert('Failed to update order status: ' + result.message);
+                    }
                 } else {
-                    alert('Failed to update order status');
+                    const errorText = await response.text();
+                    console.error('HTTP Error:', response.status, errorText);
+                    alert(`Failed to update order status (${response.status})`);
                 }
             } catch (error) {
                 console.error('Error updating order status:', error);
-                alert('Error updating order status');
+                alert('Error updating order status: ' + error.message);
             }
         }
         
