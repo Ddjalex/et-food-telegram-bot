@@ -1445,18 +1445,41 @@ def api_request_driver_live_location(driver_id):
 # Payment Verification API Endpoints
 @app.route('/api/admin/payment-verification', methods=['GET'])
 def get_admin_payment_verification_orders():
-    """Get orders requiring payment verification (admin)"""
+    """Get orders requiring payment verification (admin) - restaurant-specific"""
     try:
-        # Get orders that need payment verification (status = 'payment_pending' or 'confirmed' with transaction_image_url)
-        orders = Order.query.filter(
-            db.or_(
-                Order.status == 'payment_pending',
-                db.and_(
-                    Order.status == 'confirmed',
-                    Order.transaction_image_url.isnot(None)
+        # Check if admin is logged in
+        if 'admin_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+        
+        # Get restaurant ID - super admin can see all, regular admin sees only their restaurant
+        if admin.role == 'super_admin':
+            # Super admin sees all orders
+            orders = Order.query.filter(
+                db.or_(
+                    Order.status == 'payment_pending',
+                    db.and_(
+                        Order.status == 'confirmed',
+                        Order.transaction_image_url.isnot(None)
+                    )
                 )
-            )
-        ).order_by(Order.created_at.desc()).all()
+            ).order_by(Order.created_at.desc()).all()
+        else:
+            # Regular admin sees only their restaurant's orders
+            restaurant_id = admin.restaurant_id or session.get('restaurant_id', 1)
+            orders = Order.query.filter(
+                db.or_(
+                    Order.status == 'payment_pending',
+                    db.and_(
+                        Order.status == 'confirmed',
+                        Order.transaction_image_url.isnot(None)
+                    )
+                ),
+                Order.restaurant_id == restaurant_id
+            ).order_by(Order.created_at.desc()).all()
         
         orders_data = []
         for order in orders:
@@ -3809,13 +3832,31 @@ def get_live_tracking_data():
 
 @app.route('/api/admin/payment-notifications', methods=['GET'])
 def get_payment_notifications():
-    """Get pending payment notifications for admin"""
+    """Get pending payment notifications for admin (restaurant-specific)"""
     try:
-        # Get orders with payment screenshots but not yet verified
-        orders = Order.query.filter(
-            Order.status.in_(['confirmed', 'pending']),
-            Order.transaction_image_url.isnot(None)
-        ).order_by(Order.created_at.desc()).all()
+        # Check if admin is logged in
+        if 'admin_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+        
+        # Get restaurant ID - super admin can see all, regular admin sees only their restaurant
+        if admin.role == 'super_admin':
+            # Super admin sees all orders
+            orders = Order.query.filter(
+                Order.status.in_(['confirmed', 'pending']),
+                Order.transaction_image_url.isnot(None)
+            ).order_by(Order.created_at.desc()).all()
+        else:
+            # Regular admin sees only their restaurant's orders
+            restaurant_id = admin.restaurant_id or session.get('restaurant_id', 1)
+            orders = Order.query.filter(
+                Order.status.in_(['confirmed', 'pending']),
+                Order.transaction_image_url.isnot(None),
+                Order.restaurant_id == restaurant_id
+            ).order_by(Order.created_at.desc()).all()
         
         notifications = []
         for order in orders:
@@ -3826,7 +3867,8 @@ def get_payment_notifications():
                 'total_amount': order.total_amount,
                 'created_at': order.created_at.isoformat(),
                 'screenshot_url': order.transaction_image_url,
-                'status': order.status
+                'status': order.status,
+                'restaurant_id': order.restaurant_id
             })
         
         return jsonify({
