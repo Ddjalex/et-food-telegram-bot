@@ -407,3 +407,164 @@ def kitchen_get_restaurants():
     except Exception as e:
         logger.error(f"Error fetching restaurants for kitchen: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Kitchen API Routes
+@app.route('/api/kitchen/orders')
+@kitchen_staff_required 
+def kitchen_get_orders():
+    """Get orders for kitchen staff"""
+    try:
+        import json
+        orders = Order.query.filter(
+            Order.status.in_(['pending', 'confirmed', 'preparing', 'ready'])
+        ).order_by(Order.created_at.desc()).all()
+        
+        orders_data = []
+        for order in orders:
+            # Parse items properly
+            items = []
+            if order.items:
+                try:
+                    if isinstance(order.items, str):
+                        items = json.loads(order.items)
+                    else:
+                        items = order.items
+                except:
+                    items = []
+            
+            # Ensure items is a list
+            if not isinstance(items, list):
+                items = []
+            
+            # Add image URL for each item
+            for item in items:
+                if isinstance(item, dict):
+                    # Try to find the menu item to get the image
+                    menu_item = MenuItem.query.filter_by(name=item.get('name')).first()
+                    if menu_item and menu_item.image_url:
+                        item['image'] = menu_item.image_url
+                    else:
+                        item['image'] = '/static/placeholder-food.jpg'
+                    
+                    # Ensure all required fields are present
+                    item['name'] = item.get('name', 'Unknown Item')
+                    item['price'] = item.get('price', 0)
+                    item['quantity'] = item.get('quantity', 1)
+            
+            order_dict = {
+                'id': order.id,
+                'customer_name': order.customer_name or 'Unknown Customer',
+                'phone': order.phone or 'No phone',
+                'address': order.address or 'Pickup at restaurant',
+                'items': items,
+                'total': float(order.total) if order.total else 0,
+                'status': order.status,
+                'payment_method': order.payment_method,
+                'created_at': order.created_at.isoformat() if order.created_at else None,
+                'special_instructions': order.special_instructions
+            }
+            orders_data.append(order_dict)
+        
+        return jsonify({
+            'success': True,
+            'orders': orders_data,
+            'total_orders': len(orders_data)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching kitchen orders: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/kitchen/orders/<int:order_id>/status', methods=['PUT'])
+@kitchen_staff_required
+def kitchen_update_order_status_api(order_id):
+    """Update order status from kitchen"""
+    try:
+        order = Order.query.get_or_404(order_id)
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if new_status not in ['confirmed', 'preparing', 'ready', 'cancelled']:
+            return jsonify({'success': False, 'message': 'Invalid status'}), 400
+        
+        order.status = new_status
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order status updated to {new_status}'
+        })
+    except Exception as e:
+        logger.error(f"Error updating order status: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/kitchen/analytics')
+@kitchen_staff_required
+def kitchen_get_analytics_api():
+    """Get kitchen analytics data"""
+    try:
+        from datetime import timedelta
+        from sqlalchemy import func
+        import json
+        
+        today = datetime.now().date()
+        week_ago = today - timedelta(days=7)
+        
+        # Today's orders
+        today_orders = Order.query.filter(
+            func.date(Order.created_at) == today
+        ).count()
+        
+        # This week's orders
+        week_orders = Order.query.filter(
+            Order.created_at >= week_ago
+        ).count()
+        
+        # Orders by status
+        status_counts = {}
+        statuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
+        for status in statuses:
+            count = Order.query.filter_by(status=status).count()
+            status_counts[status] = count
+        
+        # Popular items
+        popular_items = []
+        try:
+            orders_with_items = Order.query.filter(Order.items.isnot(None)).all()
+            item_counts = {}
+            
+            for order in orders_with_items:
+                items = []
+                if order.items:
+                    try:
+                        if isinstance(order.items, str):
+                            items = json.loads(order.items)
+                        else:
+                            items = order.items
+                    except:
+                        items = []
+                
+                if isinstance(items, list):
+                    for item in items:
+                        if isinstance(item, dict):
+                            item_name = item.get('name', 'Unknown')
+                            item_counts[item_name] = item_counts.get(item_name, 0) + item.get('quantity', 1)
+            
+            # Sort by count and get top 5
+            sorted_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)
+            popular_items = [{'name': name, 'count': count} for name, count in sorted_items[:5]]
+        except Exception as e:
+            logger.error(f"Error calculating popular items: {e}")
+        
+        return jsonify({
+            'success': True,
+            'analytics': {
+                'today_orders': today_orders,
+                'week_orders': week_orders,
+                'status_counts': status_counts,
+                'popular_items': popular_items
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error fetching kitchen analytics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -154,21 +154,27 @@
                                     <small class="text-muted"><i class="fas fa-phone"></i> ${order.phone}</small>
                                 </div>
                                 <div class="mb-2">
-                                    <small class="text-muted"><i class="fas fa-map-marker-alt"></i> ${order.address || 'No address'}</small>
+                                    <small class="text-muted"><i class="fas fa-map-marker-alt"></i> ${order.address || 'Pickup at restaurant'}</small>
                                 </div>
                                 
                                 <div class="order-items">
                                     <strong>Items:</strong>
                                     ${order.items.map(item => `
-                                        <div class="d-flex justify-content-between">
-                                            <span>${item.name} x${item.quantity}</span>
-                                            <span>${item.price} ETB</span>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <img src="${item.image || '/static/placeholder-food.jpg'}" 
+                                                 alt="${item.name || 'Food Item'}" 
+                                                 style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px; margin-right: 10px;">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">${item.name || 'Unknown Item'}</div>
+                                                <small class="text-muted">Qty: ${item.quantity || 1} × ${item.price || 0} ETB</small>
+                                            </div>
+                                            <strong>${(item.price || 0) * (item.quantity || 1)} ETB</strong>
                                         </div>
                                     `).join('')}
                                 </div>
                                 
                                 <div class="d-flex justify-content-between align-items-center mt-3">
-                                    <strong>Total: ${order.total} ETB</strong>
+                                    <strong>Total: ${order.total || 0} ETB</strong>
                                     <small class="text-muted">${formatTime(order.created_at)}</small>
                                 </div>
                                 
@@ -179,13 +185,40 @@
                                 ` : ''}
                                 
                                 <div class="mt-3">
-                                    <select class="form-select form-select-sm" onchange="updateOrderStatus(${order.id}, this.value)">
-                                        <option value="">Update Status</option>
-                                        <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-                                        <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Preparing</option>
-                                        <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Ready</option>
-                                        <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                                    </select>
+                                    ${order.status === 'pending' ? `
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-success btn-sm" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                                <i class="fas fa-check"></i> Accept Order
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="updateOrderStatus(${order.id}, 'cancelled')">
+                                                <i class="fas fa-times"></i> Cannot Prepare
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${order.status === 'confirmed' ? `
+                                        <button class="btn btn-warning btn-sm w-100" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                            <i class="fas fa-fire"></i> Start Preparing
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${order.status === 'preparing' ? `
+                                        <button class="btn btn-info btn-sm w-100" onclick="updateOrderStatus(${order.id}, 'ready')">
+                                            <i class="fas fa-bell"></i> Mark as Ready
+                                        </button>
+                                    ` : ''}
+                                    
+                                    ${order.status === 'ready' ? `
+                                        <div class="alert alert-success p-2 mb-0">
+                                            <i class="fas fa-clock"></i> Ready for Pickup/Delivery
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${order.status === 'cancelled' ? `
+                                        <div class="alert alert-danger p-2 mb-0">
+                                            <i class="fas fa-times-circle"></i> Order Cancelled
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
