@@ -203,6 +203,16 @@
             transform: scale(1.05);
         }
         
+        .category-item.active .category-icon {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .category-item.active .category-name {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+        
         .category-icon {
             width: 60px;
             height: 60px;
@@ -805,21 +815,29 @@
             }
         }
 
-        // Load categories from API
+        // Load categories from API for selected restaurant
         async function loadCategories() {
             try {
-                const response = await fetch('/api/menu');
+                // Get selected restaurant ID
+                const selectedRestaurant = localStorage.getItem('selectedRestaurant') || '1';
+                
+                // Fetch menu items for the specific restaurant
+                const response = await fetch(`/api/restaurants/${selectedRestaurant}/menu`);
                 const data = await response.json();
                 
-                // Handle new API format with categories
-                if (data.success && data.categories) {
-                    categories = data.categories.map(cat => ({ name: cat.name }));
-                } else if (Array.isArray(data)) {
-                    // Fallback: extract unique categories from flat items array
-                    const uniqueCategories = [...new Set(data.map(item => item.category))];
+                console.log('Restaurant menu data:', data);
+                
+                if (data.success && data.menu_items) {
+                    // Extract unique categories from menu items
+                    const uniqueCategories = [...new Set(data.menu_items.map(item => item.category))];
                     categories = uniqueCategories.map(name => ({ name }));
+                    
+                    // Add "All" category at the beginning
+                    categories.unshift({ name: 'All' });
+                    
+                    console.log('Categories loaded:', categories);
                 } else {
-                    categories = [];
+                    categories = [{ name: 'All' }]; // Default fallback
                 }
                 renderCategories();
             } catch (error) {
@@ -865,15 +883,19 @@
             `).join('');
         }
 
-        // Load menu items for special offers
+        // Load menu items for special offers from selected restaurant
         async function loadSpecialOffers() {
             try {
-                const response = await fetch('/api/menu');
+                // Get selected restaurant ID
+                const selectedRestaurant = localStorage.getItem('selectedRestaurant') || '1';
+                
+                // Fetch menu items for the specific restaurant
+                const response = await fetch(`/api/restaurants/${selectedRestaurant}/menu`);
                 const data = await response.json();
                 
-                // Handle new API format
-                if (data.success && data.items) {
-                    menuItems = data.items;
+                // Handle restaurant-specific API format
+                if (data.success && data.menu_items) {
+                    menuItems = data.menu_items;
                 } else if (Array.isArray(data)) {
                     menuItems = data;
                 } else {
@@ -985,11 +1007,58 @@
             }
         });
 
-        // Filter by category
+        // Filter products by category
         function filterByCategory(categoryName) {
-            const filtered = menuItems.filter(item => item.category === categoryName);
-            console.log('Category filter:', categoryName, filtered);
-            // Navigate to category view or update current view
+            console.log('Filtering by category:', categoryName);
+            
+            // Update category selection state
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected category
+            const selectedCategory = [...document.querySelectorAll('.category-item')].find(item => 
+                item.querySelector('.category-name').textContent === categoryName
+            );
+            if (selectedCategory) {
+                selectedCategory.classList.add('active');
+            }
+            
+            // Filter menu items
+            if (categoryName === 'All') {
+                renderSpecialOffers(); // Show all items
+            } else {
+                // Show items from selected category
+                const filteredItems = menuItems.filter(item => item.category === categoryName);
+                renderFilteredOffers(filteredItems, categoryName);
+            }
+        }
+
+        // Render filtered offers
+        function renderFilteredOffers(items, categoryName) {
+            const container = document.getElementById('specialOffersContainer');
+            
+            if (items.length === 0) {
+                container.innerHTML = `<p>No items available in ${categoryName} category</p>`;
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="offer-card" onclick="addToCart(${item.id})">
+                    <img src="${item.image_url || '/static/placeholder-food.jpg'}" alt="${item.name}" class="offer-image" 
+                         onerror="this.src='/static/placeholder-food.jpg'">
+                    <div class="offer-content">
+                        <div class="offer-title">${item.name}</div>
+                        <div class="offer-description">${item.description || ''}</div>
+                        <div class="offer-price">
+                            <span class="current-price">${item.price.toFixed(0)} Br</span>
+                        </div>
+                        <button class="add-btn" onclick="event.stopPropagation(); addToCart(${item.id})">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // Add to cart
