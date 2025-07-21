@@ -1698,27 +1698,37 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
+                if (result.success || result.message) {
                     // Clear cart
                     cart = [];
                     updateCartUI();
                     closeCheckout();
                     
-                    // Show success message
-                    if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.showAlert(`Order placed successfully! Order ID: ${result.order_id}`);
-                    } else {
-                        alert(`Order placed successfully! Order ID: ${result.order_id}`);
+                    // Show success message with fallback for older Telegram versions
+                    const message = `Order placed successfully! Order ID: ${result.order_id || 'Pending'}`;
+                    try {
+                        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+                            window.Telegram.WebApp.showAlert(message);
+                        } else {
+                            alert(message);
+                        }
+                    } catch (e) {
+                        alert(message);
                     }
                 } else {
-                    throw new Error(result.message || 'Order placement failed');
+                    throw new Error(result.error || 'Order placement failed');
                 }
             } catch (error) {
                 console.error('Error placing order:', error);
-                if (window.Telegram && window.Telegram.WebApp) {
-                    window.Telegram.WebApp.showAlert('Error placing order: ' + error.message);
-                } else {
-                    alert('Error placing order: ' + error.message);
+                const errorMessage = 'Error placing order: ' + (error.message || 'Unknown error');
+                try {
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+                        window.Telegram.WebApp.showAlert(errorMessage);
+                    } else {
+                        alert(errorMessage);
+                    }
+                } catch (e) {
+                    alert(errorMessage);
                 }
             }
         }
@@ -1757,10 +1767,10 @@
             statusDiv.textContent = 'Requesting location access...';
             locationBtn.disabled = true;
             
-            // Try Telegram WebApp location sharing first
-            if (window.Telegram && window.Telegram.WebApp) {
+            // Try Telegram WebApp location sharing first (only if supported)
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.requestLocation) {
                 try {
-                    // Request location from Telegram WebApp
+                    // Request location from Telegram WebApp (newer versions)
                     window.Telegram.WebApp.requestLocation(function(location) {
                         if (location) {
                             handleLocationData(location.latitude, location.longitude);
@@ -1774,6 +1784,7 @@
                     getBrowserLocation();
                 }
             } else {
+                // Use browser geolocation for older Telegram versions or non-Telegram browsers
                 getBrowserLocation();
             }
         }

@@ -1439,9 +1439,14 @@ def create_order():
         for item in data['items']:
             total_amount += item['price'] * item['quantity']
         
-        # Create order
+        # Create order with proper telegram_user_id handling
+        telegram_user_id = data.get('telegram_user_id')
+        if not telegram_user_id:
+            # Try to get from Telegram WebApp user data or use fallback
+            telegram_user_id = 383870190  # Default fallback for web orders
+        
         order = Order(
-            telegram_user_id=data.get('telegram_user_id', 383870190),  # Default fallback ID
+            telegram_user_id=telegram_user_id,
             customer_name=data['customer_name'],
             customer_phone=data['customer_phone'],
             customer_address=data['customer_address'],
