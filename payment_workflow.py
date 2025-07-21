@@ -120,11 +120,14 @@ def verify_payment():
             transaction.admin_notes = admin_notes
             
             # Update order status - ready for kitchen preparation
-            order.status = 'payment_verified'
+            order.status = 'confirmed'  # Change to 'confirmed' so kitchen can start preparing
             order.payment_verified_at = datetime.utcnow()
             
             # Notify kitchen staff that they can start preparing
             notify_kitchen_start_preparation(order)
+            
+            # Send real-time notification to kitchen dashboard
+            notify_kitchen_realtime(order)
             
             # Notify customer of payment approval
             notify_customer_payment_approved(order)
@@ -337,3 +340,50 @@ def search_nearby_drivers(order):
         notify_drivers_about_order(order.id, nearby_drivers)
     
     return nearby_drivers
+
+def notify_kitchen_realtime(order):
+    """Send real-time notification to kitchen dashboard when payment is verified"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Log the kitchen notification for real-time updates
+        logger.info(f"🚨 KITCHEN ALERT: Order #{order.id} payment verified - Ready for preparation!")
+        logger.info(f"Customer: {order.customer_name}, Total: {order.total_amount:.2f} ETB")
+        logger.info(f"Kitchen staff should start preparing Order #{order.id} immediately")
+        
+        # Additional notification via Telegram to kitchen staff
+        from bot_minimal import send_message_to_all_active_users
+        
+        kitchen_message = f"""
+🚨 *URGENT KITCHEN NOTIFICATION*
+
+✅ Order #{order.id} - Payment VERIFIED!
+👤 Customer: {order.customer_name}
+💰 Total: {order.total_amount:.2f} ETB
+📱 Phone: {order.phone}
+
+⏰ **START COOKING NOW!**
+
+Access kitchen dashboard immediately to begin preparation.
+        """
+        
+        # Send to all kitchen staff
+        send_message_to_all_active_users(kitchen_message, user_type='kitchen')
+        
+        # Also send to admin for awareness
+        admin_message = f"""
+💼 *Admin Notification*
+
+✅ Payment verified for Order #{order.id}
+👨‍🍳 Kitchen staff notified to start preparation
+📋 Customer: {order.customer_name}
+💰 Total: {order.total_amount:.2f} ETB
+
+Order status changed to 'confirmed' - ready for cooking.
+        """
+        
+        send_message_to_all_active_users(admin_message, user_type='admin')
+        
+    except Exception as e:
+        logger.error(f"Error sending kitchen real-time notification: {e}")
