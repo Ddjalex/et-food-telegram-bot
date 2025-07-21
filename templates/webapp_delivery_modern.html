@@ -848,6 +848,29 @@
             margin-top: 15px;
             text-align: right;
         }
+        
+        .location-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .location-btn:hover {
+            background: #059669;
+        }
+        
+        .location-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -1027,6 +1050,10 @@
                         <div class="form-group">
                             <label for="deliveryAddress">Delivery Address *</label>
                             <textarea id="deliveryAddress" name="deliveryAddress" rows="3" required></textarea>
+                            <button type="button" class="location-btn" onclick="shareLocation()">
+                                📍 Share Live Location
+                            </button>
+                            <div id="locationStatus" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
                         </div>
                         <div class="form-group">
                             <label for="paymentMethod">Payment Method *</label>
@@ -1067,6 +1094,7 @@
         let menuItems = [];
         let cart = [];
         let userLocationData = null;
+        let liveLocationData = null;
 
         // Load user location from Telegram WebApp
         function loadUserLocation() {
@@ -1644,6 +1672,7 @@
                 restaurant_id: parseInt(selectedRestaurant),
                 customer_name: formData.get('customerName'),
                 customer_phone: formData.get('customerPhone'),
+                customer_address: formData.get('deliveryAddress'),
                 delivery_address: formData.get('deliveryAddress'),
                 payment_method: formData.get('paymentMethod'),
                 items: cart.map(item => ({
@@ -1652,7 +1681,10 @@
                     price: item.price
                 })),
                 total_amount: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                telegram_user_id: getTelegramUserId()
+                telegram_user_id: getTelegramUserId(),
+                // Include live location data if available (backend expects location_lat/location_lng)
+                location_lat: liveLocationData ? liveLocationData.latitude : null,
+                location_lng: liveLocationData ? liveLocationData.longitude : null
             };
             
             try {
@@ -1700,6 +1732,137 @@
             } catch (error) {
                 console.error('Error getting Telegram user ID:', error);
             }
+            return null;
+        }
+        
+        // Update header location display
+        function updateHeaderLocation(latitude, longitude, address) {
+            const locationElement = document.getElementById('userLocation');
+            if (locationElement) {
+                if (address) {
+                    // Show first 50 characters of address with GPS coordinates
+                    const shortAddress = address.length > 50 ? address.substring(0, 50) + '...' : address;
+                    locationElement.innerHTML = `📍 ${shortAddress}<br><small style="color: #666; font-size: 10px;">GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}</small>`;
+                } else {
+                    locationElement.innerHTML = `📍 GPS Location<br><small style="color: #666; font-size: 10px;">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</small>`;
+                }
+            }
+        }
+        
+        // Location sharing functionality
+        function shareLocation() {
+            const statusDiv = document.getElementById('locationStatus');
+            const locationBtn = document.querySelector('.location-btn');
+            
+            statusDiv.textContent = 'Requesting location access...';
+            locationBtn.disabled = true;
+            
+            // Try Telegram WebApp location sharing first
+            if (window.Telegram && window.Telegram.WebApp) {
+                try {
+                    // Request location from Telegram WebApp
+                    window.Telegram.WebApp.requestLocation(function(location) {
+                        if (location) {
+                            handleLocationData(location.latitude, location.longitude);
+                        } else {
+                            // Fallback to browser geolocation
+                            getBrowserLocation();
+                        }
+                    });
+                } catch (error) {
+                    console.error('Telegram location error:', error);
+                    getBrowserLocation();
+                }
+            } else {
+                getBrowserLocation();
+            }
+        }
+        
+        function getBrowserLocation() {
+            const statusDiv = document.getElementById('locationStatus');
+            const locationBtn = document.querySelector('.location-btn');
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        handleLocationData(position.coords.latitude, position.coords.longitude);
+                    },
+                    function(error) {
+                        console.error('Geolocation error:', error);
+                        statusDiv.textContent = 'Location access denied or unavailable';
+                        statusDiv.style.color = '#ef4444';
+                        locationBtn.disabled = false;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    }
+                );
+            } else {
+                statusDiv.textContent = 'Geolocation not supported by this browser';
+                statusDiv.style.color = '#ef4444';
+                locationBtn.disabled = false;
+            }
+        }
+        
+        async function handleLocationData(latitude, longitude) {
+            const statusDiv = document.getElementById('locationStatus');
+            const locationBtn = document.querySelector('.location-btn');
+            const addressField = document.getElementById('deliveryAddress');
+            
+            try {
+                // Store location data
+                liveLocationData = {
+                    latitude: latitude,
+                    longitude: longitude,
+                    timestamp: new Date().toISOString()
+                };
+                
+                statusDiv.textContent = 'Getting address from coordinates...';
+                
+                // Reverse geocode to get address
+                const address = await reverseGeocode(latitude, longitude);
+                
+                // Update address field
+                if (address) {
+                    addressField.value = address;
+                    statusDiv.textContent = `✓ Live location captured: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    statusDiv.style.color = '#10b981';
+                } else {
+                    addressField.value = `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    statusDiv.textContent = `✓ GPS coordinates captured: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    statusDiv.style.color = '#10b981';
+                }
+                
+                // Update location button text
+                locationBtn.innerHTML = '✓ Location Shared';
+                locationBtn.style.background = '#10b981';
+                
+                // Update header location display
+                updateHeaderLocation(latitude, longitude, address);
+                
+            } catch (error) {
+                console.error('Error processing location:', error);
+                statusDiv.textContent = 'Error processing location';
+                statusDiv.style.color = '#ef4444';
+                locationBtn.disabled = false;
+            }
+        }
+        
+        async function reverseGeocode(latitude, longitude) {
+            try {
+                // Using OpenStreetMap Nominatim for reverse geocoding (free service)
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                const data = await response.json();
+                
+                if (data && data.display_name) {
+                    return data.display_name;
+                }
+            } catch (error) {
+                console.error('Reverse geocoding error:', error);
+            }
+            
             return null;
         }
 
