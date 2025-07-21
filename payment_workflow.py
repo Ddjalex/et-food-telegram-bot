@@ -129,10 +129,10 @@ def verify_payment():
             # Send real-time notification to kitchen dashboard
             notify_kitchen_realtime(order)
             
-            # Notify customer of payment approval
-            notify_customer_payment_approved(order)
+            # Do NOT notify customer - only kitchen staff should receive notification
+            # notify_customer_payment_approved(order)  # REMOVED
             
-            message = 'Payment verified successfully. Kitchen can start preparing.'
+            message = 'Payment verified successfully. Kitchen notified to start preparing.'
             
         else:
             # Reject payment
