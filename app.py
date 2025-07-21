@@ -36,8 +36,8 @@ def create_tables():
             # Create default restaurants
             restaurants = [
                 {
-                    'name': 'X Factory',
-                    'description': 'Premium food factory with authentic flavors',
+                    'name': 'Flavour cafe | E.Fabrica',
+                    'description': 'Authentic Ethiopian and International Cuisine',
                     'address': 'Addis Ababa, Ethiopia',
                     'phone': '+251911123456',
                     'latitude': 9.0579,
