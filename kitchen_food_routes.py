@@ -44,9 +44,13 @@ def get_menu_items():
         restaurant_id = request.args.get('restaurant_id', 1)
         menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
         
+        # Convert to simple array format that the kitchen interface expects
+        items_list = [item.to_dict() for item in menu_items]
+        
         return jsonify({
             'success': True,
-            'menu_items': [item.to_dict() for item in menu_items]
+            'menu_items': items_list,
+            'total_items': len(items_list)
         })
     except Exception as e:
         logger.error(f"Error fetching menu items: {e}")

@@ -573,7 +573,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Handle the grouped category structure
+                    // Handle categorized API response structure
                     allProducts = [];
                     if (data.categories && Array.isArray(data.categories)) {
                         // Extract all items from categories
@@ -585,6 +585,9 @@
                     } else if (data.menu_items && Array.isArray(data.menu_items)) {
                         // Handle direct menu_items array if available
                         allProducts = data.menu_items;
+                    } else {
+                        console.error('Unexpected API response structure:', data);
+                        allProducts = [];
                     }
                     displayProducts(allProducts);
                 } else {
