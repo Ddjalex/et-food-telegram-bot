@@ -448,8 +448,11 @@ def get_restaurant_drivers():
         from models import Driver
         from datetime import datetime, timedelta
         
-        # Get all drivers since they don't have restaurant_id field
-        drivers = Driver.query.all()
+        # Get only drivers assigned to this restaurant
+        drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        
+        logger.info(f"Getting drivers for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
+        logger.info(f"Found {len(drivers)} drivers for restaurant {admin.restaurant_id}")
         
         drivers_data = []
         for driver in drivers:

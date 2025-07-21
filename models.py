@@ -245,6 +245,7 @@ class Driver(db.Model):
     is_available = db.Column(db.Boolean, default=True)
     is_approved = db.Column(db.Boolean, default=False)  # Admin approval status
     approval_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)  # Associated restaurant
     
     # Document storage fields - updated to match registration system
     license_document = db.Column(db.String(500))  # License document URL
@@ -265,6 +266,9 @@ class Driver(db.Model):
     last_location_update = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    restaurant = db.relationship('Restaurant', backref='drivers')
 
 class UserProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
