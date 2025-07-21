@@ -2121,7 +2121,8 @@
                 
                 // Add cache-busting parameter to API call
                 const timestamp = Date.now();
-                const response = await fetch(`${apiUrl}&_cb=${timestamp}`);
+                const separator = apiUrl.includes('?') ? '&' : '?';
+                const response = await fetch(`${apiUrl}${separator}_cb=${timestamp}`);
                 const data = await response.json();
                 
                 console.log('Restaurant data received:', data);
