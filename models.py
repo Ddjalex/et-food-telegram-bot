@@ -26,6 +26,9 @@ class Restaurant(db.Model):
     orders = db.relationship('Order', backref='restaurant', lazy=True)
     
     def to_dict(self):
+        # Add cache-busting timestamp to image URLs for real-time updates
+        timestamp = str(int(datetime.utcnow().timestamp()))
+        
         return {
             'id': self.id,
             'name': self.name,
@@ -34,8 +37,8 @@ class Restaurant(db.Model):
             'phone': self.phone,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            'logo_url': self.logo_url,
-            'cover_image_url': self.cover_image_url,
+            'logo_url': f"{self.logo_url}?t={timestamp}" if self.logo_url else None,
+            'cover_image_url': f"{self.cover_image_url}?t={timestamp}" if self.cover_image_url else None,
             'is_active': self.is_active,
             'is_featured': self.is_featured,
             'delivery_fee': self.delivery_fee,

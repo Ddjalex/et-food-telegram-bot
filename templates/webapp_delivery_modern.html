@@ -1284,7 +1284,7 @@
             }
         }
 
-        // Load restaurant information (header removed, function simplified)
+        // Load restaurant information with cache-busting for real-time image updates
         async function loadRestaurantInfo(restaurantId = null) {
             try {
                 // Get selected restaurant from localStorage or get first available restaurant
@@ -1297,17 +1297,58 @@
                 }
                 
                 console.log('Loading restaurant info for ID:', selectedRestaurant || 'first available');
-                const response = await fetch(apiUrl);
+                
+                // Add cache-busting parameter to API call
+                const timestamp = Date.now();
+                const response = await fetch(`${apiUrl}&_cb=${timestamp}`);
                 const data = await response.json();
                 
                 console.log('Restaurant data received:', data);
                 
                 if (data.success && data.restaurant) {
+                    // Update restaurant images with cache-busting URLs
+                    updateRestaurantImages(data.restaurant);
                     console.log('Restaurant info updated successfully');
                 }
             } catch (error) {
                 console.error('Error loading restaurant info:', error);
             }
+        }
+
+        // Update restaurant images throughout the webapp
+        function updateRestaurantImages(restaurant) {
+            // Update any restaurant images in the DOM with new URLs
+            const logoElements = document.querySelectorAll('.restaurant-logo, .header-logo');
+            const coverElements = document.querySelectorAll('.restaurant-cover, .header-cover');
+            
+            logoElements.forEach(img => {
+                if (restaurant.logo_url) {
+                    img.src = restaurant.logo_url;
+                    img.onerror = function() {
+                        this.src = '/static/placeholder-restaurant.jpg';
+                    };
+                }
+            });
+            
+            coverElements.forEach(img => {
+                if (restaurant.cover_image_url) {
+                    img.src = restaurant.cover_image_url;
+                    img.onerror = function() {
+                        this.src = '/static/restaurant-placeholder.jpg';
+                    };
+                }
+            });
+        }
+
+        // Periodically refresh restaurant info to check for image updates (every 30 seconds)
+        function startImageRefreshTimer() {
+            setInterval(async () => {
+                try {
+                    await loadRestaurantInfo();
+                } catch (error) {
+                    console.error('Error refreshing restaurant images:', error);
+                }
+            }, 30000); // 30 seconds
         }
 
         // Initialize app
@@ -1317,6 +1358,9 @@
             
             // Load restaurant info and images
             await loadRestaurantInfo();
+            
+            // Start periodic image refresh for real-time updates
+            startImageRefreshTimer();
             
             // Get first available restaurant and set as default
             const restaurantsResponse = await fetch('/api/restaurants/super-admin');

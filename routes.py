@@ -4804,14 +4804,17 @@ def api_restaurant_info():
             ).first()
         
         if restaurant:
+            # Add cache-busting timestamp to image URLs to ensure real-time updates
+            timestamp = str(int(datetime.now().timestamp()))
+            
             return jsonify({
                 'success': True,
                 'restaurant': {
                     'id': restaurant.id,
                     'name': restaurant.name,
                     'description': restaurant.description,
-                    'logo_url': restaurant.logo_url,
-                    'cover_image_url': restaurant.cover_image_url,
+                    'logo_url': f"{restaurant.logo_url}?t={timestamp}" if restaurant.logo_url else None,
+                    'cover_image_url': f"{restaurant.cover_image_url}?t={timestamp}" if restaurant.cover_image_url else None,
                     'address': restaurant.address,
                     'phone': restaurant.phone,
                     'estimated_delivery_time': restaurant.estimated_delivery_time
