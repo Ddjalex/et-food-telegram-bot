@@ -2,7 +2,7 @@ import os
 
 class Config:
     # Telegram Bot Configuration
-    BOT_TOKEN = os.environ.get('BOT_TOKEN', 'your_bot_token_here')
+    BOT_TOKEN = os.environ.get('ETFASTFOOD_BOT_TOKEN', 'your_bot_token_here')
     DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN', 'your_driver_bot_token_here')
     @staticmethod
     def get_webhook_url():
