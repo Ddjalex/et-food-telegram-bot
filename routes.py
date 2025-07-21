@@ -71,12 +71,37 @@ def index():
     # If accessed with ?admin=1, show login portal
     if request.args.get('admin') == '1':
         return render_template('login_home.html')
+    
+    # Check if a specific restaurant is requested
+    restaurant_id = request.args.get('restaurant_id', type=int)
+    if restaurant_id:
+        # Store the restaurant ID in session for the WebApp to use
+        session['selected_restaurant'] = restaurant_id
+    
+    return render_template('webapp_delivery_modern.html')
+
+@app.route('/restaurant/<int:restaurant_id>')
+def restaurant_menu(restaurant_id):
+    """Restaurant-specific menu page"""
+    # Verify the restaurant exists and is active
+    restaurant = Restaurant.query.filter_by(id=restaurant_id, is_active=True).first()
+    if not restaurant:
+        # Redirect to main page if restaurant not found
+        return redirect('/')
+    
+    # Store the restaurant ID in session
+    session['selected_restaurant'] = restaurant_id
     return render_template('webapp_delivery_modern.html')
 
 @app.route('/login-portal')
 def login_portal():
     """Admin login portal page"""
     return render_template('login_home.html')
+
+@app.route('/test-restaurants')
+def test_restaurants():
+    """Test page for restaurant routing"""
+    return send_file('test_restaurant_routing.html')
 
 # Separate login routes for different user roles
 @app.route('/superadmin', methods=['GET', 'POST'])
@@ -4885,8 +4910,10 @@ def update_driver_search_radius():
 def api_restaurant_info():
     """API endpoint for current selected restaurant info"""
     try:
-        # Get restaurant ID from query parameter
+        # Get restaurant ID from query parameter, then session
         restaurant_id = request.args.get('restaurant_id', type=int)
+        if restaurant_id is None:
+            restaurant_id = session.get('selected_restaurant')
         
         # If no specific restaurant requested, get the first available active restaurant with menu items
         if restaurant_id is None:

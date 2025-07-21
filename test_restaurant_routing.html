@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Restaurant Routing Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .restaurant-link { 
+            display: block; 
+            padding: 15px; 
+            margin: 10px 0; 
+            background: #f4f4f4; 
+            text-decoration: none; 
+            color: #333; 
+            border-radius: 8px;
+        }
+        .restaurant-link:hover { background: #e4e4e4; }
+    </style>
+</head>
+<body>
+    <h1>Restaurant Routing Test</h1>
+    <p>Test the different restaurant routes:</p>
+    
+    <a href="/restaurant/1" class="restaurant-link">
+        <strong>Restaurant 1: Flavour cafe | E.Fabrica</strong><br>
+        Address: Addis Ababa, Ethiopia
+    </a>
+    
+    <a href="/restaurant/2" class="restaurant-link">
+        <strong>Restaurant 2: Rich Cafe</strong><br>
+        Address: 2PXG+X4P, Addis Ababa
+    </a>
+    
+    <a href="/?restaurant_id=1" class="restaurant-link">
+        <strong>Main Page with Restaurant 1 Parameter</strong><br>
+        Using URL parameter method
+    </a>
+    
+    <a href="/?restaurant_id=2" class="restaurant-link">
+        <strong>Main Page with Restaurant 2 Parameter</strong><br>
+        Using URL parameter method
+    </a>
+    
+    <a href="/" class="restaurant-link">
+        <strong>Default Page</strong><br>
+        Will show first available restaurant
+    </a>
+    
+    <script>
+        console.log('Current page path:', window.location.pathname);
+        console.log('Current page search:', window.location.search);
+    </script>
+</body>
+</html>

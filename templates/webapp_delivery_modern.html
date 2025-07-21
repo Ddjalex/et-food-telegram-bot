@@ -2143,13 +2143,34 @@
         // Load restaurant information with cache-busting for real-time image updates
         async function loadRestaurantInfo(restaurantId = null) {
             try {
-                // Get selected restaurant from localStorage or get first available restaurant
-                let selectedRestaurant = restaurantId || localStorage.getItem('selectedRestaurant');
+                // Priority order: parameter > URL parameter > localStorage > first available
+                let selectedRestaurant = restaurantId;
                 
-                // If no restaurant selected, get first available restaurant
+                // Check URL parameters for restaurant_id
+                if (!selectedRestaurant) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    selectedRestaurant = urlParams.get('restaurant_id');
+                }
+                
+                // Check if we're on a restaurant-specific route
+                if (!selectedRestaurant) {
+                    const pathMatch = window.location.pathname.match(/\/restaurant\/(\d+)/);
+                    if (pathMatch) {
+                        selectedRestaurant = pathMatch[1];
+                    }
+                }
+                
+                // Fallback to localStorage
+                if (!selectedRestaurant) {
+                    selectedRestaurant = localStorage.getItem('selectedRestaurant');
+                }
+                
+                // Build API URL
                 let apiUrl = '/api/restaurants/info';
                 if (selectedRestaurant) {
                     apiUrl += `?restaurant_id=${selectedRestaurant}`;
+                    // Store in localStorage for future use
+                    localStorage.setItem('selectedRestaurant', selectedRestaurant);
                 }
                 
                 console.log('Loading restaurant info for ID:', selectedRestaurant || 'first available');
