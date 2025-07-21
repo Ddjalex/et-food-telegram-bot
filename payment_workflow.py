@@ -244,41 +244,18 @@ Please verify payment in admin dashboard.
     send_message_to_all_active_users(message, user_type='admin')
 
 def notify_kitchen_start_preparation(order):
-    """Notify kitchen staff to start preparation"""
+    """Notify kitchen staff through web dashboard - NOT Telegram"""
     import logging
     logger = logging.getLogger(__name__)
     
     try:
-        # Log the notification for real-time dashboard updates
+        # Log notification for kitchen web dashboard to pick up
         logger.info(f"🚨 KITCHEN ALERT: Order #{order.id} payment verified - Ready for preparation!")
         logger.info(f"Customer: {order.customer_name}, Total: {order.total_amount:.2f} ETB")
+        logger.info(f"Kitchen staff should check web dashboard at /kitchen/orders")
         
-        # Update order status for kitchen dashboard
-        from models import KitchenStaff
-        kitchen_staff = KitchenStaff.query.filter_by(restaurant_id=order.restaurant_id).all()
-        
-        if kitchen_staff:
-            # Send Telegram notifications to kitchen staff
-            from bot_minimal import send_message
-            
-            message = f"""
-👨‍🍳 *Kitchen Alert*
-
-✅ Payment verified for Order #{order.id}
-📋 Customer: {order.customer_name}
-💰 Total: {order.total_amount:.2f} ETB
-
-🚀 Ready to start preparation!
-
-Access kitchen dashboard to begin cooking.
-            """
-            
-            for staff in kitchen_staff:
-                if staff.telegram_user_id:
-                    try:
-                        send_message(staff.telegram_user_id, message, parse_mode='Markdown')
-                    except Exception as e:
-                        logger.error(f"Failed to send message to kitchen staff {staff.name}: {e}")
+        # Kitchen staff will see this order in the web dashboard at /kitchen/orders
+        # No Telegram notifications needed - they use the web interface
         
         logger.info(f"Kitchen staff notified for Order #{order.id}")
         
@@ -375,54 +352,21 @@ def search_nearby_drivers(order):
     return nearby_drivers
 
 def notify_kitchen_realtime(order):
-    """Send real-time notification to kitchen dashboard when payment is verified"""
+    """Send real-time notification to kitchen web dashboard"""
     import logging
     logger = logging.getLogger(__name__)
     
     try:
-        # Log the kitchen notification for real-time updates
+        # Kitchen staff use web dashboard at /kitchen/orders - no Telegram needed
         logger.info(f"🚨 KITCHEN ALERT: Order #{order.id} payment verified - Ready for preparation!")
         logger.info(f"Customer: {order.customer_name}, Total: {order.total_amount:.2f} ETB")
         logger.info(f"Kitchen staff should start preparing Order #{order.id} immediately")
         
-        # Send notifications to kitchen staff and admins
-        from models import KitchenStaff, AdminUser
-        from bot_minimal import send_message
+        # Kitchen dashboard will show this order with 'confirmed' status
+        # Staff can see all new confirmed orders in their web interface
         
-        # Notify kitchen staff
-        kitchen_staff = KitchenStaff.query.filter_by(restaurant_id=order.restaurant_id).all()
-        kitchen_message = f"""
-🚨 *URGENT KITCHEN NOTIFICATION*
-
-✅ Order #{order.id} - Payment VERIFIED!
-👤 Customer: {order.customer_name}
-💰 Total: {order.total_amount:.2f} ETB
-📱 Phone: {order.customer_phone}
-
-⏰ **START COOKING NOW!**
-
-Access kitchen dashboard immediately to begin preparation.
-        """
-        
-        for staff in kitchen_staff:
-            if staff.telegram_user_id:
-                try:
-                    send_message(staff.telegram_user_id, kitchen_message, parse_mode='Markdown')
-                except Exception as e:
-                    logger.error(f"Failed to send message to kitchen staff {staff.name}: {e}")
-        
-        # Notify admins for awareness
-        admins = AdminUser.query.filter_by(restaurant_id=order.restaurant_id, is_active=True).all()
-        admin_message = f"""
-💼 *Admin Notification*
-
-✅ Payment verified for Order #{order.id}
-👨‍🍳 Kitchen staff notified to start preparation
-📋 Customer: {order.customer_name}
-💰 Total: {order.total_amount:.2f} ETB
-
-Order status changed to 'confirmed' - ready for cooking.
-        """
+    except Exception as e:
+        logger.error(f"Error sending kitchen real-time notification: {e}")
         
         for admin in admins:
             if admin.telegram_user_id:
