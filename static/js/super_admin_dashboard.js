@@ -1275,19 +1275,34 @@ function deleteDriver(driverId, driverName) {
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is a redirect (authentication issue)
+            if (response.redirected && response.url.includes('/superadmin/login')) {
+                showAlert('error', 'Session expired. Please log in again.');
+                window.location.href = '/superadmin/login';
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            if (!data) return; // Handle redirect case
+            
             if (data.success) {
                 showAlert('success', `Driver "${driverName}" deleted successfully`);
                 loadDriverApprovals();
                 loadDriverLocationDetails();
             } else {
-                showAlert('error', data.message || 'Failed to delete driver');
+                showAlert('error', data.message || data.error || 'Failed to delete driver');
             }
         })
         .catch(error => {
             console.error('Error deleting driver:', error);
-            showAlert('error', 'Failed to delete driver');
+            showAlert('error', `Failed to delete driver: ${error.message}`);
         });
     }
 }

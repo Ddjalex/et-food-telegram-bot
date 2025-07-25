@@ -1105,10 +1105,17 @@ def change_admin_password():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/drivers/<int:driver_id>', methods=['DELETE'])
-@super_admin_required
 def delete_driver_super_admin(driver_id):
     """Delete a driver (Super Admin only)"""
     try:
+        # Check if user is authenticated as super admin
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
+            
         from models import Driver
         
         driver = Driver.query.get_or_404(driver_id)
