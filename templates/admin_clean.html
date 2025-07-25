@@ -1062,7 +1062,7 @@
 
         // Verify payment
         function verifyPayment(orderId) {
-            if (!confirm('Are you sure you want to verify this payment?')) {
+            if (!confirm('Are you sure you want to verify this payment? This will confirm the order and notify the kitchen staff and customer.')) {
                 return;
             }
             
@@ -1073,15 +1073,20 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Payment verified successfully');
+                    alert('Payment verified successfully! Kitchen staff and customer have been notified.');
                     loadPaymentVerificationOrders();
+                    
+                    // Also reload dashboard stats if available
+                    if (typeof loadDashboardStats === 'function') {
+                        loadDashboardStats();
+                    }
                 } else {
                     alert('Error verifying payment: ' + (data.message || 'Unknown error'));
                 }
             })
             .catch(error => {
                 console.error('Error verifying payment:', error);
-                alert('Error verifying payment');
+                alert('Error verifying payment: ' + error.message);
             });
         }
 

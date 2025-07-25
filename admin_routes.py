@@ -2043,18 +2043,34 @@ def verify_payment_admin(order_id):
     try:
         admin = AdminUser.query.get(session['admin_id'])
         
-        from models import Order
+        from models import Order, KitchenStaff
         order = Order.query.filter_by(id=order_id, restaurant_id=admin.restaurant_id).first()
         
         if not order:
             return jsonify({'success': False, 'message': 'Order not found'}), 404
         
         # Update order status to confirmed
+        old_status = order.status
         order.status = 'confirmed'
+        order.payment_verified_at = datetime.utcnow()
         db.session.commit()
         
         # Log activity
         log_admin_activity(admin.id, 'payment_verified', 'order', order_id, f'Payment verified for order #{order_id}')
+        
+        # Send notification to kitchen staff
+        try:
+            from payment_workflow import notify_kitchen_staff_payment_verified
+            notify_kitchen_staff_payment_verified(order)
+        except Exception as notify_error:
+            logger.error(f"Error notifying kitchen staff: {notify_error}")
+        
+        # Send notification to customer
+        try:
+            from payment_workflow import notify_customer_payment_approved
+            notify_customer_payment_approved(order)
+        except Exception as customer_error:
+            logger.error(f"Error notifying customer: {customer_error}")
         
         return jsonify({'success': True, 'message': 'Payment verified successfully'})
     except Exception as e:

@@ -4,7 +4,7 @@ Handles deposit requirements, payment verification, and order preparation workfl
 """
 
 from flask import Blueprint, request, jsonify, render_template
-from models import db, Order, MenuItem, Restaurant, PaymentTransaction
+from models import db, Order, MenuItem, Restaurant, PaymentTransaction, KitchenStaff
 from datetime import datetime
 import os
 
@@ -371,13 +371,46 @@ def notify_kitchen_realtime(order):
         
     except Exception as e:
         logger.error(f"Error sending kitchen real-time notification: {e}")
+
+def notify_kitchen_staff_payment_verified(order):
+    """Send real-time notification to kitchen staff when payment is verified"""
+    try:
+        # Get kitchen staff for this restaurant
+        kitchen_staff = KitchenStaff.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            is_active=True
+        ).all()
         
-        for admin in admins:
-            if admin.telegram_user_id:
+        if not kitchen_staff:
+            print(f"No active kitchen staff found for restaurant {order.restaurant_id}")
+            return
+        
+        # Send notifications to kitchen staff via Telegram
+        from bot_minimal import send_message_to_user
+        
+        for staff in kitchen_staff:
+            if staff.telegram_user_id:
                 try:
-                    send_message(admin.telegram_user_id, admin_message, parse_mode='Markdown')
+                    message = f"""
+🔔 **PAYMENT VERIFIED - NEW ORDER**
+
+📋 **Order #{order.id}**
+👤 Customer: {order.customer_name}
+💰 Amount: {order.total_amount} ETB
+💳 Payment Method: {order.payment_method or 'N/A'}
+📍 Address: {order.customer_address or 'N/A'}
+
+✅ Payment has been verified by admin
+🍽️ **Please start preparing the order**
+
+Order Status: CONFIRMED → PREPARING
+                    """
+                    
+                    send_message_to_user(staff.telegram_user_id, message)
+                    print(f"Kitchen staff notification sent to {staff.name} (ID: {staff.telegram_user_id})")
+                    
                 except Exception as e:
-                    logger.error(f"Failed to send message to admin {admin.username}: {e}")
-        
+                    print(f"Error sending notification to kitchen staff {staff.name}: {e}")
+                    
     except Exception as e:
-        logger.error(f"Error sending kitchen real-time notification: {e}")
+        print(f"Error in notify_kitchen_staff_payment_verified: {e}")
