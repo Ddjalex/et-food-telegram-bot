@@ -7,22 +7,50 @@ from flask import Blueprint, request, jsonify, session
 from models import db, Order, AdminUser, KitchenStaff, Restaurant
 from datetime import datetime
 import logging
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
 enhanced_payment = Blueprint('enhanced_payment', __name__)
 
+def admin_required(f):
+    """Decorator to require admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_id' not in session:
+            logger.warning(f"Admin authentication failed - no admin_id in session. Session keys: {list(session.keys())}")
+            if request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or not admin.is_active:
+            session.clear()
+            if request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Account not active'}), 401
+            return jsonify({'success': False, 'error': 'Account not active'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 @enhanced_payment.route('/api/admin/payment-verification-enhanced', methods=['GET'])
+@admin_required
 def get_enhanced_payment_verification():
     """Enhanced payment verification endpoint with real-time data"""
     try:
+        logger.info(f"Enhanced payment verification accessed. Session: {dict(session)}")
+        
         # Check authentication
         if 'admin_id' not in session:
+            logger.warning("Admin not authenticated - no admin_id in session")
             return jsonify({'success': False, 'error': 'Not authenticated'}), 401
         
         admin = AdminUser.query.get(session['admin_id'])
         if not admin:
+            logger.warning(f"Admin not found for ID: {session['admin_id']}")
             return jsonify({'success': False, 'error': 'Admin not found'}), 404
+        
+        logger.info(f"Enhanced payment verification for admin: {admin.username} (Restaurant: {admin.restaurant_id})")
         
         # Get restaurant-specific orders needing verification
         restaurant_id = admin.restaurant_id or 1
@@ -64,6 +92,8 @@ def get_enhanced_payment_verification():
         with_screenshots = len([o for o in verification_orders if o['has_screenshot']])
         manual_verification = len([o for o in verification_orders if not o['has_screenshot']])
         
+        logger.info(f"Found {len(verification_orders)} orders for verification (pending: {total_pending})")
+        
         return jsonify({
             'success': True,
             'orders': verification_orders,
@@ -81,6 +111,7 @@ def get_enhanced_payment_verification():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @enhanced_payment.route('/api/admin/verify-payment-enhanced/<int:order_id>', methods=['POST'])
+@admin_required
 def verify_payment_enhanced(order_id):
     """Enhanced payment verification with comprehensive workflow"""
     try:
@@ -177,6 +208,7 @@ def verify_payment_enhanced(order_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @enhanced_payment.route('/api/admin/reject-payment-enhanced/<int:order_id>', methods=['POST'])
+@admin_required
 def reject_payment_enhanced(order_id):
     """Enhanced payment rejection with detailed workflow"""
     try:
