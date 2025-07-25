@@ -207,6 +207,8 @@ def get_admin_dashboard_stats():
     """Get dashboard statistics for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
         
         # Get orders for this admin's restaurant
         from models import Order
@@ -244,6 +246,9 @@ def get_recent_orders():
     """Get recent orders for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+            
         logger.info(f"Getting recent orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
@@ -308,6 +313,9 @@ def get_restaurant_admin_orders():
     """Get all orders for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+            
         logger.info(f"Getting orders for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         from models import Order
@@ -358,6 +366,9 @@ def get_restaurant_menu_items():
     """Get menu items for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+            
         logger.info(f"Getting menu items for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
@@ -386,6 +397,8 @@ def get_restaurant_categories():
     """Get categories for restaurant admin"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
         
         # Get unique categories from menu items
         from sqlalchemy import distinct
@@ -393,6 +406,10 @@ def get_restaurant_categories():
         
         categories_data = []
         for i, (category_name,) in enumerate(categories):
+            # Skip None categories
+            if not category_name:
+                continue
+                
             # Count items in this category
             item_count = MenuItem.query.filter_by(
                 category=category_name,
