@@ -2149,11 +2149,11 @@ def get_admin_payment_notifications():
         admin = AdminUser.query.get(session['admin_id'])
         
         from models import Order
-        # Get orders with payment images that need verification
+        # Get orders that need payment verification (with or without payment images)
         orders = Order.query.filter(
             Order.restaurant_id == admin.restaurant_id,
-            Order.transaction_image_url.isnot(None),
-            Order.status.in_(['pending', 'confirmed'])
+            Order.status.in_(['pending', 'confirmed']),
+            Order.payment_verified_at.is_(None)  # Not yet verified
         ).order_by(Order.created_at.desc()).all()
         
         notifications = []
@@ -2161,9 +2161,10 @@ def get_admin_payment_notifications():
             notifications.append({
                 'id': order.id,
                 'customer_name': order.customer_name,
+                'customer_phone': getattr(order, 'customer_phone', 'N/A'),
                 'total_amount': order.total_amount,
-                'payment_method': order.payment_method,
-                'transaction_id': order.transaction_id,
+                'payment_method': order.payment_method or 'Manual verification required',
+                'transaction_id': order.transaction_id or 'N/A',
                 'transaction_image_url': order.transaction_image_url,
                 'created_at': order.created_at.isoformat(),
                 'status': order.status
@@ -2190,10 +2191,19 @@ def verify_payment_admin(order_id):
         if not order:
             return jsonify({'success': False, 'message': 'Order not found'}), 404
         
+        # Check if order is already verified
+        if order.payment_verified_at:
+            return jsonify({'success': False, 'message': 'Payment already verified'}), 400
+        
         # Update order status to confirmed
         old_status = order.status
         order.status = 'confirmed'
         order.payment_verified_at = datetime.utcnow()
+        
+        # If no payment method specified, mark as cash/manual verification
+        if not order.payment_method:
+            order.payment_method = 'Manual verification'
+            
         db.session.commit()
         
         # Log activity

@@ -965,23 +965,23 @@
 
         // Load payment verification orders
         function loadPaymentVerificationOrders() {
-            fetch('/api/orders/payment-verification')
+            fetch('/api/admin/payment-notifications')
                 .then(response => response.json())
                 .then(data => {
                     const tbody = document.getElementById('paymentVerificationTableBody');
                     const noOrdersDiv = document.getElementById('noPaymentOrders');
                     const badge = document.getElementById('paymentVerificationCount');
                     
-                    if (data.orders && data.orders.length > 0) {
+                    if (data.notifications && data.notifications.length > 0) {
                         tbody.innerHTML = '';
                         noOrdersDiv.style.display = 'none';
                         tbody.parentElement.parentElement.style.display = 'block';
                         
                         // Update badge count
-                        badge.textContent = data.orders.length;
+                        badge.textContent = data.notifications.length;
                         badge.style.display = 'inline';
                         
-                        data.orders.forEach(order => {
+                        data.notifications.forEach(order => {
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>#${order.id}</td>
@@ -997,7 +997,7 @@
                                         `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
                                             <i class="fas fa-image"></i> View
                                         </button>` : 
-                                        '<span class="text-muted">No screenshot</span>'
+                                        '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Manual verification</span>'
                                     }
                                 </td>
                                 <td>
