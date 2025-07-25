@@ -1450,11 +1450,15 @@
         
         async function loadStatistics() {
             try {
-                const response = await fetch('/kitchen/orders');
-                const orders = await response.json();
+                const response = await fetch('/api/orders');
+                const data = await response.json();
                 
-                const stats = calculateStatistics(orders);
-                updateStatisticsDisplay(stats);
+                if (data.success && data.orders) {
+                    const stats = calculateStatistics(data.orders);
+                    updateStatisticsDisplay(stats);
+                } else {
+                    console.error('Error loading statistics: Invalid response format');
+                }
             } catch (error) {
                 console.error('Error loading statistics:', error);
             }
@@ -2107,29 +2111,41 @@
                 // Load menu items count
                 const menuResponse = await fetch('/api/kitchen/menu-items');
                 const menuData = await menuResponse.json();
-                if (menuData.success) {
-                    document.getElementById('totalMenuItems').textContent = menuData.menu_items.length;
+                if (menuData.success && menuData.items) {
+                    const totalMenuItems = document.getElementById('totalMenuItems');
+                    if (totalMenuItems) {
+                        totalMenuItems.textContent = menuData.items.length;
+                    }
                 }
                 
                 // Load categories count
                 const categoriesResponse = await fetch('/api/kitchen/categories');
                 const categoriesData = await categoriesResponse.json();
-                if (categoriesData.success) {
-                    document.getElementById('totalCategories').textContent = categoriesData.categories.length;
+                if (categoriesData.success && categoriesData.categories) {
+                    const totalCategories = document.getElementById('totalCategories');
+                    if (totalCategories) {
+                        totalCategories.textContent = categoriesData.categories.length;
+                    }
                 }
                 
                 // Load orders count
                 const ordersResponse = await fetch('/api/orders');
                 const ordersData = await ordersResponse.json();
-                if (ordersData.success) {
-                    document.getElementById('totalOrders').textContent = ordersData.orders.length;
+                if (ordersData.success && ordersData.orders) {
+                    const totalOrders = document.getElementById('totalOrders');
+                    if (totalOrders) {
+                        totalOrders.textContent = ordersData.orders.length;
+                    }
                     
                     // Count today's orders
                     const today = new Date().toISOString().split('T')[0];
                     const todayOrders = ordersData.orders.filter(order => 
-                        order.created_at.startsWith(today)
+                        order.created_at && order.created_at.startsWith(today)
                     );
-                    document.getElementById('todayOrders').textContent = todayOrders.length;
+                    const todayOrdersElement = document.getElementById('todayOrders');
+                    if (todayOrdersElement) {
+                        todayOrdersElement.textContent = todayOrders.length;
+                    }
                 }
             } catch (error) {
                 console.error('Error loading dashboard stats:', error);

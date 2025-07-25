@@ -1550,9 +1550,32 @@ def create_order():
         db.session.add(order)
         db.session.commit()
         
-        # Send real-time notification to admin only (no driver notification)
-        from real_time_admin_system import notify_admin_new_order
-        notify_admin_new_order(order.id)
+        # Send real-time notification to admin and kitchen staff
+        try:
+            from real_time_admin_system import notify_admin_new_order
+            notify_admin_new_order(order.id)
+        except Exception as e:
+            logger.warning(f"Admin notification failed: {e}")
+        
+        # Send real-time notification to kitchen staff
+        try:
+            import threading
+            import requests
+            
+            def notify_kitchen():
+                try:
+                    requests.post(f'http://localhost:5000/api/orders/notify-kitchen', 
+                                 json={'order_id': order.id}, 
+                                 timeout=5)
+                except Exception as e:
+                    logger.error(f"Kitchen notification failed: {e}")
+            
+            # Run notification in background thread
+            thread = threading.Thread(target=notify_kitchen)
+            thread.daemon = True
+            thread.start()
+        except Exception as e:
+            logger.warning(f"Kitchen notification setup failed: {e}")
         
         return jsonify({'message': 'Order created successfully', 'order_id': order.id}), 201
     
@@ -5056,4 +5079,123 @@ def api_restaurant_info():
             })
     except Exception as e:
         logger.error(f"Error fetching restaurant info: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Kitchen Dashboard API Endpoints Fix
+@app.route('/api/kitchen/menu-items')
+def api_kitchen_menu_items():
+    """API endpoint for kitchen menu items"""
+    try:
+        # Get all menu items - for kitchen staff all restaurants can be managed
+        admin_id = session.get('admin_id')
+        if admin_id:
+            admin = AdminUser.query.get(admin_id)
+            if admin and admin.restaurant_id:
+                menu_items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
+            else:
+                menu_items = MenuItem.query.all()
+        else:
+            menu_items = MenuItem.query.all()
+        
+        items_data = []
+        for item in menu_items:
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'price': item.price,
+                'description': item.description,
+                'category': item.category,
+                'available': item.available,
+                'image_url': item.image_url,
+                'restaurant_id': item.restaurant_id
+            })
+        
+        return jsonify({
+            'success': True,
+            'items': items_data,
+            'menu_items': items_data  # Both formats for compatibility
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting kitchen menu items: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/kitchen/categories')
+def api_kitchen_categories():
+    """API endpoint for kitchen categories"""
+    try:
+        categories = Category.query.all()
+        categories_data = []
+        for category in categories:
+            categories_data.append({
+                'id': category.id,
+                'name': category.name,
+                'icon': category.icon,
+                'sort_order': category.sort_order
+            })
+        
+        return jsonify({
+            'success': True,
+            'categories': categories_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting kitchen categories: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Real-time order notification system
+@app.route('/api/orders/notify-kitchen', methods=['POST'])
+def notify_kitchen_new_order():
+    """Send real-time notification to kitchen staff about new orders"""
+    try:
+        data = request.get_json()
+        order_id = data.get('order_id')
+        
+        if not order_id:
+            return jsonify({'success': False, 'error': 'Order ID required'}), 400
+            
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        # Send notification to all kitchen staff for this restaurant
+        kitchen_staff = AdminUser.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            user_type='kitchen_staff'
+        ).all() + AdminUser.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            user_type='admin'
+        ).all()
+        
+        notification_message = f"""
+🍽️ *New Order Alert!*
+
+📋 Order #{order.id}
+👤 Customer: {order.customer_name}
+📱 Phone: {order.customer_phone}
+💰 Total: {order.total_amount:.2f} ETB
+⏰ Time: {order.created_at.strftime('%H:%M')}
+
+📍 Address: {order.customer_address}
+
+Please check kitchen dashboard for details!
+"""
+        
+        # Send to kitchen staff via Telegram if they have telegram_user_id
+        notifications_sent = 0
+        for staff in kitchen_staff:
+            if hasattr(staff, 'telegram_user_id') and staff.telegram_user_id:
+                try:
+                    send_order_notification(staff.telegram_user_id, notification_message)
+                    notifications_sent += 1
+                except Exception as e:
+                    logger.warning(f"Could not notify kitchen staff {staff.username}: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Kitchen notification sent to {notifications_sent} staff members'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending kitchen notification: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
