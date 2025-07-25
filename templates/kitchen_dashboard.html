@@ -2161,23 +2161,8 @@
         // Logout function for kitchen staff
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                fetch('/admin/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.href = '/admin/login';
-                    } else {
-                        alert('Logout failed. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Logout error:', error);
-                    alert('Logout failed. Please try again.');
-                });
+                // Use the kitchen-specific logout route
+                window.location.href = '/kitchen/logout';
             }
         }
     </script>

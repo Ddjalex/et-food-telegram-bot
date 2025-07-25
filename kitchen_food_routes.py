@@ -363,8 +363,14 @@ def kitchen_login():
 @app.route('/kitchen/logout')
 def kitchen_logout():
     """Kitchen staff logout"""
-    session.clear()
-    return redirect('/kitchen/login')
+    try:
+        session.clear()
+        return redirect('/kitchen/login')
+    except Exception as e:
+        logger.error(f"Kitchen logout error: {e}")
+        # Even if there's an error, clear session and redirect
+        session.clear()
+        return redirect('/kitchen/login')
 
 # Kitchen Order Status Update Functions
 @app.route('/api/kitchen/orders/<int:order_id>/status', methods=['PUT', 'POST'])
