@@ -456,29 +456,39 @@ def get_kitchen_stats():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/drivers', methods=['GET'])
-@admin_required
 def get_restaurant_drivers():
     """Get drivers for restaurant admin with real-time location status"""
     try:
+        # Check authentication
+        if 'admin_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+            
         admin = AdminUser.query.get(session['admin_id'])
-        
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+            
         from models import Driver
         from datetime import datetime, timedelta
         
-        # Get only drivers assigned to this restaurant
-        drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+        # Get drivers for this restaurant - handle both restaurant admins and super admins
+        if admin.role == 'super_admin':
+            # Super admin sees all drivers
+            drivers = Driver.query.all()
+        else:
+            # Regular restaurant admin sees only their restaurant's drivers
+            drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
         
-        logger.info(f"Getting drivers for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
-        logger.info(f"Found {len(drivers)} drivers for restaurant {admin.restaurant_id}")
+        logger.info(f"Getting drivers for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id}, Role: {admin.role})")
+        logger.info(f"Found {len(drivers)} drivers")
         
         drivers_data = []
         for driver in drivers:
-            # Enhanced location status calculation (same as super admin)
+            # Enhanced location status calculation
             location_status = 'inactive'
             last_update_text = "Never"
             minutes_ago = None
             
-            if driver.last_location_update:
+            if hasattr(driver, 'last_location_update') and driver.last_location_update:
                 time_diff = datetime.utcnow() - driver.last_location_update
                 minutes_ago = time_diff.total_seconds() / 60
                 
@@ -500,21 +510,30 @@ def get_restaurant_drivers():
                         days_ago = hours_ago / 24
                         last_update_text = f"{int(days_ago)} days ago"
             
-            drivers_data.append({
+            driver_data = {
                 'id': driver.id,
-                'full_name': driver.name,  # Driver model uses 'name' not 'full_name'
-                'phone': driver.phone_number,  # Driver model uses 'phone_number' not 'phone'
-                'vehicle_type': driver.vehicle_type,
-                'status': driver.approval_status,  # Driver model uses 'approval_status' not 'status'
+                'full_name': driver.name,
+                'phone': driver.phone_number,
+                'vehicle_type': driver.vehicle_type or 'Unknown',
+                'status': driver.approval_status or 'pending',
                 'is_active': driver.is_active,
                 'is_available': driver.is_available,
-                'current_latitude': driver.current_lat,  # Driver model uses 'current_lat' not 'current_latitude'
-                'current_longitude': driver.current_lng,  # Driver model uses 'current_lng' not 'current_longitude'
-                'last_location_update': driver.last_location_update.isoformat() if driver.last_location_update else None,
                 'location_status': location_status,
                 'last_update_text': last_update_text,
-                'minutes_ago': int(minutes_ago) if minutes_ago else None
-            })
+                'minutes_ago': int(minutes_ago) if minutes_ago else None,
+                'telegram_user_id': driver.telegram_user_id,
+                'restaurant_id': driver.restaurant_id
+            }
+            
+            # Add location data if available
+            if hasattr(driver, 'current_lat') and hasattr(driver, 'current_lng'):
+                driver_data['current_latitude'] = driver.current_lat
+                driver_data['current_longitude'] = driver.current_lng
+                
+            if hasattr(driver, 'last_location_update'):
+                driver_data['last_location_update'] = driver.last_location_update.isoformat() if driver.last_location_update else None
+            
+            drivers_data.append(driver_data)
         
         return jsonify(drivers_data)
     except Exception as e:
@@ -522,11 +541,17 @@ def get_restaurant_drivers():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/drivers', methods=['POST'])
-@admin_required
 def add_restaurant_driver():
     """Add new driver for restaurant admin"""
     try:
+        # Check authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'success': False, 'error': 'Admin not found'}), 404
+            
         data = request.get_json()
         
         from models import Driver
@@ -544,7 +569,8 @@ def add_restaurant_driver():
             is_approved=data.get('auto_approve', False),
             is_active=True,
             is_available=True,
-            telegram_user_id=data.get('telegram_user_id')
+            telegram_user_id=data.get('telegram_user_id'),
+            restaurant_id=admin.restaurant_id  # Assign driver to the admin's restaurant
         )
         
         db.session.add(driver)
