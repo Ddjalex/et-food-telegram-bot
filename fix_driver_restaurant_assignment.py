@@ -1,165 +1,65 @@
 #!/usr/bin/env python3
-"""
-Fix driver restaurant assignment issue
-- Add restaurant_id column to driver table
-- Assign approved drivers to Flavour Cafe restaurant
-"""
+"""Fix driver restaurant assignment and verify correct filtering"""
 
-import sqlite3
-import sys
-from datetime import datetime
+from app import app, db
+from models import Driver, AdminUser, Restaurant
 
-def connect_db():
-    """Connect to the database"""
-    try:
-        conn = sqlite3.connect('instance/database.db')
-        return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        return None
-
-def add_restaurant_id_column(conn):
-    """Add restaurant_id column to driver table"""
-    try:
-        cursor = conn.cursor()
+def fix_driver_restaurant_assignment():
+    with app.app_context():
+        # Get restaurants
+        flavour_cafe = Restaurant.query.filter_by(name="Flavour cafe | E.Fabrica").first()
+        rich_cafe = Restaurant.query.filter_by(name="Rich Cafe").first()
         
-        # Check if column already exists
-        cursor.execute("PRAGMA table_info(driver)")
-        columns = [column[1] for column in cursor.fetchall()]
+        print(f"Flavour Cafe ID: {flavour_cafe.id if flavour_cafe else 'Not found'}")
+        print(f"Rich Cafe ID: {rich_cafe.id if rich_cafe else 'Not found'}")
         
-        if 'restaurant_id' not in columns:
-            print("Adding restaurant_id column to driver table...")
-            cursor.execute("""
-                ALTER TABLE driver 
-                ADD COLUMN restaurant_id INTEGER 
-                REFERENCES restaurant(id)
-            """)
-            conn.commit()
-            print("✅ restaurant_id column added successfully")
-        else:
-            print("✅ restaurant_id column already exists")
-            
-    except Exception as e:
-        print(f"Error adding restaurant_id column: {e}")
-        return False
-    
-    return True
-
-def get_flavour_cafe_id(conn):
-    """Get the restaurant ID for Flavour Cafe"""
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM restaurant WHERE name LIKE '%Flavour%' OR name LIKE '%E.Fabrica%'")
-        result = cursor.fetchone()
-        if result:
-            return result[0]
-        else:
-            print("❌ Flavour Cafe restaurant not found")
-            return None
-    except Exception as e:
-        print(f"Error getting restaurant ID: {e}")
-        return None
-
-def assign_drivers_to_restaurant(conn, restaurant_id):
-    """Assign all approved drivers to Flavour Cafe restaurant"""
-    try:
-        cursor = conn.cursor()
+        # Get admins
+        flavor_admin = AdminUser.query.filter_by(username="Flavor").first()
+        babi_admin = AdminUser.query.filter_by(username="Babi").first()
         
-        # Get all approved drivers without restaurant assignment
-        cursor.execute("""
-            SELECT id, name, approval_status, is_approved 
-            FROM driver 
-            WHERE (restaurant_id IS NULL OR restaurant_id = 0) 
-            AND approval_status = 'approved' 
-            AND is_approved = 1
-        """)
-        drivers = cursor.fetchall()
+        print(f"Flavor admin restaurant_id: {flavor_admin.restaurant_id if flavor_admin else 'Not found'}")
+        print(f"Babi admin restaurant_id: {babi_admin.restaurant_id if babi_admin else 'Not found'}")
         
-        if not drivers:
-            print("❌ No approved drivers found to assign")
-            return False
-        
-        print(f"Found {len(drivers)} approved drivers to assign:")
+        # Get all drivers
+        drivers = Driver.query.all()
+        print(f"\nCurrent driver assignments:")
         for driver in drivers:
-            print(f"  - {driver[1]} (ID: {driver[0]})")
+            print(f"  {driver.name} (ID: {driver.id}) -> Restaurant ID: {driver.restaurant_id}")
         
-        # Assign all approved drivers to the restaurant
-        cursor.execute("""
-            UPDATE driver 
-            SET restaurant_id = ? 
-            WHERE (restaurant_id IS NULL OR restaurant_id = 0) 
-            AND approval_status = 'approved' 
-            AND is_approved = 1
-        """, (restaurant_id,))
+        # Verify Mike Johnson is assigned to Flavour cafe
+        mike = Driver.query.filter_by(name="Mike Johnson").first()
+        if mike:
+            print(f"\nMike Johnson assignment: Restaurant ID {mike.restaurant_id}")
+            if mike.restaurant_id != flavour_cafe.id:
+                print(f"ERROR: Mike should be assigned to Flavour cafe (ID: {flavour_cafe.id})")
+                mike.restaurant_id = flavour_cafe.id
+                print(f"Fixed: Mike Johnson now assigned to restaurant {flavour_cafe.id}")
         
-        affected_rows = cursor.rowcount
-        conn.commit()
+        # Verify DJ ALEX is assigned to Rich Cafe
+        dj_alex = Driver.query.filter_by(name="DJ ALEX").first()
+        if dj_alex:
+            print(f"DJ ALEX assignment: Restaurant ID {dj_alex.restaurant_id}")
+            if dj_alex.restaurant_id != rich_cafe.id:
+                print(f"ERROR: DJ ALEX should be assigned to Rich Cafe (ID: {rich_cafe.id})")
+                dj_alex.restaurant_id = rich_cafe.id
+                print(f"Fixed: DJ ALEX now assigned to restaurant {rich_cafe.id}")
         
-        print(f"✅ Successfully assigned {affected_rows} drivers to Flavour Cafe restaurant")
-        return True
-        
-    except Exception as e:
-        print(f"Error assigning drivers to restaurant: {e}")
-        return False
-
-def verify_assignment(conn, restaurant_id):
-    """Verify the driver assignments"""
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT d.id, d.name, d.approval_status, r.name as restaurant_name
-            FROM driver d
-            LEFT JOIN restaurant r ON d.restaurant_id = r.id
-            WHERE d.restaurant_id = ?
-        """, (restaurant_id,))
-        
-        drivers = cursor.fetchall()
-        
-        if drivers:
-            print(f"\n✅ Verification: {len(drivers)} drivers assigned to restaurant:")
-            for driver in drivers:
-                print(f"  - {driver[1]} → {driver[3]}")
-        else:
-            print("❌ No drivers found assigned to restaurant")
+        try:
+            db.session.commit()
+            print("\nDriver assignments verified and fixed!")
             
-    except Exception as e:
-        print(f"Error verifying assignments: {e}")
+            # Final verification
+            print("\nFinal driver-restaurant assignments:")
+            for restaurant in [flavour_cafe, rich_cafe]:
+                if restaurant:
+                    restaurant_drivers = Driver.query.filter_by(restaurant_id=restaurant.id).all()
+                    print(f"  {restaurant.name} (ID: {restaurant.id}): {len(restaurant_drivers)} drivers")
+                    for driver in restaurant_drivers:
+                        print(f"    - {driver.name} (ID: {driver.id})")
+                        
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error fixing assignments: {e}")
 
-def main():
-    """Main function"""
-    print("=" * 60)
-    print("🔧 FIXING DRIVER RESTAURANT ASSIGNMENT")
-    print("=" * 60)
-    
-    # Connect to database
-    conn = connect_db()
-    if not conn:
-        sys.exit(1)
-    
-    try:
-        # Step 1: Add restaurant_id column
-        if not add_restaurant_id_column(conn):
-            sys.exit(1)
-        
-        # Step 2: Get Flavour Cafe restaurant ID
-        restaurant_id = get_flavour_cafe_id(conn)
-        if not restaurant_id:
-            sys.exit(1)
-        
-        print(f"✅ Found Flavour Cafe restaurant (ID: {restaurant_id})")
-        
-        # Step 3: Assign drivers to restaurant
-        if not assign_drivers_to_restaurant(conn, restaurant_id):
-            sys.exit(1)
-        
-        # Step 4: Verify assignments
-        verify_assignment(conn, restaurant_id)
-        
-        print("\n🎉 Driver restaurant assignment completed successfully!")
-        print("✅ Approved drivers should now appear in Flavour Cafe's driver management section")
-        
-    finally:
-        conn.close()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    fix_driver_restaurant_assignment()
