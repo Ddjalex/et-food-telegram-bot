@@ -139,6 +139,7 @@ class AdminUser(db.Model):
     role = db.Column(db.String(20), default='admin')  # super_admin, admin, kitchen_staff
     is_active = db.Column(db.Boolean, default=True)
     is_blocked = db.Column(db.Boolean, default=False)
+    is_approved = db.Column(db.Boolean, default=True)  # Approval status for admin users
     password_hash = db.Column(db.String(256))
     last_login = db.Column(db.DateTime)
     created_by = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=True)

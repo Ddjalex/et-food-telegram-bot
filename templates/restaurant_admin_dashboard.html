@@ -384,10 +384,12 @@
                         <i class="fas fa-tags me-2"></i>
                         Categories
                     </a>
+                    {% if admin.role == 'super_admin' or (admin.role == 'admin' and admin.is_approved) %}
                     <a class="nav-link" data-bs-toggle="pill" href="#drivers">
                         <i class="fas fa-motorcycle me-2"></i>
                         Drivers
                     </a>
+                    {% endif %}
                     <a class="nav-link" data-bs-toggle="pill" href="#analytics">
                         <i class="fas fa-chart-line me-2"></i>
                         Analytics
@@ -460,10 +462,12 @@
                                     <i class="fas fa-chart-line fa-2x mb-2"></i>
                                     <div>Analytics</div>
                                 </a>
+                                {% if admin.role == 'super_admin' or (admin.role == 'admin' and admin.is_approved) %}
                                 <a href="#" class="quick-action" onclick="switchToTab('drivers')">
                                     <i class="fas fa-motorcycle fa-2x mb-2"></i>
                                     <div>Drivers</div>
                                 </a>
+                                {% endif %}
                             </div>
                             
                             <!-- Stats Cards -->
@@ -730,6 +734,7 @@
                         </div>
 
                         <!-- Drivers Tab -->
+                        {% if admin.role == 'super_admin' or (admin.role == 'admin' and admin.is_approved) %}
                         <div class="tab-pane fade" id="drivers" role="tabpanel">
                             <div class="card table-container">
                                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -767,6 +772,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
 
                         <!-- Analytics Tab -->
                         <div class="tab-pane fade" id="analytics" role="tabpanel">

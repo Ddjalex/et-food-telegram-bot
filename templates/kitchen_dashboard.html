@@ -949,13 +949,19 @@
                     <i class="fas fa-utensils me-2"></i>
                     Kitchen Dashboard
                 </a>
-                <div class="navbar-text">
-                    <i class="fas fa-restaurant me-1"></i>
-                    {% if restaurant %}
-                        {{ restaurant.name }}
-                    {% else %}
-                        Kitchen Staff
-                    {% endif %}
+                <div class="d-flex align-items-center">
+                    <div class="navbar-text me-3">
+                        <i class="fas fa-restaurant me-1"></i>
+                        {% if restaurant %}
+                            {{ restaurant.name }}
+                        {% else %}
+                            Kitchen Staff
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-outline-light btn-sm" onclick="logout()" title="Logout">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        Logout
+                    </button>
                 </div>
             </div>
         </div>
@@ -2149,6 +2155,29 @@
                 }
             } catch (error) {
                 console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        // Logout function for kitchen staff
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                fetch('/admin/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/admin/login';
+                    } else {
+                        alert('Logout failed. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('Logout failed. Please try again.');
+                });
             }
         }
     </script>
