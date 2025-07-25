@@ -17,8 +17,8 @@ from config import Config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Driver Bot Configuration
-DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN')
+# Driver Bot Configuration - Use same token as main bot
+DRIVER_BOT_TOKEN = Config.BOT_TOKEN
 
 from url_utils import construct_webhook_url
 
