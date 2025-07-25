@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kitchen Dashboard - Flavour Cafe | E.Fabrica</title>
+    <title>Kitchen Dashboard{% if restaurant %} - {{ restaurant.name }}{% endif %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -177,7 +177,13 @@
                     Kitchen Dashboard
                 </a>
                 <div class="d-flex align-items-center gap-3">
-                    <span class="navbar-text">Flavour Cafe | E.Fabrica</span>
+                    <span class="navbar-text">
+                        {% if restaurant %}
+                            {{ restaurant.name }}
+                        {% else %}
+                            Kitchen Dashboard
+                        {% endif %}
+                    </span>
                     <a href="/kitchen/logout" class="btn btn-outline-light btn-sm">
                         <i class="fas fa-sign-out-alt me-1"></i>
                         Logout

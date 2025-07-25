@@ -385,7 +385,7 @@
         <!-- Page Header -->
         <div class="page-header">
             <h1><i class="fas fa-clipboard-list me-3"></i>Food Product Management</h1>
-            <p>Manage all menu items, categories, and pricing for Flavour Cafe</p>
+            <p>Manage all menu items, categories, and pricing{% if restaurant %} for {{ restaurant.name }}{% endif %}</p>
         </div>
 
         <!-- Management Controls -->

@@ -37,7 +37,12 @@ def kitchen_staff_required(f):
 @kitchen_staff_required
 def kitchen_food_management():
     """Kitchen staff food product management page"""
-    return render_template('kitchen_food_management.html')
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_food_management.html', admin=admin, restaurant=restaurant)
 
 @app.route('/api/menu', methods=['GET'])
 def get_menu_items():
@@ -272,19 +277,34 @@ def kitchen_delete_menu_item(item_id):
 @kitchen_staff_required
 def kitchen_orders():
     """Kitchen staff orders management page"""
-    return render_template('kitchen_orders.html')
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_orders.html', admin=admin, restaurant=restaurant)
 
 @app.route('/kitchen/analytics')
 @kitchen_staff_required
 def kitchen_analytics():
     """Kitchen staff analytics page"""
-    return render_template('kitchen_analytics.html')
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_analytics.html', admin=admin, restaurant=restaurant)
 
 @app.route('/kitchen/settings')
 @kitchen_staff_required
 def kitchen_settings():
     """Kitchen staff settings page"""
-    return render_template('kitchen_settings.html')
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_settings.html', admin=admin, restaurant=restaurant)
 
 # Kitchen API endpoints moved to kitchen_availability_routes.py to avoid duplicates
 
@@ -293,7 +313,12 @@ def kitchen_settings():
 @kitchen_staff_required
 def kitchen_dashboard():
     """Kitchen staff dashboard - requires authentication"""
-    return render_template('kitchen_dashboard_simple.html')
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_dashboard_simple.html', admin=admin, restaurant=restaurant)
 
 # Kitchen login route (simplified)
 @app.route('/kitchen/login', methods=['GET', 'POST'])
