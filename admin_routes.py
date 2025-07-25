@@ -1918,12 +1918,31 @@ def delete_restaurant_super_admin(restaurant_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/super-admin/restaurants', methods=['POST'])
-@super_admin_required
+@app.route('/api/restaurants/super-admin', methods=['POST'])
+@super_admin_required  
 def create_restaurant():
-    """Create new restaurant (super admin only)"""
+    """Create new restaurant with image upload support (super admin only)"""
     try:
-        data = request.get_json()
+        # Handle both JSON and FormData
+        if request.is_json:
+            data = request.get_json()
+        else:
+            # Handle FormData from file upload
+            data = request.form.to_dict()
+            # Convert string boolean values
+            data['is_active'] = data.get('is_active') == 'on'
+            data['is_featured'] = data.get('is_featured') == 'on'
+            # Convert numeric values
+            try:
+                data['latitude'] = float(data.get('latitude', 9.047658))
+                data['longitude'] = float(data.get('longitude', 38.741143))
+                data['delivery_fee'] = float(data.get('delivery_fee', 50.0))
+                data['minimum_order'] = float(data.get('minimum_order', 100.0))
+            except (ValueError, TypeError):
+                data['latitude'] = 9.047658
+                data['longitude'] = 38.741143
+                data['delivery_fee'] = 50.0
+                data['minimum_order'] = 100.0
         
         # Validation
         required_fields = ['name', 'address', 'phone']
@@ -1984,6 +2003,47 @@ def create_restaurant():
         )
         db.session.add(kitchen_staff)
         
+        # Handle image uploads if present in form data
+        uploaded_files = {}
+        if not request.is_json and request.files:
+            # Handle logo upload
+            if 'logo' in request.files:
+                logo_file = request.files['logo']
+                if logo_file and logo_file.filename and allowed_file(logo_file.filename):
+                    # Generate unique filename
+                    import time
+                    timestamp = str(int(time.time() * 1000))
+                    filename = f"{timestamp}_{secure_filename(logo_file.filename)}"
+                    
+                    # Save file
+                    upload_folder = os.path.join('static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, filename)
+                    logo_file.save(file_path)
+                    
+                    # Update restaurant logo URL
+                    restaurant.logo_url = f'/static/uploads/{filename}'
+                    uploaded_files['logo'] = restaurant.logo_url
+            
+            # Handle cover image upload
+            if 'cover_image' in request.files:
+                cover_file = request.files['cover_image']
+                if cover_file and cover_file.filename and allowed_file(cover_file.filename):
+                    # Generate unique filename
+                    import time
+                    timestamp = str(int(time.time() * 1000))
+                    filename = f"{timestamp}_{secure_filename(cover_file.filename)}"
+                    
+                    # Save file
+                    upload_folder = os.path.join('static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, filename)
+                    cover_file.save(file_path)
+                    
+                    # Update restaurant cover image URL
+                    restaurant.cover_image_url = f'/static/uploads/{filename}'
+                    uploaded_files['cover_image'] = restaurant.cover_image_url
+        
         db.session.commit()
         
         # Log activity
@@ -1992,13 +2052,18 @@ def create_restaurant():
             'restaurant_created',
             'restaurant',
             restaurant.id,
-            f'Created restaurant: {restaurant.name}'
+            f'Created restaurant: {restaurant.name}' + (f' with {len(uploaded_files)} image(s)' if uploaded_files else '')
         )
+        
+        message = 'Restaurant created successfully'
+        if uploaded_files:
+            message += f' with {len(uploaded_files)} image(s) uploaded'
         
         return jsonify({
             'success': True,
             'restaurant': restaurant.to_dict(),
-            'message': 'Restaurant created successfully'
+            'uploaded_files': uploaded_files,
+            'message': message
         })
     except Exception as e:
         logger.error(f"Error creating restaurant: {e}")

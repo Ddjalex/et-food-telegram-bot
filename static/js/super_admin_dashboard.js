@@ -942,38 +942,31 @@ function createRestaurant() {
     const form = document.getElementById('addRestaurantForm');
     const formData = new FormData(form);
     
-    // Convert FormData to JSON
-    const data = {
-        name: formData.get('name'),
-        phone: formData.get('phone'),
-        address: formData.get('address'),
-        latitude: parseFloat(formData.get('latitude')) || 9.047658,
-        longitude: parseFloat(formData.get('longitude')) || 38.741143,
-        delivery_fee: parseFloat(formData.get('delivery_fee')) || 50.0,
-        minimum_order: parseFloat(formData.get('minimum_order')) || 100.0,
-        estimated_delivery_time: formData.get('estimated_delivery_time') || '30-45 minutes',
-        description: formData.get('description') || '',
-        is_active: formData.get('is_active') === 'on',
-        is_featured: formData.get('is_featured') === 'on'
-    };
-    
     // Basic validation
-    if (!data.name || !data.phone || !data.address) {
-        showAlert('error', 'Please fill in all required fields');
+    const name = formData.get('name');
+    const phone = formData.get('phone');
+    const address = formData.get('address');
+    
+    if (!name || !phone || !address) {
+        showAlert('error', 'Please fill in all required fields (Name, Phone, Address)');
         return;
     }
     
+    // Show loading state on button
+    const createBtn = document.querySelector('#addRestaurantModal .btn-gradient');
+    const originalText = createBtn.innerHTML;
+    createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    createBtn.disabled = true;
+    
+    // First create the restaurant with all data including images
     fetch('/api/restaurants/super-admin', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+        body: formData // Send FormData directly to handle both text and files
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showAlert('success', data.message);
+            showAlert('success', data.message || 'Restaurant created successfully!');
             
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('addRestaurantModal'));
@@ -982,15 +975,26 @@ function createRestaurant() {
             // Reset form
             form.reset();
             
+            // Clear image previews
+            const logoPreview = document.getElementById('logoPreview');
+            const coverPreview = document.getElementById('coverPreview');
+            if (logoPreview) logoPreview.style.display = 'none';
+            if (coverPreview) coverPreview.style.display = 'none';
+            
             // Reload restaurants table
             loadRestaurants();
         } else {
-            showAlert('error', data.message || data.error);
+            showAlert('error', data.message || data.error || 'Failed to create restaurant');
         }
     })
     .catch(error => {
         console.error('Error creating restaurant:', error);
-        showAlert('error', 'Failed to create restaurant');
+        showAlert('error', 'Network error: Failed to create restaurant');
+    })
+    .finally(() => {
+        // Restore button state
+        createBtn.innerHTML = originalText;
+        createBtn.disabled = false;
     });
 }
 
