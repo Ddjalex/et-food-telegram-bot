@@ -470,13 +470,21 @@ def get_restaurant_drivers():
         from models import Driver
         from datetime import datetime, timedelta
         
-        # Get drivers for this restaurant - handle both restaurant admins and super admins
+        # Get drivers based on admin role and driver availability status
         if admin.role == 'super_admin':
             # Super admin sees all drivers
             drivers = Driver.query.all()
         else:
-            # Regular restaurant admin sees only their restaurant's drivers
-            drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+            # Regular restaurant admin sees:
+            # 1. Their own restaurant's drivers (regardless of status)
+            # 2. Available drivers from other restaurants (not busy)
+            own_drivers = Driver.query.filter_by(restaurant_id=admin.restaurant_id).all()
+            available_other_drivers = Driver.query.filter(
+                Driver.restaurant_id != admin.restaurant_id,
+                Driver.is_available == True,
+                Driver.approval_status == 'approved'
+            ).all()
+            drivers = own_drivers + available_other_drivers
         
         logger.info(f"Getting drivers for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id}, Role: {admin.role})")
         logger.info(f"Found {len(drivers)} drivers")
@@ -510,6 +518,10 @@ def get_restaurant_drivers():
                         days_ago = hours_ago / 24
                         last_update_text = f"{int(days_ago)} days ago"
             
+            # Determine driver availability display
+            availability_status = "AVAILABLE" if driver.is_available else "BUSY"
+            availability_class = "text-success" if driver.is_available else "text-warning"
+            
             driver_data = {
                 'id': driver.id,
                 'full_name': driver.name,
@@ -518,6 +530,8 @@ def get_restaurant_drivers():
                 'status': driver.approval_status or 'pending',
                 'is_active': driver.is_active,
                 'is_available': driver.is_available,
+                'availability_status': availability_status,
+                'availability_class': availability_class,
                 'location_status': location_status,
                 'last_update_text': last_update_text,
                 'minutes_ago': int(minutes_ago) if minutes_ago else None,

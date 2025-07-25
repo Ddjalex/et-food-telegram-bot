@@ -1370,6 +1370,10 @@
                                 <span class="badge ${driver.is_active ? 'bg-success' : 'bg-secondary'}">
                                     ${driver.is_active ? 'Active' : 'Inactive'}
                                 </span>
+                                <br>
+                                <small class="${driver.availability_class || (driver.is_available ? 'text-success' : 'text-warning')}">
+                                    <i class="fas fa-circle me-1"></i>${driver.availability_status || (driver.is_available ? 'AVAILABLE' : 'BUSY')}
+                                </small>
                             </td>
                             <td>
                                 <span class="${locationClass}">
