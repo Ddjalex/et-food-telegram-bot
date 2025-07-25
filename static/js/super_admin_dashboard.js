@@ -1218,29 +1218,81 @@ function viewDriverDocuments(driverId) {
         });
 }
 
-function showDriverDocumentsModal(documents) {
+function showDriverDocumentsModal(data) {
+    const documents = data.documents || [];
+    const driverInfo = data.driver_info || {};
+    
     const modalHtml = `
         <div class="modal fade" id="driverDocumentsModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Driver Documents</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-file-alt"></i> Driver Documents
+                            ${driverInfo.driver_name ? ` - ${driverInfo.driver_name}` : ''}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="row">
-                            ${documents.map(doc => `
-                                <div class="col-md-6 mb-3">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <h6 class="mb-0">${doc.document_type}</h6>
+                        ${driverInfo.driver_name ? `
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-user"></i> Driver Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Name:</strong> ${driverInfo.driver_name}</p>
+                                            <p><strong>Phone:</strong> ${driverInfo.phone_number || 'Not provided'}</p>
                                         </div>
-                                        <div class="card-body">
-                                            <img src="${doc.document_url}" class="img-fluid" alt="${doc.document_type}">
+                                        <div class="col-md-6">
+                                            <p><strong>Vehicle Type:</strong> ${driverInfo.vehicle_type || 'Not specified'}</p>
+                                            <p><strong>Status:</strong> 
+                                                <span class="badge ${driverInfo.approval_status === 'approved' ? 'bg-success' : 
+                                                    driverInfo.approval_status === 'pending' ? 'bg-warning' : 'bg-danger'}">
+                                                    ${driverInfo.approval_status || 'Unknown'}
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
-                            `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="row">
+                            ${documents.length > 0 ? documents.map(doc => `
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-file"></i> ${doc.document_type}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body text-center">
+                                            ${doc.document_url ? `
+                                                <img src="${doc.document_url}" class="img-fluid rounded" alt="${doc.document_type}" 
+                                                     style="max-height: 200px; cursor: pointer;" 
+                                                     onclick="window.open('${doc.document_url}', '_blank')">
+                                                <p class="mt-2 mb-0">
+                                                    <small class="text-muted">Click to view full size</small>
+                                                </p>
+                                            ` : `
+                                                <div class="text-muted">
+                                                    <i class="fas fa-file-times fa-3x"></i>
+                                                    <p class="mt-2">No document uploaded</p>
+                                                </div>
+                                            `}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('') : `
+                                <div class="col-12">
+                                    <div class="alert alert-info text-center">
+                                        <i class="fas fa-info-circle"></i>
+                                        No documents have been uploaded for this driver.
+                                    </div>
+                                </div>
+                            `}
                         </div>
                     </div>
                 </div>

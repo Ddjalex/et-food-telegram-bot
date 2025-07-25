@@ -748,21 +748,47 @@ def get_driver_documents_super_admin(driver_id):
     try:
         driver = Driver.query.get_or_404(driver_id)
         
-        documents = {
+        # Create array of documents for the frontend
+        documents = []
+        
+        # Driver information
+        driver_info = {
             'driver_id': driver.id,
             'driver_name': driver.name,
             'phone_number': driver.phone_number,
             'vehicle_type': driver.vehicle_type,
-            'license_document': driver.license_document,
-            'id_document': driver.id_document,
-            'vehicle_document': driver.vehicle_document,
             'approval_status': driver.approval_status,
             'created_at': driver.created_at.isoformat() if driver.created_at else None
         }
         
+        # Add license document if exists
+        if driver.license_document:
+            documents.append({
+                'document_type': 'Driver License',
+                'document_url': driver.license_document,
+                'file_name': 'License Document'
+            })
+        
+        # Add ID document if exists
+        if driver.id_document:
+            documents.append({
+                'document_type': 'Government ID',
+                'document_url': driver.id_document,
+                'file_name': 'ID Document'
+            })
+        
+        # Add vehicle document if exists  
+        if driver.vehicle_document:
+            documents.append({
+                'document_type': 'Vehicle Registration',
+                'document_url': driver.vehicle_document,
+                'file_name': 'Vehicle Registration'
+            })
+        
         return jsonify({
             'success': True,
-            'documents': documents
+            'documents': documents,
+            'driver_info': driver_info
         })
     
     except Exception as e:
