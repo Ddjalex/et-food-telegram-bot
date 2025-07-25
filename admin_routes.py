@@ -16,6 +16,8 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
+            # Log the session debug info
+            logger.warning(f"Admin authentication failed - no admin_id in session. Session keys: {list(session.keys())}")
             # Check if this is an API request
             if request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({'success': False, 'error': 'Authentication required', 'redirect': '/admin/login'}), 401
@@ -2187,9 +2189,13 @@ def get_admin_payment_notifications():
 @app.route('/api/admin/verify-payment/<int:order_id>', methods=['POST'])
 @admin_required
 def verify_payment_admin(order_id):
-    """Verify payment for an order (admin only)"""
+    """Verify payment for an order (admin, super_admin, or kitchen_staff)"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        
+        # Check if user has permission to verify payments
+        if admin.role not in ['admin', 'super_admin', 'kitchen_staff']:
+            return jsonify({'success': False, 'message': 'Insufficient permissions to verify payments'}), 403
         
         from models import Order, KitchenStaff
         order = Order.query.filter_by(id=order_id, restaurant_id=admin.restaurant_id).first()
