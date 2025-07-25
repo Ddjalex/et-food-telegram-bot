@@ -11,3 +11,7 @@ from kitchen_availability_routes import kitchen_bp
 
 # Register kitchen availability blueprint
 app.register_blueprint(kitchen_bp)
+
+# Initialize bot_minimal
+from bot_minimal import init_bot
+init_bot(app)

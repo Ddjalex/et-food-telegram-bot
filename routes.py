@@ -427,6 +427,8 @@ def super_admin_redirect():
 
 
 
+
+
 @app.route('/api/driver-registration-legacy', methods=['POST'])
 def api_driver_registration():
     """Handle driver registration submission from mini web app"""
