@@ -308,17 +308,7 @@ def kitchen_settings():
 
 # Kitchen API endpoints moved to kitchen_availability_routes.py to avoid duplicates
 
-# Kitchen dashboard route
-@app.route('/kitchen')
-@kitchen_staff_required
-def kitchen_dashboard():
-    """Kitchen staff dashboard - requires authentication"""
-    admin = AdminUser.query.get(session['admin_id'])
-    restaurant = None
-    if admin and admin.restaurant_id:
-        restaurant = Restaurant.query.get(admin.restaurant_id)
-    
-    return render_template('kitchen_dashboard_simple.html', admin=admin, restaurant=restaurant)
+# Kitchen dashboard route moved to kitchen_routes.py to avoid duplicate route definitions
 
 # Kitchen login route (simplified)
 @app.route('/kitchen/login', methods=['GET', 'POST'])

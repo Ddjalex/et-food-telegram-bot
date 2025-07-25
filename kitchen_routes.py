@@ -91,7 +91,11 @@ def kitchen_login():
 def kitchen_dashboard():
     """Kitchen staff dashboard - requires authentication"""
     admin = AdminUser.query.get(session['admin_id'])
-    return render_template('kitchen_dashboard.html', admin=admin)
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_dashboard.html', admin=admin, restaurant=restaurant)
 
 @app.route('/kitchen/menu')
 @kitchen_staff_required
