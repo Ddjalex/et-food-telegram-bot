@@ -16,11 +16,17 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
+            # Check if this is an API request
+            if request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Authentication required', 'redirect': '/admin/login'}), 401
             return redirect(url_for('admin_login'))
         
         admin = AdminUser.query.get(session['admin_id'])
         if not admin or not admin.is_active or admin.is_blocked:
             session.clear()
+            # Check if this is an API request
+            if request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Account not active or blocked', 'redirect': '/admin/login'}), 401
             return redirect(url_for('admin_login'))
         
         return f(*args, **kwargs)

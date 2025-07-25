@@ -1068,15 +1068,26 @@
             
             fetch(`/api/admin/verify-payment/${orderId}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     order_id: orderId,
                     decision: 'approve'
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     alert('Payment verified successfully! Order confirmed.');
                     loadPaymentVerificationOrders();
                     
@@ -1084,8 +1095,11 @@
                     if (typeof loadDashboardStats === 'function') {
                         loadDashboardStats();
                     }
+                } else if (data && data.redirect) {
+                    alert('Session expired. Please login again.');
+                    window.location.href = data.redirect;
                 } else {
-                    alert('Error verifying payment: ' + (data.message || data.error || 'Unknown error'));
+                    alert('Error verifying payment: ' + (data ? (data.message || data.error || 'Unknown error') : 'Network error'));
                 }
             })
             .catch(error => {
@@ -1103,7 +1117,11 @@
             
             fetch(`/api/admin/reject-payment/${orderId}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     order_id: orderId,
                     decision: 'reject',
