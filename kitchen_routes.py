@@ -412,10 +412,16 @@ def kitchen_get_restaurants():
 @app.route('/api/kitchen/orders')
 @kitchen_staff_required 
 def kitchen_get_orders():
-    """Get orders for kitchen staff"""
+    """Get orders for kitchen staff - filtered by restaurant"""
     try:
+        # Get the current kitchen staff's restaurant
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or not admin.restaurant_id:
+            return jsonify({'success': False, 'error': 'Kitchen staff not associated with a restaurant'}), 403
+        
         import json
         orders = Order.query.filter(
+            Order.restaurant_id == admin.restaurant_id,  # CRITICAL FIX: Filter by restaurant
             Order.status.in_(['pending', 'confirmed', 'preparing', 'ready'])
         ).order_by(Order.created_at.desc()).all()
         

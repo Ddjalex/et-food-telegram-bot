@@ -946,6 +946,14 @@ def get_orders():
 def get_kitchen_orders():
     """Get orders for kitchen staff - all active orders including pending"""
     try:
+        # Check if user is authenticated and get their restaurant
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or not admin.restaurant_id:
+            return jsonify({'success': False, 'error': 'Kitchen staff not associated with a restaurant'}), 403
+        
         # Get time filter parameter (default: today only)
         time_filter = request.args.get('time_filter', 'today')
         
@@ -959,6 +967,7 @@ def get_kitchen_orders():
             # Only show orders from last 24 hours
             since_time = datetime.utcnow() - timedelta(hours=24)
             orders = Order.query.filter(
+                Order.restaurant_id == admin.restaurant_id,  # CRITICAL FIX: Filter by restaurant
                 Order.status.in_(active_statuses),
                 Order.created_at >= since_time
             ).order_by(Order.created_at.asc()).all()
@@ -966,12 +975,14 @@ def get_kitchen_orders():
             # Only show orders from last 4 hours
             since_time = datetime.utcnow() - timedelta(hours=4)
             orders = Order.query.filter(
+                Order.restaurant_id == admin.restaurant_id,  # CRITICAL FIX: Filter by restaurant
                 Order.status.in_(active_statuses),
                 Order.created_at >= since_time
             ).order_by(Order.created_at.asc()).all()
         else:
             # Show all active orders
             orders = Order.query.filter(
+                Order.restaurant_id == admin.restaurant_id,  # CRITICAL FIX: Filter by restaurant
                 Order.status.in_(active_statuses)
             ).order_by(Order.created_at.asc()).all()
         
