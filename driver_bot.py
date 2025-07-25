@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Driver Bot Configuration
-DRIVER_BOT_TOKEN = os.environ.get('DRIVER_BOT_TOKEN')
+DRIVER_BOT_TOKEN = os.environ.get('FOOD_DRIVER_BOT_TOKEN')
 
 from url_utils import construct_webhook_url
 
