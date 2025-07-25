@@ -2096,7 +2096,14 @@
                     alert('Error updating price');
                 }
             });
+            
+            // Load dashboard statistics
+            loadDashboardStats();
         });
+        
+        // Function to load dashboard statistics
+        async function loadDashboardStats() {
+            try {
                 // Load menu items count
                 const menuResponse = await fetch('/api/kitchen/menu-items');
                 const menuData = await menuResponse.json();
