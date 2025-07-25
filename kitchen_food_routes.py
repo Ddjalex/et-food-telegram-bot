@@ -310,7 +310,19 @@ def kitchen_settings():
 
 # Kitchen dashboard route moved to kitchen_routes.py to avoid duplicate route definitions
 
-# Kitchen login route (simplified)
+# Kitchen main dashboard route
+@app.route('/kitchen')
+@kitchen_staff_required
+def kitchen_dashboard():
+    """Kitchen staff dashboard"""
+    admin = AdminUser.query.get(session['admin_id'])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template('kitchen_dashboard.html', admin=admin, restaurant=restaurant)
+
+# Kitchen login route 
 @app.route('/kitchen/login', methods=['GET', 'POST'])
 def kitchen_login():
     """Kitchen staff login page"""
@@ -341,7 +353,7 @@ def kitchen_login():
             admin.last_login = datetime.utcnow()
             db.session.commit()
             
-            return redirect('/kitchen/food-management')
+            return redirect('/kitchen')
         
         flash('Invalid credentials', 'error')
         return render_template('kitchen_login.html')

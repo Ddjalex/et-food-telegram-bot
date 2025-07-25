@@ -105,7 +105,7 @@ def kitchen_menu_management():
 
 @app.route('/kitchen/orders', methods=['GET'])
 @kitchen_staff_required
-def kitchen_get_orders():
+def kitchen_orders_view():
     """Get orders for kitchen staff"""
     try:
         # Get restaurant_id from logged-in admin's restaurant
