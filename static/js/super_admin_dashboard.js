@@ -26,14 +26,125 @@ function initializeDashboard() {
     loadDriverApprovals();
 }
 
-// Simplified monitoring functions
+// Enhanced real-time monitoring functions
 function startAutoRefresh() {
-    // Auto-refresh basic dashboard stats every 30 seconds
+    // Auto-refresh dashboard data every 10 seconds for real-time updates
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     
     autoRefreshInterval = setInterval(() => {
         loadDashboardStats();
-    }, 30000); // Refresh every 30 seconds
+        loadDriverApprovals(); // Real-time driver applications
+        checkForNewDriverApplications(); // Check for new applications
+    }, 10000); // Refresh every 10 seconds for real-time updates
+}
+
+// Track driver applications for real-time notifications
+let lastDriverApplicationCount = 0;
+
+function checkForNewDriverApplications() {
+    fetch('/api/super-admin/drivers/pending')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const currentCount = data.drivers.length;
+                
+                // Check if there are new applications
+                if (currentCount > lastDriverApplicationCount && lastDriverApplicationCount > 0) {
+                    const newApplications = currentCount - lastDriverApplicationCount;
+                    showNewApplicationNotification(newApplications);
+                    
+                    // Flash the pending applications section
+                    flashPendingApplicationsSection();
+                }
+                
+                lastDriverApplicationCount = currentCount;
+                updatePendingDriversBadge(currentCount);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking for new driver applications:', error);
+        });
+}
+
+function showNewApplicationNotification(count) {
+    // Play notification sound
+    playNotificationSound();
+    
+    // Create notification toast
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);';
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-bell text-success me-2"></i>
+            <div>
+                <strong>🚗 New Driver Application${count > 1 ? 's' : ''}!</strong>
+                <div class="small">${count} new application${count > 1 ? 's' : ''} received</div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 7 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 7000);
+}
+
+function playNotificationSound() {
+    try {
+        // Create notification sound using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Audio notification not available:', error);
+    }
+}
+
+function flashPendingApplicationsSection() {
+    const section = document.querySelector('#driver-approval .stat-card');
+    if (section) {
+        section.classList.add('flash-highlight');
+        setTimeout(() => {
+            section.classList.remove('flash-highlight');
+        }, 2000);
+    }
+}
+
+function updatePendingDriversBadge(count) {
+    // Update the tab badge if it exists
+    const driverTab = document.querySelector('[data-target="driver-approval"]');
+    if (driverTab && count > 0) {
+        let badge = driverTab.querySelector('.badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'badge bg-warning ms-1';
+            driverTab.appendChild(badge);
+        }
+        badge.textContent = count;
+    } else if (driverTab) {
+        const badge = driverTab.querySelector('.badge');
+        if (badge) {
+            badge.remove();
+        }
+    }
 }
 
 function updateLastRefreshTime() {
@@ -888,6 +999,29 @@ function loadDriverApprovals() {
     console.log('Loading driver approvals...');
     loadPendingDrivers();
     loadApprovedDrivers();
+    initializeDriverApplicationTracking();
+}
+
+function initializeDriverApplicationTracking() {
+    // Initialize the counter for real-time tracking
+    fetch('/api/super-admin/drivers/pending')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                lastDriverApplicationCount = data.drivers.length;
+                updatePendingDriversBadge(lastDriverApplicationCount);
+            }
+        })
+        .catch(error => {
+            console.error('Error initializing driver application tracking:', error);
+        });
+}
+
+function refreshRealTimeData() {
+    loadDashboardStats();
+    loadDriverApprovals();
+    updateLastRefreshTime();
+    showAlert('success', 'Data refreshed successfully');
 }
 
 // Load restaurants into dropdown when modal opens
@@ -1207,7 +1341,7 @@ function viewDriverDocuments(driverId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showDriverDocumentsModal(data.documents);
+                showDriverDocumentsModal(data);
             } else {
                 showAlert('error', data.message || 'Failed to load driver documents');
             }

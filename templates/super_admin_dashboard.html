@@ -223,6 +223,41 @@
             border-radius: 6px;
             margin: 0 2px;
         }
+
+        /* Real-time notification styles */
+        .flash-highlight {
+            animation: flashHighlight 2s ease-in-out;
+            border: 2px solid #28a745 !important;
+        }
+
+        @keyframes flashHighlight {
+            0% { 
+                background: rgba(40, 167, 69, 0.1);
+                box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+            }
+            50% { 
+                background: rgba(40, 167, 69, 0.2);
+                box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+            }
+            100% { 
+                background: transparent;
+                box-shadow: none;
+            }
+        }
+
+        /* Badge styles for tab notifications */
+        .nav-link .badge {
+            font-size: 0.7em;
+            padding: 0.2em 0.4em;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -268,7 +303,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#driver-approval" data-tab="driver-approval">
+                            <a class="nav-link" href="#driver-approval" data-tab="driver-approval" data-target="driver-approval">
                                 <i class="fas fa-user-check"></i> Driver Approval
                             </a>
                         </li>
@@ -621,6 +656,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h5 class="mb-0">
                                             <i class="fas fa-clock text-warning"></i> Pending Driver Applications
+                                            <span class="badge bg-info ms-2" id="realTimeStatus">Real-time</span>
                                         </h5>
                                         <button class="btn btn-sm btn-outline-primary" onclick="loadPendingDrivers()">
                                             <i class="fas fa-sync-alt"></i> Refresh
