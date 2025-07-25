@@ -1316,6 +1316,8 @@
                 // Check if we're on a restaurant-specific path (/restaurant/ID)
                 if (pathParts[1] === 'restaurant' && pathParts[2]) {
                     restaurantId = parseInt(pathParts[2]);
+                    // Store the restaurant ID for future orders
+                    localStorage.setItem('selectedRestaurant', restaurantId);
                 } else {
                     // Check URL parameters
                     restaurantId = urlParams.get('restaurant') || urlParams.get('restaurant_id');
@@ -1332,6 +1334,12 @@
                 }
                 
                 console.log('Loading restaurant info for ID:', restaurantId);
+                
+                // If we got a numeric restaurant ID, store it for order submission
+                if (restaurantId && !isNaN(restaurantId) && restaurantId !== 'first_available') {
+                    localStorage.setItem('selectedRestaurant', restaurantId);
+                    window.currentRestaurantId = parseInt(restaurantId);
+                }
                 
                 const response = await fetch(`/api/restaurants/${restaurantId}/menu`);
                 const data = await response.json();
@@ -1364,6 +1372,13 @@
         // Update restaurant info in header
         function updateRestaurantInfo(restaurant) {
             if (!restaurant) return;
+            
+            // Store restaurant ID for order submission
+            if (restaurant.id) {
+                localStorage.setItem('selectedRestaurant', restaurant.id);
+                window.currentRestaurantId = restaurant.id;
+                console.log('Restaurant ID stored for orders:', restaurant.id);
+            }
             
             // Update page title
             document.title = `${restaurant.name} - Order Now`;
@@ -1810,9 +1825,29 @@
                 telegramUserId = window.Telegram.WebApp.initDataUnsafe.user.id;
             }
 
-            // Get selected restaurant ID
-            const urlParams = new URLSearchParams(window.location.search);
-            const restaurantId = urlParams.get('restaurant') || localStorage.getItem('selectedRestaurant') || 1;
+            // Get selected restaurant ID - prioritize stored selection
+            let restaurantId = window.currentRestaurantId || localStorage.getItem('selectedRestaurant');
+            
+            // Fallback to URL parameters
+            if (!restaurantId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                restaurantId = urlParams.get('restaurant') || urlParams.get('restaurant_id');
+            }
+            
+            // Check if we're on a restaurant-specific path
+            if (!restaurantId) {
+                const pathParts = window.location.pathname.split('/');
+                if (pathParts[1] === 'restaurant' && pathParts[2]) {
+                    restaurantId = parseInt(pathParts[2]);
+                }
+            }
+            
+            // Default to 1 only if absolutely no restaurant specified
+            if (!restaurantId) {
+                restaurantId = 1;
+            }
+            
+            console.log('Submitting order to restaurant ID:', restaurantId);
 
             const orderData = {
                 ...window.currentOrderData,
