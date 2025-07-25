@@ -85,24 +85,24 @@ def notify_admin_new_driver_registration(driver_id):
         message += f"📋 **Driver ID:** #{driver.id}\n"
         message += f"📱 **Telegram ID:** {driver.telegram_user_id or 'Not linked'}"
         
-        # Send to all active admins via driver bot to avoid customer bot interference
-        admins = AdminUser.query.filter_by(is_active=True).all()
-        if not admins:
-            # Fallback to default admin IDs if no admins in database
-            default_admin_ids = [383870191, 383870190]  # Add your admin IDs here
-            for admin_id in default_admin_ids:
+        # Send ONLY to super admins - driver registrations should be reviewed by super admin only
+        super_admins = AdminUser.query.filter_by(is_active=True, role='super_admin').all()
+        if not super_admins:
+            # Fallback to default super admin IDs if no super admins in database
+            default_super_admin_ids = [383870191]  # Only super admin
+            for admin_id in default_super_admin_ids:
                 try:
                     send_driver_message(admin_id, message)
-                    logger.info(f"Sent new driver notification to admin {admin_id} via driver bot")
+                    logger.info(f"Sent new driver notification to super admin {admin_id} via driver bot")
                 except Exception as e:
-                    logger.error(f"Failed to send notification to admin {admin_id}: {e}")
+                    logger.error(f"Failed to send notification to super admin {admin_id}: {e}")
         else:
-            for admin in admins:
+            for super_admin in super_admins:
                 try:
-                    send_driver_message(admin.telegram_user_id, message)
-                    logger.info(f"Sent new driver notification to admin {admin.telegram_user_id} via driver bot")
+                    send_driver_message(super_admin.telegram_user_id, message)
+                    logger.info(f"Sent new driver notification to super admin {super_admin.telegram_user_id} via driver bot")
                 except Exception as e:
-                    logger.error(f"Failed to send notification to admin {admin.telegram_user_id}: {e}")
+                    logger.error(f"Failed to send notification to super admin {super_admin.telegram_user_id}: {e}")
         
         # Customer notifications disabled - driver registration messages only go to admins
         

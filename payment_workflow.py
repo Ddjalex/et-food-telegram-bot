@@ -339,14 +339,25 @@ You'll be notified when ready for delivery!
         send_message_to_user(order.telegram_user_id, message)
 
 def search_nearby_drivers(order):
-    """Search for nearby available drivers"""
+    """Search for nearby available drivers for specific restaurant"""
     from enhanced_driver_system import find_nearby_drivers, notify_drivers_about_order
     
-    # Find drivers within 10km radius
+    # Get restaurant coordinates for this specific order
+    restaurant = Restaurant.query.get(order.restaurant_id)
+    if not restaurant or not restaurant.latitude or not restaurant.longitude:
+        # Fallback coordinates for Flavour Cafe if no coordinates in database
+        restaurant_lat = 9.047658
+        restaurant_lng = 38.741143
+    else:
+        restaurant_lat = restaurant.latitude
+        restaurant_lng = restaurant.longitude
+    
+    # Find drivers within 10km radius for this restaurant only
     nearby_drivers = find_nearby_drivers(
-        restaurant_lat=9.047658,  # Flavour Cafe coordinates
-        restaurant_lng=38.741143,
-        radius_km=10
+        restaurant_lat=restaurant_lat,
+        restaurant_lng=restaurant_lng,
+        radius_km=10,
+        restaurant_id=order.restaurant_id  # Pass restaurant filter
     )
     
     if nearby_drivers:

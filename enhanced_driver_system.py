@@ -32,9 +32,10 @@ def fix_driver_telegram_linking():
         logger.error(f"Error fixing driver Telegram linking: {e}")
 
 def notify_admin_unlinked_driver(driver):
-    """Notify admin about driver without Telegram link"""
+    """Notify ONLY super admin about driver without Telegram link"""
     try:
-        admins = AdminUser.query.filter_by(is_active=True).all()
+        # Only notify super admins about driver issues
+        super_admins = AdminUser.query.filter_by(is_active=True, role='super_admin').all()
         
         message = f"⚠️ *Driver Account Needs Linking*\n\n"
         message += f"👤 Driver: {driver.name}\n"
@@ -47,9 +48,9 @@ def notify_admin_unlinked_driver(driver):
         message += f"3. System will automatically link their profile\n\n"
         message += f"📞 Contact driver: {driver.phone_number}"
         
-        for admin in admins:
+        for super_admin in super_admins:
             from bot_minimal import send_message_to_admin
-            send_message_to_admin(admin.telegram_user_id, message)
+            send_message_to_admin(super_admin.telegram_user_id, message)
             
     except Exception as e:
         logger.error(f"Error notifying admin about unlinked driver: {e}")

@@ -1758,13 +1758,18 @@ def get_dashboard_stats():
         logger.error(f"Error fetching dashboard stats: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Public overview data endpoint
+# Restaurant-specific overview data endpoint
 @app.route('/api/overview-data', methods=['GET'])
-def get_public_overview_data():
-    """Get public overview data for charts"""
+@admin_required
+def get_restaurant_overview_data():
+    """Get restaurant-specific overview data for charts"""
     try:
-        # Get recent orders for chart data
-        recent_orders = Order.query.order_by(Order.created_at.desc()).limit(30).all()
+        admin = AdminUser.query.get(session['admin_id'])
+        
+        # Get recent orders for this restaurant only
+        recent_orders = Order.query.filter_by(
+            restaurant_id=admin.restaurant_id
+        ).order_by(Order.created_at.desc()).limit(30).all()
         
         # Group by date for revenue chart
         revenue_data = {}
@@ -1775,14 +1780,14 @@ def get_public_overview_data():
             if order.status == 'delivered':
                 revenue_data[date_str] += order.total_amount
         
-        # Order status distribution
+        # Order status distribution for this restaurant only
         status_data = {
-            'pending': Order.query.filter_by(status='pending').count(),
-            'confirmed': Order.query.filter_by(status='confirmed').count(),
-            'preparing': Order.query.filter_by(status='preparing').count(),
-            'ready': Order.query.filter_by(status='ready').count(),
-            'out_for_delivery': Order.query.filter_by(status='out_for_delivery').count(),
-            'delivered': Order.query.filter_by(status='delivered').count(),
+            'pending': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='pending').count(),
+            'confirmed': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='confirmed').count(),
+            'preparing': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='preparing').count(),
+            'ready': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='ready').count(),
+            'out_for_delivery': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='out_for_delivery').count(),
+            'delivered': Order.query.filter_by(restaurant_id=admin.restaurant_id, status='delivered').count(),
         }
         
         return jsonify({
@@ -1791,7 +1796,7 @@ def get_public_overview_data():
             'status_data': status_data
         })
     except Exception as e:
-        logger.error(f"Error fetching public overview data: {e}")
+        logger.error(f"Error fetching restaurant overview data: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/overview', methods=['GET'])

@@ -56,17 +56,18 @@ class DriverIntegrationSystem:
             return False
     
     def notify_new_order(self, order_id):
-        """BeUdelivery-style order notification to nearby drivers"""
+        """BeUdelivery-style order notification to nearby drivers - RESTAURANT SPECIFIC"""
         with app.app_context():
             order = Order.query.get(order_id)
             if not order:
                 return False
             
-            # Find available drivers with location data (more flexible timing for testing)
+            # Find available drivers ONLY for this specific restaurant
             available_drivers = Driver.query.filter_by(
                 is_active=True,
                 is_available=True,
-                is_approved=True
+                is_approved=True,
+                restaurant_id=order.restaurant_id  # CRITICAL: Only drivers from same restaurant
             ).filter(
                 Driver.telegram_user_id.isnot(None),
                 Driver.current_lat.isnot(None),
@@ -84,9 +85,17 @@ class DriverIntegrationSystem:
             
             # Calculate distances and sort by proximity
             drivers_with_distance = []
-            for driver in available_drivers:
-                # Use restaurant location as the pickup point (Addis Ababa coordinates)
+            
+            # Get restaurant coordinates for this order
+            from models import Restaurant
+            restaurant = Restaurant.query.get(order.restaurant_id)
+            if restaurant and restaurant.latitude and restaurant.longitude:
+                restaurant_lat, restaurant_lng = restaurant.latitude, restaurant.longitude
+            else:
+                # Fallback to Flavour Cafe coordinates
                 restaurant_lat, restaurant_lng = 9.047658, 38.741143
+            
+            for driver in available_drivers:
                 distance = self.calculate_distance(
                     driver.current_lat, driver.current_lng,
                     restaurant_lat, restaurant_lng
