@@ -963,69 +963,155 @@
                 .catch(error => console.error('Error loading categories:', error));
         }
 
-        // Load payment verification orders
+        // Enhanced payment verification orders loading
         function loadPaymentVerificationOrders() {
-            fetch('/api/admin/payment-notifications')
+            fetch('/api/admin/payment-verification-enhanced')
                 .then(response => response.json())
                 .then(data => {
                     const tbody = document.getElementById('paymentVerificationTableBody');
                     const noOrdersDiv = document.getElementById('noPaymentOrders');
                     const badge = document.getElementById('paymentVerificationCount');
                     
-                    if (data.notifications && data.notifications.length > 0) {
+                    if (data.success && data.orders && data.orders.length > 0) {
                         tbody.innerHTML = '';
                         noOrdersDiv.style.display = 'none';
                         tbody.parentElement.parentElement.style.display = 'block';
                         
-                        // Update badge count
-                        badge.textContent = data.notifications.length;
-                        badge.style.display = 'inline';
+                        // Update badge count with pending verification count
+                        const pendingCount = data.statistics.total_pending;
+                        if (badge) {
+                            badge.textContent = pendingCount;
+                            badge.style.display = pendingCount > 0 ? 'inline' : 'none';
+                        }
                         
-                        data.notifications.forEach(order => {
+                        // Enhanced order display with better status indicators
+                        data.orders.forEach(order => {
                             const row = document.createElement('tr');
+                            const statusClass = order.needs_verification ? 'table-warning' : 'table-light';
+                            const urgencyClass = order.time_since_order.includes('hour') ? 'text-danger fw-bold' : '';
+                            
+                            row.className = statusClass;
                             row.innerHTML = `
-                                <td>#${order.id}</td>
-                                <td>${order.customer_name}</td>
-                                <td>${order.customer_phone || 'N/A'}</td>
-                                <td>ETB ${order.total_amount.toFixed(2)}</td>
-                                <td>${new Date(order.created_at).toLocaleString()}</td>
                                 <td>
-                                    <span class="badge bg-info">${order.payment_method || 'Not specified'}</span>
+                                    <strong>#${order.id}</strong>
+                                    ${order.needs_verification ? '<span class="badge bg-warning ms-1">Pending</span>' : '<span class="badge bg-success ms-1">Verified</span>'}
                                 </td>
                                 <td>
-                                    ${order.transaction_image_url ? 
+                                    <div>
+                                        <strong>${order.customer_name}</strong>
+                                        <br><small class="text-muted">${order.customer_phone || 'N/A'}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>ETB ${parseFloat(order.total_amount).toFixed(2)}</strong>
+                                        <br><small class="text-muted">${order.items_count} items</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        ${new Date(order.created_at).toLocaleDateString()}
+                                        <br><small class="${urgencyClass}">${order.time_since_order}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge ${order.payment_method === 'Manual Verification Required' ? 'bg-warning' : 'bg-info'}">
+                                        ${order.payment_method || 'Not specified'}
+                                    </span>
+                                    ${order.transaction_id && order.transaction_id !== 'N/A' ? 
+                                        `<br><small class="text-muted">ID: ${order.transaction_id}</small>` : ''}
+                                </td>
+                                <td>
+                                    ${order.has_screenshot ? 
                                         `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
-                                            <i class="fas fa-image"></i> View
+                                            <i class="fas fa-image"></i> View Receipt
                                         </button>` : 
-                                        '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Manual verification</span>'
+                                        '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> No receipt image</span>'
                                     }
                                 </td>
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-success" onclick="verifyPayment(${order.id})" title="Verify Payment">
-                                            <i class="fas fa-check"></i> Verify
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="rejectPayment(${order.id})" title="Reject Payment">
-                                            <i class="fas fa-times"></i> Reject
-                                        </button>
-                                    </div>
+                                    ${order.needs_verification ? 
+                                        `<div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-success" onclick="verifyPaymentEnhanced(${order.id})" title="Verify Payment">
+                                                <i class="fas fa-check"></i> Verify
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="rejectPaymentEnhanced(${order.id})" title="Reject Payment">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>` :
+                                        `<span class="text-success">
+                                            <i class="fas fa-check-circle"></i> Already verified
+                                            <br><small class="text-muted">${new Date(order.payment_verified_at).toLocaleDateString()}</small>
+                                        </span>`
+                                    }
                                 </td>
                             `;
                             tbody.appendChild(row);
                         });
+                        
+                        // Show statistics summary
+                        updatePaymentVerificationStats(data.statistics);
+                        
                     } else {
                         tbody.innerHTML = '';
                         tbody.parentElement.parentElement.style.display = 'none';
                         noOrdersDiv.style.display = 'block';
                         
                         // Hide badge
-                        badge.style.display = 'none';
+                        if (badge) badge.style.display = 'none';
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading payment verification orders:', error);
-                    alert('Error loading payment verification orders');
+                    console.error('Error loading enhanced payment verification orders:', error);
+                    alert('Error loading payment verification orders. Please try again.');
                 });
+        }
+        
+        // Update payment verification statistics display
+        function updatePaymentVerificationStats(stats) {
+            // Create or update stats display
+            let statsDiv = document.getElementById('paymentVerificationStats');
+            if (!statsDiv) {
+                statsDiv = document.createElement('div');
+                statsDiv.id = 'paymentVerificationStats';
+                statsDiv.className = 'row mb-3';
+                document.querySelector('#payment-verification-tab .table-container').prepend(statsDiv);
+            }
+            
+            statsDiv.innerHTML = `
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-clock"></i> Pending</h5>
+                            <h3>${stats.total_pending}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-image"></i> With Receipt</h5>
+                            <h3>${stats.with_screenshots}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-hand-paper"></i> Manual</h5>
+                            <h3>${stats.manual_verification}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-sync"></i> Last Updated</h5>
+                            <h6>${new Date(stats.last_updated).toLocaleTimeString()}</h6>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // View payment screenshot
@@ -1060,13 +1146,73 @@
             modal.show();
         }
 
-        // Verify payment
-        function verifyPayment(orderId) {
-            if (!confirm('Are you sure you want to verify this payment? This will confirm the order and notify the kitchen staff and customer.')) {
-                return;
-            }
+        // Enhanced payment verification with detailed modal
+        function verifyPaymentEnhanced(orderId) {
+            // Show verification modal with options
+            const modalHtml = `
+                <div class="modal fade" id="verifyPaymentModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-check-circle"></i> Verify Payment - Order #${orderId}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> 
+                                    <strong>Verification Action:</strong> This will confirm the payment and automatically:
+                                    <ul class="mt-2 mb-0">
+                                        <li>Change order status to "Confirmed"</li>
+                                        <li>Notify kitchen staff to start preparation</li>
+                                        <li>Send confirmation to customer</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Verification Method</label>
+                                    <select class="form-select" id="verificationMethod">
+                                        <option value="manual">Manual Verification</option>
+                                        <option value="receipt_review">Receipt Review</option>
+                                        <option value="bank_confirmation">Bank Confirmation</option>
+                                        <option value="cash_delivery">Cash on Delivery</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Verification Notes (Optional)</label>
+                                    <textarea class="form-control" id="verificationNotes" rows="3" 
+                                              placeholder="Add any notes about the payment verification..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-success" onclick="submitPaymentVerification(${orderId})">
+                                    <i class="fas fa-check"></i> Verify Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            fetch(`/api/admin/verify-payment/${orderId}`, {
+            // Remove existing modal if present
+            const existingModal = document.getElementById('verifyPaymentModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('verifyPaymentModal'));
+            modal.show();
+        }
+        
+        // Submit payment verification
+        function submitPaymentVerification(orderId) {
+            const method = document.getElementById('verificationMethod').value;
+            const notes = document.getElementById('verificationNotes').value.trim();
+            
+            fetch(`/api/admin/verify-payment-enhanced/${orderId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1074,8 +1220,8 @@
                 },
                 credentials: 'same-origin',
                 body: JSON.stringify({
-                    order_id: orderId,
-                    decision: 'approve'
+                    method: method,
+                    notes: notes
                 })
             })
             .then(response => {
@@ -1088,18 +1234,23 @@
             })
             .then(data => {
                 if (data && data.success) {
-                    alert('Payment verified successfully! Order confirmed.');
-                    loadPaymentVerificationOrders();
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('verifyPaymentModal'));
+                    modal.hide();
                     
-                    // Also reload dashboard stats if available
+                    // Show success message with details
+                    alert(`✅ Payment verified successfully!\n\n` +
+                          `Order #${orderId} confirmed using ${method}\n` +
+                          `Notifications sent to: ${data.notifications_sent.join(', ')}\n\n` +
+                          `Kitchen staff and customer have been notified.`);
+                    
+                    // Reload verification orders and dashboard
+                    loadPaymentVerificationOrders();
                     if (typeof loadDashboardStats === 'function') {
                         loadDashboardStats();
                     }
-                } else if (data && data.redirect) {
-                    alert('Session expired. Please login again.');
-                    window.location.href = data.redirect;
                 } else {
-                    alert('Error verifying payment: ' + (data ? (data.message || data.error || 'Unknown error') : 'Network error'));
+                    alert('Error verifying payment: ' + (data ? (data.error || 'Unknown error') : 'Network error'));
                 }
             })
             .catch(error => {
@@ -1108,14 +1259,101 @@
             });
         }
 
-        // Reject payment
-        function rejectPayment(orderId) {
-            const reason = prompt('Please provide a reason for rejecting this payment:');
+        // Enhanced payment rejection with detailed modal
+        function rejectPaymentEnhanced(orderId) {
+            // Show rejection modal with predefined reasons
+            const modalHtml = `
+                <div class="modal fade" id="rejectPaymentModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-times-circle"></i> Reject Payment - Order #${orderId}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    <strong>Warning:</strong> This will cancel the order and notify the customer.
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Rejection Reason *</label>
+                                    <select class="form-select" id="rejectionReason" onchange="toggleCustomReason()">
+                                        <option value="">Select reason for rejection</option>
+                                        <option value="invalid_payment_screenshot">Invalid payment screenshot</option>
+                                        <option value="insufficient_payment_amount">Insufficient payment amount</option>
+                                        <option value="payment_not_received">Payment not received in account</option>
+                                        <option value="duplicate_transaction">Duplicate transaction</option>
+                                        <option value="suspicious_transaction">Suspicious transaction</option>
+                                        <option value="bank_transfer_failed">Bank transfer failed</option>
+                                        <option value="custom">Other (specify below)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3" id="customReasonDiv" style="display: none;">
+                                    <label class="form-label fw-bold">Custom Reason</label>
+                                    <input type="text" class="form-control" id="customReason" 
+                                           placeholder="Enter custom rejection reason...">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Additional Notes (Optional)</label>
+                                    <textarea class="form-control" id="rejectionNotes" rows="3" 
+                                              placeholder="Add any additional notes for the customer or internal records..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" onclick="submitPaymentRejection(${orderId})">
+                                    <i class="fas fa-times"></i> Reject Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('rejectPaymentModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('rejectPaymentModal'));
+            modal.show();
+        }
+        
+        // Toggle custom reason input
+        function toggleCustomReason() {
+            const reasonSelect = document.getElementById('rejectionReason');
+            const customDiv = document.getElementById('customReasonDiv');
+            
+            if (reasonSelect.value === 'custom') {
+                customDiv.style.display = 'block';
+            } else {
+                customDiv.style.display = 'none';
+            }
+        }
+        
+        // Submit payment rejection
+        function submitPaymentRejection(orderId) {
+            const reasonSelect = document.getElementById('rejectionReason');
+            const customReason = document.getElementById('customReason');
+            const notes = document.getElementById('rejectionNotes').value.trim();
+            
+            let reason = reasonSelect.value;
+            if (reason === 'custom') {
+                reason = customReason.value.trim();
+            }
+            
             if (!reason) {
+                alert('Please select or enter a rejection reason.');
                 return;
             }
             
-            fetch(`/api/admin/reject-payment/${orderId}`, {
+            fetch(`/api/admin/reject-payment-enhanced/${orderId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1123,23 +1361,42 @@
                 },
                 credentials: 'same-origin',
                 body: JSON.stringify({
-                    order_id: orderId,
-                    decision: 'reject',
-                    reason: reason
+                    reason: reason,
+                    notes: notes
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
-                    alert('Payment rejected successfully');
+                if (data && data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('rejectPaymentModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    alert(`❌ Payment rejected successfully!\n\n` +
+                          `Order #${orderId} has been cancelled.\n` +
+                          `Reason: ${reason}\n\n` +
+                          `Customer has been notified.`);
+                    
+                    // Reload verification orders and dashboard
                     loadPaymentVerificationOrders();
+                    if (typeof loadDashboardStats === 'function') {
+                        loadDashboardStats();
+                    }
                 } else {
-                    alert('Error rejecting payment: ' + (data.message || 'Unknown error'));
+                    alert('Error rejecting payment: ' + (data ? (data.error || 'Unknown error') : 'Network error'));
                 }
             })
             .catch(error => {
                 console.error('Error rejecting payment:', error);
-                alert('Error rejecting payment');
+                alert('Error rejecting payment: ' + error.message);
             });
         }
 
