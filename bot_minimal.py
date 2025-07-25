@@ -873,12 +873,12 @@ def handle_admin_callback(callback_query):
                     delivery_bot = Driver(
                         name="Delivery Bot",
                         phone_number="+251900000000",
-                        vehicle_type="automated",
-                        is_active=True,
-                        is_available=True,
-                        is_approved=True,
-                        approval_status="approved"
+                        vehicle_type="automated"
                     )
+                    delivery_bot.is_active = True
+                    delivery_bot.is_available = True
+                    delivery_bot.is_approved = True
+                    delivery_bot.approval_status = "approved"
                     db.session.add(delivery_bot)
                     db.session.commit()
                 
@@ -1175,7 +1175,8 @@ def handle_contact_share(chat_id, contact, user_id):
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
             if not user_profile:
-                user_profile = UserProfile(telegram_user_id=user_id)
+                user_profile = UserProfile()
+                user_profile.telegram_user_id = user_id
                 db.session.add(user_profile)
             
             user_profile.phone_number = phone_number
@@ -1225,7 +1226,8 @@ def handle_location_share(chat_id, location, user_id):
         with app.app_context():
             user_profile = UserProfile.query.filter_by(telegram_user_id=user_id).first()
             if not user_profile:
-                user_profile = UserProfile(telegram_user_id=user_id)
+                user_profile = UserProfile()
+                user_profile.telegram_user_id = user_id
                 db.session.add(user_profile)
             
             user_profile.location_lat = lat
