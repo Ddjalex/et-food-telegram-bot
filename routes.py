@@ -1507,8 +1507,121 @@ def get_admin_payment_verification_orders():
         logger.error(f"Error fetching payment verification orders: {e}")
         return jsonify({'error': 'Failed to fetch payment verification orders'}), 500
 
+# Kitchen Dashboard API Endpoints Fix
+@app.route('/api/kitchen/statistics')
+def api_kitchen_statistics():
+    """API endpoint for kitchen dashboard statistics"""
+    try:
+        # Get restaurant ID from session or default to 1
+        restaurant_id = session.get('restaurant_id', 1)
+        if 'admin_id' in session:
+            admin = AdminUser.query.get(session['admin_id'])
+            if admin and admin.restaurant_id:
+                restaurant_id = admin.restaurant_id
+        
+        # Get today's orders
+        from datetime import date
+        today = date.today()
+        today_orders = Order.query.filter_by(restaurant_id=restaurant_id).filter(
+            db.func.date(Order.created_at) == today
+        ).count()
+        
+        # Get pending orders
+        pending_orders = Order.query.filter_by(restaurant_id=restaurant_id, status='pending').count()
+        
+        # Get total menu items
+        total_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).count()
+        
+        # Get total revenue for today
+        today_revenue = db.session.query(db.func.sum(Order.total_amount)).filter(
+            Order.restaurant_id == restaurant_id,
+            db.func.date(Order.created_at) == today,
+            Order.status == 'delivered'
+        ).scalar() or 0
+        
+        return jsonify({
+            'success': True,
+            'todayOrders': today_orders,
+            'pendingOrders': pending_orders,
+            'totalMenuItems': total_items,
+            'todayRevenue': float(today_revenue)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading kitchen statistics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/kitchen/menu-items')
+def api_kitchen_menu_items_fixed():
+    """API endpoint for kitchen menu items"""
+    try:
+        # Get restaurant ID from session or default to 1
+        restaurant_id = session.get('restaurant_id', 1)
+        if 'admin_id' in session:
+            admin = AdminUser.query.get(session['admin_id'])
+            if admin and admin.restaurant_id:
+                restaurant_id = admin.restaurant_id
+        
+        menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+        
+        items_data = []
+        for item in menu_items:
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'price': item.price,
+                'description': item.description,
+                'category': item.category,
+                'available': item.available,
+                'image_url': item.image_url,
+                'restaurant_id': item.restaurant_id
+            })
+        
+        return jsonify({
+            'success': True,
+            'menuItems': items_data,
+            'total': len(items_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading kitchen menu items: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/kitchen/products')
+def api_kitchen_products_fixed():
+    """API endpoint for kitchen products (same as menu items)"""
+    try:
+        # Get restaurant ID from session or default to 1
+        restaurant_id = session.get('restaurant_id', 1)
+        if 'admin_id' in session:
+            admin = AdminUser.query.get(session['admin_id'])
+            if admin and admin.restaurant_id:
+                restaurant_id = admin.restaurant_id
+        
+        products = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+        
+        products_data = []
+        for product in products:
+            products_data.append({
+                'id': product.id,
+                'name': product.name,
+                'price': product.price,
+                'description': product.description,
+                'category': product.category,
+                'available': product.available,
+                'image_url': product.image_url,
+                'restaurant_id': product.restaurant_id
+            })
+        
+        return jsonify({
+            'success': True,
+            'products': products_data,
+            'total': len(products_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading kitchen products: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/orders', methods=['POST'])
 def create_order():
