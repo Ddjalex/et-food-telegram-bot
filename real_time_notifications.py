@@ -1,236 +1,194 @@
 """
-Real-time notification system for ET-FOOD
-Handles live notifications for driver approvals, payments, and order updates
+Real-time Notification System for ET-FOOD
+Handles Telegram notifications between admin, kitchen staff, and customers
 """
 
-import logging
-from flask import jsonify
-from models import db, Driver, Order, AdminUser, Restaurant
-from datetime import datetime
 import requests
-from config import Config
+import logging
+import os
+from models import db, KitchenStaff, AdminUser
 
 logger = logging.getLogger(__name__)
 
-def send_telegram_notification(chat_id, message, keyboard=None):
-    """Send Telegram notification"""
-    if not Config.BOT_TOKEN or Config.BOT_TOKEN == 'your_bot_token_here':
-        logger.warning("BOT_TOKEN not configured - notification not sent")
-        return False
-    
-    url = f"https://api.telegram.org/bot{Config.BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
-    if keyboard:
-        data["reply_markup"] = keyboard
-    
+def send_telegram_notification(telegram_user_id, message, bot_token=None):
+    """Send notification via Telegram bot"""
     try:
-        response = requests.post(url, json=data)
+        # Use main bot token for notifications
+        if not bot_token:
+            bot_token = os.environ.get('BOT_TOKEN', os.environ.get('ETFASTFOOD_BOT_TOKEN'))
+            
+        if not bot_token or bot_token == 'your_bot_token_here':
+            logger.warning("Bot token not configured for notifications")
+            return False
+            
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = {
+            'chat_id': telegram_user_id,
+            'text': message,
+            'parse_mode': 'Markdown'
+        }
+        
+        response = requests.post(url, data=data, timeout=10)
         result = response.json()
-        if result.get("ok"):
-            logger.info(f"Telegram notification sent successfully to {chat_id}")
+        
+        if result.get('ok'):
+            logger.info(f"Notification sent successfully to {telegram_user_id}")
             return True
         else:
-            logger.error(f"Telegram notification failed: {result}")
+            logger.error(f"Failed to send notification: {result}")
             return False
+            
     except Exception as e:
         logger.error(f"Error sending Telegram notification: {e}")
         return False
 
-def notify_restaurants_new_driver(driver_id):
-    """Send real-time notification to all restaurant admins about new approved driver"""
+def notify_kitchen_staff_payment_verified(order):
+    """Notify kitchen staff that payment has been verified and they should start preparing"""
     try:
-        driver = Driver.query.get(driver_id)
-        if not driver:
-            return False
+        logger.info(f"Notifying kitchen staff for order #{order.id}")
         
-        # Get all active restaurant admins
-        admins = AdminUser.query.filter_by(
-            is_active=True,
-            role='admin'
+        # Get kitchen staff for this restaurant
+        kitchen_staff = KitchenStaff.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            is_active=True
         ).all()
         
-        notification_count = 0
+        if not kitchen_staff:
+            logger.warning(f"No active kitchen staff found for restaurant {order.restaurant_id}")
+            return False
         
-        for admin in admins:
-            try:
-                # Construct notification message
-                message = f"🚗 *NEW DRIVER APPROVED*\n\n"
-                message += f"✅ **Driver**: {driver.name}\n"
-                message += f"📱 **Phone**: {driver.phone_number}\n"
-                message += f"🚙 **Vehicle**: {driver.vehicle_type.title()}\n"
-                message += f"📍 **Status**: Available for deliveries\n"
-                message += f"⏰ **Approved**: {datetime.utcnow().strftime('%H:%M')}\n\n"
-                message += f"🎯 **This driver is now available for your restaurant's delivery orders!**\n"
-                message += f"They will appear in your driver assignment list for new orders."
-                
-                # Create keyboard for quick actions
-                keyboard = {
-                    "inline_keyboard": [
-                        [
-                            {
-                                "text": "👥 View All Drivers",
-                                "callback_data": "view_drivers"
-                            },
-                            {
-                                "text": "📊 Admin Dashboard",
-                                "callback_data": "admin_dashboard"
-                            }
-                        ]
-                    ]
-                }
-                
-                # Send notification if admin has Telegram ID
-                if admin.telegram_user_id:
-                    success = send_telegram_notification(
-                        admin.telegram_user_id, 
-                        message, 
-                        keyboard
-                    )
-                    if success:
-                        notification_count += 1
-                        logger.info(f"Sent driver approval notification to admin {admin.username}")
-                
-            except Exception as e:
-                logger.error(f"Error sending notification to admin {admin.username}: {e}")
+        # Create notification message
+        message = f"💳 *PAYMENT VERIFIED - START PREPARING*\n\n"
+        message += f"🆔 *Order*: #{order.id}\n"
+        message += f"👤 *Customer*: {order.customer_name}\n"
+        message += f"📞 *Phone*: {order.customer_phone or 'N/A'}\n"
+        message += f"💰 *Amount*: {order.total_amount:.2f} ETB\n"
+        message += f"📍 *Address*: {order.customer_address or order.delivery_address or 'N/A'}\n\n"
         
-        logger.info(f"Sent driver approval notifications to {notification_count} restaurant admins")
-        return notification_count > 0
+        # Add order items
+        if order.items:
+            message += f"🍽️ *Order Items*:\n"
+            items_list = order.items.split(',') if isinstance(order.items, str) else order.items
+            for i, item in enumerate(items_list[:5], 1):  # Show first 5 items
+                message += f"{i}. {item.strip()}\n"
+            if len(items_list) > 5:
+                message += f"... and {len(items_list) - 5} more items\n"
+        
+        message += f"\n🍳 *ACTION REQUIRED*: Start preparing this order now!\n"
+        message += f"⏰ *Target Time*: 15-20 minutes\n\n"
+        message += f"Click /kitchen to access kitchen dashboard"
+        
+        notifications_sent = []
+        for staff in kitchen_staff:
+            if staff.telegram_user_id:
+                success = send_telegram_notification(staff.telegram_user_id, message)
+                if success:
+                    notifications_sent.append(f"Kitchen: {staff.name}")
+                    logger.info(f"Notified kitchen staff: {staff.name} ({staff.telegram_user_id})")
+            else:
+                logger.warning(f"Kitchen staff {staff.name} has no telegram_user_id")
+        
+        return notifications_sent
         
     except Exception as e:
-        logger.error(f"Error in notify_restaurants_new_driver: {e}")
-        return False
+        logger.error(f"Error notifying kitchen staff: {e}")
+        return []
 
-def notify_payment_verification_needed(order_id):
-    """Send real-time notification to restaurant admin about payment verification needed"""
+def notify_customer_payment_approved(order):
+    """Notify customer that payment has been approved and order is being prepared"""
     try:
-        order = Order.query.get(order_id)
-        if not order:
+        logger.info(f"Notifying customer for order #{order.id}")
+        
+        if not order.telegram_user_id:
+            logger.warning(f"Order #{order.id} has no telegram_user_id for customer notification")
             return False
         
-        # Get restaurant admin
-        admin = AdminUser.query.filter_by(
-            restaurant_id=order.restaurant_id,
-            role='admin',
-            is_active=True
-        ).first()
+        message = f"✅ *PAYMENT APPROVED*\n\n"
+        message += f"🆔 *Order*: #{order.id}\n"
+        message += f"💰 *Amount*: {order.total_amount:.2f} ETB\n"
+        message += f"✅ *Status*: Payment Verified\n\n"
+        message += f"🍳 *Good News*: Your order is now being prepared!\n"
+        message += f"⏰ *Estimated Time*: 15-30 minutes\n"
+        message += f"🚚 *Delivery*: We'll notify you when ready for delivery\n\n"
+        message += f"Thank you for your order! 🙏"
         
-        if not admin or not admin.telegram_user_id:
-            logger.warning(f"No admin with Telegram ID found for restaurant {order.restaurant_id}")
-            return False
-        
-        # Construct payment verification message
-        message = f"💳 *PAYMENT VERIFICATION NEEDED*\n\n"
-        message += f"🆔 **Order**: #{order.id}\n"
-        message += f"👤 **Customer**: {order.customer_name}\n"
-        message += f"📱 **Phone**: {order.customer_phone}\n"
-        message += f"💰 **Amount**: {order.total_amount:.2f} ETB\n"
-        message += f"💳 **Payment Method**: {order.payment_method}\n"
-        
-        if order.transaction_id:
-            message += f"🔢 **Transaction ID**: {order.transaction_id}\n"
-        
-        message += f"⏰ **Order Time**: {order.created_at.strftime('%H:%M')}\n\n"
-        message += f"📸 **Payment screenshot uploaded!**\n"
-        message += f"🔍 **Action Required**: Please verify the payment screenshot in your admin dashboard."
-        
-        # Create keyboard for quick actions
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "✅ Verify Payment",
-                        "callback_data": f"verify_payment_{order.id}"
-                    },
-                    {
-                        "text": "❌ Reject Payment",
-                        "callback_data": f"reject_payment_{order.id}"
-                    }
-                ],
-                [
-                    {
-                        "text": "📊 Admin Dashboard",
-                        "callback_data": "admin_dashboard"
-                    }
-                ]
-            ]
-        }
-        
-        # Send notification
-        success = send_telegram_notification(
-            admin.telegram_user_id,
-            message,
-            keyboard
-        )
-        
+        success = send_telegram_notification(order.telegram_user_id, message)
         if success:
-            logger.info(f"Sent payment verification notification for order {order_id}")
+            logger.info(f"Customer notification sent for order #{order.id}")
+            return True
+        else:
+            logger.error(f"Failed to notify customer for order #{order.id}")
+            return False
             
-        return success
-        
     except Exception as e:
-        logger.error(f"Error in notify_payment_verification_needed: {e}")
+        logger.error(f"Error notifying customer: {e}")
         return False
 
-def notify_order_status_change(order_id, new_status, admin_action=True):
-    """Send real-time notification about order status changes"""
+def notify_customer_order_preparing(order, kitchen_staff_name=None):
+    """Notify customer that kitchen has started preparing their order"""
     try:
-        order = Order.query.get(order_id)
-        if not order:
+        logger.info(f"Notifying customer that order #{order.id} preparation started")
+        
+        if not order.telegram_user_id:
+            logger.warning(f"Order #{order.id} has no telegram_user_id for customer notification")
             return False
         
-        # Determine message based on status
-        status_messages = {
-            'confirmed': '✅ Order Confirmed',
-            'preparing': '👨‍🍳 Preparing Your Order',
-            'ready': '🍽️ Order Ready for Pickup',
-            'out_for_delivery': '🚚 Out for Delivery',
-            'delivered': '✅ Order Delivered'
-        }
+        kitchen_name = kitchen_staff_name or "Our kitchen team"
         
-        message = f"📦 *{status_messages.get(new_status, 'Order Update')}*\n\n"
-        message += f"🆔 **Order**: #{order.id}\n"
-        message += f"👤 **Customer**: {order.customer_name}\n"
-        message += f"💰 **Amount**: {order.total_amount:.2f} ETB\n"
-        message += f"⏰ **Updated**: {datetime.utcnow().strftime('%H:%M')}\n\n"
+        message = f"👨‍🍳 *ORDER PREPARATION STARTED*\n\n"
+        message += f"🆔 *Order*: #{order.id}\n"
+        message += f"👨‍🍳 *Chef*: {kitchen_name}\n"
+        message += f"🍽️ *Status*: Now preparing your delicious food!\n\n"
+        message += f"⏰ *Estimated Time*: 15-20 minutes\n"
+        message += f"🔥 *Process*: Fresh ingredients, made with care\n"
+        message += f"📱 *Tracking*: We'll update you when ready!\n\n"
+        message += f"Get ready for an amazing meal! 😋"
         
-        if new_status == 'confirmed':
-            message += "✅ **Payment verified successfully!**\nYour order is now confirmed and will be prepared shortly."
-        elif new_status == 'preparing':
-            message += "👨‍🍳 **Kitchen started preparing your order!**\nEstimated completion: 15-30 minutes."
-        elif new_status == 'ready':
-            message += "🍽️ **Your order is ready!**\nWaiting for driver assignment."
-        elif new_status == 'out_for_delivery':
-            message += "🚚 **Driver assigned!**\nYour order is on the way."
-        elif new_status == 'delivered':
-            message += "✅ **Order delivered successfully!**\nThank you for choosing ET-FOOD!"
-        
-        # Send to customer if they have telegram_user_id
-        if hasattr(order, 'telegram_user_id') and order.telegram_user_id:
-            send_telegram_notification(order.telegram_user_id, message)
-        
-        # Also send to restaurant admin if admin_action is False (system update)
-        if not admin_action:
-            admin = AdminUser.query.filter_by(
-                restaurant_id=order.restaurant_id,
-                role='admin',
-                is_active=True
-            ).first()
+        success = send_telegram_notification(order.telegram_user_id, message)
+        if success:
+            logger.info(f"Customer preparation notification sent for order #{order.id}")
+            return True
+        else:
+            logger.error(f"Failed to notify customer about preparation for order #{order.id}")
+            return False
             
-            if admin and admin.telegram_user_id:
-                admin_message = f"📊 *ORDER STATUS UPDATE*\n\n"
-                admin_message += f"🆔 **Order**: #{order.id}\n"
-                admin_message += f"📊 **Status**: {new_status.replace('_', ' ').title()}\n"
-                admin_message += f"👤 **Customer**: {order.customer_name}\n"
-                admin_message += f"⏰ **Updated**: {datetime.utcnow().strftime('%H:%M')}"
-                
-                send_telegram_notification(admin.telegram_user_id, admin_message)
+    except Exception as e:
+        logger.error(f"Error notifying customer about preparation: {e}")
+        return False
+
+def notify_admin_kitchen_started(order, kitchen_staff_name):
+    """Notify admin that kitchen staff started preparing an order"""
+    try:
+        logger.info(f"Notifying admin that kitchen started preparing order #{order.id}")
         
-        return True
+        # Get restaurant admins
+        admins = AdminUser.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            is_active=True
+        ).all()
+        
+        if not admins:
+            logger.warning(f"No active admins found for restaurant {order.restaurant_id}")
+            return False
+        
+        message = f"👨‍🍳 *KITCHEN UPDATE*\n\n"
+        message += f"🆔 *Order*: #{order.id}\n"
+        message += f"👤 *Customer*: {order.customer_name}\n"
+        message += f"👨‍🍳 *Chef*: {kitchen_staff_name}\n"
+        message += f"🍽️ *Status*: Preparation started\n"
+        message += f"💰 *Amount*: {order.total_amount:.2f} ETB\n\n"
+        message += f"✅ Kitchen team is now preparing the order\n"
+        message += f"⏰ Expected completion: 15-20 minutes"
+        
+        notifications_sent = []
+        for admin in admins:
+            if hasattr(admin, 'telegram_user_id') and admin.telegram_user_id:
+                success = send_telegram_notification(admin.telegram_user_id, message)
+                if success:
+                    notifications_sent.append(f"Admin: {admin.username}")
+        
+        return notifications_sent
         
     except Exception as e:
-        logger.error(f"Error in notify_order_status_change: {e}")
-        return False
+        logger.error(f"Error notifying admin about kitchen start: {e}")
+        return []

@@ -4,6 +4,10 @@ from app import app  # noqa: F401
 from enhanced_payment_verification import enhanced_payment
 app.register_blueprint(enhanced_payment)
 
+# Register kitchen preparation API blueprint
+from kitchen_preparation_api import kitchen_prep
+app.register_blueprint(kitchen_prep)
+
 # Import route modules
 import routes
 import admin_routes

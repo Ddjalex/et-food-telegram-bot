@@ -152,28 +152,26 @@ def verify_payment_enhanced(order_id):
         
         db.session.commit()
         
-        # Send notifications
+        # Send real-time notifications
         notifications_sent = []
         
-        # 1. Notify kitchen staff
+        # 1. Notify kitchen staff to start preparing
         try:
-            kitchen_staff = KitchenStaff.query.filter_by(
-                restaurant_id=restaurant_id,
-                is_active=True
-            ).all()
-            
-            if kitchen_staff:
-                from payment_workflow import notify_kitchen_staff_payment_verified
-                notify_kitchen_staff_payment_verified(order)
-                notifications_sent.append('kitchen_staff')
+            from real_time_notifications import notify_kitchen_staff_payment_verified
+            kitchen_notifications = notify_kitchen_staff_payment_verified(order)
+            if kitchen_notifications:
+                notifications_sent.extend(kitchen_notifications)
+                logger.info(f"Kitchen staff notified for order #{order_id}")
         except Exception as e:
             logger.error(f"Error notifying kitchen staff: {e}")
         
-        # 2. Notify customer
+        # 2. Notify customer that payment is approved
         try:
-            from bot_minimal import notify_customer_status_change
-            notify_customer_status_change(order_id, 'confirmed')
-            notifications_sent.append('customer')
+            from real_time_notifications import notify_customer_payment_approved
+            customer_notified = notify_customer_payment_approved(order)
+            if customer_notified:
+                notifications_sent.append('Customer')
+                logger.info(f"Customer notified for order #{order_id}")
         except Exception as e:
             logger.error(f"Error notifying customer: {e}")
         
