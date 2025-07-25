@@ -1307,9 +1307,31 @@
         // Load menu items
         async function loadMenuItems() {
             try {
-                // Get selected restaurant ID from URL parameter or localStorage
+                // Get selected restaurant ID from URL parameter, session, or localStorage
                 const urlParams = new URLSearchParams(window.location.search);
-                let restaurantId = urlParams.get('restaurant') || localStorage.getItem('selectedRestaurant') || 1;
+                const pathParts = window.location.pathname.split('/');
+                
+                let restaurantId = null;
+                
+                // Check if we're on a restaurant-specific path (/restaurant/ID)
+                if (pathParts[1] === 'restaurant' && pathParts[2]) {
+                    restaurantId = parseInt(pathParts[2]);
+                } else {
+                    // Check URL parameters
+                    restaurantId = urlParams.get('restaurant') || urlParams.get('restaurant_id');
+                    
+                    // Check localStorage
+                    if (!restaurantId) {
+                        restaurantId = localStorage.getItem('selectedRestaurant');
+                    }
+                    
+                    // Default to first available restaurant if none specified
+                    if (!restaurantId) {
+                        restaurantId = 'first_available';
+                    }
+                }
+                
+                console.log('Loading restaurant info for ID:', restaurantId);
                 
                 const response = await fetch(`/api/restaurants/${restaurantId}/menu`);
                 const data = await response.json();
@@ -2521,12 +2543,66 @@
             }
         }
 
+        // Navigation functions for bottom menu
+        function showHome() {
+            console.log('Showing home section');
+            // Show home content, hide others
+            const sections = ['home-section', 'orders-section', 'profile-section'];
+            sections.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.style.display = id === 'home-section' ? 'block' : 'none';
+                }
+            });
+            
+            // Update active navigation
+            updateActiveNav('home');
+        }
+
+        function showOrders() {
+            console.log('Showing orders section');
+            // Show order history modal instead of separate section
+            viewOrderHistory();
+        }
+
+        function showProfile() {
+            console.log('Showing profile section');
+            // Show profile modal instead of separate section
+            showUserProfile();
+        }
+
+        function updateActiveNav(activeSection) {
+            // Update navigation active states if needed
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent.toLowerCase().includes(activeSection)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, calling initApp...');
+            
+            // Test navigation functions
+            console.log('Navigation functions test:');
+            console.log('showHome:', typeof showHome);
+            console.log('showOrders:', typeof showOrders);
+            console.log('showProfile:', typeof showProfile);
+            
+            console.log('Initializing app...');
             updateTexts();
             loadCategories();
             loadMenuItems();
             loadUserProfile();
+            
+            console.log('App initialized. Functions available:', {
+                showHome: typeof showHome,
+                showOrders: typeof showOrders,
+                showProfile: typeof showProfile
+            });
             
             // Force profile update after a short delay to ensure elements are loaded
             setTimeout(() => {

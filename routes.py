@@ -91,7 +91,7 @@ def restaurant_menu(restaurant_id):
     
     # Store the restaurant ID in session
     session['selected_restaurant'] = restaurant_id
-    return render_template('webapp_delivery_modern.html')
+    return render_template('webapp_modern_fixed.html')
 
 @app.route('/login-portal')
 def login_portal():

@@ -4,637 +4,177 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Restaurant - ET-FOOD</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #ffffff;
+            line-height: 1.6;
             min-height: 100vh;
-            color: white;
             padding: 20px;
         }
         
-        /* Header Styles */
-        .page-header {
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
             text-align: center;
             margin-bottom: 30px;
         }
-        .page-header h1 {
-            font-size: 2.5rem;
+        
+        .header h1 {
+            color: #ffffff;
+            font-size: 24px;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .page-header p {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.8);
         }
         
-        /* Location Detection Section */
-        .location-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .location-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ffa726);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 10px;
-            transition: all 0.3s ease;
-        }
-        .location-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
-        }
-        .location-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .location-status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        .location-status.success {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-        }
-        .location-status.error {
-            background: rgba(220, 53, 69, 0.2);
-            color: #dc3545;
-        }
-        
-        /* Search Section */
-        .search-section {
-            margin-bottom: 30px;
-        }
-        .search-input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+        .header p {
+            color: #9ca3af;
             font-size: 16px;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-        .search-input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-        .search-input:focus {
-            border-color: #ff6b6b;
-            box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
         }
         
-        /* Nearby Restaurants Section */
-        .nearby-section {
-            margin-bottom: 30px;
-        }
-        .section-title {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        /* Horizontal Scrolling Restaurants */
-        .restaurants-horizontal {
-            display: flex;
-            overflow-x: auto;
+        .restaurant-grid {
+            display: grid;
             gap: 20px;
-            padding: 10px 0;
-            scroll-behavior: smooth;
-        }
-        .restaurants-horizontal::-webkit-scrollbar {
-            height: 8px;
-        }
-        .restaurants-horizontal::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        .restaurants-horizontal::-webkit-scrollbar-thumb {
-            background: rgba(255, 107, 107, 0.6);
-            border-radius: 10px;
         }
         
-        /* Restaurant Cards */
         .restaurant-card {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #16213e 0%, #1e293b 100%);
+            border-radius: 12px;
+            padding: 20px;
             cursor: pointer;
-            min-width: 280px;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
+        
         .restaurant-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            background: rgba(255, 255, 255, 0.15);
+            border-color: #f97316;
+            box-shadow: 0 10px 25px rgba(249, 115, 22, 0.3);
         }
-        .restaurant-card-body {
-            padding: 20px;
-        }
-        .restaurant-logo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+        
+        .restaurant-image {
+            width: 100%;
+            height: 150px;
+            background: #374151;
+            border-radius: 8px;
             margin-bottom: 15px;
+            background-size: cover;
+            background-position: center;
         }
-        .restaurant-info h5 {
+        
+        .restaurant-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        
+        .restaurant-description {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .restaurant-address {
+            color: #6b7280;
+            font-size: 12px;
             margin-bottom: 10px;
-            color: #fff;
-            font-size: 1.3rem;
-        }
-        .restaurant-info p {
-            margin-bottom: 5px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
-        }
-        .distance-badge {
-            background: linear-gradient(45deg, #4facfe, #00f2fe);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            top: 15px;
-            right: 15px;
-        }
-        .featured-badge {
-            background: linear-gradient(45deg, #ff6b6b, #ffa726);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .delivery-info {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 10px;
-            margin-top: 10px;
-        }
-        .delivery-info small {
-            color: rgba(255, 255, 255, 0.7);
         }
         
-        /* Loading States */
-        .loading-spinner {
+        .restaurant-meta {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            min-height: 200px;
-        }
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #ff6b6b;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* All Restaurants Section */
-        .all-restaurants-section {
-            margin-top: 40px;
-        }
-        .restaurants-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px 0;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .restaurants-horizontal {
-                gap: 15px;
-            }
-            .restaurant-card {
-                min-width: 250px;
-            }
-            .restaurants-grid {
-                grid-template-columns: 1fr;
-            }
-            .page-header h1 {
-                font-size: 2rem;
-            }
-        }
-            height: 200px;
-        }
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 20px;
             font-size: 12px;
+        }
+        
+        .delivery-fee {
+            color: #10b981;
             font-weight: bold;
         }
-        .status-open {
-            background: #28a745;
-            color: white;
+        
+        .delivery-time {
+            color: #f59e0b;
         }
-        .status-closed {
-            background: #dc3545;
-            color: white;
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ef4444;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="page-header">
+        <div class="header">
             <h1>🍽️ Choose Your Restaurant</h1>
-            <p>Find restaurants near you and explore delicious options</p>
+            <p>Select a restaurant to start ordering</p>
         </div>
         
-        <!-- Location Detection Section -->
-        <div class="location-section">
-            <h4>📍 Find Restaurants Near You</h4>
-            <p>Enable location to see nearby restaurants sorted by distance</p>
-            <button class="location-btn" onclick="detectLocation()">
-                <span id="locationText">📍 Detect My Location</span>
-            </button>
-            <div id="locationStatus" style="margin-top: 10px; display: none;"></div>
-        </div>
-        
-        <!-- Search Section -->
-        <div class="search-section">
-            <input type="text" class="search-input" placeholder="🔍 Search restaurants by name, cuisine, or location..." 
-                   id="searchInput" onkeyup="searchRestaurants()" />
-        </div>
-        
-        <!-- Nearby Restaurants Section -->
-        <div class="nearby-section">
-            <h3 class="section-title">
-                <span>🏪 Nearby Restaurants</span>
-                <span id="nearbyCount" style="font-size: 1rem; color: rgba(255,255,255,0.7);"></span>
-            </h3>
-            <div class="restaurants-horizontal" id="nearbyRestaurants">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- All Restaurants Section -->
-        <div class="all-restaurants-section">
-            <h3 class="section-title">
-                <span>🍽️ All Restaurants</span>
-                <span id="allCount" style="font-size: 1rem; color: rgba(255,255,255,0.7);"></span>
-            </h3>
-            <div class="restaurants-grid" id="allRestaurants">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
-            </div>
+        <div id="restaurantGrid" class="restaurant-grid">
+            <div class="loading">Loading restaurants...</div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let userLocation = null;
-        let allRestaurants = [];
-        let filteredRestaurants = [];
-        
-        // Load restaurants on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadRestaurants();
-        });
-
-        // Calculate distance between two coordinates (Haversine formula)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth's radius in kilometers
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        // Detect user location
-        async function detectLocation() {
-            const locationBtn = document.querySelector('.location-btn');
-            const locationText = document.getElementById('locationText');
-            const locationStatus = document.getElementById('locationStatus');
-            
-            if (!navigator.geolocation) {
-                locationStatus.innerHTML = '<div style="color: #ff6b6b;">❌ Geolocation is not supported by this browser</div>';
-                locationStatus.style.display = 'block';
-                return;
-            }
-            
-            locationText.textContent = '📍 Detecting Location...';
-            locationBtn.disabled = true;
-            
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    userLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    };
-                    
-                    locationText.textContent = '✅ Location Detected';
-                    locationStatus.innerHTML = `<div style="color: #4facfe;">📍 Location: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}</div>`;
-                    locationStatus.style.display = 'block';
-                    locationBtn.disabled = false;
-                    
-                    // Reload restaurants with distance calculation
-                    displayRestaurants();
-                },
-                function(error) {
-                    locationText.textContent = '📍 Detect My Location';
-                    locationBtn.disabled = false;
-                    
-                    let errorMessage = 'Unable to detect location';
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = 'Location access denied by user';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'Location information unavailable';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage = 'Location request timed out';
-                            break;
-                    }
-                    
-                    locationStatus.innerHTML = `<div style="color: #ff6b6b;">❌ ${errorMessage}</div>`;
-                    locationStatus.style.display = 'block';
-                }
-            );
-        }
-
-        // Search restaurants
-        function searchRestaurants() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            if (searchTerm) {
-                filteredRestaurants = allRestaurants.filter(restaurant => 
-                    restaurant.name.toLowerCase().includes(searchTerm) ||
-                    restaurant.description.toLowerCase().includes(searchTerm) ||
-                    restaurant.address.toLowerCase().includes(searchTerm)
-                );
-            } else {
-                filteredRestaurants = allRestaurants;
-            }
-            
-            displayRestaurants();
-        }
-
         async function loadRestaurants() {
             try {
                 const response = await fetch('/api/restaurants');
-                const data = await response.json();
+                const restaurants = await response.json();
                 
-                if (data.success && data.restaurants.length > 0) {
-                    allRestaurants = data.restaurants;
-                    filteredRestaurants = allRestaurants;
-                    displayRestaurants();
-                } else {
-                    showError('No restaurants available');
+                const grid = document.getElementById('restaurantGrid');
+                
+                if (restaurants.length === 0) {
+                    grid.innerHTML = '<div class="error">No restaurants available</div>';
+                    return;
                 }
+                
+                grid.innerHTML = restaurants.map(restaurant => `
+                    <div class="restaurant-card" onclick="selectRestaurant(${restaurant.id})">
+                        <div class="restaurant-image" style="background-image: url('${restaurant.logo_url || '/static/uploads/placeholder.jpg'}')"></div>
+                        <div class="restaurant-name">${restaurant.name}</div>
+                        <div class="restaurant-description">${restaurant.description || 'Fresh food delivered fast'}</div>
+                        <div class="restaurant-address">📍 ${restaurant.address || 'Addis Ababa'}</div>
+                        <div class="restaurant-meta">
+                            <div class="delivery-fee">Delivery: ${restaurant.delivery_fee || '15'} ETB</div>
+                            <div class="delivery-time">⏱️ ${restaurant.estimated_delivery_time || '30-45'} min</div>
+                        </div>
+                    </div>
+                `).join('');
+                
             } catch (error) {
                 console.error('Error loading restaurants:', error);
-                showError('Failed to load restaurants');
+                document.getElementById('restaurantGrid').innerHTML = 
+                    '<div class="error">Failed to load restaurants</div>';
             }
         }
-
-        function displayRestaurants() {
-            const restaurantsToShow = filteredRestaurants.length > 0 ? filteredRestaurants : allRestaurants;
-            
-            // Sort by distance if location is available
-            if (userLocation) {
-                restaurantsToShow.forEach(restaurant => {
-                    restaurant.distance = calculateDistance(
-                        userLocation.latitude,
-                        userLocation.longitude,
-                        restaurant.latitude,
-                        restaurant.longitude
-                    );
-                });
-                restaurantsToShow.sort((a, b) => a.distance - b.distance);
-            }
-            
-            // Display nearby restaurants (first 5)
-            const nearbyRestaurants = restaurantsToShow.slice(0, 5);
-            displayNearbyRestaurants(nearbyRestaurants);
-            
-            // Display all restaurants
-            displayAllRestaurants(restaurantsToShow);
-            
-            // Update counts
-            document.getElementById('nearbyCount').textContent = `(${nearbyRestaurants.length} found)`;
-            document.getElementById('allCount').textContent = `(${restaurantsToShow.length} total)`;
-        }
-
-        function displayNearbyRestaurants(restaurants) {
-            const container = document.getElementById('nearbyRestaurants');
-            container.innerHTML = '';
-            
-            restaurants.forEach(restaurant => {
-                container.appendChild(createRestaurantCard(restaurant, true));
-            });
-        }
-
-        function displayAllRestaurants(restaurants) {
-            const container = document.getElementById('allRestaurants');
-            container.innerHTML = '';
-            
-            restaurants.forEach(restaurant => {
-                container.appendChild(createRestaurantCard(restaurant, false));
-            });
-        }
-
-        function createRestaurantCard(restaurant, isNearby) {
-            const card = document.createElement('div');
-            card.className = 'restaurant-card';
-            card.onclick = () => selectRestaurant(restaurant.id);
-            
-            const distanceBadge = userLocation && restaurant.distance ? 
-                `<div class="distance-badge">${restaurant.distance.toFixed(1)} km</div>` : '';
-            
-            const logoUrl = restaurant.logo_url || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmZjZiNmIiIHJ4PSI0MCIvPjx0ZXh0IHg9IjQwIiB5PSI0MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZpbGw9IiNmZmZmZmYiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIj7wn40l8J+NnTwvdGV4dD48L3N2Zz4=';
-            
-            card.innerHTML = `
-                ${distanceBadge}
-                <div class="restaurant-card-body">
-                    <img src="${logoUrl}" alt="${restaurant.name}" class="restaurant-logo">
-                    <div class="restaurant-info">
-                        <h5>${restaurant.name}</h5>
-                        <p>${restaurant.description}</p>
-                        <p>📍 ${restaurant.address}</p>
-                        <div class="delivery-info">
-                            <small>📞 ${restaurant.phone}</small><br>
-                            <small>🕒 Open Now • 30-45 min delivery</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            return card;
-        }
-
+        
         function selectRestaurant(restaurantId) {
-            // Store selected restaurant and redirect to menu
+            // Store selection in localStorage
             localStorage.setItem('selectedRestaurant', restaurantId);
             
-            // Redirect to menu with restaurant parameter
-            const menuUrl = `/menu?restaurant=${restaurantId}`;
-            window.location.href = menuUrl;
+            // Redirect to restaurant menu
+            window.location.href = `/restaurant/${restaurantId}`;
         }
-
-        function showError(message) {
-            const nearbyContainer = document.getElementById('nearbyRestaurants');
-            const allContainer = document.getElementById('allRestaurants');
-            
-            const errorHtml = `
-                <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
-                    <h4>❌ ${message}</h4>
-                    <p>Please try again later</p>
-                </div>
-            `;
-            
-            nearbyContainer.innerHTML = errorHtml;
-            allContainer.innerHTML = errorHtml;
-        }
-    </script>
-</body>
-</html>
-            
-            // Redirect to menu with restaurant parameter
-            const menuUrl = `/menu?restaurant=${restaurantId}`;
-            window.location.href = menuUrl;
-        }
-
-        function showError(message) {
-            const nearbyContainer = document.getElementById('nearbyRestaurants');
-            const allContainer = document.getElementById('allRestaurants');
-            
-            const errorHtml = `
-                <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.7);">
-                    <h4>❌ ${message}</h4>
-                    <p>Please try again later</p>
-                </div>
-            `;
-            
-            nearbyContainer.innerHTML = errorHtml;
-            allContainer.innerHTML = errorHtml;
-                        const restaurantCard = createRestaurantCard(restaurant);
-                        restaurantsList.appendChild(restaurantCard);
-                    });
-                } else {
-                    restaurantsList.innerHTML = `
-                        <div class="col-12">
-                            <div class="alert alert-warning text-center">
-                                <h4>No restaurants available</h4>
-                                <p>Please check back later or contact support.</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error loading restaurants:', error);
-                document.getElementById('restaurantsList').innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger text-center">
-                            <h4>Error loading restaurants</h4>
-                            <p>Please try again later.</p>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function createRestaurantCard(restaurant) {
-            const col = document.createElement('div');
-            col.className = 'col-md-6 col-lg-4';
-            
-            const currentTime = new Date();
-            const currentHour = currentTime.getHours();
-            const currentDay = currentTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-            
-            // Check if restaurant is open
-            let isOpen = false;
-            let openingHours = '';
-            
-            if (restaurant.opening_hours && restaurant.opening_hours[currentDay]) {
-                openingHours = restaurant.opening_hours[currentDay];
-                const [openTime, closeTime] = openingHours.split('-');
-                const [openHour] = openTime.split(':').map(Number);
-                const [closeHour] = closeTime.split(':').map(Number);
-                
-                isOpen = currentHour >= openHour && currentHour < closeHour;
-            }
-            
-            col.innerHTML = `
-                <div class="restaurant-card p-3" onclick="selectRestaurant(${restaurant.id})">
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="${restaurant.logo_url || '/static/images/restaurant-placeholder.png'}" 
-                             alt="${restaurant.name}" class="restaurant-logo me-3">
-                        <div class="restaurant-info flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5>${restaurant.name}</h5>
-                                ${restaurant.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
-                            </div>
-                            <p class="mb-1">${restaurant.description || 'Delicious food awaits!'}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="status-badge ${isOpen ? 'status-open' : 'status-closed'}">
-                                    ${isOpen ? 'Open' : 'Closed'}
-                                </span>
-                                <small>${openingHours || 'Hours not specified'}</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="delivery-info">
-                        <div class="row">
-                            <div class="col-6">
-                                <small><strong>Delivery Fee:</strong> ${restaurant.delivery_fee} ETB</small>
-                            </div>
-                            <div class="col-6">
-                                <small><strong>Min Order:</strong> ${restaurant.minimum_order} ETB</small>
-                            </div>
-                        </div>
-                        <div class="row mt-2">
-                            <div class="col-6">
-                                <small><strong>Delivery Time:</strong> ${restaurant.estimated_delivery_time}</small>
-                            </div>
-                            <div class="col-6">
-                                <small><strong>📍</strong> ${restaurant.address || 'Addis Ababa'}</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            return col;
-        }
-
-        function selectRestaurant(restaurantId) {
-            // Store selected restaurant in localStorage
-            localStorage.setItem('selectedRestaurant', restaurantId);
-            
-            // Redirect to main menu page with restaurant parameter
-            window.location.href = `/?restaurant=${restaurantId}`;
-        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadRestaurants);
     </script>
 </body>
 </html>
