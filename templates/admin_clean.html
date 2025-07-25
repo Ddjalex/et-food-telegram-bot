@@ -1066,14 +1066,18 @@
                 return;
             }
             
-            fetch(`/api/orders/${orderId}/verify-payment`, {
+            fetch(`/api/admin/verify-payment/${orderId}`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'}
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    order_id: orderId,
+                    decision: 'approve'
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Payment verified successfully! Kitchen staff and customer have been notified.');
+                    alert('Payment verified successfully! Order confirmed.');
                     loadPaymentVerificationOrders();
                     
                     // Also reload dashboard stats if available
@@ -1081,7 +1085,7 @@
                         loadDashboardStats();
                     }
                 } else {
-                    alert('Error verifying payment: ' + (data.message || 'Unknown error'));
+                    alert('Error verifying payment: ' + (data.message || data.error || 'Unknown error'));
                 }
             })
             .catch(error => {
@@ -1097,10 +1101,14 @@
                 return;
             }
             
-            fetch(`/api/orders/${orderId}/reject-payment`, {
+            fetch(`/api/admin/reject-payment/${orderId}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({reason: reason})
+                body: JSON.stringify({
+                    order_id: orderId,
+                    decision: 'reject',
+                    reason: reason
+                })
             })
             .then(response => response.json())
             .then(data => {

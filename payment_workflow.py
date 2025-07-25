@@ -4,11 +4,59 @@ Handles deposit requirements, payment verification, and order preparation workfl
 """
 
 from flask import Blueprint, request, jsonify, render_template
-from models import db, Order, MenuItem, Restaurant, PaymentTransaction, KitchenStaff
+from models import db, Order, MenuItem, Restaurant, KitchenStaff
 from datetime import datetime
 import os
 
 payment_workflow = Blueprint('payment_workflow', __name__)
+
+def notify_kitchen_staff_payment_verified(order):
+    """Notify kitchen staff that payment has been verified"""
+    try:
+        from real_time_notifications import send_telegram_notification
+        
+        # Get kitchen staff for this restaurant
+        kitchen_staff = KitchenStaff.query.filter_by(
+            restaurant_id=order.restaurant_id,
+            is_active=True
+        ).all()
+        
+        message = f"💳 *PAYMENT VERIFIED*\n\n"
+        message += f"🆔 **Order**: #{order.id}\n"
+        message += f"👤 **Customer**: {order.customer_name}\n"
+        message += f"💰 **Amount**: {order.total_amount:.2f} ETB\n"
+        message += f"✅ **Status**: Payment Confirmed\n\n"
+        message += f"🍳 **Action Required**: Start preparing the order"
+        
+        for staff in kitchen_staff:
+            if staff.telegram_user_id:
+                send_telegram_notification(staff.telegram_user_id, message)
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error notifying kitchen staff: {e}")
+        return False
+
+def notify_customer_payment_approved(order):
+    """Notify customer that payment has been approved"""
+    try:
+        from real_time_notifications import send_telegram_notification
+        
+        if not hasattr(order, 'telegram_user_id') or not order.telegram_user_id:
+            return False
+        
+        message = f"✅ *PAYMENT APPROVED*\n\n"
+        message += f"🆔 **Order**: #{order.id}\n"
+        message += f"💰 **Amount**: {order.total_amount:.2f} ETB\n"
+        message += f"✅ **Status**: Payment Verified\n\n"
+        message += f"🍳 **Next Step**: Your order is now being prepared!\n"
+        message += f"⏰ **Estimated Time**: 15-30 minutes"
+        
+        send_telegram_notification(order.telegram_user_id, message)
+        return True
+    except Exception as e:
+        logger.error(f"Error notifying customer: {e}")
+        return False
 
 @payment_workflow.route('/api/kitchen/food-available', methods=['POST'])
 def kitchen_food_available():
@@ -66,33 +114,25 @@ def submit_deposit():
                 file.save(filepath)
                 payment_screenshot = f"/static/uploads/{filename}"
         
-        # Create payment transaction record
-        payment_transaction = PaymentTransaction(
-            order_id=order_id,
-            payment_type='deposit',
-            amount=order.deposit_amount,
-            payment_method=payment_method,
-            transaction_id=transaction_id,
-            screenshot_url=payment_screenshot,
-            status='pending_verification',
-            created_at=datetime.utcnow()
-        )
-        
-        db.session.add(payment_transaction)
-        
-        # Update order status
-        order.status = 'deposit_submitted'
-        order.deposit_submitted_at = datetime.utcnow()
+        # Update order with payment information
+        order.payment_method = payment_method
+        order.transaction_id = transaction_id
+        order.transaction_image_url = payment_screenshot
+        order.status = 'pending'  # Set to pending for admin verification
         
         db.session.commit()
         
-        # Notify restaurant admin for payment verification
-        notify_admin_payment_verification(order, payment_transaction)
+        # Send real-time notification for payment verification
+        try:
+            from real_time_notifications import notify_payment_verification_needed
+            notify_payment_verification_needed(order.id)
+        except Exception as e:
+            logger.error(f"Error sending payment notification: {e}")
         
         return jsonify({
             'success': True,
-            'message': 'Deposit submitted successfully. Awaiting admin verification.',
-            'transaction_id': payment_transaction.id
+            'message': 'Payment information submitted successfully. Awaiting admin verification.',
+            'order_id': order.id
         })
         
     except Exception as e:
@@ -107,56 +147,39 @@ def verify_payment():
         admin_decision = data.get('decision')  # 'approve' or 'reject'
         admin_notes = data.get('notes', '')
         
-        transaction = PaymentTransaction.query.get(transaction_id)
-        if not transaction:
-            return jsonify({'error': 'Transaction not found'}), 404
-            
-        order = transaction.order
+        # For simplified workflow, directly work with order_id instead of transaction_id
+        order_id = data.get('order_id', transaction_id)
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
         
         if admin_decision == 'approve':
-            # Approve payment
-            transaction.status = 'verified'
-            transaction.verified_at = datetime.utcnow()
-            transaction.admin_notes = admin_notes
-            
-            # Update order status - ready for kitchen preparation
-            order.status = 'confirmed'  # Change to 'confirmed' so kitchen can start preparing
+            # Update order status to confirmed
+            order.status = 'confirmed'
             order.payment_verified_at = datetime.utcnow()
             
-            # Notify kitchen staff that they can start preparing
-            notify_kitchen_start_preparation(order)
+            # Send real-time notifications
+            try:
+                from real_time_notifications import notify_order_status_change
+                notify_order_status_change(order.id, 'confirmed', admin_action=True)
+            except Exception as e:
+                print(f"Notification error: {e}")
             
-            # Send real-time notification to kitchen dashboard
-            notify_kitchen_realtime(order)
-            
-            # Enhanced real-time kitchen notification
-            from enhanced_kitchen_workflow import notify_kitchen_start_preparation_realtime
-            notify_kitchen_start_preparation_realtime(order)
-            
-            # Do NOT notify customer - only kitchen staff should receive notification
-            # notify_customer_payment_approved(order)  # REMOVED
-            
-            message = 'Payment verified successfully. Kitchen notified to start preparing.'
+            message = 'Payment verified successfully. Order confirmed.'
             
         else:
             # Reject payment
-            transaction.status = 'rejected'
-            transaction.admin_notes = admin_notes
+            order.status = 'cancelled'
+            order.cancellation_reason = admin_notes or "Payment verification failed"
             
-            # Reset order to require new deposit
-            order.status = 'deposit_required'
-            
-            # Notify customer of payment rejection
-            notify_customer_payment_rejected(order, admin_notes)
-            
-            message = 'Payment rejected. Customer notified to resubmit.'
+            message = 'Payment rejected. Order cancelled.'
         
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': message,
-            'transaction_status': transaction.status
+            'order_status': order.status
         })
         
     except Exception as e:

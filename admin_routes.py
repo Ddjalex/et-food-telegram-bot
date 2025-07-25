@@ -666,6 +666,13 @@ def approve_driver_super_admin(driver_id):
         success = approve_driver(driver_id, admin_telegram_id=admin.telegram_user_id)
         
         if success:
+            # Send real-time notifications to all restaurant admins
+            try:
+                from real_time_notifications import notify_restaurants_new_driver
+                notify_restaurants_new_driver(driver_id)
+            except Exception as notify_error:
+                logger.error(f"Error sending driver approval notifications: {notify_error}")
+            
             # Log admin activity
             log_admin_activity(
                 admin.id,
@@ -2191,6 +2198,13 @@ def verify_payment_admin(order_id):
         
         # Log activity
         log_admin_activity(admin.id, 'payment_verified', 'order', order_id, f'Payment verified for order #{order_id}')
+        
+        # Send real-time notification about order status change
+        try:
+            from real_time_notifications import notify_order_status_change
+            notify_order_status_change(order_id, 'confirmed', admin_action=True)
+        except Exception as notify_error:
+            logger.error(f"Error sending order status notification: {notify_error}")
         
         # Send notification to kitchen staff
         try:
