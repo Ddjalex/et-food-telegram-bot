@@ -108,7 +108,9 @@ def kitchen_menu_management():
 def kitchen_get_orders():
     """Get orders for kitchen staff"""
     try:
-        restaurant_id = request.args.get('restaurant_id', 1)
+        # Get restaurant_id from logged-in admin's restaurant
+        admin = AdminUser.query.get(session['admin_id'])
+        restaurant_id = admin.restaurant_id if admin and admin.restaurant_id else 1
         
         orders = Order.query.filter_by(restaurant_id=restaurant_id).filter(
             Order.status.in_(['pending', 'confirmed', 'preparing', 'ready'])
@@ -151,7 +153,9 @@ def kitchen_get_orders():
 def kitchen_get_menu_items():
     """Get all menu items for kitchen staff"""
     try:
-        restaurant_id = request.args.get('restaurant_id', 1)
+        # Get restaurant_id from logged-in admin's restaurant
+        admin = AdminUser.query.get(session['admin_id'])
+        restaurant_id = admin.restaurant_id if admin and admin.restaurant_id else 1
         menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
         return jsonify({
             'success': True,
