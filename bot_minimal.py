@@ -452,11 +452,23 @@ def handle_message(message):
         else:
             send_start_message(chat_id)
     elif text == "/admin":
-        handle_admin_command(chat_id, text)
+        # Check if user is admin before allowing access
+        if is_admin_user(user_id):
+            handle_admin_command(chat_id, text)
+        else:
+            send_message(chat_id, "❌ Access denied. This command is for administrators only.")
     elif text == "/orders":
-        handle_orders_command(chat_id, user_id)
+        # Check if user is admin before allowing access
+        if is_admin_user(user_id):
+            handle_orders_command(chat_id, user_id)
+        else:
+            send_message(chat_id, "❌ Access denied. This command is for administrators only.")
     elif text == "/menuadmin":
-        handle_menu_admin_command(chat_id, user_id)
+        # Check if user is admin before allowing access
+        if is_admin_user(user_id):
+            handle_menu_admin_command(chat_id, user_id)
+        else:
+            send_message(chat_id, "❌ Access denied. This command is for administrators only.")
     elif text == "/contact":
         send_contact_request(chat_id)
     # Handle keyboard button presses
@@ -1436,6 +1448,19 @@ def handle_photo_attachment(chat_id, photo, user_id, message_id=None):
     except Exception as e:
         logger.error(f"Failed to handle photo attachment: {e}")
         send_message(chat_id, "❌ Failed to process receipt. Please try again or contact support.")
+
+def is_admin_user(user_id):
+    """Check if a user is an admin"""
+    try:
+        from models import AdminUser
+        from app import app
+        
+        with app.app_context():
+            admin = AdminUser.query.filter_by(telegram_user_id=user_id, is_active=True).first()
+            return admin is not None
+    except Exception as e:
+        logger.error(f"Error checking admin status for user {user_id}: {e}")
+        return False
 
 def handle_admin_command(chat_id, text):
     """Handle admin commands"""
