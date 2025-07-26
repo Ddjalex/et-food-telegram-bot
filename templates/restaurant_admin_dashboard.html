@@ -371,11 +371,7 @@
                         <i class="fas fa-shopping-bag me-2"></i>
                         Orders
                     </a>
-                    <a class="nav-link" data-bs-toggle="pill" href="#payments">
-                        <i class="fas fa-credit-card me-2"></i>
-                        Payment Verification
-                        <span class="badge bg-danger ms-1" id="paymentNotificationCount" style="display: none;">0</span>
-                    </a>
+
                     <a class="nav-link" data-bs-toggle="pill" href="#menu">
                         <i class="fas fa-utensils me-2"></i>
                         Menu Management
@@ -639,26 +635,6 @@
                             </div>
                         </div>
 
-                        <!-- Payment Verification Tab -->
-                        <div class="tab-pane fade" id="payments" role="tabpanel">
-                            <div class="card table-container">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Payment Verification</h5>
-                                    <button class="btn btn-primary btn-sm" onclick="loadPaymentNotifications()">
-                                        <i class="fas fa-sync me-1"></i> Refresh
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div id="paymentNotifications">
-                                        <div class="text-center py-4">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Menu Management Tab -->
                         <div class="tab-pane fade" id="menu" role="tabpanel">
@@ -926,7 +902,6 @@
         function initializeDashboard() {
             loadDashboardStats();
             loadRecentOrders();
-            loadPaymentNotifications();
             initializeCharts();
         }
         
@@ -1035,9 +1010,6 @@
                         setTimeout(() => loadDrivers(), 100);
                     } else if (targetTab === '#orders') {
                         setTimeout(() => loadOrders(1, 'all'), 100);
-                    } else if (targetTab === '#payments') {
-                        setTimeout(() => loadPaymentNotifications(), 100);
-                    } else if (targetTab === '#kitchen-staff') {
                         setTimeout(() => loadKitchenStaff(), 100);
                     } else if (targetTab === '#dashboard') {
                         setTimeout(() => {
@@ -1152,7 +1124,7 @@
                             <td>${order.customer_name}</td>
                             <td>${order.items ? order.items.length : 0} items</td>
                             <td><span class="badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
-                            <td><span class="badge ${getPaymentBadgeClass(order.payment_method)}">${order.payment_method}</span></td>
+                            <td><span class="badge bg-info">${order.payment_method || 'N/A'}</span></td>
                             <td>ETB ${order.total_amount}</td>
                             <td>${formatTime(order.created_at)}</td>
                             <td>
@@ -1172,58 +1144,6 @@
                 .catch(error => {
                     console.error('Error loading orders:', error);
                     document.getElementById('ordersTable').innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading orders</td></tr>';
-                });
-        }
-
-        function loadPaymentNotifications() {
-            fetch('/api/admin/payment-notifications')
-                .then(response => response.json())
-                .then(data => {
-                    const notifications = data.notifications || [];
-                    const container = document.getElementById('paymentNotifications');
-                    
-                    updatePaymentBadge(notifications.length);
-                    
-                    if (notifications.length === 0) {
-                        container.innerHTML = '<div class="text-center py-4">No pending payment verifications</div>';
-                        return;
-                    }
-                    
-                    container.innerHTML = notifications.map(order => `
-                        <div class="card mb-3" id="payment-${order.id}">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <h6>Order #${order.id}</h6>
-                                        <p>Customer: ${order.customer_name}</p>
-                                        <p>Amount: ETB ${order.total_amount}</p>
-                                        <p>Payment Method: ${order.payment_method}</p>
-                                        <p>Transaction ID: ${order.transaction_id || 'N/A'}</p>
-                                    </div>
-                                    <div class="col-md-4">
-                                        ${order.transaction_image_url ? `
-                                            <img src="${order.transaction_image_url}" 
-                                                 class="img-fluid rounded mb-2" 
-                                                 style="max-height: 100px; cursor: pointer;" 
-                                                 onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
-                                        ` : '<p>No receipt image</p>'}
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-success btn-sm" onclick="verifyPayment(${order.id})">
-                                                <i class="fas fa-check"></i> Verify
-                                            </button>
-                                            <button class="btn btn-danger btn-sm" onclick="rejectPayment(${order.id})">
-                                                <i class="fas fa-times"></i> Reject
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                })
-                .catch(error => {
-                    console.error('Error loading payment notifications:', error);
-                    document.getElementById('paymentNotifications').innerHTML = '<div class="text-center py-4 text-danger">Error loading notifications</div>';
                 });
         }
 
@@ -1421,22 +1341,6 @@
             return classes[status] || 'bg-secondary';
         }
 
-        function getPaymentBadgeClass(method) {
-            const classes = {
-                'cash': 'bg-success',
-                'card': 'bg-primary',
-                'mobile': 'bg-info',
-                'bank': 'bg-warning'
-            };
-            return classes[method] || 'bg-secondary';
-        }
-
-        function formatTime(timestamp) {
-            return new Date(timestamp).toLocaleString();
-        }
-
-        function updatePaymentBadge(count) {
-            const badge = document.getElementById('paymentNotificationCount');
             if (count > 0) {
                 badge.textContent = count;
                 badge.style.display = 'inline';
@@ -1462,47 +1366,6 @@
             alert(`Update order #${orderId} to ${status}`);
         }
 
-        function verifyPayment(orderId) {
-            alert(`Verify payment for order #${orderId}`);
-        }
-
-        function rejectPayment(orderId) {
-            alert(`Reject payment for order #${orderId}`);
-        }
-
-        function viewPaymentScreenshot(imageUrl) {
-            window.open(imageUrl, '_blank');
-        }
-
-        function showAddMenuItemModal() {
-            alert('Add menu item modal');
-        }
-
-        function editMenuItem(itemId) {
-            alert(`Edit menu item #${itemId}`);
-        }
-
-        function deleteMenuItem(itemId) {
-            alert(`Delete menu item #${itemId}`);
-        }
-
-        function editCategory(categoryId) {
-            alert(`Edit category #${categoryId}`);
-        }
-
-        function deleteCategory(categoryId) {
-            alert(`Delete category #${categoryId}`);
-        }
-
-        function editDriver(driverId) {
-            alert(`Edit driver #${driverId}`);
-        }
-
-        function deleteDriver(driverId) {
-            alert(`Delete driver #${driverId}`);
-        }
-
-        function viewDriverDocuments(driverId) {
             alert(`View documents for driver #${driverId}`);
         }
 

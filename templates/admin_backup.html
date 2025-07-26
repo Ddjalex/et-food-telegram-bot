@@ -802,6 +802,13 @@
                 });
         }
 
+        // Initialize payment notifications when tab is shown
+        function initializePaymentTab() {
+            document.querySelector('a[href="#payments"]').addEventListener('click', function() {
+                loadPaymentNotifications();
+            });
+        }
+
         // Get status badge HTML
         function getStatusBadge(status) {
             const badges = {
@@ -1666,6 +1673,173 @@
             document.getElementById('resetRadiusBtn').addEventListener('click', resetDriverSearchRadius);
         }
 
+        // Payment Verification Functions
+        function loadPaymentNotifications() {
+            fetch('/api/admin/payment-notifications')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('paymentNotifications');
+                    const notifications = data.notifications || [];
+                    
+                    if (notifications.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center p-4">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <h5>No Pending Payment Verifications</h5>
+                                <p class="text-muted">All payments have been verified.</p>
+                            </div>
+                        `;
+                        updatePaymentBadge(0);
+                        return;
+                    }
+                    
+                    updatePaymentBadge(notifications.length);
+                    
+                    container.innerHTML = notifications.map(order => `
+                        <div class="card mb-3" id="payment-${order.id}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-2">
+                                        <h6 class="mb-1">Order #${order.id}</h6>
+                                        <small class="text-muted">${new Date(order.created_at).toLocaleDateString()}</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <h6 class="mb-1">${order.customer_name}</h6>
+                                        <small class="text-muted">${order.customer_phone}</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <h6 class="mb-1">ETB ${order.total_amount.toFixed(2)}</h6>
+                                        <small class="text-muted">${order.payment_method}</small>
+                                    </div>
+                                    <div class="col-md-2">
+                                        ${order.screenshot_url ? `
+                                            <button class="btn btn-sm btn-outline-info" onclick="viewPaymentScreenshot('${order.screenshot_url}')">
+                                                <i class="fas fa-image me-1"></i>
+                                                View Receipt
+                                            </button>
+                                        ` : '<small class="text-muted">No receipt uploaded</small>'}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-success" onclick="verifyPayment(${order.id})">
+                                                <i class="fas fa-check me-1"></i>
+                                                Verify
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="rejectPayment(${order.id})">
+                                                <i class="fas fa-times me-1"></i>
+                                                Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading payment notifications:', error);
+                    document.getElementById('paymentNotifications').innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading payment notifications. Please try again.
+                        </div>
+                    `;
+                });
+        }
+
+        function updatePaymentBadge(count) {
+            const badge = document.getElementById('paymentNotificationCount');
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function viewPaymentScreenshot(imageUrl) {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Payment Receipt</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${imageUrl}" class="img-fluid" alt="Payment Receipt" style="max-height: 600px;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', function() {
+                document.body.removeChild(modal);
+            });
+        }
+
+        function verifyPayment(orderId) {
+            if (!confirm('Verify this payment? This action cannot be undone.')) return;
+            
+            fetch(`/api/admin/verify-payment/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`payment-${orderId}`).remove();
+                    loadPaymentNotifications();
+                    alert('Payment verified successfully!');
+                } else {
+                    alert('Failed to verify payment: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error verifying payment:', error);
+                alert('Failed to verify payment. Please try again.');
+            });
+        }
+
+        function rejectPayment(orderId) {
+            const reason = prompt('Reason for rejection (optional):');
+            if (reason === null) return; // User cancelled
+            
+            fetch(`/api/admin/reject-payment/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reason: reason || 'Payment not found' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`payment-${orderId}`).remove();
+                    loadPaymentNotifications();
+                    alert('Payment rejected successfully!');
+                } else {
+                    alert('Failed to reject payment: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error rejecting payment:', error);
+                alert('Failed to reject payment. Please try again.');
+            });
+        }
+
+        // Auto-refresh payment notifications every 30 seconds
+        setInterval(() => {
+            if (document.getElementById('payments').classList.contains('show')) {
+                loadPaymentNotifications();
+            }
+        }, 30000);
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
@@ -1675,7 +1849,8 @@
             // Initialize settings
             initializeSettings();
             
-
+            // Initialize payment tab
+            initializePaymentTab();
             
             // Setup event listeners
             setupEventListeners();
@@ -1714,7 +1889,10 @@
                         setTimeout(() => loadDrivers(), 100);
                     } else if (targetTab === '#orders') {
                         setTimeout(() => loadOrders(1, 'all'), 100);
+                    } else if (targetTab === '#payments') {
+                        setTimeout(() => loadPaymentNotifications(), 100);
                     }
+                });
             });
         }
         
