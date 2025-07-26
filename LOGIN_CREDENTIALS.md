@@ -15,9 +15,9 @@ All three login systems have been successfully restored and verified. Here are t
 ### 2. Regular Admin Login
 - **URL**: `/admin`
 - **Credentials**: 
-  - Username: `ADDISU` / Password: `admin123`
-  - Username: `admin` / Password: `admin123`
-- **Access**: Restaurant management, menu items, orders, kitchen staff
+  - **Flavour Cafe Admin**: Username: `Flavor` / Password: `admin123`
+  - **Rich Cafe Admin**: Username: `Babi` / Password: `admin123`
+- **Access**: Restaurant management, menu items, orders, kitchen staff, payment verification
 - **Dashboard**: Restaurant-specific administration
 
 ### 3. Kitchen Staff Login
