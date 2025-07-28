@@ -429,10 +429,7 @@ def handle_message(message):
         handle_location_share(chat_id, message['location'], user_id)
         return
     
-    # Handle skip location
-    if text == "⏭️ Skip Location":
-        handle_skip_location(chat_id, user_id)
-        return
+    # Skip location is no longer needed since we go directly to WebApp
     
     # Handle photo/image attachments (payment receipts)
     if 'photo' in message:
@@ -1195,32 +1192,23 @@ def handle_contact_share(chat_id, contact, user_id):
             user_profile.first_name = first_name
             db.session.commit()
             
-        # Send success message
-        send_message(chat_id, f"✅ Phone number saved: {phone_number}")
+        # Send confirmation
+        send_message(chat_id, f"✅ Perfect, {first_name}! Your contact has been saved.")
         
-        # Request location sharing for nearby restaurant detection
-        location_keyboard = {
-            "keyboard": [
-                [{
-                    "text": "📍 Share My Location",
-                    "request_location": True
-                }],
-                [{
-                    "text": "⏭️ Skip Location"
-                }]
-            ],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
+        # Remove keyboard and go directly to WebApp
+        remove_keyboard = {"remove_keyboard": True}
+        send_message(chat_id, "🍽️ You're all set! Location sharing is available in the menu for accurate delivery.", remove_keyboard)
+        
+        # Send WebApp menu button
+        from config import Config
+        base_url = Config.WEBHOOK_URL or "https://1457c5c2-862e-454c-b8db-ae8fdcb0b0cc-00-3htegwfqei46f.spock.replit.dev"
+        webapp_keyboard = {
+            "inline_keyboard": [[{
+                "text": "🍽️ Open Menu",
+                "web_app": {"url": f"{base_url}/?restaurant_id=1"}
+            }]]
         }
-        
-        send_message(chat_id, 
-                    "📍 Please share your location to find nearby restaurants and get better delivery estimates.\n\n"
-                    "This helps us:\n"
-                    "• Find restaurants closest to you\n"
-                    "• Calculate accurate delivery times\n"
-                    "• Show distance-based recommendations\n\n"
-                    "You can share your location or skip this step:", 
-                    location_keyboard)
+        send_message(chat_id, "🍽️ Ready to order? Click below to browse our delicious menu:", webapp_keyboard)
         
     except Exception as e:
         logger.error(f"Failed to save contact: {e}")
@@ -1506,7 +1494,7 @@ def send_contact_request(chat_id):
     send_message(chat_id, "Please share your contact information:", keyboard)
 
 def check_user_registration(chat_id, user_id):
-    """Check if user has shared both contact and location"""
+    """Check if user has shared contact information"""
     try:
         from models import UserProfile, db
         from app import app
@@ -1516,26 +1504,14 @@ def check_user_registration(chat_id, user_id):
             if not user_profile:
                 return False
             
-            # Check if both phone number and location are provided
+            # Only check if phone number is provided (location is now optional and handled in WebApp)
             has_contact = user_profile.phone_number is not None and user_profile.phone_number != ""
-            has_location = user_profile.location_lat is not None and user_profile.location_lng is not None
             
             if not has_contact:
                 send_message(chat_id, "❌ Please share your phone number first using /start")
                 return False
-            elif not has_location:
-                send_message(chat_id, "❌ Please share your location first")
-                keyboard = {
-                    "keyboard": [[{
-                        "text": "📍 Share live location",
-                        "request_location": True
-                    }]],
-                    "resize_keyboard": True,
-                    "one_time_keyboard": True
-                }
-                send_message(chat_id, "Please share your live location for delivery:", keyboard)
-                return False
             
+            # User is registered if they have contact info (location is handled in WebApp)
             return True
             
     except Exception as e:
