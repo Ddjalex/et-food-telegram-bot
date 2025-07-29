@@ -1,47 +1,69 @@
+#!/usr/bin/env python3
 """
-Create a super admin user for testing the multi-tier admin system
+Create super admin user for login access
 """
-from app import app, db
+
+from app import app
+from extensions import db
 from models import AdminUser
 from werkzeug.security import generate_password_hash
 
 def create_super_admin():
-    """Create a super admin user"""
+    """Create super admin user"""
+    
     with app.app_context():
+        print("🔐 Creating super admin user...")
+        
         # Check if super admin already exists
-        existing_super_admin = AdminUser.query.filter_by(role='super_admin').first()
-        if existing_super_admin:
-            print(f"Super admin already exists: {existing_super_admin.username}")
+        existing_admin = AdminUser.query.filter_by(username='admin').first()
+        if existing_admin:
+            print("⚠️  Super admin 'admin' already exists, updating password...")
+            existing_admin.password_hash = generate_password_hash('admin123')
+            existing_admin.role = 'super_admin'
+            existing_admin.is_active = True
+            existing_admin.is_approved = True
+            db.session.commit()
+            print("✅ Updated existing super admin password to 'admin123'")
             return
         
-        # Create super admin
+        # Create new super admin
         super_admin = AdminUser(
-            username='superadmin',
-            email='superadmin@etfood.com',
+            username='admin',
+            email='admin@etfood.com',
             full_name='Super Administrator',
-            phone='+251911000000',
+            password_hash=generate_password_hash('admin123'),
             role='super_admin',
-            password_hash=generate_password_hash('superadmin123'),
             is_active=True,
-            is_blocked=False,
-            permissions={
-                'can_create_admins': True,
-                'can_delete_admins': True,
-                'can_manage_restaurants': True,
-                'can_view_analytics': True,
-                'can_manage_system': True
-            }
+            is_approved=True,
+            restaurant_id=None  # Super admin not tied to specific restaurant
         )
         
         db.session.add(super_admin)
         db.session.commit()
         
-        print("Super admin created successfully!")
-        print(f"Username: {super_admin.username}")
-        print(f"Password: superadmin123")
-        print(f"Role: {super_admin.role}")
-        print(f"Email: {super_admin.email}")
-        print("\nYou can now login to the admin panel at /admin/login")
+        print("✅ Super admin created successfully!")
+        print("   Username: admin")
+        print("   Password: admin123")
+        print("   Role: super_admin")
+        
+        # Also create backup admin
+        backup_admin = AdminUser(
+            username='superadmin',
+            email='superadmin@etfood.com', 
+            full_name='Backup Super Admin',
+            password_hash=generate_password_hash('superadmin123'),
+            role='super_admin',
+            is_active=True,
+            is_approved=True,
+            restaurant_id=None
+        )
+        
+        db.session.add(backup_admin)
+        db.session.commit()
+        
+        print("✅ Backup super admin created!")
+        print("   Username: superadmin")
+        print("   Password: superadmin123")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     create_super_admin()
