@@ -65,6 +65,15 @@ def notify_drivers_in_background(order_id):
     thread.daemon = True
     thread.start()
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from static/uploads directory"""
+    try:
+        return send_file(os.path.join(UPLOAD_FOLDER, filename))
+    except FileNotFoundError:
+        # Return a placeholder image if file not found
+        return send_file('static/placeholder-food.jpg'), 404
+
 @app.route('/')
 def index():
     """Main page - check if showing login portal or customer app"""
