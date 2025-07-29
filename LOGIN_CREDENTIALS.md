@@ -18,9 +18,9 @@
 - **Type**: PostgreSQL
 - **Connection**: Via DATABASE_URL environment variable
 - **Restaurants**: 2 active restaurants
-  - Flavour cafe | E.Fabrica (16 menu items)
+  - Flavour cafe | E.Fabrica (64 menu items across 14 categories)
   - Y Factory Restaurant (10 menu items)
-- **Total Menu Items**: 18 items across both restaurants
+- **Total Menu Items**: 74 items across both restaurants
 - **Categories**: 8 categories (4 per restaurant)
 
 ## Bot Configuration
