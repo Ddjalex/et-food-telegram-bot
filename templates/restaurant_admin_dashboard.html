@@ -784,7 +784,7 @@
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <div class="d-flex align-items-center">
                                                 <div class="kitchen-logo-container me-3">
-                                                    <img id="kitchenLogo" src="/static/uploads/kitchen_logo.jpg" alt="Kitchen" 
+                                                    <img id="kitchenLogo" src="/static/uploads/kitchen_logo.svg" alt="Kitchen" 
                                                          class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" 
                                                          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNmOGY5ZmEiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNjQ3NDhiIi8+Cjwvc3ZnPgo8L3N2Zz4K'">
                                                     <button class="btn btn-sm btn-outline-secondary position-absolute" 
@@ -1341,13 +1341,7 @@
             return classes[status] || 'bg-secondary';
         }
 
-            if (count > 0) {
-                badge.textContent = count;
-                badge.style.display = 'inline';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
+
 
         function switchToTab(tabName) {
             const tabLink = document.querySelector(`[href="#${tabName}"]`);
@@ -1366,6 +1360,7 @@
             alert(`Update order #${orderId} to ${status}`);
         }
 
+        function viewDriverDocuments(driverId) {
             alert(`View documents for driver #${driverId}`);
         }
 
