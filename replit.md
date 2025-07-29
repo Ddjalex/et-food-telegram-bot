@@ -97,6 +97,7 @@ ET-FOOD is a Telegram-based food delivery application that combines a Python Fla
 - **Migration Support**: SQLAlchemy provides schema evolution capabilities
 
 ## Changelog
+- July 29, 2025. **REPLIT MIGRATION COMPLETED SUCCESSFULLY**: Successfully migrated ET-FOOD project from Replit Agent to standard Replit environment with full functionality preservation. Both customer bot (BOT_TOKEN: 7956456272...) and driver bot (DRIVER_BOT_TOKEN: 7679369276...) are now fully operational with webhooks properly configured. Flask web server running stable on port 5000, complete food delivery system with menu items and categories fully operational, admin dashboard functional, WebApp interface displaying correctly with restaurant data, database connectivity verified, all core features preserved including menu display, order processing, and bot functionality. Project structure cleaned up and optimized for Replit deployment with proper security practices and client/server separation.
 - July 05, 2025. Initial setup
 - July 05, 2025. Fixed Telegram bot integration - bot now responds to all commands (/start, /menu, /track, /admin)
 - July 05, 2025. Enhanced bot features: Contact sharing, location sharing, admin status notifications, customer status updates
