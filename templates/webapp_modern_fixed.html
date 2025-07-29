@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botifi Food - Order Now</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Leaflet CSS and JS for OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -669,6 +672,282 @@
         .location-status.error {
             border-left-color: #ef4444;
             background: #7f1d1d;
+        }
+        
+        /* Enhanced Map Search Styles */
+        .address-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .address-search-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        
+        .address-search-btn:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+        
+        .map-search-container {
+            background: #0f172a;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            margin-top: 12px;
+            overflow: hidden;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .map-search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #1e293b;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .map-search-header h5 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .map-close-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .map-close-btn:hover {
+            background: #374151;
+            color: #ffffff;
+        }
+        
+        .map-search-input {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .map-search-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .map-search-input input:focus {
+            border-color: #3b82f6;
+        }
+        
+        .map-search-input input::placeholder {
+            color: #6b7280;
+        }
+        
+        .search-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            background: #059669;
+        }
+        
+        .map-container {
+            padding: 16px;
+            background: #1e293b;
+        }
+        
+        .search-results {
+            background: #1e293b;
+            border-top: 1px solid #374151;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0f172a;
+            border-bottom: 1px solid #374151;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .clear-results {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-results:hover {
+            background: #374151;
+        }
+        
+        .results-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .search-result-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #374151;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .search-result-item:hover {
+            background: #374151;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-icon {
+            font-size: 16px;
+            color: #3b82f6;
+        }
+        
+        .result-details {
+            flex: 1;
+        }
+        
+        .result-name {
+            font-weight: 500;
+            color: #ffffff;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        
+        .result-address {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+        
+        .location-tools {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            background: #0f172a;
+            border-top: 1px solid #374151;
+        }
+        
+        .location-tool-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .location-tool-btn:hover {
+            background: #374151;
+            border-color: #3b82f6;
+        }
+        
+        .location-tool-btn:active {
+            background: #3b82f6;
+        }
+        
+        .selected-location-info {
+            padding: 16px;
+            background: #0f172a;
+            border-top: 1px solid #374151;
+        }
+        
+        .location-details {
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        .location-details strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #10b981;
+        }
+        
+        .coordinates {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 4px;
+            font-family: monospace;
+        }
+        
+        /* Map loading and error states */
+        .map-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 250px;
+            background: #1e293b;
+            border-radius: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .map-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 250px;
+            background: #dc2626;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            text-align: center;
+            padding: 16px;
         }
 
         /* Location Modal Styles */
@@ -1854,7 +2133,58 @@
                             <input type="text" id="customerName" placeholder="Full Name" value="${orderData.customer_name || ''}" required>
                             <input type="tel" id="customerPhone" placeholder="Phone Number" value="${orderData.customer_phone || ''}" required>
                             <div class="address-container">
-                                <textarea id="customerAddress" placeholder="Delivery Address" rows="3" required></textarea>
+                                <div class="address-input-wrapper">
+                                    <textarea id="customerAddress" placeholder="Enter delivery address or search below" rows="2" required></textarea>
+                                    <button type="button" class="address-search-btn" onclick="toggleMapSearch()" title="Search on Map">
+                                        🗺️
+                                    </button>
+                                </div>
+                                
+                                <!-- Advanced Map Search Interface -->
+                                <div class="map-search-container" id="mapSearchContainer" style="display: none;">
+                                    <div class="map-search-header">
+                                        <h5>📍 Choose Delivery Location</h5>
+                                        <button type="button" class="map-close-btn" onclick="closeMapSearch()">✕</button>
+                                    </div>
+                                    
+                                    <div class="map-search-input">
+                                        <input type="text" id="mapSearchInput" placeholder="Search for addresses, landmarks, or places..." 
+                                               onkeyup="searchPlaces(this.value)" onkeypress="handleSearchKeyPress(event)">
+                                        <button type="button" class="search-btn" onclick="searchPlaces(document.getElementById('mapSearchInput').value)">
+                                            🔍
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="map-container" id="mapContainer">
+                                        <div id="map" style="height: 250px; border-radius: 8px;"></div>
+                                    </div>
+                                    
+                                    <div class="search-results" id="searchResults" style="display: none;">
+                                        <div class="results-header">
+                                            <span>Search Results</span>
+                                            <button type="button" onclick="clearSearchResults()" class="clear-results">Clear</button>
+                                        </div>
+                                        <div class="results-list" id="resultsList"></div>
+                                    </div>
+                                    
+                                    <div class="location-tools">
+                                        <button type="button" class="location-tool-btn" onclick="getCurrentLocationOnMap()" title="Use Current Location">
+                                            📍 Current Location
+                                        </button>
+                                        <button type="button" class="location-tool-btn" onclick="useSelectedLocation()" title="Use Selected Location">
+                                            ✅ Use This Location
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="selected-location-info" id="selectedLocationInfo" style="display: none;">
+                                        <div class="location-details">
+                                            <strong>Selected Location:</strong>
+                                            <div id="selectedLocationText">No location selected</div>
+                                            <div class="coordinates" id="selectedCoordinates">Coordinates: Not set</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="location-options">
                                     <button type="button" class="location-btn primary" onclick="shareLocationInCheckout()" title="Share Live Location">
                                         📍 Share Current Location
@@ -2085,6 +2415,37 @@
             
             console.log('Submitting order to restaurant ID:', restaurantId);
 
+            // Enhanced location data handling including map selection
+            let locationData = {};
+            
+            // Priority: 1. Map selection, 2. GPS location, 3. Telegram location, 4. Manual entry
+            if (window.currentOrderLocation && window.currentOrderLocation.source === 'map_selection') {
+                locationData = {
+                    location_lat: window.currentOrderLocation.latitude,
+                    location_lng: window.currentOrderLocation.longitude,
+                    location_source: 'map_selection',
+                    location_accuracy: 1 // High accuracy for map selection
+                };
+            } else if (window.userLocation) {
+                locationData = {
+                    location_lat: window.userLocation.latitude,
+                    location_lng: window.userLocation.longitude,
+                    location_source: window.userLocation.source || 'gps',
+                    location_accuracy: window.userLocation.accuracy
+                };
+            } else if (window.currentOrderLocation) {
+                locationData = {
+                    location_lat: window.currentOrderLocation.latitude,
+                    location_lng: window.currentOrderLocation.longitude,
+                    location_source: window.currentOrderLocation.source || 'manual',
+                    location_accuracy: window.currentOrderLocation.accuracy
+                };
+            } else {
+                locationData = {
+                    location_source: 'manual_address'
+                };
+            }
+
             const orderData = {
                 ...window.currentOrderData,
                 telegram_user_id: telegramUserId,
@@ -2092,11 +2453,12 @@
                 customer_phone: customerPhone,
                 customer_address: customerAddress,
                 payment_method: 'manual_verification', // All orders use manual payment verification
-                location_lat: window.userLocation?.latitude || window.currentOrderLocation?.latitude,
-                location_lng: window.userLocation?.longitude || window.currentOrderLocation?.longitude,
-                location_accuracy: window.userLocation?.accuracy || window.currentOrderLocation?.accuracy,
-                location_source: window.userLocation?.source || 'manual',
-                restaurant_id: parseInt(restaurantId)
+                ...locationData,
+                restaurant_id: parseInt(restaurantId),
+                // Additional metadata for enhanced tracking
+                order_timestamp: new Date().toISOString(),
+                browser_info: navigator.userAgent,
+                map_enhanced: true // Flag to indicate this order uses enhanced map features
             };
 
             await submitOrder(orderData);
@@ -3144,6 +3506,313 @@
                     item.classList.add('active');
                 }
             });
+        }
+
+        // Enhanced Map Search Functions
+        let checkoutMap = null;
+        let mapMarker = null;
+        let selectedMapLocation = null;
+        let searchTimeout = null;
+
+        function toggleMapSearch() {
+            const container = document.getElementById('mapSearchContainer');
+            if (!container) return;
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                setTimeout(() => {
+                    initializeMap();
+                }, 100);
+            } else {
+                closeMapSearch();
+            }
+        }
+
+        function closeMapSearch() {
+            const container = document.getElementById('mapSearchContainer');
+            if (container) {
+                container.style.display = 'none';
+            }
+            if (checkoutMap) {
+                checkoutMap.remove();
+                checkoutMap = null;
+                mapMarker = null;
+            }
+        }
+
+        function initializeMap() {
+            const mapElement = document.getElementById('map');
+            if (!mapElement) return;
+            
+            try {
+                // Remove existing map if any
+                if (checkoutMap) {
+                    checkoutMap.remove();
+                }
+                
+                // Default to Addis Ababa, Ethiopia
+                const defaultLat = 9.0320;
+                const defaultLng = 38.7469;
+                
+                // Initialize map with Ethiopian location
+                checkoutMap = L.map('map').setView([defaultLat, defaultLng], 13);
+                
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(checkoutMap);
+                
+                // Add click handler for map
+                checkoutMap.on('click', function(e) {
+                    selectLocationOnMap(e.latlng.lat, e.latlng.lng);
+                });
+                
+                // If user has current location, center map there
+                if (window.userLocation && window.userLocation.latitude) {
+                    checkoutMap.setView([window.userLocation.latitude, window.userLocation.longitude], 15);
+                    selectLocationOnMap(window.userLocation.latitude, window.userLocation.longitude);
+                }
+                
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                mapElement.innerHTML = '<div class="map-error">Map loading failed. Please use manual address entry.</div>';
+            }
+        }
+
+        function selectLocationOnMap(lat, lng) {
+            if (!checkoutMap) return;
+            
+            // Remove existing marker
+            if (mapMarker) {
+                checkoutMap.removeLayer(mapMarker);
+            }
+            
+            // Add new marker
+            mapMarker = L.marker([lat, lng]).addTo(checkoutMap);
+            
+            // Store selected location
+            selectedMapLocation = { lat, lng };
+            
+            // Update selected location info
+            const locationInfo = document.getElementById('selectedLocationInfo');
+            const locationText = document.getElementById('selectedLocationText');
+            const coordinates = document.getElementById('selectedCoordinates');
+            
+            if (locationInfo && locationText && coordinates) {
+                locationInfo.style.display = 'block';
+                locationText.textContent = `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`;
+                coordinates.textContent = `Coordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                
+                // Try to get address from reverse geocoding
+                reverseGeocode(lat, lng);
+            }
+        }
+
+        function reverseGeocode(lat, lng) {
+            // Use Nominatim for reverse geocoding
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        const locationText = document.getElementById('selectedLocationText');
+                        if (locationText) {
+                            locationText.textContent = data.display_name;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('Reverse geocoding failed:', error);
+                });
+        }
+
+        function searchPlaces(query) {
+            if (!query || query.length < 3) {
+                clearSearchResults();
+                return;
+            }
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Debounce search
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 500);
+        }
+
+        function performSearch(query) {
+            // Focus search around Addis Ababa, Ethiopia
+            const searchURL = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' Addis Ababa Ethiopia')}&limit=10&bounded=1&viewbox=38.6,9.1,38.9,8.9`;
+            
+            fetch(searchURL)
+                .then(response => response.json())
+                .then(results => {
+                    displaySearchResults(results);
+                })
+                .catch(error => {
+                    console.error('Search failed:', error);
+                });
+        }
+
+        function displaySearchResults(results) {
+            const searchResults = document.getElementById('searchResults');
+            const resultsList = document.getElementById('resultsList');
+            
+            if (!searchResults || !resultsList) return;
+            
+            if (!results || results.length === 0) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            
+            resultsList.innerHTML = '';
+            
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result-item';
+                resultItem.innerHTML = `
+                    <div class="result-icon">📍</div>
+                    <div class="result-details">
+                        <div class="result-name">${result.name || result.display_name.split(',')[0]}</div>
+                        <div class="result-address">${result.display_name}</div>
+                    </div>
+                `;
+                
+                resultItem.addEventListener('click', () => {
+                    selectSearchResult(result);
+                });
+                
+                resultsList.appendChild(resultItem);
+            });
+            
+            searchResults.style.display = 'block';
+        }
+
+        function selectSearchResult(result) {
+            const lat = parseFloat(result.lat);
+            const lng = parseFloat(result.lon);
+            
+            if (checkoutMap) {
+                checkoutMap.setView([lat, lng], 16);
+                selectLocationOnMap(lat, lng);
+            }
+            
+            // Clear search results
+            clearSearchResults();
+            
+            // Clear search input
+            const searchInput = document.getElementById('mapSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+        }
+
+        function clearSearchResults() {
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) {
+                searchResults.style.display = 'none';
+            }
+        }
+
+        function handleSearchKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const query = event.target.value;
+                if (query) {
+                    performSearch(query);
+                }
+            }
+        }
+
+        function getCurrentLocationOnMap() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser');
+                return;
+            }
+            
+            const btn = document.querySelector('.location-tool-btn');
+            if (btn) {
+                btn.textContent = '🔄 Getting Location...';
+                btn.disabled = true;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    if (checkoutMap) {
+                        checkoutMap.setView([lat, lng], 16);
+                        selectLocationOnMap(lat, lng);
+                    }
+                    
+                    // Store in global location
+                    window.userLocation = {
+                        latitude: lat,
+                        longitude: lng,
+                        accuracy: position.coords.accuracy,
+                        source: 'gps'
+                    };
+                    
+                    if (btn) {
+                        btn.textContent = '📍 Current Location';
+                        btn.disabled = false;
+                    }
+                },
+                (error) => {
+                    console.error('Error getting location:', error);
+                    if (btn) {
+                        btn.textContent = '📍 Current Location';
+                        btn.disabled = false;
+                    }
+                    alert('Could not get your location. Please select manually on the map.');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000
+                }
+            );
+        }
+
+        function useSelectedLocation() {
+            if (!selectedMapLocation) {
+                alert('Please select a location on the map first');
+                return;
+            }
+            
+            // Update the address field with coordinates and any available address text
+            const addressField = document.getElementById('customerAddress');
+            const locationText = document.getElementById('selectedLocationText');
+            
+            if (addressField && locationText) {
+                addressField.value = locationText.textContent;
+            }
+            
+            // Store location data for order submission
+            window.currentOrderLocation = {
+                latitude: selectedMapLocation.lat,
+                longitude: selectedMapLocation.lng,
+                source: 'map_selection'
+            };
+            
+            // Update location status
+            const locationStatus = document.getElementById('locationStatus');
+            const locationTextEl = document.getElementById('locationText');
+            
+            if (locationStatus && locationTextEl) {
+                locationStatus.style.display = 'block';
+                locationStatus.className = 'location-status success';
+                locationTextEl.textContent = `📍 Location selected from map`;
+            }
+            
+            // Close map search
+            closeMapSearch();
         }
 
         // Initialize app

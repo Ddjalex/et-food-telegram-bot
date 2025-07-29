@@ -1648,6 +1648,9 @@ def create_order():
             # Try to get from Telegram WebApp user data or use fallback
             telegram_user_id = 383870190  # Default fallback for web orders
         
+        # Get restaurant ID from the order data (enhanced for map integration)
+        restaurant_id = data.get('restaurant_id', 1)
+        
         order = Order(
             telegram_user_id=telegram_user_id,
             customer_name=data['customer_name'],
@@ -1659,7 +1662,8 @@ def create_order():
             transaction_id=data.get('transaction_id'),
             transaction_image_url=data.get('transaction_image_url'),
             location_lat=data.get('location_lat'),
-            location_lng=data.get('location_lng')
+            location_lng=data.get('location_lng'),
+            restaurant_id=restaurant_id
         )
         
         db.session.add(order)
@@ -3115,6 +3119,159 @@ def export_orders():
     except Exception as e:
         logger.error(f"Error exporting orders: {e}")
         return jsonify({'error': 'Failed to export orders'}), 500
+
+@app.route('/api/admin/fetch/<resource>/<int:item_id>', methods=['GET'])
+def admin_fetch_by_id(resource, item_id):
+    """Enhanced admin fetch endpoint for various resources by ID"""
+    try:
+        # Check admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'error': 'Unauthorized access'}), 401
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'error': 'Admin not found'}), 404
+            
+        result = None
+        
+        if resource == 'orders':
+            item = Order.query.get(item_id)
+            if item:
+                # Check restaurant access for regular admins
+                if admin.role != 'super_admin' and item.restaurant_id != admin.restaurant_id:
+                    return jsonify({'error': 'Access denied'}), 403
+                result = item.to_dict()
+            
+        elif resource == 'menu_items':
+            item = MenuItem.query.get(item_id)
+            if item:
+                # Check restaurant access for regular admins
+                if admin.role != 'super_admin' and item.restaurant_id != admin.restaurant_id:
+                    return jsonify({'error': 'Access denied'}), 403
+                result = item.to_dict()
+                
+        elif resource == 'drivers':
+            item = Driver.query.get(item_id)
+            if item:
+                # Check restaurant access for regular admins
+                if admin.role != 'super_admin' and item.restaurant_id != admin.restaurant_id:
+                    return jsonify({'error': 'Access denied'}), 403
+                result = {
+                    'id': item.id,
+                    'name': item.name,
+                    'phone_number': item.phone_number,
+                    'telegram_user_id': item.telegram_user_id,
+                    'vehicle_type': item.vehicle_type,
+                    'is_active': item.is_active,
+                    'is_available': item.is_available,
+                    'is_approved': item.is_approved,
+                    'approval_status': item.approval_status,
+                    'created_at': item.created_at.isoformat() if item.created_at else None,
+                    'restaurant_id': item.restaurant_id
+                }
+                
+        elif resource == 'categories':
+            item = Category.query.get(item_id)
+            if item:
+                # Check restaurant access for regular admins
+                if admin.role != 'super_admin' and item.restaurant_id != admin.restaurant_id:
+                    return jsonify({'error': 'Access denied'}), 403
+                result = {
+                    'id': item.id,
+                    'name': item.name,
+                    'description': item.description,
+                    'icon': item.icon,
+                    'image_url': item.image_url,
+                    'sort_order': item.sort_order,
+                    'is_active': item.is_active,
+                    'restaurant_id': item.restaurant_id
+                }
+                
+        elif resource == 'restaurants':
+            if admin.role != 'super_admin':
+                return jsonify({'error': 'Super admin access required'}), 403
+            item = Restaurant.query.get(item_id)
+            if item:
+                result = {
+                    'id': item.id,
+                    'name': item.name,
+                    'description': item.description,
+                    'address': item.address,
+                    'phone': item.phone,
+                    'logo_url': item.logo_url,
+                    'cover_image_url': item.cover_image_url,
+                    'estimated_delivery_time': item.estimated_delivery_time,
+                    'is_active': item.is_active,
+                    'created_at': item.created_at.isoformat() if item.created_at else None
+                }
+        
+        if result is None:
+            return jsonify({'error': f'{resource.capitalize()} with ID {item_id} not found'}), 404
+            
+        return jsonify({
+            'success': True,
+            'data': result,
+            'resource': resource,
+            'id': item_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching {resource} {item_id}: {e}")
+        return jsonify({'error': f'Failed to fetch {resource}'}), 500
+
+@app.route('/api/admin/get/<resource>/<int:item_id>', methods=['GET'])
+def admin_get_by_id(resource, item_id):
+    """Alias for admin_fetch_by_id for backward compatibility"""
+    return admin_fetch_by_id(resource, item_id)
+
+@app.route('/api/database/sync-check', methods=['GET'])
+def database_sync_check():
+    """Check database synchronization status and fix any issues"""
+    try:
+        # Check admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'error': 'Unauthorized access'}), 401
+            
+        # Count all major tables
+        order_count = Order.query.count()
+        menu_count = MenuItem.query.count()
+        category_count = Category.query.count()
+        restaurant_count = Restaurant.query.count()
+        driver_count = Driver.query.count()
+        
+        # Check for orphaned records
+        orphaned_menu_items = MenuItem.query.filter(
+            ~MenuItem.restaurant_id.in_(
+                db.session.query(Restaurant.id).filter(Restaurant.is_active == True)
+            )
+        ).count()
+        
+        orphaned_orders = Order.query.filter(
+            ~Order.restaurant_id.in_(
+                db.session.query(Restaurant.id).filter(Restaurant.is_active == True)
+            )
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'database_status': 'synchronized',
+            'table_counts': {
+                'orders': order_count,
+                'menu_items': menu_count,
+                'categories': category_count,
+                'restaurants': restaurant_count,
+                'drivers': driver_count
+            },
+            'orphaned_records': {
+                'menu_items': orphaned_menu_items,
+                'orders': orphaned_orders
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error checking database sync: {e}")
+        return jsonify({'error': 'Database sync check failed'}), 500
 
 @app.errorhandler(404)
 def not_found(error):
