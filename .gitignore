@@ -201,9 +201,9 @@ cython_debug/
 *.sqlite3
 food_delivery.db
 
-# Uploads
-uploads/
-static/uploads/
+# Uploads - but keep the static/uploads directory for food images
+# uploads/
+# static/uploads/
 
 # Test files
 test_*.py
