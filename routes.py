@@ -2681,7 +2681,8 @@ def add_menu_item():
             description=description,
             image_url=image_url,
             category=category,
-            available=available
+            available=available,
+            restaurant_id=1  # Default to restaurant 1 (Flavour cafe)
         )
         
         db.session.add(item)
