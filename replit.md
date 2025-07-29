@@ -96,8 +96,22 @@ ET-FOOD is a Telegram-based food delivery application that combines a Python Fla
 - **Default Data**: Sample menu items populated if database is empty
 - **Migration Support**: SQLAlchemy provides schema evolution capabilities
 
-## Changelog
+## Recent Changes
 - July 29, 2025. **MENU MANAGEMENT FUNCTIONALITY FULLY RESTORED**: Successfully fixed all menu management issues in admin dashboard. Added complete JavaScript functions for adding new menu items with image upload (showAddMenuItemModal, saveMenuItem), editing existing items with image replacement (editMenuItem, updateMenuItem), and deleting menu items (deleteMenuItem). Fixed API endpoints to properly handle FormData with file uploads, restored all 14 food categories in dropdown selectors, and eliminated "Error loading menu items" when switching between admin panels. Menu management now fully functional with professional modal interfaces, image upload capabilities, form validation, and real-time table updates. Super admin credentials working (superadmin/superadmin123), all 64 menu items properly loaded, and admin dashboard operational across all tabs without JavaScript errors.
+
+## Dependencies
+The project uses the following core dependencies (managed via packager tool):
+- **Flask 3.1.1**: Web framework and routing
+- **Flask-SQLAlchemy 3.1.1**: Database ORM integration  
+- **PostgreSQL**: Production database with psycopg2-binary driver
+- **Gunicorn 23.0.0**: WSGI HTTP server for production deployment
+- **python-telegram-bot 22.2**: Telegram Bot API integration
+- **Werkzeug 3.1.3**: WSGI utilities and security functions
+- **requests 2.32.4**: HTTP library for API calls
+- **email-validator 2.2.0**: Email validation utilities
+- **SQLAlchemy 2.0.41**: Database toolkit and ORM
+
+## Changelog
 
 - July 29, 2025. **REPLIT MIGRATION COMPLETED SUCCESSFULLY**: Successfully migrated ET-FOOD project from Replit Agent to standard Replit environment with full functionality preservation. Fixed database connectivity issues, restored complete Flavour cafe menu with exactly 64 food products across 14 categories, and verified all API endpoints are working properly. Restaurant selection and menu loading now functional in webapp interface with authentic food images from uploads directory. Both customer bot (BOT_TOKEN: 7956456272...) and driver bot (DRIVER_BOT_TOKEN: 7679369276...) are now fully operational with webhooks properly configured. Flask web server running stable on port 5000, complete food delivery system with 74 menu items across 2 restaurants and 14 categories fully operational, super admin dashboard accessible with credentials (superadmin/admin123), WebApp interface displaying correctly with restaurant data, PostgreSQL database connectivity verified, all core features preserved including menu display, order processing, and bot functionality. Project structure cleaned up and optimized for Replit deployment with proper security practices and client/server separation. **COMPLETE MENU RESTORATION**: Flavour cafe now has exactly 64 food products across 14 proper categories as requested: 8 Burgers, 4 Shawarma, 5 Sandwiches & Wraps, 5 Pizza, 5 Pasta, 3 Burritos, 4 Rice Dishes, 3 Egg Dishes & Toast, 4 Fries & Pancakes, 8 Traditional Ethiopian Breakfast, 4 Extras, 5 Drinks, 3 Snacks, 3 Sauces. All items use authentic uploaded food images instead of placeholders. Y Factory Restaurant maintains 10 items for comparison.
 
