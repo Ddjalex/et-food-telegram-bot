@@ -201,9 +201,9 @@ cython_debug/
 *.sqlite3
 food_delivery.db
 
-# Uploads - but keep the static/uploads directory for food images
-# uploads/
-# static/uploads/
+# Keep all uploads - these are important for the food delivery app
+# uploads/ - COMMENTED OUT - we want to track uploads
+# static/uploads/ - COMMENTED OUT - we want to track food images
 
 # Test files
 test_*.py
@@ -227,6 +227,16 @@ tmp/
 ehthumbs.db
 Thumbs.db
 
-# Replit specific
+# Replit specific - but keep important config files
 .replit
 uv.lock
+.upm/
+.cache/
+.config/
+.local/
+!.local/state/replit/agent/progress_tracker.md
+
+# Git workflow files - keep these
+!git_sync_guide.md
+!git_workflow.sh
+!restart_after_pull.sh
