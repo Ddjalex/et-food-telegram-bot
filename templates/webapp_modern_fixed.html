@@ -589,6 +589,101 @@
             margin-bottom: 10px;
         }
         
+        /* Order Type Selection Styles */
+        .order-type-selection {
+            margin-bottom: 20px;
+        }
+        
+        .order-type-options {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .order-type-option {
+            flex: 1;
+            cursor: pointer;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            background: #1a1a2e;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .order-type-option:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+        
+        .order-type-option input[type="radio"] {
+            display: none;
+        }
+        
+        .order-type-option input[type="radio"]:checked + .option-content {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-color: #3b82f6;
+        }
+        
+        .option-content {
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .option-icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .option-text strong {
+            color: #ffffff;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .option-text small {
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        /* Info Section Styles */
+        .info-section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #1a1a2e;
+            border-radius: 12px;
+            border: 1px solid #374151;
+        }
+        
+        .info-section h5 {
+            color: #ffffff;
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .info-section input,
+        .info-section textarea {
+            margin-bottom: 12px;
+        }
+        
+        .info-section input:last-child,
+        .info-section textarea:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Address Label */
+        .address-label {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
         .customer-info input,
         .customer-info textarea {
             width: 100%;
@@ -2129,11 +2224,52 @@
                         </div>
                         
                         <div class="customer-info">
-                            <h4>Customer Information</h4>
-                            <input type="text" id="customerName" placeholder="Full Name" value="${orderData.customer_name || ''}" required>
-                            <input type="tel" id="customerPhone" placeholder="Phone Number" value="${orderData.customer_phone || ''}" required>
+                            <h4>Order Information</h4>
+                            
+                            <!-- Order Type Selection -->
+                            <div class="order-type-selection">
+                                <div class="order-type-options">
+                                    <label class="order-type-option" for="orderForSelf">
+                                        <input type="radio" id="orderForSelf" name="orderType" value="self" checked onchange="toggleOrderType()">
+                                        <div class="option-content">
+                                            <span class="option-icon">👤</span>
+                                            <div class="option-text">
+                                                <strong>Order for Myself</strong>
+                                                <small>Deliver to my address</small>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="order-type-option" for="orderForOthers">
+                                        <input type="radio" id="orderForOthers" name="orderType" value="others" onchange="toggleOrderType()">
+                                        <div class="option-content">
+                                            <span class="option-icon">🎁</span>
+                                            <div class="option-text">
+                                                <strong>Order for Someone Else</strong>
+                                                <small>Gift or deliver to another person</small>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Customer Information Section -->
+                            <div class="info-section" id="customerInfoSection">
+                                <h5 id="customerSectionTitle">Your Information</h5>
+                                <input type="text" id="customerName" placeholder="Your Full Name" value="${orderData.customer_name || ''}" required>
+                                <input type="tel" id="customerPhone" placeholder="Your Phone Number" value="${orderData.customer_phone || ''}" required>
+                            </div>
+                            
+                            <!-- Recipient Information Section (hidden by default) -->
+                            <div class="info-section" id="recipientInfoSection" style="display: none;">
+                                <h5>Recipient Information</h5>
+                                <input type="text" id="recipientName" placeholder="Recipient's Full Name" required>
+                                <input type="tel" id="recipientPhone" placeholder="Recipient's Phone Number" required>
+                                <textarea id="orderNote" placeholder="Special message or instructions for recipient (optional)" rows="2"></textarea>
+                            </div>
                             <div class="address-container">
                                 <div class="address-input-wrapper">
+                                    <div class="address-label" id="addressLabel">Delivery Address</div>
                                     <textarea id="customerAddress" placeholder="Enter delivery address or search below" rows="2" required></textarea>
                                     <button type="button" class="address-search-btn" onclick="toggleMapSearch()" title="Search on Map">
                                         🗺️
@@ -2374,6 +2510,46 @@
             }
         }
 
+        // Toggle order type between self and others
+        function toggleOrderType() {
+            const orderType = document.querySelector('input[name="orderType"]:checked').value;
+            const customerSection = document.getElementById('customerInfoSection');
+            const recipientSection = document.getElementById('recipientInfoSection');
+            const customerSectionTitle = document.getElementById('customerSectionTitle');
+            const addressLabel = document.getElementById('addressLabel');
+            const customerNameInput = document.getElementById('customerName');
+            const customerPhoneInput = document.getElementById('customerPhone');
+            
+            if (orderType === 'others') {
+                // Ordering for someone else
+                customerSectionTitle.textContent = 'Your Information (Order Placer)';
+                customerNameInput.placeholder = 'Your Full Name (who is ordering)';
+                customerPhoneInput.placeholder = 'Your Phone Number (for order confirmation)';
+                addressLabel.textContent = 'Recipient\'s Delivery Address';
+                recipientSection.style.display = 'block';
+                
+                // Make recipient fields required
+                document.getElementById('recipientName').required = true;
+                document.getElementById('recipientPhone').required = true;
+            } else {
+                // Ordering for self
+                customerSectionTitle.textContent = 'Your Information';
+                customerNameInput.placeholder = 'Your Full Name';
+                customerPhoneInput.placeholder = 'Your Phone Number';
+                addressLabel.textContent = 'Your Delivery Address';
+                recipientSection.style.display = 'none';
+                
+                // Make recipient fields not required
+                document.getElementById('recipientName').required = false;
+                document.getElementById('recipientPhone').required = false;
+                
+                // Clear recipient fields
+                document.getElementById('recipientName').value = '';
+                document.getElementById('recipientPhone').value = '';
+                document.getElementById('orderNote').value = '';
+            }
+        }
+
         // Place order with manual payment verification
         async function placeOrder() {
             const customerName = document.getElementById('customerName').value.trim();
@@ -2446,7 +2622,9 @@
                 };
             }
 
-            const orderData = {
+            // Enhanced order data handling for self vs others orders
+            const orderType = document.querySelector('input[name="orderType"]:checked').value;
+            let orderData = {
                 ...window.currentOrderData,
                 telegram_user_id: telegramUserId,
                 customer_name: customerName,
@@ -2458,8 +2636,29 @@
                 // Additional metadata for enhanced tracking
                 order_timestamp: new Date().toISOString(),
                 browser_info: navigator.userAgent,
-                map_enhanced: true // Flag to indicate this order uses enhanced map features
+                map_enhanced: true, // Flag to indicate this order uses enhanced map features
+                order_type: orderType
             };
+
+            // Add recipient information if ordering for others
+            if (orderType === 'others') {
+                const recipientName = document.getElementById('recipientName').value.trim();
+                const recipientPhone = document.getElementById('recipientPhone').value.trim();
+                const orderNote = document.getElementById('orderNote').value.trim();
+
+                if (!recipientName || !recipientPhone) {
+                    alert('Please fill in recipient information');
+                    return;
+                }
+
+                orderData = {
+                    ...orderData,
+                    recipient_name: recipientName,
+                    recipient_phone: recipientPhone,
+                    order_note: orderNote,
+                    is_gift_order: true
+                };
+            }
 
             await submitOrder(orderData);
         }

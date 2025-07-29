@@ -1663,7 +1663,13 @@ def create_order():
             transaction_image_url=data.get('transaction_image_url'),
             location_lat=data.get('location_lat'),
             location_lng=data.get('location_lng'),
-            restaurant_id=restaurant_id
+            restaurant_id=restaurant_id,
+            # Order for Others fields
+            order_type=data.get('order_type', 'self'),
+            recipient_name=data.get('recipient_name'),
+            recipient_phone=data.get('recipient_phone'),
+            order_note=data.get('order_note'),
+            is_gift_order=data.get('is_gift_order', False)
         )
         
         db.session.add(order)

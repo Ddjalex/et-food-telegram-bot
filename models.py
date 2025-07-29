@@ -91,6 +91,13 @@ class Order(db.Model):
     delivery_notes = db.Column(db.Text)
     estimated_delivery_time = db.Column(db.DateTime)
     
+    # Order for Others fields
+    order_type = db.Column(db.String(20), default='self')  # 'self' or 'others'
+    recipient_name = db.Column(db.String(100))  # Name of the person receiving the order
+    recipient_phone = db.Column(db.String(20))  # Phone number of the recipient
+    order_note = db.Column(db.Text)  # Special message or instructions for recipient
+    is_gift_order = db.Column(db.Boolean, default=False)  # Flag for gift orders
+    
     # Payment workflow fields
     kitchen_accepted_at = db.Column(db.DateTime)  # When kitchen accepted the order
     deposit_amount = db.Column(db.Float)  # Required deposit amount (50% of total)
@@ -125,6 +132,11 @@ class Order(db.Model):
             'location_lng': self.location_lng,
             'delivery_notes': self.delivery_notes,
             'estimated_delivery_time': self.estimated_delivery_time.isoformat() if self.estimated_delivery_time else None,
+            'order_type': self.order_type,
+            'recipient_name': self.recipient_name,
+            'recipient_phone': self.recipient_phone,
+            'order_note': self.order_note,
+            'is_gift_order': self.is_gift_order,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
