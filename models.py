@@ -148,6 +148,7 @@ class AdminUser(db.Model):
     email = db.Column(db.String(120))
     full_name = db.Column(db.String(200))
     phone = db.Column(db.String(20))
+    photo_url = db.Column(db.String(500))  # Staff photo URL
     role = db.Column(db.String(20), default='admin')  # super_admin, admin, kitchen_staff
     is_active = db.Column(db.Boolean, default=True)
     is_blocked = db.Column(db.Boolean, default=False)
@@ -188,6 +189,7 @@ class AdminUser(db.Model):
             'email': self.email,
             'full_name': self.full_name,
             'phone': self.phone,
+            'photo_url': self.photo_url,
             'role': self.role,
             'is_active': self.is_active,
             'is_blocked': self.is_blocked,

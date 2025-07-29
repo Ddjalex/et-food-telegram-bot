@@ -2391,23 +2391,51 @@ def get_kitchen_staff_admin():
 @app.route('/api/admin/kitchen-staff-management', methods=['POST'])
 @admin_required
 def add_kitchen_staff_admin():
-    """Add kitchen staff for restaurant admin"""
+    """Add kitchen staff for restaurant admin with photo upload"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
-        data = request.get_json()
+        
+        # Handle both JSON and FormData
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData from modal with photo upload
+            username = request.form.get('username')
+            full_name = request.form.get('full_name')
+            phone = request.form.get('phone')
+            password = request.form.get('password')
+            
+            # Handle photo upload
+            photo_url = None
+            if 'photo' in request.files:
+                file = request.files['photo']
+                if file and file.filename and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = str(int(datetime.now().timestamp()))
+                    filename = f"staff_{timestamp}_{filename}"
+                    filepath = os.path.join(app.static_folder, 'uploads', filename)
+                    file.save(filepath)
+                    photo_url = f"/static/uploads/{filename}"
+        else:
+            # JSON data (legacy support)
+            data = request.get_json()
+            username = data.get('username')
+            full_name = data.get('full_name')
+            phone = data.get('phone')
+            password = data.get('password')
+            photo_url = None
         
         # Check if username already exists
-        if AdminUser.query.filter_by(username=data['username']).first():
+        if AdminUser.query.filter_by(username=username).first():
             return jsonify({'success': False, 'message': 'Username already exists'}), 400
         
         # Generate password hash
-        password_hash = generate_password_hash(data['password'])
+        password_hash = generate_password_hash(password)
         
         # Create kitchen staff user
         kitchen_staff = AdminUser(
-            username=data['username'],
-            full_name=data['full_name'],
-            phone=data.get('phone'),
+            username=username,
+            full_name=full_name,
+            phone=phone,
+            photo_url=photo_url,
             role='kitchen_staff',
             password_hash=password_hash,
             restaurant_id=admin.restaurant_id,

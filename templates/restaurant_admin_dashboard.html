@@ -804,6 +804,7 @@
                                                 <table class="table table-striped">
                                                     <thead>
                                                         <tr>
+                                                            <th>Photo</th>
                                                             <th>Name</th>
                                                             <th>Username</th>
                                                             <th>Phone</th>
@@ -814,7 +815,7 @@
                                                     </thead>
                                                     <tbody id="kitchenStaffTable">
                                                         <tr>
-                                                            <td colspan="6" class="text-center py-4">Loading kitchen staff...</td>
+                                                            <td colspan="7" class="text-center py-4">Loading kitchen staff...</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -1700,12 +1701,17 @@
                     const tableBody = document.getElementById('kitchenStaffTable');
                     
                     if (staff.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No kitchen staff found</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No kitchen staff found</td></tr>';
                         return;
                     }
                     
                     tableBody.innerHTML = staff.map(member => `
                         <tr>
+                            <td>
+                                <img src="${member.photo_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNmOGY5ZmEiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHBhdGggZD0iTTEyIDEyQzE0LjIwOTEgMTIgMTYgMTAuMjA5MSAxNiA4QzE2IDUuNzkwOSAxNC4yMDkxIDQgMTIgNEM5Ljc5MDg2IDQgOCA1Ljc5MDkgOCA4QzggMTAuMjA5MSA5Ljc5MDg2IDEyIDEyIDEyWiIgZmlsbD0iIzY0NzQ4YiIvPgo8cGF0aCBkPSJNMTIgMTRDOSAxMyA0IDE0LjUgNCAyMFYyMkgxNlYyMEMxNiAxNC41IDExIDEzIDEyIDE0WiIgZmlsbD0iIzY0NzQ4YiIvPgo8L3N2Zz4KPC9zdmc+Cg=='}" 
+                                     class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;" 
+                                     alt="${member.full_name}">
+                            </td>
                             <td>${member.full_name}</td>
                             <td>${member.username}</td>
                             <td>${member.phone || 'N/A'}</td>
@@ -1733,48 +1739,138 @@
                 })
                 .catch(error => {
                     console.error('Error loading kitchen staff:', error);
-                    document.getElementById('kitchenStaffTable').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading kitchen staff</td></tr>';
+                    document.getElementById('kitchenStaffTable').innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading kitchen staff</td></tr>';
                 });
         }
 
         function showAddKitchenStaffModal() {
-            const username = prompt('Enter username:');
-            if (!username) return;
+            const modalHtml = `
+                <div class="modal fade" id="addKitchenStaffModal" tabindex="-1" data-bs-backdrop="static">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-user-plus me-2"></i>Add Kitchen Staff
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form id="addKitchenStaffForm" enctype="multipart/form-data">
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-12 text-center mb-3">
+                                            <div class="position-relative d-inline-block">
+                                                <img id="staffPhotoPreview" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmOGY5ZmEiLz4KPHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSIxNiIgeT0iMTYiPgo8cGF0aCBkPSJNMTIgMTJDMTQuMjA5MSAxMiAxNiAxMC4yMDkxIDE2IDhDMTYgNS43OTA5IDE0LjIwOTEgNCAxMiA0QzkuNzkwODYgNCA4IDUuNzkwOSA4IDhDOCAxMC4yMDkxIDkuNzkwODYgMTIgMTIgMTJaIiBmaWxsPSIjNjQ3NDhiIi8+CjxwYXRoIGQ9Ik0xMiAxNEM5IDEzIDQgMTQuNSA0IDIwVjIySDE2VjIwQzE2IDE0LjUgMTEgMTMgMTIgMTRaIiBmaWxsPSIjNjQ3NDhiIi8+Cjwvc3ZnPgo8L3N2Zz4K" 
+                                                     class="rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #e9ecef;">
+                                                <button type="button" class="btn btn-sm btn-primary position-absolute" 
+                                                        style="bottom: 0; right: 0; border-radius: 50%; width: 25px; height: 25px; padding: 0;"
+                                                        onclick="document.getElementById('staffPhoto').click()">
+                                                    <i class="fas fa-camera" style="font-size: 10px;"></i>
+                                                </button>
+                                            </div>
+                                            <input type="file" id="staffPhoto" name="photo" accept="image/*" style="display: none" onchange="previewStaffPhoto(event)">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Full Name *</label>
+                                                <input type="text" class="form-control" name="full_name" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Username *</label>
+                                                <input type="text" class="form-control" name="username" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Phone</label>
+                                                <input type="tel" class="form-control" name="phone">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Password *</label>
+                                                <input type="password" class="form-control" name="password" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Add Staff
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            const fullName = prompt('Enter full name:');
-            if (!fullName) return;
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addKitchenStaffModal');
+            if (existingModal) existingModal.remove();
             
-            const phone = prompt('Enter phone number (optional):');
-            const password = prompt('Enter password:');
-            if (!password) return;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
             
-            const staffData = {
-                username: username,
-                full_name: fullName,
-                phone: phone,
-                password: password
-            };
-            
-            fetch('/api/admin/kitchen-staff', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(staffData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Kitchen staff added successfully');
-                    loadKitchenStaff();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error adding kitchen staff:', error);
-                alert('Error adding kitchen staff');
+            // Setup form submission
+            document.getElementById('addKitchenStaffForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+                submitBtn.disabled = true;
+                
+                fetch('/api/admin/kitchen-staff', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Kitchen staff added successfully');
+                        loadKitchenStaff();
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addKitchenStaffModal'));
+                        modal.hide();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding kitchen staff:', error);
+                    alert('Error adding kitchen staff');
+                })
+                .finally(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
             });
+            
+            const modal = new bootstrap.Modal(document.getElementById('addKitchenStaffModal'));
+            modal.show();
+            
+            // Clean up modal after close
+            document.getElementById('addKitchenStaffModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        function previewStaffPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('staffPhotoPreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
         }
 
         function editKitchenStaff(staffId) {
