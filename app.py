@@ -35,19 +35,19 @@ def create_tables():
         if Restaurant.query.count() == 0:
             # Create default restaurants
             restaurants = [
-                {
-                    'name': 'Flavour cafe | E.Fabrica',
-                    'description': 'Authentic Ethiopian and International Cuisine',
-                    'address': 'Addis Ababa, Ethiopia',
-                    'phone': '+251911123456',
-                    'latitude': 9.0579,
-                    'longitude': 38.7914,
-                    'is_active': True,
-                    'is_featured': True,
-                    'delivery_fee': 50.0,
-                    'minimum_order': 200.0,
-                    'estimated_delivery_time': '30-45 minutes',
-                    'opening_hours': {
+                Restaurant(
+                    name='Flavour cafe | E.Fabrica',
+                    description='Authentic Ethiopian and International Cuisine',
+                    address='Addis Ababa, Ethiopia',
+                    phone='+251911123456',
+                    latitude=9.0579,
+                    longitude=38.7914,
+                    is_active=True,
+                    is_featured=True,
+                    delivery_fee=50.0,
+                    minimum_order=200.0,
+                    estimated_delivery_time='30-45 minutes',
+                    opening_hours={
                         'monday': '09:00-22:00',
                         'tuesday': '09:00-22:00',
                         'wednesday': '09:00-22:00',
@@ -56,20 +56,20 @@ def create_tables():
                         'saturday': '09:00-22:00',
                         'sunday': '09:00-22:00'
                     }
-                },
-                {
-                    'name': 'Y Factory Restaurant',
-                    'description': 'Modern restaurant with diverse cuisine',
-                    'address': 'Addis Ababa, Ethiopia',
-                    'phone': '+251911654321',
-                    'latitude': 9.0519,
-                    'longitude': 38.7269,
-                    'is_active': True,
-                    'is_featured': False,
-                    'delivery_fee': 40.0,
-                    'minimum_order': 150.0,
-                    'estimated_delivery_time': '25-40 minutes',
-                    'opening_hours': {
+                ),
+                Restaurant(
+                    name='Y Factory Restaurant',
+                    description='Modern restaurant with diverse cuisine',
+                    address='Addis Ababa, Ethiopia',
+                    phone='+251911654321',
+                    latitude=9.0519,
+                    longitude=38.7269,
+                    is_active=True,
+                    is_featured=False,
+                    delivery_fee=40.0,
+                    minimum_order=150.0,
+                    estimated_delivery_time='25-40 minutes',
+                    opening_hours={
                         'monday': '08:00-23:00',
                         'tuesday': '08:00-23:00',
                         'wednesday': '08:00-23:00',
@@ -78,11 +78,10 @@ def create_tables():
                         'saturday': '08:00-23:00',
                         'sunday': '08:00-23:00'
                     }
-                }
+                )
             ]
             
-            for rest_data in restaurants:
-                restaurant = Restaurant(**rest_data)
+            for restaurant in restaurants:
                 db.session.add(restaurant)
             
             db.session.commit()
