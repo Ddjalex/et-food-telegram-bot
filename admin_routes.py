@@ -624,6 +624,41 @@ def delete_restaurant_driver(driver_id):
         logger.error(f"Error deleting driver: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/admin/uploaded-images', methods=['GET'])
+@admin_required
+def get_uploaded_images():
+    """Get list of all uploaded images for image gallery"""
+    try:
+        uploads_dir = os.path.join(app.static_folder, 'uploads')
+        
+        if not os.path.exists(uploads_dir):
+            return jsonify({'success': True, 'images': []})
+        
+        # Get all image files from uploads directory
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
+        images = []
+        
+        for filename in os.listdir(uploads_dir):
+            file_path = os.path.join(uploads_dir, filename)
+            if os.path.isfile(file_path):
+                # Check if it's an image file
+                _, ext = os.path.splitext(filename.lower())
+                if ext in image_extensions:
+                    images.append({
+                        'filename': filename,
+                        'url': f'/static/uploads/{filename}',
+                        'size': os.path.getsize(file_path),
+                        'modified': os.path.getmtime(file_path)
+                    })
+        
+        # Sort by modification time (newest first)
+        images.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify({'success': True, 'images': images})
+    except Exception as e:
+        logger.error(f"Error getting uploaded images: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Super Admin Driver Management Routes
 @app.route('/api/super-admin/drivers/pending', methods=['GET'])
 def get_super_admin_pending_drivers():

@@ -1558,9 +1558,18 @@
                                             </div>
                                         </div>
                                         <div class="mb-3">
-                                            <label for="editItemImage" class="form-label">Upload New Image (optional)</label>
-                                            <input type="file" class="form-control" id="editItemImage" name="image" accept="image/*">
-                                            <div class="form-text">Leave empty to keep current image</div>
+                                            <label class="form-label">Change Image</label>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="showImageGallery('${itemId}')">
+                                                    <i class="fas fa-images me-1"></i>Choose from Gallery
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('editItemImage').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload New
+                                                </button>
+                                            </div>
+                                            <input type="file" class="form-control d-none" id="editItemImage" name="image" accept="image/*">
+                                            <div class="form-text">Choose from existing images or upload a new one</div>
+                                            <input type="hidden" id="selectedImageUrl" name="selected_image_url" value="">
                                         </div>
                                     </form>
                                 </div>
@@ -2086,6 +2095,122 @@
                 console.error('Error updating kitchen staff:', error);
                 alert('Error updating kitchen staff');
             });
+        }
+
+        // Image Gallery for Menu Item Selection
+        function showImageGallery(itemId) {
+            console.log('Opening image gallery for item:', itemId);
+            
+            // Fetch available images from uploads directory
+            fetch('/api/admin/uploaded-images')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.images) {
+                        createImageGalleryModal(data.images, itemId);
+                    } else {
+                        alert('Error loading image gallery');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading image gallery:', error);
+                    alert('Error loading image gallery');
+                });
+        }
+
+        function createImageGalleryModal(images, itemId) {
+            const modalHtml = `
+                <div class="modal fade" id="imageGalleryModal" tabindex="-1" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-images me-2"></i>Choose Image from Gallery
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3" id="imageGalleryGrid">
+                                    ${images.map(image => `
+                                        <div class="col-md-3 col-sm-4 col-6">
+                                            <div class="card h-100 image-card" onclick="selectImage('${image.url}', '${itemId}')" 
+                                                 style="cursor: pointer; transition: all 0.3s ease;">
+                                                <img src="${image.url}" class="card-img-top" 
+                                                     style="height: 200px; object-fit: cover;" 
+                                                     alt="${image.filename}">
+                                                <div class="card-body p-2">
+                                                    <small class="text-muted">${image.filename}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${images.length === 0 ? '<p class="text-center text-muted py-5">No images found in gallery</p>' : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('imageGalleryModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Add hover effects
+            const imageCards = document.querySelectorAll('.image-card');
+            imageCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = '';
+                });
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('imageGalleryModal'));
+            modal.show();
+            
+            // Clean up modal after close
+            document.getElementById('imageGalleryModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        }
+
+        function selectImage(imageUrl, itemId) {
+            console.log('Selected image:', imageUrl, 'for item:', itemId);
+            
+            // Update the current image preview in the edit modal
+            const currentImagePreview = document.querySelector('#editMenuItemModal .img-thumbnail');
+            if (currentImagePreview) {
+                currentImagePreview.src = imageUrl;
+            }
+            
+            // Set the selected image URL in the hidden field
+            const selectedImageField = document.getElementById('selectedImageUrl');
+            if (selectedImageField) {
+                selectedImageField.value = imageUrl;
+            }
+            
+            // Clear the file input since we're using a selected image
+            const fileInput = document.getElementById('editItemImage');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            
+            // Close the gallery modal
+            const galleryModal = bootstrap.Modal.getInstance(document.getElementById('imageGalleryModal'));
+            if (galleryModal) {
+                galleryModal.hide();
+            }
+            
+            // Show confirmation
+            alert('Image selected successfully!');
         }
 
         // Auto-refresh functionality

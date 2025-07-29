@@ -2721,8 +2721,12 @@ def update_menu_item(item_id):
             available = request.form.get('available') == 'on' or request.form.get('available') == 'true'
             image_url = request.form.get('image_url', item.image_url)
             
-            # Handle image upload
-            if 'image' in request.files:
+            # Check if an image was selected from gallery
+            selected_image_url = request.form.get('selected_image_url')
+            if selected_image_url:
+                image_url = selected_image_url
+            # Handle new image upload
+            elif 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
                     filename = secure_filename(file.filename)
