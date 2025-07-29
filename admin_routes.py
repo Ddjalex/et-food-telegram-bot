@@ -626,10 +626,16 @@ def delete_restaurant_driver(driver_id):
 
 # Super Admin Driver Management Routes
 @app.route('/api/super-admin/drivers/pending', methods=['GET'])
-@super_admin_required
 def get_super_admin_pending_drivers():
     """Get all pending driver applications for super admin approval"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         from admin_approval_system import get_pending_drivers
         pending_drivers = get_pending_drivers()
         
@@ -663,10 +669,16 @@ def get_super_admin_pending_drivers():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/drivers/<int:driver_id>/approve', methods=['POST'])
-@super_admin_required
 def approve_driver_super_admin(driver_id):
     """Approve a pending driver application (Super Admin only)"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         from admin_approval_system import approve_driver
         from driver_bot import send_driver_message
         
@@ -739,10 +751,16 @@ def approve_driver_super_admin(driver_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/drivers/stats', methods=['GET'])
-@super_admin_required
 def get_super_admin_driver_stats():
     """Get driver statistics for super admin dashboard"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         from datetime import datetime, timedelta
         
         # Get all drivers
@@ -780,10 +798,16 @@ def get_super_admin_driver_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/drivers/<int:driver_id>/reject', methods=['POST'])
-@super_admin_required
 def reject_driver_super_admin(driver_id):
     """Reject a pending driver application (Super Admin only)"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         from admin_approval_system import reject_driver
         
         admin = AdminUser.query.get(session['admin_id'])
@@ -868,10 +892,16 @@ def get_driver_documents_super_admin(driver_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/drivers/approved', methods=['GET'])
-@super_admin_required
 def get_approved_drivers_super_admin():
     """Get all approved drivers with live location status"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         from datetime import datetime, timedelta
         
         approved_drivers = Driver.query.filter_by(approval_status='approved').all()
@@ -1839,11 +1869,16 @@ def get_dashboard_stats():
 
 # Restaurant-specific overview data endpoint
 @app.route('/api/overview-data', methods=['GET'])
-@admin_required
 def get_restaurant_overview_data():
     """Get restaurant-specific overview data for charts"""
     try:
+        # Check authentication first
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
         admin = AdminUser.query.get(session['admin_id'])
+        if not admin:
+            return jsonify({'success': False, 'error': 'Admin not found'}), 404
         
         # Get recent orders for this restaurant only
         recent_orders = Order.query.filter_by(
@@ -1879,10 +1914,16 @@ def get_restaurant_overview_data():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/super-admin/overview', methods=['GET'])
-@super_admin_required
 def get_overview_data():
     """Get overview data for charts"""
     try:
+        # Check super admin authentication
+        if 'admin_id' not in session:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or admin.role != 'super_admin':
+            return jsonify({'success': False, 'error': 'Super admin access required'}), 403
         # Get admin activity data for charts
         activity_data = db.session.query(
             func.date(AdminActivity.created_at),

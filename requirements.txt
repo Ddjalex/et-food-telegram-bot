@@ -702,3 +702,12 @@ flask
 flask-sqlalchemy
 gunicorn
 psycopg2-binary
+email-validator
+Flask
+Flask-SQLAlchemy
+gunicorn
+psycopg2-binary
+python-telegram-bot
+requests
+SQLAlchemy
+Werkzeug
