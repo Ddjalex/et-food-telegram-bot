@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Delivery Location - ET-FOOD</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 90vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .header h1 {
+            color: #1e293b;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .order-type-toggle {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .toggle-option {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .toggle-option.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .toggle-option:not(.active) {
+            color: #64748b;
+        }
+        
+        .recipient-info {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .recipient-info.active {
+            display: block;
+        }
+        
+        .recipient-info h3 {
+            color: #1e293b;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 12px;
+        }
+        
+        .input-group label {
+            display: block;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .map-section {
+            margin-bottom: 20px;
+        }
+        
+        .map-section h3 {
+            color: #1e293b;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        #map {
+            height: 300px;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .address-input {
+            margin-top: 10px;
+        }
+        
+        .address-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .location-info {
+            background: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #1e40af;
+        }
+        
+        .delivery-notes {
+            margin-bottom: 20px;
+        }
+        
+        .delivery-notes h3 {
+            color: #1e293b;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .delivery-notes textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            min-height: 80px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        .current-location-btn {
+            width: 100%;
+            padding: 10px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: background 0.3s ease;
+        }
+        
+        .current-location-btn:hover {
+            background: #059669;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
+        }
+        
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Select Delivery Location</h1>
+            <p>Choose where you want your order delivered</p>
+        </div>
+        
+        <!-- Order Type Toggle -->
+        <div class="order-type-toggle">
+            <div class="toggle-option active" data-type="self">
+                📦 For Myself
+            </div>
+            <div class="toggle-option" data-type="others">
+                🎁 For Someone Else
+            </div>
+        </div>
+        
+        <!-- Recipient Information (hidden by default) -->
+        <div class="recipient-info" id="recipientInfo">
+            <h3>🎁 Recipient Information</h3>
+            <div class="input-group">
+                <label for="recipientName">Recipient Name</label>
+                <input type="text" id="recipientName" placeholder="Who is receiving this order?">
+            </div>
+            <div class="input-group">
+                <label for="recipientPhone">Recipient Phone</label>
+                <input type="tel" id="recipientPhone" placeholder="+251911234567">
+            </div>
+            <div class="input-group">
+                <label for="orderNote">Personal Message (Optional)</label>
+                <textarea id="orderNote" placeholder="Add a personal message for the recipient..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Map Section -->
+        <div class="map-section">
+            <h3>📍 Delivery Location</h3>
+            <button class="current-location-btn" onclick="getCurrentLocation()">
+                📍 Use My Current Location
+            </button>
+            <div id="map"></div>
+            <div class="address-input">
+                <input type="text" id="addressInput" placeholder="Type or search for delivery address...">
+            </div>
+            <div class="location-info" id="locationInfo" style="display: none;">
+                <strong>Selected Location:</strong><br>
+                <span id="selectedAddress">No location selected</span><br>
+                <small>GPS: <span id="selectedCoords">--</span></small>
+            </div>
+        </div>
+        
+        <!-- Delivery Notes -->
+        <div class="delivery-notes">
+            <h3>📝 Delivery Instructions</h3>
+            <textarea id="deliveryNotes" placeholder="Add delivery instructions (apartment number, gate code, landmarks, etc.)"></textarea>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="goBack()">
+                ← Back
+            </button>
+            <button class="btn btn-primary" onclick="confirmLocation()">
+                Confirm Location →
+            </button>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let marker;
+        let selectedLocation = {
+            lat: 9.0579, // Default to Addis Ababa
+            lng: 38.7914,
+            address: ''
+        };
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([selectedLocation.lat, selectedLocation.lng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add marker
+            marker = L.marker([selectedLocation.lat, selectedLocation.lng], {
+                draggable: true
+            }).addTo(map);
+            
+            // Handle marker drag
+            marker.on('dragend', function(e) {
+                const position = e.target.getLatLng();
+                selectedLocation.lat = position.lat;
+                selectedLocation.lng = position.lng;
+                reverseGeocode(position.lat, position.lng);
+            });
+            
+            // Handle map click
+            map.on('click', function(e) {
+                const latlng = e.latlng;
+                marker.setLatLng(latlng);
+                selectedLocation.lat = latlng.lat;
+                selectedLocation.lng = latlng.lng;
+                reverseGeocode(latlng.lat, latlng.lng);
+            });
+        }
+        
+        // Get current location
+        function getCurrentLocation() {
+            if ("geolocation" in navigator) {
+                const btn = document.querySelector('.current-location-btn');
+                btn.innerHTML = '🔄 Getting location...';
+                btn.disabled = true;
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        selectedLocation.lat = lat;
+                        selectedLocation.lng = lng;
+                        
+                        map.setView([lat, lng], 15);
+                        marker.setLatLng([lat, lng]);
+                        
+                        reverseGeocode(lat, lng);
+                        
+                        btn.innerHTML = '✅ Location found!';
+                        setTimeout(() => {
+                            btn.innerHTML = '📍 Use My Current Location';
+                            btn.disabled = false;
+                        }, 2000);
+                    },
+                    function(error) {
+                        console.error('Error getting location:', error);
+                        btn.innerHTML = '❌ Location access denied';
+                        setTimeout(() => {
+                            btn.innerHTML = '📍 Use My Current Location';
+                            btn.disabled = false;
+                        }, 3000);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser');
+            }
+        }
+        
+        // Reverse geocoding to get address from coordinates
+        async function reverseGeocode(lat, lng) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+                const data = await response.json();
+                
+                if (data && data.display_name) {
+                    selectedLocation.address = data.display_name;
+                    document.getElementById('addressInput').value = data.display_name;
+                    updateLocationInfo();
+                }
+            } catch (error) {
+                console.error('Error reverse geocoding:', error);
+                selectedLocation.address = `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                updateLocationInfo();
+            }
+        }
+        
+        // Forward geocoding when user types address
+        let searchTimeout;
+        document.getElementById('addressInput').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            
+            if (query.length > 3) {
+                searchTimeout = setTimeout(() => {
+                    searchAddress(query);
+                }, 1000);
+            }
+        });
+        
+        async function searchAddress(query) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=et&limit=1`);
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    const result = data[0];
+                    selectedLocation.lat = parseFloat(result.lat);
+                    selectedLocation.lng = parseFloat(result.lon);
+                    selectedLocation.address = result.display_name;
+                    
+                    map.setView([selectedLocation.lat, selectedLocation.lng], 15);
+                    marker.setLatLng([selectedLocation.lat, selectedLocation.lng]);
+                    
+                    updateLocationInfo();
+                }
+            } catch (error) {
+                console.error('Error searching address:', error);
+            }
+        }
+        
+        // Update location info display
+        function updateLocationInfo() {
+            const locationInfo = document.getElementById('locationInfo');
+            const selectedAddress = document.getElementById('selectedAddress');
+            const selectedCoords = document.getElementById('selectedCoords');
+            
+            selectedAddress.textContent = selectedLocation.address || 'Custom location';
+            selectedCoords.textContent = `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`;
+            
+            locationInfo.style.display = 'block';
+        }
+        
+        // Handle order type toggle
+        document.querySelectorAll('.toggle-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.toggle-option').forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                const recipientInfo = document.getElementById('recipientInfo');
+                if (this.dataset.type === 'others') {
+                    recipientInfo.classList.add('active');
+                } else {
+                    recipientInfo.classList.remove('active');
+                }
+            });
+        });
+        
+        // Confirm location and save data
+        function confirmLocation() {
+            const orderType = document.querySelector('.toggle-option.active').dataset.type;
+            const deliveryData = {
+                orderType: orderType,
+                location: selectedLocation,
+                deliveryNotes: document.getElementById('deliveryNotes').value
+            };
+            
+            // Add recipient info if ordering for others
+            if (orderType === 'others') {
+                deliveryData.recipient = {
+                    name: document.getElementById('recipientName').value,
+                    phone: document.getElementById('recipientPhone').value,
+                    message: document.getElementById('orderNote').value
+                };
+                
+                // Validate recipient info
+                if (!deliveryData.recipient.name || !deliveryData.recipient.phone) {
+                    alert('Please fill in recipient name and phone number');
+                    return;
+                }
+            }
+            
+            // Validate location
+            if (!selectedLocation.lat || !selectedLocation.lng) {
+                alert('Please select a delivery location on the map');
+                return;
+            }
+            
+            // Save to localStorage and return to main app
+            localStorage.setItem('deliveryData', JSON.stringify(deliveryData));
+            
+            // Return to main app or close window
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'deliveryLocationSelected',
+                    data: deliveryData
+                }, '*');
+                window.close();
+            } else {
+                // Redirect back to main app
+                window.location.href = '/';
+            }
+        }
+        
+        // Go back function
+        function goBack() {
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = '/';
+            }
+        }
+        
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            
+            // Load any existing delivery data
+            const savedData = localStorage.getItem('deliveryData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                if (data.orderType === 'others') {
+                    document.querySelector('[data-type="others"]').click();
+                    if (data.recipient) {
+                        document.getElementById('recipientName').value = data.recipient.name || '';
+                        document.getElementById('recipientPhone').value = data.recipient.phone || '';
+                        document.getElementById('orderNote').value = data.recipient.message || '';
+                    }
+                }
+                
+                if (data.location) {
+                    selectedLocation = data.location;
+                    map.setView([selectedLocation.lat, selectedLocation.lng], 15);
+                    marker.setLatLng([selectedLocation.lat, selectedLocation.lng]);
+                    document.getElementById('addressInput').value = selectedLocation.address || '';
+                    updateLocationInfo();
+                }
+                
+                document.getElementById('deliveryNotes').value = data.deliveryNotes || '';
+            }
+        });
+    </script>
+</body>
+</html>

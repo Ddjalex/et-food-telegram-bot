@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Admin Dashboard</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.js"></script>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <style>
+        .admin-sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .admin-sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin: 0.25rem;
+            transition: all 0.3s ease;
+        }
+        .admin-sidebar .nav-link:hover,
+        .admin-sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateX(5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 admin-sidebar">
+                <div class="sidebar-sticky p-3">
+                    <h4 class="text-white mb-4">ET-FOOD Admin</h4>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#orders">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#menu">
+                                <i class="fas fa-utensils"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#categories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-10 ms-sm-auto p-4">
+                <div class="tab-content">
+                    <!-- Dashboard Tab -->
+                    <div class="tab-pane fade show active" id="dashboard">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Dashboard Overview</h2>
+                            <span class="text-muted" id="lastUpdated">Last updated: Loading...</span>
+                        </div>
+                        
+                        <!-- Statistics Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalOrders">0</h3>
+                                        <p class="mb-0">Total Orders</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-dollar-sign fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalRevenue">ETB 0.00</h3>
+                                        <p class="mb-0">Total Revenue</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalCustomers">0</h3>
+                                        <p class="mb-0">Total Customers</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="card stat-card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-utensils fa-2x mb-3"></i>
+                                        <h3 class="mb-1" id="totalMenuItems">0</h3>
+                                        <p class="mb-0">Menu Items</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card table-container">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Sales Trend</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="salesChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card table-container">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Order Status</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="orderChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Orders -->
+                        <div class="card table-container">
+                            <div class="card-header">
+                                <h5 class="mb-0">Recent Orders</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentOrdersTable">
+                                            <!-- Recent orders will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Tab -->
+                    <div class="tab-pane fade" id="orders">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Order Management</h4>
+                            <button class="btn btn-danger" onclick="showClearOrdersModal()">
+                                <i class="fas fa-trash-alt"></i> Clear Old Orders
+                            </button>
+                        </div>
+                        <div class="table-container">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer</th>
+                                                <th>Phone</th>
+                                                <th>Items</th>
+                                                <th>Total</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ordersTable">
+                                            <tr>
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menu Tab -->
+                    <div class="tab-pane fade" id="menu">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Menu Management</h4>
+                            <button class="btn btn-primary" onclick="openAddMenuModal()">
+                                <i class="fas fa-plus"></i> Add Menu Item
+                            </button>
+                        </div>
+                        <div class="row" id="menuItemsGrid">
+                            <!-- Menu items will be loaded here -->
+                        </div>
+                        <div class="text-center mt-4" id="menuLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading menu items...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories Tab -->
+                    <div class="tab-pane fade" id="categories">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4>Manage Categories</h4>
+                            <button class="btn btn-primary" onclick="addCategory()">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                        <div class="row" id="categoriesGrid">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                        <div class="text-center mt-4" id="categoriesLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading categories...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin-enhanced.js"></script>
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            loadCategories();
+            loadMenuItems();
+        });
+
+        // Categories Management Functions
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const grid = document.getElementById('categoriesGrid');
+                    grid.innerHTML = '';
+                    
+                    categories.forEach(category => {
+                        const categoryCard = document.createElement('div');
+                        categoryCard.className = 'col-md-3 mb-3';
+                        const categoryImageHtml = category.image_url ? 
+                            `<img src="${category.image_url}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="${category.name}">` : 
+                            `<div class="card-img-top d-flex align-items-center justify-content-center" style="height: 120px; background: linear-gradient(45deg, #f0f2f5, #e4e7ea);">
+                                <div style="font-size: 3rem;">${category.icon}</div>
+                            </div>`;
+                        
+                        categoryCard.innerHTML = `
+                            <div class="card h-100">
+                                ${categoryImageHtml}
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">${category.name}</h5>
+                                    <p class="card-text">${category.description}</p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(categoryCard);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        function addCategory() {
+            // Create modal HTML for adding category
+            const modalHtml = `
+                <div class="modal fade" id="addCategoryModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Category</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addCategoryForm">
+                                    <div class="mb-3">
+                                        <label for="categoryName" class="form-label">Category Name</label>
+                                        <input type="text" class="form-control" id="categoryName" required placeholder="e.g., Pizza, Desserts, Salads">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryDescription" class="form-label">Description</label>
+                                        <textarea class="form-control" id="categoryDescription" rows="2" placeholder="Brief description of this category"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryIcon" class="form-label">Emoji Icon</label>
+                                        <input type="text" class="form-control" id="categoryIcon" value="🍽️" placeholder="🍕 🍰 🥤 🥗">
+                                        <div class="form-text">Enter an emoji that represents this category</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="categoryImage" class="form-label">Upload Category Image</label>
+                                        <input type="file" class="form-control" id="categoryImage" accept="image/*">
+                                        <div class="form-text">Optional: Upload an image for this category (JPG, PNG, GIF, WebP)</div>
+                                    </div>
+                                    <div class="mb-3" id="categoryImagePreview" style="display: none;">
+                                        <label class="form-label">Image Preview</label>
+                                        <img id="categoryPreviewImg" src="" alt="Preview" class="img-fluid" style="max-height: 150px;">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="saveCategory()">Save Category</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addCategoryModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to page
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Setup image preview for category
+            const imageInput = document.getElementById('categoryImage');
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('categoryPreviewImg').src = e.target.result;
+                        document.getElementById('categoryImagePreview').style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+            modal.show();
+        }
+
+        function saveCategory() {
+            const name = document.getElementById('categoryName').value;
+            const description = document.getElementById('categoryDescription').value;
+            const icon = document.getElementById('categoryIcon').value || '🍽️';
+            const imageFile = document.getElementById('categoryImage').files[0];
+            
+            if (!name) {
+                alert('Please enter a category name.');
+                return;
+            }
+            
+            // If image is selected, upload it first
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                
+                fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.image_url) {
+                        createCategoryWithData(name, description, icon, data.image_url);
+                    } else {
+                        throw new Error(data.error || 'Failed to upload image');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading category image:', error);
+                    alert('Error uploading image: ' + error.message);
+                });
+            } else {
+                // Create category without image
+                createCategoryWithData(name, description, icon, null);
+            }
+        }
+
+        function createCategoryWithData(name, description, icon, imageUrl) {
+            const categoryData = {
+                name: name,
+                description: description,
+                icon: icon
+            };
+            
+            if (imageUrl) {
+                categoryData.image_url = imageUrl;
+            }
+            
+            fetch('/api/categories', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(categoryData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Category "' + name + '" added successfully!');
+                    loadCategories();
+                    bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+                } else {
+                    alert('Failed to add category: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding category:', error);
+                alert('Error adding category: ' + error.message);
+            });
+        }
+
+        function editCategory(categoryId) {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const category = categories.find(c => c.id === categoryId);
+                    if (category) {
+                        alert('Edit category: ' + category.name);
+                        // Add edit modal here
+                    }
+                })
+                .catch(error => console.error('Error loading category:', error));
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Are you sure you want to delete this category?')) {
+                fetch(`/api/categories/${categoryId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Category deleted successfully!');
+                            loadCategories();
+                        } else {
+                            alert('Failed to delete category: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting category:', error);
+                        alert('Error deleting category: ' + error.message);
+                    });
+            }
+        }
+
+        function showClearOrdersModal() {
+            alert('Clear Orders feature - To be implemented');
+        }
+
+        function openAddMenuModal() {
+            alert('Add Menu Item feature - To be implemented');
+        }
+
+        function loadMenuItems() {
+            // Load menu items from API
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(items => {
+                    const grid = document.getElementById('menuItemsGrid');
+                    grid.innerHTML = '';
+                    
+                    items.forEach(item => {
+                        const itemCard = document.createElement('div');
+                        itemCard.className = 'col-md-4 mb-3';
+                        itemCard.innerHTML = `
+                            <div class="card h-100">
+                                <img src="${item.image_url || '/static/images/placeholder.jpg'}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="${item.name}">
+                                <div class="card-body">
+                                    <h5 class="card-title">${item.name}</h5>
+                                    <p class="card-text">${item.description}</p>
+                                    <p class="card-text"><strong>ETB ${item.price}</strong></p>
+                                    <div class="btn-group w-100" role="group">
+                                        <button class="btn btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(itemCard);
+                    });
+                    
+                    document.getElementById('menuLoading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading menu items:', error);
+                    document.getElementById('menuLoading').style.display = 'none';
+                });
+        }
+
+        function editMenuItem(itemId) {
+            alert('Edit menu item: ' + itemId);
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Delete this menu item?')) {
+                fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            alert('Menu item deleted successfully!');
+                            loadMenuItems();
+                        } else {
+                            alert('Failed to delete menu item: ' + (data.error || 'Unknown error'));
+                        }
+                    });
+            }
+        }
+    </script>
+</body>
+</html>

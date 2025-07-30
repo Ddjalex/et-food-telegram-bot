@@ -1,0 +1,3550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .nav-link {
+            color: white !important;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4><i class="fas fa-utensils"></i> ET-FOOD</h4>
+                        <small>Admin Panel</small>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard" data-tab="dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#orders" data-tab="orders">
+                                <i class="fas fa-shopping-cart"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#menu" data-tab="menu">
+                                <i class="fas fa-utensils"></i> Menu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#categories" data-tab="categories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#kitchen-staff" data-tab="kitchen-staff">
+                                <i class="fas fa-users"></i> Kitchen Staff
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#payment-verification" data-tab="payment-verification">
+                                <i class="fas fa-credit-card"></i> Payment Verification
+                                <span id="paymentVerificationCount" class="badge bg-warning ms-2" style="display: none;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#drivers" data-tab="drivers">
+                                <i class="fas fa-motorcycle"></i> Drivers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#nearby-drivers" data-tab="nearby-drivers">
+                                <i class="fas fa-map-marker-alt"></i> Nearby Drivers
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Admin Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="window.location.href='/change-password'">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h5>Total Customers</h5>
+                                    <h3 id="totalCustomers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-utensils fa-2x text-success mb-2"></i>
+                                    <h5>Menu Items</h5>
+                                    <h3 id="totalMenuItems">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle fa-2x text-info mb-2"></i>
+                                    <h5>Completed Orders</h5>
+                                    <h3 id="completedOrders">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-motorcycle fa-2x text-warning mb-2"></i>
+                                    <h5>Active Drivers</h5>
+                                    <h3 id="activeDrivers">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Tab -->
+                <div id="orders-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Orders Management</h3>
+                            <div class="d-flex gap-2">
+                                <select id="statusFilter" class="form-select">
+                                    <option value="">All Orders</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="preparing">Preparing</option>
+                                    <option value="out_for_delivery">Out for Delivery</option>
+                                    <option value="delivered">Delivered</option>
+                                </select>
+                                <button class="btn btn-danger dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Clear Orders">
+                                    <i class="fas fa-trash"></i> Clear Orders
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('day')">
+                                        <i class="fas fa-calendar-day"></i> Clear Today's Orders
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('week')">
+                                        <i class="fas fa-calendar-week"></i> Clear This Week
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('month')">
+                                        <i class="fas fa-calendar-alt"></i> Clear This Month
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="clearOrders('year')">
+                                        <i class="fas fa-calendar"></i> Clear This Year
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="clearOrders('all')">
+                                        <i class="fas fa-exclamation-triangle"></i> Clear All Orders
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody">
+                                    <!-- Orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Tab -->
+                <div id="menu-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Menu Management</h3>
+                            <button class="btn btn-primary" onclick="showAddMenuModal()">
+                                <i class="fas fa-plus"></i> Add Menu Item
+                            </button>
+                        </div>
+                        <div class="row" id="menuItemsGrid">
+                            <!-- Menu items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Tab -->
+                <div id="categories-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Categories Management</h3>
+                            <button class="btn btn-primary" onclick="addCategory()">
+                                <i class="fas fa-plus"></i> Add Category
+                            </button>
+                        </div>
+                        <div class="row" id="categoriesGrid">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kitchen Staff Tab -->
+                <div id="kitchen-staff-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Kitchen Staff Management</h3>
+                            <button class="btn btn-primary" onclick="showAddKitchenStaffModal()">
+                                <i class="fas fa-plus"></i> Add Kitchen Staff
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Username</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Created Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kitchenStaffTableBody">
+                                    <!-- Kitchen staff will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Verification Tab -->
+                <div id="payment-verification-tab" class="tab-content">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Payment Verification</h3>
+                            <div>
+                                <button class="btn btn-outline-info" onclick="loadPaymentVerificationOrders()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Phone</th>
+                                        <th>Amount (ETB)</th>
+                                        <th>Order Time</th>
+                                        <th>Payment Method</th>
+                                        <th>Screenshot</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentVerificationTableBody">
+                                    <!-- Payment verification orders will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noPaymentOrders" class="text-center p-4" style="display: none;">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5>No Orders Waiting for Payment Verification</h5>
+                            <p class="text-muted">All orders have been processed or there are no confirmed orders requiring payment verification.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drivers Tab -->
+                <div id="drivers-tab" class="tab-content">
+                    <!-- Live Driver Statistics Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h5>Total Drivers</h5>
+                                    <h3 id="totalDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                                    <h5>Online Drivers</h5>
+                                    <h3 id="onlineDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle fa-2x text-primary mb-2"></i>
+                                    <h5>Available Drivers</h5>
+                                    <h3 id="availableDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-map-marker-alt fa-2x text-info mb-2"></i>
+                                    <h5>Live Tracking</h5>
+                                    <h3 id="trackingDriversCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Location Map -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-map"></i> Live Driver Locations 
+                                        <span class="badge bg-success" id="mapOnlineStatus">LIVE</span>
+                                    </h5>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshDriverMap()">
+                                            <i class="fas fa-sync"></i> Refresh
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="toggleMapView()">
+                                            <i class="fas fa-satellite"></i> Satellite
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="driversMap" style="height: 400px; width: 100%;"></div>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">
+                                        <i class="fas fa-circle text-success"></i> Available
+                                        <i class="fas fa-circle text-warning ms-3"></i> Busy
+                                        <i class="fas fa-circle text-danger ms-3"></i> Location Outdated
+                                        <i class="fas fa-circle text-secondary ms-3"></i> Offline
+                                        | Last Update: <span id="mapLastUpdate">Never</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drivers Management Table -->
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h3>Drivers Management</h3>
+                            <div>
+                                <button class="btn btn-outline-info me-2" onclick="requestAllDriversLocation()">
+                                    <i class="fas fa-location-arrow"></i> Request All Locations
+                                </button>
+                                <button class="btn btn-primary" onclick="addDriver()">
+                                    <i class="fas fa-plus"></i> Add Driver
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Live Location</th>
+                                        <th>Last Update</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driversTableBody">
+                                    <!-- Drivers will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nearby Drivers Tab -->
+                <div id="nearby-drivers-tab" class="tab-content">
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-map-marker-alt"></i> Nearby Drivers Tracking</h5>
+                                    <p class="text-muted mb-0">Track drivers within 10km radius of your restaurant</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-map-marker-alt fa-2x text-primary mb-2"></i>
+                                                    <h5>Total Nearby</h5>
+                                                    <h3 id="nearbyDriversCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                                    <h5>Available</h5>
+                                                    <h3 id="nearbyAvailableCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                                    <h5>Busy</h5>
+                                                    <h3 id="nearbyBusyCount">0</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <i class="fas fa-sync-alt fa-2x text-info mb-2"></i>
+                                                    <h5>Last Updated</h5>
+                                                    <h6 id="nearbyLastUpdate">Never</h6>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6>Nearby Drivers List</h6>
+                                        <button class="btn btn-primary btn-sm" onclick="loadNearbyDrivers()">
+                                            <i class="fas fa-sync"></i> Refresh
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Driver Name</th>
+                                                    <th>Vehicle</th>
+                                                    <th>Phone</th>
+                                                    <th>Distance</th>
+                                                    <th>Status</th>
+                                                    <th>Last Update</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="nearbyDriversTableBody">
+                                                <!-- Nearby drivers will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div id="noNearbyDrivers" class="text-center p-4" style="display: none;">
+                                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                        <h5>No Nearby Drivers Found</h5>
+                                        <p class="text-muted">No drivers with recent location updates found within 10km radius.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.js"></script>
+    <!-- Leaflet CSS and JS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <script src="/static/js/admin-enhanced.js"></script>
+    <script src="/static/js/live-tracking.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('[data-tab]').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Show target tab
+                document.getElementById(targetTab + '-tab').classList.add('active');
+                
+                // Update nav links
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // Load tab content
+                loadTabContent(targetTab);
+            });
+        });
+
+        function loadTabContent(tab) {
+            switch(tab) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'orders':
+                    loadOrdersTab();
+                    break;
+                case 'menu':
+                    loadMenuItems();
+                    break;
+                case 'categories':
+                    loadCategories();
+                    break;
+                case 'payment-verification':
+                    loadPaymentVerificationOrders();
+                    break;
+                case 'drivers':
+                    initializeLiveTracking();
+                    break;
+                case 'nearby-drivers':
+                    loadNearbyDrivers();
+                    break;
+            }
+        }
+
+        // Load orders tab
+        function loadOrdersTab() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    data.orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td>${order.items.length} items</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="updateOrderStatus(${order.id}, 'confirmed')" 
+                                            ${order.status !== 'pending' ? 'disabled' : ''}>
+                                        Confirm
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus(${order.id}, 'preparing')" 
+                                            ${order.status !== 'confirmed' ? 'disabled' : ''}>
+                                        Preparing
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')" 
+                                            ${order.status !== 'preparing' ? 'disabled' : ''}>
+                                        Out for Delivery
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="updateOrderStatus(${order.id}, 'delivered')" 
+                                            ${order.status !== 'out_for_delivery' ? 'disabled' : ''}>
+                                        Delivered
+                                    </button>
+                                </div>
+                                <div class="mt-2">
+                                    ${order.driver_id ? 
+                                        `<div class="d-flex gap-2">
+                                            <small class="text-success">Driver: ${order.driver_name || 'Assigned'}</small>
+                                            ${order.status === 'out_for_delivery' ? 
+                                                `<button class="btn btn-sm btn-info" onclick="trackDriver(${order.id})">
+                                                    <i class="fas fa-map-marker-alt"></i> Track Driver
+                                                </button>` : ''
+                                            }
+                                        </div>` : 
+                                        `<button class="btn btn-sm btn-secondary" onclick="assignDriver(${order.id})">
+                                            <i class="fas fa-motorcycle"></i> Assign Driver
+                                        </button>`
+                                    }
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'confirmed': return 'info';
+                case 'preparing': return 'primary';
+                case 'out_for_delivery': return 'dark';
+                case 'delivered': return 'success';
+                default: return 'secondary';
+            }
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadOrdersTab();
+                    alert(`Order #${orderId} updated to ${newStatus}`);
+                } else {
+                    alert('Error updating order status');
+                }
+            })
+            .catch(error => console.error('Error updating order status:', error));
+        }
+
+        async function assignDriver(orderId) {
+            try {
+                // Get available drivers
+                const response = await fetch('/api/admin/drivers');
+                const drivers = await response.json();
+                
+                const availableDrivers = drivers.filter(driver => 
+                    driver.is_active && driver.is_available && driver.is_approved
+                );
+                
+                if (availableDrivers.length === 0) {
+                    alert('No available drivers found. Please ensure drivers are active and available.');
+                    return;
+                }
+                
+                // Create driver selection modal
+                const modalHtml = `
+                    <div class="modal fade" id="driverAssignModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Assign Driver to Order #${orderId}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Driver:</label>
+                                        <select class="form-select" id="driverSelect">
+                                            <option value="">-- Select Driver --</option>
+                                            ${availableDrivers.map(driver => `
+                                                <option value="${driver.id}">
+                                                    ${driver.name} (${driver.vehicle_type}) - ${driver.phone_number}
+                                                </option>
+                                            `).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <strong>Automatic Assignment:</strong> You can also use "Find Nearby Drivers" to automatically assign based on location.
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-warning" onclick="findNearbyDrivers(${orderId})">
+                                        <i class="fas fa-search"></i> Find Nearby Drivers
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmDriverAssignment(${orderId})">
+                                        <i class="fas fa-check"></i> Assign Driver
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('driverAssignModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('driverAssignModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error loading drivers:', error);
+                alert('Error loading available drivers');
+            }
+        }
+
+        function confirmDriverAssignment(orderId) {
+            const driverId = document.getElementById('driverSelect').value;
+            
+            if (!driverId) {
+                alert('Please select a driver');
+                return;
+            }
+            
+            fetch(`/api/orders/${orderId}/assign-driver`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({driver_id: parseInt(driverId)})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('driverAssignModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrdersTab();
+                    
+                    alert(`Driver successfully assigned to Order #${orderId}`);
+                } else {
+                    alert(`Error assigning driver: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error assigning driver:', error);
+                alert('Error assigning driver');
+            });
+        }
+
+        function findNearbyDrivers(orderId) {
+            fetch(`/api/orders/${orderId}/find-nearby-drivers`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('driverAssignModal'));
+                    modal.hide();
+                    
+                    // Reload orders
+                    loadOrdersTab();
+                    
+                    alert(`${data.message}. Drivers have been notified!`);
+                } else {
+                    alert(`Error finding nearby drivers: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error finding nearby drivers:', error);
+                alert('Error finding nearby drivers');
+            });
+        }
+
+        // Load menu items
+        function loadMenuItems() {
+            fetch('/api/menu')
+                .then(response => response.json())
+                .then(items => {
+                    const grid = document.getElementById('menuItemsGrid');
+                    grid.innerHTML = '';
+
+                    items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'col-md-4 mb-3';
+                        card.innerHTML = `
+                            <div class="card">
+                                <img src="${item.image_url}" class="card-img-top" alt="${item.name}" style="height: 200px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h5 class="card-title">${item.name}</h5>
+                                    <p class="card-text">${item.description}</p>
+                                    <p class="card-text"><strong>ETB ${item.price.toFixed(2)}</strong></p>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge ${item.available ? 'bg-success' : 'bg-danger'}">
+                                            ${item.available ? 'Available' : 'Unavailable'}
+                                        </span>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem(${item.id})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem(${item.id})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => console.error('Error loading menu items:', error));
+        }
+
+        // Load orders
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orders = data.orders || [];
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (orders.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    No orders found
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+                    
+                    orders.forEach(order => {
+                        const row = document.createElement('tr');
+                        const statusBadge = getStatusBadge(order.status);
+                        
+                        // Parse items from JSON string if needed
+                        let items = [];
+                        try {
+                            items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        } catch (e) {
+                            console.error('Error parsing items for order', order.id, e);
+                            items = [];
+                        }
+                        
+                        const itemsList = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                        const truncatedItems = itemsList.length > 50 ? itemsList.substring(0, 50) + '...' : itemsList;
+                        
+                        row.innerHTML = `
+                            <td>#${order.id}</td>
+                            <td>${order.customer_name}</td>
+                            <td title="${itemsList}">${truncatedItems}</td>
+                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>${statusBadge}</td>
+                            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails(${order.id})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="manuallyAssignDriver(${order.id})" title="Assign Driver">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Update Status">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'pending')">
+                                            <i class="fas fa-clock text-warning me-2"></i>Pending
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'confirmed')">
+                                            <i class="fas fa-check text-success me-2"></i>Confirmed
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'preparing')">
+                                            <i class="fas fa-fire text-info me-2"></i>Preparing
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'out_for_delivery')">
+                                            <i class="fas fa-truck text-primary me-2"></i>Out for Delivery
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateOrderStatus(${order.id}, 'delivered')">
+                                            <i class="fas fa-check-circle text-success me-2"></i>Delivered
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus(${order.id}, 'cancelled')">
+                                            <i class="fas fa-times text-danger me-2"></i>Cancel
+                                        </a></li>
+                                    </ul>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${order.id})" title="Delete Order">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        }
+
+        // Helper function to get status badge
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-warning">Pending</span>',
+                'confirmed': '<span class="badge bg-success">Confirmed</span>',
+                'preparing': '<span class="badge bg-info">Preparing</span>',
+                'out_for_delivery': '<span class="badge bg-primary">Out for Delivery</span>',
+                'delivered': '<span class="badge bg-success">Delivered</span>',
+                'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+        }
+
+        // Load categories
+        function loadCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const grid = document.getElementById('categoriesGrid');
+                    grid.innerHTML = '';
+                    
+                    categories.forEach(category => {
+                        const categoryCard = document.createElement('div');
+                        categoryCard.className = 'col-md-3 mb-3';
+                        categoryCard.innerHTML = `
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div style="font-size: 2rem;">${category.icon}</div>
+                                    <h5 class="card-title">${category.name}</h5>
+                                    <p class="card-text">${category.description}</p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editCategory(${category.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory(${category.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(categoryCard);
+                    });
+                })
+                .catch(error => console.error('Error loading categories:', error));
+        }
+
+        // Enhanced payment verification orders loading
+        function loadPaymentVerificationOrders() {
+            fetch('/api/admin/payment-verification-enhanced')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('paymentVerificationTableBody');
+                    const noOrdersDiv = document.getElementById('noPaymentOrders');
+                    const badge = document.getElementById('paymentVerificationCount');
+                    
+                    if (data.success && data.orders && data.orders.length > 0) {
+                        tbody.innerHTML = '';
+                        noOrdersDiv.style.display = 'none';
+                        tbody.parentElement.parentElement.style.display = 'block';
+                        
+                        // Update badge count with pending verification count
+                        const pendingCount = data.statistics.total_pending;
+                        if (badge) {
+                            badge.textContent = pendingCount;
+                            badge.style.display = pendingCount > 0 ? 'inline' : 'none';
+                        }
+                        
+                        // Enhanced order display with better status indicators
+                        data.orders.forEach(order => {
+                            const row = document.createElement('tr');
+                            const statusClass = order.needs_verification ? 'table-warning' : 'table-light';
+                            const urgencyClass = order.time_since_order.includes('hour') ? 'text-danger fw-bold' : '';
+                            
+                            row.className = statusClass;
+                            row.innerHTML = `
+                                <td>
+                                    <strong>#${order.id}</strong>
+                                    ${order.needs_verification ? '<span class="badge bg-warning ms-1">Pending</span>' : '<span class="badge bg-success ms-1">Verified</span>'}
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>${order.customer_name}</strong>
+                                        <br><small class="text-muted">${order.customer_phone || 'N/A'}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>ETB ${parseFloat(order.total_amount).toFixed(2)}</strong>
+                                        <br><small class="text-muted">${order.items_count} items</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        ${new Date(order.created_at).toLocaleDateString()}
+                                        <br><small class="${urgencyClass}">${order.time_since_order}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge ${order.payment_method === 'Manual Verification Required' ? 'bg-warning' : 'bg-info'}">
+                                        ${order.payment_method || 'Not specified'}
+                                    </span>
+                                    ${order.transaction_id && order.transaction_id !== 'N/A' ? 
+                                        `<br><small class="text-muted">ID: ${order.transaction_id}</small>` : ''}
+                                </td>
+                                <td>
+                                    ${order.has_screenshot ? 
+                                        `<button class="btn btn-sm btn-outline-primary" onclick="viewPaymentScreenshot('${order.transaction_image_url}')">
+                                            <i class="fas fa-image"></i> View Receipt
+                                        </button>` : 
+                                        '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> No receipt image</span>'
+                                    }
+                                </td>
+                                <td>
+                                    ${order.needs_verification ? 
+                                        `<div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-success" onclick="verifyPaymentEnhanced(${order.id})" title="Verify Payment">
+                                                <i class="fas fa-check"></i> Verify
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="rejectPaymentEnhanced(${order.id})" title="Reject Payment">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>` :
+                                        `<span class="text-success">
+                                            <i class="fas fa-check-circle"></i> Already verified
+                                            <br><small class="text-muted">${new Date(order.payment_verified_at).toLocaleDateString()}</small>
+                                        </span>`
+                                    }
+                                </td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        
+                        // Show statistics summary
+                        updatePaymentVerificationStats(data.statistics);
+                        
+                    } else {
+                        tbody.innerHTML = '';
+                        tbody.parentElement.parentElement.style.display = 'none';
+                        noOrdersDiv.style.display = 'block';
+                        
+                        // Hide badge
+                        if (badge) badge.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading enhanced payment verification orders:', error);
+                    alert('Error loading payment verification orders. Please try again.');
+                });
+        }
+        
+        // Update payment verification statistics display
+        function updatePaymentVerificationStats(stats) {
+            // Create or update stats display
+            let statsDiv = document.getElementById('paymentVerificationStats');
+            if (!statsDiv) {
+                statsDiv = document.createElement('div');
+                statsDiv.id = 'paymentVerificationStats';
+                statsDiv.className = 'row mb-3';
+                document.querySelector('#payment-verification-tab .table-container').prepend(statsDiv);
+            }
+            
+            statsDiv.innerHTML = `
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-clock"></i> Pending</h5>
+                            <h3>${stats.total_pending}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-image"></i> With Receipt</h5>
+                            <h3>${stats.with_screenshots}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-hand-paper"></i> Manual</h5>
+                            <h3>${stats.manual_verification}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5><i class="fas fa-sync"></i> Last Updated</h5>
+                            <h6>${new Date(stats.last_updated).toLocaleTimeString()}</h6>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // View payment screenshot
+        function viewPaymentScreenshot(imageUrl) {
+            const modalHtml = `
+                <div class="modal fade" id="paymentScreenshotModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Payment Screenshot</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                <img src="${imageUrl}" alt="Payment Screenshot" class="img-fluid" style="max-height: 500px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('paymentScreenshotModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('paymentScreenshotModal'));
+            modal.show();
+        }
+
+        // Enhanced payment verification with detailed modal
+        function verifyPaymentEnhanced(orderId) {
+            // Show verification modal with options
+            const modalHtml = `
+                <div class="modal fade" id="verifyPaymentModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-check-circle"></i> Verify Payment - Order #${orderId}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> 
+                                    <strong>Verification Action:</strong> This will confirm the payment and automatically:
+                                    <ul class="mt-2 mb-0">
+                                        <li>Change order status to "Confirmed"</li>
+                                        <li>Notify kitchen staff to start preparation</li>
+                                        <li>Send confirmation to customer</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Verification Method</label>
+                                    <select class="form-select" id="verificationMethod">
+                                        <option value="manual">Manual Verification</option>
+                                        <option value="receipt_review">Receipt Review</option>
+                                        <option value="bank_confirmation">Bank Confirmation</option>
+                                        <option value="cash_delivery">Cash on Delivery</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Verification Notes (Optional)</label>
+                                    <textarea class="form-control" id="verificationNotes" rows="3" 
+                                              placeholder="Add any notes about the payment verification..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-success" onclick="submitPaymentVerification(${orderId})">
+                                    <i class="fas fa-check"></i> Verify Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('verifyPaymentModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('verifyPaymentModal'));
+            modal.show();
+        }
+        
+        // Submit payment verification
+        function submitPaymentVerification(orderId) {
+            const method = document.getElementById('verificationMethod').value;
+            const notes = document.getElementById('verificationNotes').value.trim();
+            
+            fetch(`/api/admin/verify-payment-enhanced/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    method: method,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('verifyPaymentModal'));
+                    modal.hide();
+                    
+                    // Show success message with details
+                    alert(`✅ Payment verified successfully!\n\n` +
+                          `Order #${orderId} confirmed using ${method}\n` +
+                          `Notifications sent to: ${data.notifications_sent.join(', ')}\n\n` +
+                          `Kitchen staff and customer have been notified.`);
+                    
+                    // Reload verification orders and dashboard
+                    loadPaymentVerificationOrders();
+                    if (typeof loadDashboardStats === 'function') {
+                        loadDashboardStats();
+                    }
+                } else {
+                    alert('Error verifying payment: ' + (data ? (data.error || 'Unknown error') : 'Network error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error verifying payment:', error);
+                alert('Error verifying payment: ' + error.message);
+            });
+        }
+
+        // Enhanced payment rejection with detailed modal
+        function rejectPaymentEnhanced(orderId) {
+            // Show rejection modal with predefined reasons
+            const modalHtml = `
+                <div class="modal fade" id="rejectPaymentModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-times-circle"></i> Reject Payment - Order #${orderId}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    <strong>Warning:</strong> This will cancel the order and notify the customer.
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Rejection Reason *</label>
+                                    <select class="form-select" id="rejectionReason" onchange="toggleCustomReason()">
+                                        <option value="">Select reason for rejection</option>
+                                        <option value="invalid_payment_screenshot">Invalid payment screenshot</option>
+                                        <option value="insufficient_payment_amount">Insufficient payment amount</option>
+                                        <option value="payment_not_received">Payment not received in account</option>
+                                        <option value="duplicate_transaction">Duplicate transaction</option>
+                                        <option value="suspicious_transaction">Suspicious transaction</option>
+                                        <option value="bank_transfer_failed">Bank transfer failed</option>
+                                        <option value="custom">Other (specify below)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3" id="customReasonDiv" style="display: none;">
+                                    <label class="form-label fw-bold">Custom Reason</label>
+                                    <input type="text" class="form-control" id="customReason" 
+                                           placeholder="Enter custom rejection reason...">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Additional Notes (Optional)</label>
+                                    <textarea class="form-control" id="rejectionNotes" rows="3" 
+                                              placeholder="Add any additional notes for the customer or internal records..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" onclick="submitPaymentRejection(${orderId})">
+                                    <i class="fas fa-times"></i> Reject Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if present
+            const existingModal = document.getElementById('rejectPaymentModal');
+            if (existingModal) existingModal.remove();
+            
+            // Add and show modal
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('rejectPaymentModal'));
+            modal.show();
+        }
+        
+        // Toggle custom reason input
+        function toggleCustomReason() {
+            const reasonSelect = document.getElementById('rejectionReason');
+            const customDiv = document.getElementById('customReasonDiv');
+            
+            if (reasonSelect.value === 'custom') {
+                customDiv.style.display = 'block';
+            } else {
+                customDiv.style.display = 'none';
+            }
+        }
+        
+        // Submit payment rejection
+        function submitPaymentRejection(orderId) {
+            const reasonSelect = document.getElementById('rejectionReason');
+            const customReason = document.getElementById('customReason');
+            const notes = document.getElementById('rejectionNotes').value.trim();
+            
+            let reason = reasonSelect.value;
+            if (reason === 'custom') {
+                reason = customReason.value.trim();
+            }
+            
+            if (!reason) {
+                alert('Please select or enter a rejection reason.');
+                return;
+            }
+            
+            fetch(`/api/admin/reject-payment-enhanced/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    reason: reason,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('rejectPaymentModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    alert(`❌ Payment rejected successfully!\n\n` +
+                          `Order #${orderId} has been cancelled.\n` +
+                          `Reason: ${reason}\n\n` +
+                          `Customer has been notified.`);
+                    
+                    // Reload verification orders and dashboard
+                    loadPaymentVerificationOrders();
+                    if (typeof loadDashboardStats === 'function') {
+                        loadDashboardStats();
+                    }
+                } else {
+                    alert('Error rejecting payment: ' + (data ? (data.error || 'Unknown error') : 'Network error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error rejecting payment:', error);
+                alert('Error rejecting payment: ' + error.message);
+            });
+        }
+
+        // Global variables for map
+        let driversMap = null;
+        let driverMarkers = {};
+        let mapSatelliteView = false;
+        let driversUpdateInterval = null;
+
+        // Load drivers with live location tracking
+        function loadDrivers() {
+            Promise.all([
+                fetch('/api/admin/drivers').then(r => r.json()),
+                fetch('/api/drivers/live-locations').then(r => r.json())
+            ])
+            .then(([driversData, liveData]) => {
+                // Update statistics
+                updateDriverStatistics(liveData);
+                
+                // Update drivers table
+                updateDriversTable(driversData);
+                
+                // Initialize or update map
+                initializeDriversMap(liveData.drivers);
+                
+                // Update last refresh time
+                document.getElementById('mapLastUpdate').textContent = new Date().toLocaleTimeString();
+            })
+            .catch(error => {
+                console.error('Error loading drivers:', error);
+                document.getElementById('mapOnlineStatus').textContent = 'ERROR';
+                document.getElementById('mapOnlineStatus').className = 'badge bg-danger';
+            });
+        }
+
+        function updateDriverStatistics(liveData) {
+            document.getElementById('totalDriversCount').textContent = liveData.total_drivers || 0;
+            document.getElementById('availableDriversCount').textContent = liveData.active_drivers || 0;
+            
+            const busyCount = liveData.drivers ? liveData.drivers.filter(d => d.status === 'Busy').length : 0;
+            const trackingCount = liveData.drivers ? liveData.drivers.filter(d => d.location_active).length : 0;
+            
+            document.getElementById('busyDriversCount').textContent = busyCount;
+            document.getElementById('trackingDriversCount').textContent = trackingCount;
+        }
+
+        function updateDriversTable(drivers) {
+            const tbody = document.getElementById('driversTableBody');
+            tbody.innerHTML = '';
+            
+            drivers.forEach(driver => {
+                const row = document.createElement('tr');
+                const approvalBadge = driver.approval_status === 'approved' ? 
+                    '<span class="badge bg-success">Approved</span>' :
+                    driver.approval_status === 'rejected' ? 
+                    '<span class="badge bg-danger">Rejected</span>' :
+                    '<span class="badge bg-warning">Pending</span>';
+
+                const hasLocation = driver.current_lat && driver.current_lng;
+                const locationButton = hasLocation ? 
+                    `<button class="btn btn-sm btn-outline-success" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')" title="View on Map">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>` :
+                    `<button class="btn btn-sm btn-outline-secondary" onclick="requestDriverLocation(${driver.id})" title="Request Location">
+                        <i class="fas fa-location-arrow"></i>
+                    </button>`;
+                
+                // Get real-time location status badge
+                const getLocationStatusBadge = (driver) => {
+                    if (!driver.location_status) return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                    
+                    switch(driver.location_status) {
+                        case 'live':
+                            return `<span class="badge bg-success"><i class="fas fa-circle"></i> Live Location</span>`;
+                        case 'active':
+                            return `<span class="badge bg-info"><i class="fas fa-map-marker-alt"></i> Active Location</span>`;
+                        case 'recent':
+                            return `<span class="badge bg-warning"><i class="fas fa-clock"></i> Recent Location</span>`;
+                        case 'inactive':
+                            return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                        default:
+                            return `<span class="badge bg-secondary"><i class="fas fa-map-marker-slash"></i> No Location</span>`;
+                    }
+                };
+                    
+                row.innerHTML = `
+                    <td>${driver.name}</td>
+                    <td>${driver.phone_number}</td>
+                    <td><span class="badge bg-secondary">${driver.vehicle_type}</span></td>
+                    <td>${approvalBadge}</td>
+                    <td>
+                        ${getLocationStatusBadge(driver)}
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            ${driver.last_update_text || 'Never'}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            ${driver.approval_status === 'pending' ? `
+                                <button class="btn btn-sm btn-outline-success" onclick="approveDriver(${driver.id})" title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="rejectDriver(${driver.id})" title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            ` : ''}
+                            ${locationButton}
+                            <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})" title="View Documents">
+                                <i class="fas fa-file-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})" title="Delete Driver">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function initializeDriversMap(driversData) {
+            // Initialize map only once
+            if (!driversMap) {
+                driversMap = L.map('driversMap').setView([9.0300, 38.7400], 12); // Addis Ababa center
+
+                // Add tile layers (default and satellite)
+                const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                });
+                
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri, Maxar, Earthstar Geographics'
+                });
+
+                streetLayer.addTo(driversMap);
+                driversMap.streetLayer = streetLayer;
+                driversMap.satelliteLayer = satelliteLayer;
+            }
+
+            // Clear existing markers
+            Object.values(driverMarkers).forEach(marker => {
+                driversMap.removeLayer(marker);
+            });
+            driverMarkers = {};
+
+            // Add driver markers
+            driversData.forEach(driver => {
+                if (driver.current_lat && driver.current_lng) {
+                    const marker = L.marker([driver.current_lat, driver.current_lng])
+                        .addTo(driversMap);
+
+                    // Customize marker based on status
+                    const icon = createDriverIcon(driver.status, driver.status_color);
+                    marker.setIcon(icon);
+
+                    // Add popup with driver information
+                    const popupContent = `
+                        <div class="text-center">
+                            <h6>${driver.name}</h6>
+                            <p class="mb-1">
+                                <span class="badge" style="background-color: ${driver.status_color}">
+                                    ${driver.status}
+                                </span>
+                            </p>
+                            <p class="mb-1"><i class="fas fa-phone"></i> ${driver.phone_number}</p>
+                            <p class="mb-1"><i class="fas fa-motorcycle"></i> ${driver.vehicle_type}</p>
+                            <small class="text-muted">
+                                Last Update: ${driver.last_update_text || 'Never'}
+                            </small>
+                            <br>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="requestDriverLocation(${driver.id})">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                                <a href="https://maps.google.com/?q=${driver.current_lat},${driver.current_lng}" 
+                                   target="_blank" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-external-link-alt"></i> Maps
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    driverMarkers[driver.id] = marker;
+                }
+            });
+
+            // Fit map to show all drivers
+            if (Object.keys(driverMarkers).length > 0) {
+                const group = new L.featureGroup(Object.values(driverMarkers));
+                driversMap.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function createDriverIcon(status, statusColor) {
+            const iconHtml = `
+                <div style="
+                    background-color: ${statusColor};
+                    width: 25px;
+                    height: 25px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 12px;
+                ">
+                    <i class="fas fa-motorcycle"></i>
+                </div>
+            `;
+
+            return L.divIcon({
+                html: iconHtml,
+                className: 'custom-driver-marker',
+                iconSize: [25, 25],
+                iconAnchor: [12, 12]
+            });
+        }
+
+        // Map control functions
+        function refreshDriverMap() {
+            loadDrivers();
+        }
+
+        function toggleMapView() {
+            if (driversMap) {
+                if (mapSatelliteView) {
+                    driversMap.removeLayer(driversMap.satelliteLayer);
+                    driversMap.addLayer(driversMap.streetLayer);
+                    mapSatelliteView = false;
+                } else {
+                    driversMap.removeLayer(driversMap.streetLayer);
+                    driversMap.addLayer(driversMap.satelliteLayer);
+                    mapSatelliteView = true;
+                }
+            }
+        }
+
+        function viewDriverLocation(lat, lng, driverName) {
+            if (driversMap) {
+                driversMap.setView([lat, lng], 16);
+                // Find and open the driver's popup
+                Object.values(driverMarkers).forEach(marker => {
+                    if (marker.getLatLng().lat === lat && marker.getLatLng().lng === lng) {
+                        marker.openPopup();
+                    }
+                });
+            }
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    // Refresh data after a short delay
+                    setTimeout(() => {
+                        loadDrivers();
+                    }, 2000);
+                } else {
+                    alert('Error requesting location: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting driver location:', error);
+                alert('Error requesting driver location');
+            });
+        }
+
+        function requestAllDriversLocation() {
+            if (confirm('Request location from all active drivers?')) {
+                fetch('/api/drivers')
+                    .then(response => response.json())
+                    .then(drivers => {
+                        const activeDrivers = drivers.filter(d => d.is_active && d.telegram_user_id);
+                        
+                        if (activeDrivers.length === 0) {
+                            alert('No active drivers with Telegram accounts found');
+                            return;
+                        }
+
+                        let requestCount = 0;
+                        activeDrivers.forEach(driver => {
+                            fetch(`/api/drivers/${driver.id}/request-location`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'}
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) requestCount++;
+                                
+                                // Show result when all requests are done
+                                if (requestCount === activeDrivers.length) {
+                                    alert(`Location requests sent to ${requestCount} drivers`);
+                                    setTimeout(() => loadDrivers(), 3000);
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading drivers:', error);
+                        alert('Error loading drivers list');
+                    });
+            }
+        }
+
+        // Auto-refresh drivers data every 30 seconds when on drivers tab
+        function startDriversAutoRefresh() {
+            if (driversUpdateInterval) {
+                clearInterval(driversUpdateInterval);
+            }
+            driversUpdateInterval = setInterval(() => {
+                if (document.getElementById('drivers-tab').classList.contains('active')) {
+                    refreshDriverMap();
+                }
+                if (document.getElementById('nearby-drivers-tab').classList.contains('active')) {
+                    loadNearbyDrivers();
+                }
+            }, 30000); // 30 seconds
+        }
+
+        // Load nearby drivers for restaurant admin
+        function loadNearbyDrivers() {
+            fetch('/api/admin/drivers/nearby')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateNearbyDriversDisplay(data);
+                    } else {
+                        console.error('Error loading nearby drivers:', data.error);
+                        showNoNearbyDriversMessage();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading nearby drivers:', error);
+                    showNoNearbyDriversMessage();
+                });
+        }
+
+        function updateNearbyDriversDisplay(data) {
+            // Update statistics
+            document.getElementById('nearbyDriversCount').textContent = data.total_nearby;
+            document.getElementById('nearbyAvailableCount').textContent = data.available_drivers;
+            document.getElementById('nearbyBusyCount').textContent = data.total_nearby - data.available_drivers;
+            document.getElementById('nearbyLastUpdate').textContent = new Date().toLocaleTimeString();
+
+            const tableBody = document.getElementById('nearbyDriversTableBody');
+            const noDriversDiv = document.getElementById('noNearbyDrivers');
+
+            if (data.drivers.length === 0) {
+                tableBody.innerHTML = '';
+                noDriversDiv.style.display = 'block';
+                return;
+            }
+
+            noDriversDiv.style.display = 'none';
+            
+            tableBody.innerHTML = data.drivers.map(driver => `
+                <tr>
+                    <td>
+                        <strong>${driver.name}</strong>
+                        <br>
+                        <small class="text-muted">ID: ${driver.id}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">${driver.vehicle_type}</span>
+                    </td>
+                    <td>
+                        <a href="tel:${driver.phone_number}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-phone"></i> ${driver.phone_number}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">${driver.distance} km</span>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: ${driver.status_color}">
+                            ${driver.status}
+                        </span>
+                        <br>
+                        <small class="text-muted">${driver.time_since_update}min ago</small>
+                    </td>
+                    <td>
+                        <small>${driver.last_location_update}</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewDriverLocation(${driver.current_lat}, ${driver.current_lng}, '${driver.name}')">
+                            <i class="fas fa-map-marker-alt"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="requestDriverLocation(${driver.id})">
+                            <i class="fas fa-location-arrow"></i> Request
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showNoNearbyDriversMessage() {
+            document.getElementById('nearbyDriversCount').textContent = '0';
+            document.getElementById('nearbyAvailableCount').textContent = '0';
+            document.getElementById('nearbyBusyCount').textContent = '0';
+            document.getElementById('nearbyLastUpdate').textContent = 'Error';
+            document.getElementById('nearbyDriversTableBody').innerHTML = '';
+            document.getElementById('noNearbyDrivers').style.display = 'block';
+        }
+
+        function viewDriverLocation(lat, lng, driverName) {
+            // Open Google Maps in new tab
+            const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}&z=15&t=m`;
+            window.open(googleMapsUrl, '_blank');
+        }
+
+        function requestDriverLocation(driverId) {
+            fetch(`/api/drivers/${driverId}/request-location`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Location request sent to driver');
+                    // Refresh the nearby drivers list after a short delay
+                    setTimeout(() => loadNearbyDrivers(), 3000);
+                } else {
+                    alert('Error requesting location: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error requesting location:', error);
+                alert('Error requesting location');
+            });
+        }
+
+        function stopDriversAutoRefresh() {
+            if (driversUpdateInterval) {
+                clearInterval(driversUpdateInterval);
+                driversUpdateInterval = null;
+            }
+        }
+
+        // Driver management functions
+        function addDriver() {
+            // Create enhanced modal for adding driver
+            const modalHtml = `
+                <div class="modal fade" id="addDriverModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-user-plus"></i> Add Driver Employee
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addDriverForm">
+                                    <div class="mb-3">
+                                        <label for="driverName" class="form-label">Driver Name *</label>
+                                        <input type="text" class="form-control" id="driverName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverPhone" class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-control" id="driverPhone" 
+                                               placeholder="+251900000000" required>
+                                        <div class="form-text">Format: +251XXXXXXXXX</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverTelegram" class="form-label">Telegram User ID</label>
+                                        <input type="number" class="form-control" id="driverTelegram" 
+                                               placeholder="123456789">
+                                        <div class="form-text">Optional: For automatic notifications</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="driverVehicle" class="form-label">Vehicle Type *</label>
+                                        <select class="form-select" id="driverVehicle" required>
+                                            <option value="">Select Vehicle Type</option>
+                                            <option value="motorcycle">🏍️ Motorcycle</option>
+                                            <option value="car">🚗 Car</option>
+                                            <option value="bicycle">🚴 Bicycle</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoApprove" checked>
+                                            <label class="form-check-label" for="autoApprove">
+                                                Auto-approve driver (recommended for employees)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>Note:</strong> Driver will receive a welcome message if Telegram ID is provided.
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="submitDriverForm()">
+                                    <i class="fas fa-plus"></i> Add Driver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addDriverModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addDriverModal'));
+            modal.show();
+        }
+        
+        function submitDriverForm() {
+            const name = document.getElementById('driverName').value.trim();
+            const phone = document.getElementById('driverPhone').value.trim();
+            const telegram = document.getElementById('driverTelegram').value.trim();
+            const vehicle = document.getElementById('driverVehicle').value;
+            const autoApprove = document.getElementById('autoApprove').checked;
+            
+            // Validate required fields
+            if (!name || !phone || !vehicle) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Validate phone format
+            if (!phone.startsWith('+251') && !phone.startsWith('251')) {
+                alert('Phone number must start with +251 or 251');
+                return;
+            }
+            
+            // Prepare data
+            const driverData = {
+                name: name,
+                phone_number: phone,
+                vehicle_type: vehicle,
+                auto_approve: autoApprove
+            };
+            
+            // Add telegram ID if provided
+            if (telegram) {
+                driverData.telegram_user_id = parseInt(telegram);
+            }
+            
+            // Submit form
+            fetch('/api/drivers/add-employee', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(driverData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addDriverModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    alert(data.message + (data.auto_approved ? ' (Auto-approved)' : ' (Pending approval)'));
+                    
+                    // Reload drivers list
+                    loadDrivers();
+                } else {
+                    alert('Error adding driver: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error adding driver:', error);
+                alert('Error adding driver. Please try again.');
+            });
+        }
+
+        function approveDriver(driverId) {
+            if (confirm('Approve this driver application?')) {
+                fetch(`/api/drivers/${driverId}/approve`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({admin_id: 383870191})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        loadDrivers();
+                    } else {
+                        alert('Error approving driver: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error approving driver:', error);
+                    alert('Error approving driver');
+                });
+            }
+        }
+
+        function rejectDriver(driverId) {
+            const reason = prompt('Reason for rejection:', 'Application does not meet requirements');
+            if (reason) {
+                fetch(`/api/drivers/${driverId}/reject`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        reason: reason,
+                        admin_id: 383870191
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        loadDrivers();
+                    } else {
+                        alert('Error rejecting driver: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error rejecting driver:', error);
+                    alert('Error rejecting driver');
+                });
+            }
+        }
+
+        function viewDriverDocuments(driverId) {
+            fetch(`/api/drivers/${driverId}/documents`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const docs = data.documents;
+                        let documentsHtml = `
+                            <h6>Documents for ${docs.driver_name}</h6>
+                            <div class="row">
+                        `;
+                        
+                        // License documents
+                        if (docs.license_front || docs.license_back || docs.license_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-id-card fa-2x mb-2 text-primary"></i>
+                                            <h6>License</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.license_front ? `<a href="${docs.license_front}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">Front</a>` : ''}
+                                                ${docs.license_back ? `<a href="${docs.license_back}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">Back</a>` : ''}
+                                                ${docs.license_document ? `<a href="${docs.license_document}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // ID documents
+                        if (docs.id_front || docs.id_back || docs.id_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-address-card fa-2x mb-2 text-success"></i>
+                                            <h6>ID Document</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.id_front ? `<a href="${docs.id_front}" target="_blank" class="btn btn-sm btn-outline-success mb-1">Front</a>` : ''}
+                                                ${docs.id_back ? `<a href="${docs.id_back}" target="_blank" class="btn btn-sm btn-outline-success mb-1">Back</a>` : ''}
+                                                ${docs.id_document ? `<a href="${docs.id_document}" target="_blank" class="btn btn-sm btn-outline-success mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Vehicle documents
+                        if (docs.vehicle_registration || docs.vehicle_document) {
+                            documentsHtml += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-car fa-2x mb-2 text-warning"></i>
+                                            <h6>Vehicle Registration</h6>
+                                            <div class="btn-group-vertical w-100">
+                                                ${docs.vehicle_registration ? `<a href="${docs.vehicle_registration}" target="_blank" class="btn btn-sm btn-outline-warning mb-1">View</a>` : ''}
+                                                ${docs.vehicle_document ? `<a href="${docs.vehicle_document}" target="_blank" class="btn btn-sm btn-outline-warning mb-1">View</a>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        documentsHtml += '</div>';
+                        
+                        if (!docs.license_front && !docs.license_back && !docs.license_document && 
+                            !docs.id_front && !docs.id_back && !docs.id_document && 
+                            !docs.vehicle_registration && !docs.vehicle_document) {
+                            documentsHtml += '<p class="text-muted">No documents uploaded yet.</p>';
+                        }
+                        
+                        // Show documents in a modal
+                        const modal = document.createElement('div');
+                        modal.className = 'modal fade';
+                        modal.innerHTML = `
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Driver Documents</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        ${documentsHtml}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        document.body.appendChild(modal);
+                        const bsModal = new bootstrap.Modal(modal);
+                        bsModal.show();
+                        
+                        modal.addEventListener('hidden.bs.modal', () => {
+                            document.body.removeChild(modal);
+                        });
+                    } else {
+                        alert('Failed to load driver documents: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading driver documents:', error);
+                    alert('Error loading driver documents');
+                });
+        }
+
+        function deleteDriver(driverId) {
+            if (confirm('⚠️ PERMANENT DELETION WARNING\n\nThis will:\n• Permanently delete driver from system\n• Unassign any active orders\n• Delete all driver data\n• Allow driver to register fresh\n\nDriver will be notified they can register again.\n\nContinue with permanent deletion?')) {
+                fetch(`/api/drivers/${driverId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let message = data.message;
+                        if (data.unassigned_orders > 0) {
+                            message += `\n\n📋 ${data.unassigned_orders} active orders were unassigned and reset to 'confirmed' status.`;
+                        }
+                        if (data.notification_sent) {
+                            message += `\n\n📱 Driver was notified they can register fresh.`;
+                        }
+                        alert(message);
+                        loadDrivers();
+                    } else {
+                        alert('Error deleting driver: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting driver:', error);
+                    alert('Error deleting driver');
+                });
+            }
+        }
+
+        // Driver tracking function
+        function trackDriver(orderId) {
+            fetch(`/api/orders/${orderId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const order = data.order;
+                        const driver = data.driver;
+                        
+                        // Create comprehensive driver tracking modal
+                        const modalHtml = `
+                            <div class="modal fade" id="driverTrackingModal" tabindex="-1">
+                                <div class="modal-dialog modal-xl">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-map-marker-alt"></i> Driver Tracking - Order #${order.id}
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body p-0">
+                                            <div class="row g-0">
+                                                <!-- Driver Info Panel -->
+                                                <div class="col-md-4 bg-light p-3">
+                                                    <div class="card border-0 mb-3">
+                                                        <div class="card-header bg-primary text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-user-tie"></i> Driver Information
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="text-center mb-3">
+                                                                <div class="avatar-circle bg-primary text-white mx-auto mb-2" style="width: 60px; height: 60px; line-height: 60px; border-radius: 50%;">
+                                                                    <i class="fas fa-user fa-2x"></i>
+                                                                </div>
+                                                                <h5 class="mb-1">${driver.name}</h5>
+                                                                <small class="text-muted">${driver.vehicle_type}</small>
+                                                            </div>
+                                                            <div class="row g-2 mb-3">
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="callDriver('${driver.phone_number}')">
+                                                                        <i class="fas fa-phone"></i> Call
+                                                                    </button>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-outline-success btn-sm w-100" onclick="messageDriver(${driver.id})">
+                                                                        <i class="fas fa-comments"></i> Message
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Phone:</strong> ${driver.phone_number}
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Status:</strong> 
+                                                                <span class="badge bg-${driver.is_available ? 'success' : 'warning'}">
+                                                                    ${driver.is_available ? 'Available' : 'Busy'}
+                                                                </span>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <strong>Location:</strong> 
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-muted">
+                                                                        ${driver.current_latitude ? `${driver.current_latitude.toFixed(6)}, ${driver.current_longitude.toFixed(6)}` : 'Not available'}
+                                                                    </small>
+                                                                    <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})" title="Request Location">
+                                                                        <i class="fas fa-location-arrow"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Order & Customer Info -->
+                                                    <div class="card border-0">
+                                                        <div class="card-header bg-success text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-shopping-cart"></i> Order & Customer
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <strong>Customer:</strong> ${order.customer_name}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Phone:</strong> ${order.customer_phone}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Address:</strong> ${order.customer_address}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Total:</strong> ETB ${order.total_amount.toFixed(2)}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>Payment:</strong> ${order.payment_method}
+                                                            </div>
+                                                            <div class="d-grid gap-2">
+                                                                <button class="btn btn-outline-primary btn-sm" onclick="navigateToCustomer(${order.customer_latitude}, ${order.customer_longitude})">
+                                                                    <i class="fas fa-route"></i> Navigate to Customer
+                                                                </button>
+                                                                <button class="btn btn-outline-success btn-sm" onclick="callCustomer('${order.customer_phone}')">
+                                                                    <i class="fas fa-phone"></i> Call Customer
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Live Tracking & Controls -->
+                                                <div class="col-md-8">
+                                                    <div class="card border-0 h-100">
+                                                        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                                            <h6 class="mb-0">
+                                                                <i class="fas fa-map"></i> Live Tracking & Controls
+                                                            </h6>
+                                                            <div class="btn-group">
+                                                                <button class="btn btn-outline-light btn-sm" onclick="refreshDriverTracking(${orderId})">
+                                                                    <i class="fas fa-sync"></i> Refresh
+                                                                </button>
+                                                                <button class="btn btn-outline-light btn-sm" onclick="centerMapOnDriver(${driver.id})">
+                                                                    <i class="fas fa-crosshairs"></i> Center Map
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="card-body p-0">
+                                                            <div id="driverTrackingMap" style="height: 400px; width: 100%;"></div>
+                                                            <div class="p-3">
+                                                                <div class="row g-3">
+                                                                    <div class="col-md-6">
+                                                                        <div class="card bg-light">
+                                                                            <div class="card-body text-center">
+                                                                                <h6 class="mb-2">Request Driver Location</h6>
+                                                                                <button class="btn btn-primary btn-sm" onclick="requestDriverLocation(${driver.id})">
+                                                                                    <i class="fas fa-location-arrow"></i> Request GPS
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="card bg-light">
+                                                                            <div class="card-body text-center">
+                                                                                <h6 class="mb-2">Direct Communication</h6>
+                                                                                <button class="btn btn-success btn-sm" onclick="messageDriver(${driver.id})">
+                                                                                    <i class="fas fa-paper-plane"></i> Send Message
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" onclick="viewFullMap(${driver.id})">
+                                                <i class="fas fa-expand"></i> View Full Map
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Remove existing modal if present
+                        const existingModal = document.getElementById('driverTrackingModal');
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
+                        // Add modal to body
+                        document.body.insertAdjacentHTML('beforeend', modalHtml);
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('driverTrackingModal'));
+                        modal.show();
+                        
+                        // Initialize map when modal is shown
+                        document.getElementById('driverTrackingModal').addEventListener('shown.bs.modal', function () {
+                            initializeDriverTrackingMap(order, driver);
+                        });
+                        
+                        // Clean up when modal is hidden
+                        document.getElementById('driverTrackingModal').addEventListener('hidden.bs.modal', function () {
+                            this.remove();
+                        });
+                        
+                    } else {
+                        alert('Error loading order details: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error tracking driver:', error);
+                    alert('Error loading driver tracking information');
+                });
+        }
+        
+        // Helper functions for driver tracking
+        function callDriver(phoneNumber) {
+            window.open(`tel:${phoneNumber}`, '_self');
+        }
+        
+        function callCustomer(phoneNumber) {
+            window.open(`tel:${phoneNumber}`, '_self');
+        }
+        
+        function messageDriver(driverId) {
+            const message = prompt('Send message to driver:');
+            if (message) {
+                fetch('/api/send-driver-message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({driver_id: driverId, message: message})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Message sent successfully');
+                    } else {
+                        alert('Error sending message: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    alert('Error sending message');
+                });
+            }
+        }
+        
+        function navigateToCustomer(lat, lng) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+        
+        function initializeDriverTrackingMap(order, driver) {
+            // Initialize map centered on driver location or customer location
+            const lat = driver.current_latitude || order.customer_latitude || 9.0054;
+            const lng = driver.current_longitude || order.customer_longitude || 38.7636;
+            
+            const trackingMap = L.map('driverTrackingMap').setView([lat, lng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(trackingMap);
+            
+            // Add driver marker if location available
+            if (driver.current_latitude && driver.current_longitude) {
+                L.marker([driver.current_latitude, driver.current_longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-motorcycle" style="color: blue;"></i>',
+                        iconSize: [30, 30],
+                        className: 'driver-marker'
+                    })
+                }).addTo(trackingMap)
+                .bindPopup(`<b>${driver.name}</b><br>Driver Location<br><small>Vehicle: ${driver.vehicle_type}</small>`);
+            }
+            
+            // Add customer marker
+            if (order.customer_latitude && order.customer_longitude) {
+                L.marker([order.customer_latitude, order.customer_longitude], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-home" style="color: red;"></i>',
+                        iconSize: [30, 30],
+                        className: 'customer-marker'
+                    })
+                }).addTo(trackingMap)
+                .bindPopup(`<b>${order.customer_name}</b><br>Delivery Address<br><small>${order.customer_address}</small>`);
+            }
+            
+            // Store map reference for later use
+            window.currentTrackingMap = trackingMap;
+        }
+        
+        function refreshDriverTracking(orderId) {
+            // Refresh the tracking modal with updated data
+            const modal = document.getElementById('driverTrackingModal');
+            if (modal) {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                setTimeout(() => trackDriver(orderId), 300);
+            }
+        }
+        
+        function centerMapOnDriver(driverId) {
+            if (window.currentTrackingMap) {
+                // Request fresh location and center map
+                requestDriverLocation(driverId);
+            }
+        }
+        
+        function viewFullMap(driverId) {
+            // Open full screen map view
+            const url = `https://www.google.com/maps/search/?api=1&query=drivers+near+me`;
+            window.open(url, '_blank');
+        }
+
+        // Category management functions
+        function addCategory() {
+            const name = prompt('Category Name:');
+            const description = prompt('Description:') || '';
+            const icon = prompt('Emoji Icon:', '🍽️');
+            
+            if (name) {
+                fetch('/api/categories', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, description, icon})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Category added successfully!');
+                        loadCategories();
+                    } else {
+                        alert('Failed to add category: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding category:', error);
+                    alert('Error adding category');
+                });
+            }
+        }
+
+        function editCategory(categoryId) {
+            // Simple implementation - can be enhanced with modal
+            const name = prompt('New category name:');
+            if (name) {
+                fetch(`/api/categories/${categoryId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadCategories();
+                    }
+                });
+            }
+        }
+
+        function deleteCategory(categoryId) {
+            if (confirm('Delete this category?')) {
+                fetch(`/api/categories/${categoryId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) loadCategories();
+                    });
+            }
+        }
+
+        // Kitchen Staff management functions
+        function loadKitchenStaff() {
+            fetch('/api/admin/kitchen-staff')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateKitchenStaffTable(data.staff);
+                    } else {
+                        console.error('Error loading kitchen staff:', data.error);
+                        alert('Error loading kitchen staff: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading kitchen staff:', error);
+                    alert('Error loading kitchen staff');
+                });
+        }
+
+        function updateKitchenStaffTable(staff) {
+            const tableBody = document.getElementById('kitchenStaffTableBody');
+            
+            if (staff.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <br>
+                            No kitchen staff members added yet
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = staff.map(member => `
+                <tr>
+                    <td>
+                        <strong>${member.name}</strong>
+                    </td>
+                    <td>${member.username}</td>
+                    <td>
+                        <a href="tel:${member.phone}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-phone"></i> ${member.phone}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge ${member.is_active ? 'bg-success' : 'bg-secondary'}">
+                            ${member.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">${new Date(member.created_at).toLocaleDateString()}</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-1" onclick="editKitchenStaff(${member.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteKitchenStaff(${member.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddKitchenStaffModal() {
+            const modalHtml = `
+                <div class="modal fade" id="addKitchenStaffModal" tabindex="-1" data-bs-backdrop="static">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-user-plus"></i> Add Kitchen Staff Member
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addKitchenStaffForm">
+                                    <div class="mb-3">
+                                        <label for="staffName" class="form-label">Full Name *</label>
+                                        <input type="text" class="form-control" id="staffName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="staffUsername" class="form-label">Username *</label>
+                                        <input type="text" class="form-control" id="staffUsername" required>
+                                        <div class="form-text">Used for kitchen dashboard login</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="staffPhone" class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-control" id="staffPhone" 
+                                               placeholder="+251900000000" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="staffPassword" class="form-label">Password *</label>
+                                        <input type="password" class="form-control" id="staffPassword" required>
+                                        <div class="form-text">Minimum 6 characters</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="staffActive" checked>
+                                            <label class="form-check-label" for="staffActive">
+                                                Active (can access kitchen dashboard)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="submitKitchenStaffForm()">
+                                    <i class="fas fa-plus"></i> Add Staff Member
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('addKitchenStaffModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addKitchenStaffModal'));
+            modal.show();
+        }
+
+        function submitKitchenStaffForm() {
+            const name = document.getElementById('staffName').value.trim();
+            const username = document.getElementById('staffUsername').value.trim();
+            const phone = document.getElementById('staffPhone').value.trim();
+            const password = document.getElementById('staffPassword').value;
+            const isActive = document.getElementById('staffActive').checked;
+            
+            // Validate required fields
+            if (!name || !username || !phone || !password) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Validate password length
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+            
+            // Prepare data
+            const staffData = {
+                name: name,
+                username: username,
+                phone: phone,
+                password: password,
+                is_active: isActive
+            };
+            
+            // Submit form
+            fetch('/api/admin/kitchen-staff', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(staffData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addKitchenStaffModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    alert(data.message);
+                    
+                    // Reload kitchen staff list
+                    loadKitchenStaff();
+                } else {
+                    alert('Error adding kitchen staff: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error adding kitchen staff:', error);
+                alert('Error adding kitchen staff. Please try again.');
+            });
+        }
+
+        function editKitchenStaff(staffId) {
+            // For now, use simple prompt - can be enhanced with modal later
+            const newName = prompt('Enter new name:');
+            if (newName) {
+                fetch(`/api/admin/kitchen-staff/${staffId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: newName})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Kitchen staff updated successfully');
+                        loadKitchenStaff();
+                    } else {
+                        alert('Error updating kitchen staff: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating kitchen staff:', error);
+                    alert('Error updating kitchen staff');
+                });
+            }
+        }
+
+        function deleteKitchenStaff(staffId) {
+            if (confirm('Are you sure you want to delete this kitchen staff member?')) {
+                fetch(`/api/admin/kitchen-staff/${staffId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Kitchen staff deleted successfully');
+                        loadKitchenStaff();
+                    } else {
+                        alert('Error deleting kitchen staff: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting kitchen staff:', error);
+                    alert('Error deleting kitchen staff');
+                });
+            }
+        }
+
+        // Menu item management functions
+        function addMenuItem() {
+            showAddMenuModal();
+        }
+
+        function editMenuItem(itemId) {
+            showEditMenuModal(itemId);
+        }
+
+        function deleteMenuItem(itemId) {
+            if (confirm('Are you sure you want to delete this menu item? This action cannot be undone.')) {
+                fetch(`/api/menu/${itemId}`, {method: 'DELETE'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success || data.message) {
+                            alert('Menu item deleted successfully!');
+                            loadMenuItems();
+                        } else {
+                            alert('Error deleting menu item: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting menu item:', error);
+                        alert('Error deleting menu item');
+                    });
+            }
+        }
+
+        function showAddMenuModal() {
+            // First fetch categories for dropdown
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(categories => {
+                    const modalHtml = `
+                        <div class="modal fade" id="addMenuModal" tabindex="-1" data-bs-backdrop="static">
+                            <div class="modal-dialog modal-xl">
+                                <div class="modal-content" style="border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                                    <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px 15px 0 0;">
+                                        <h5 class="modal-title d-flex align-items-center">
+                                            <i class="fas fa-plus-circle me-2"></i>
+                                            Add New Menu Item
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body" style="padding: 30px;">
+                                        <form id="addMenuForm" enctype="multipart/form-data">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="card h-100" style="border: 1px solid #e3e6f0; border-radius: 10px;">
+                                                        <div class="card-header" style="background: #f8f9fc; border-bottom: 1px solid #e3e6f0;">
+                                                            <h6 class="m-0 text-primary">
+                                                                <i class="fas fa-utensils me-1"></i>
+                                                                Basic Information
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-tag me-1"></i>
+                                                                    Item Name *
+                                                                </label>
+                                                                <input type="text" class="form-control" name="name" required 
+                                                                       placeholder="Enter item name (e.g., Beef Burger Special)"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-dollar-sign me-1"></i>
+                                                                    Price (ETB) *
+                                                                </label>
+                                                                <input type="number" class="form-control" name="price" step="0.01" required 
+                                                                       placeholder="0.00"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-list me-1"></i>
+                                                                    Category *
+                                                                </label>
+                                                                <select class="form-select" name="category" required 
+                                                                        style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                                    <option value="">Select Category</option>
+                                                                    ${categories.map(cat => `<option value="${cat.name.toLowerCase()}">${cat.name}</option>`).join('')}
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-check-circle me-1"></i>
+                                                                    Availability
+                                                                </label>
+                                                                <div class="form-check form-switch">
+                                                                    <input class="form-check-input" type="checkbox" name="available" checked>
+                                                                    <label class="form-check-label">Item is available for order</label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="card h-100" style="border: 1px solid #e3e6f0; border-radius: 10px;">
+                                                        <div class="card-header" style="background: #f8f9fc; border-bottom: 1px solid #e3e6f0;">
+                                                            <h6 class="m-0 text-primary">
+                                                                <i class="fas fa-image me-1"></i>
+                                                                Description & Image
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-align-left me-1"></i>
+                                                                    Description *
+                                                                </label>
+                                                                <textarea class="form-control" name="description" rows="4" required 
+                                                                          placeholder="Describe the item (ingredients, taste, special features)"
+                                                                          style="border-radius: 8px; border: 1px solid #d1d3e2;"></textarea>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-camera me-1"></i>
+                                                                    Upload Image
+                                                                </label>
+                                                                <div class="drop-zone" id="dropZone" style="border: 2px dashed #d1d3e2; border-radius: 8px; padding: 20px; text-align: center; background: #f8f9fc; cursor: pointer; transition: all 0.3s ease;">
+                                                                    <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                                                    <p class="mb-2 text-muted">Drag & drop your image here or click to browse</p>
+                                                                    <input type="file" class="form-control d-none" id="imageFileInput" name="image" accept="image/*">
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('imageFileInput').click()">
+                                                                        <i class="fas fa-folder-open me-1"></i>
+                                                                        Browse Files
+                                                                    </button>
+                                                                </div>
+                                                                <div class="form-text mt-2">
+                                                                    <i class="fas fa-info-circle me-1"></i>
+                                                                    Supported formats: JPG, PNG, GIF, WebP (Max 5MB)
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    <i class="fas fa-link me-1"></i>
+                                                                    Image URL (Alternative)
+                                                                </label>
+                                                                <input type="url" class="form-control" name="image_url" 
+                                                                       placeholder="https://example.com/image.jpg"
+                                                                       style="border-radius: 8px; border: 1px solid #d1d3e2;">
+                                                                <div class="form-text">
+                                                                    <i class="fas fa-info-circle me-1"></i>
+                                                                    Or provide an image URL instead of uploading
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-center">
+                                                                <div id="imagePreview" class="mt-2" style="display: none;">
+                                                                    <img id="previewImg" style="max-width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e3e6f0;">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer" style="border-top: 1px solid #e3e6f0; padding: 20px 30px;">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">
+                                            <i class="fas fa-times me-1"></i>
+                                            Cancel
+                                        </button>
+                                        <button type="button" class="btn btn-primary" onclick="submitAddMenuItem()" style="border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                            <i class="fas fa-plus me-1"></i>
+                                            Add Menu Item
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+
+                    
+                    // Remove existing modal if any
+                    const existingModal = document.getElementById('addMenuModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+                    
+                    // Add modal to body
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    // Set up enhanced drag-and-drop and image preview functionality
+                    const imageInput = document.getElementById('imageFileInput');
+                    const dropZone = document.getElementById('dropZone');
+                    const imageUrlInput = document.querySelector('#addMenuModal input[name="image_url"]');
+                    const previewDiv = document.getElementById('imagePreview');
+                    const previewImg = document.getElementById('previewImg');
+                    
+                    // File validation function
+                    function validateImageFile(file) {
+                        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        
+                        if (!validTypes.includes(file.type)) {
+                            alert('Invalid file type. Please upload JPG, PNG, GIF, or WebP images only.');
+                            return false;
+                        }
+                        
+                        if (file.size > maxSize) {
+                            alert('File size too large. Please upload images smaller than 5MB.');
+                            return false;
+                        }
+                        
+                        return true;
+                    }
+                    
+                    // Handle file selection and preview
+                    function handleFileSelect(file) {
+                        if (validateImageFile(file)) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImg.src = e.target.result;
+                                previewDiv.style.display = 'block';
+                                
+                                // Update drop zone appearance
+                                dropZone.innerHTML = \`
+                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                    <p class="mb-2 text-success">Image uploaded successfully!</p>
+                                    <p class="text-muted small">File: \${file.name}</p>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetDropZone()">
+                                        <i class="fas fa-times me-1"></i>
+                                        Change Image
+                                    </button>
+                                \`;
+                                dropZone.style.border = '2px dashed #28a745';
+                                dropZone.style.background = '#f8fff8';
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                    
+                    // Reset drop zone to original state
+                    window.resetDropZone = function() {
+                        dropZone.innerHTML = \`
+                            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                            <p class="mb-2 text-muted">Drag & drop your image here or click to browse</p>
+                            <input type="file" class="form-control d-none" id="imageFileInput" name="image" accept="image/*">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('imageFileInput').click()">
+                                <i class="fas fa-folder-open me-1"></i>
+                                Browse Files
+                            </button>
+                        \`;
+                        dropZone.style.border = '2px dashed #d1d3e2';
+                        dropZone.style.background = '#f8f9fc';
+                        previewDiv.style.display = 'none';
+                        
+                        // Re-attach event listeners
+                        const newImageInput = document.getElementById('imageFileInput');
+                        if (newImageInput) {
+                            newImageInput.addEventListener('change', function(e) {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    handleFileSelect(file);
+                                }
+                            });
+                        }
+                    };
+                    
+                    // Set up drag and drop events
+                    if (dropZone) {
+                        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, preventDefaults, false);
+                        });
+                        
+                        function preventDefaults(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                        
+                        ['dragenter', 'dragover'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, highlight, false);
+                        });
+                        
+                        ['dragleave', 'drop'].forEach(eventName => {
+                            dropZone.addEventListener(eventName, unhighlight, false);
+                        });
+                        
+                        function highlight(e) {
+                            dropZone.style.border = '2px dashed #007bff';
+                            dropZone.style.background = '#f0f8ff';
+                        }
+                        
+                        function unhighlight(e) {
+                            dropZone.style.border = '2px dashed #d1d3e2';
+                            dropZone.style.background = '#f8f9fc';
+                        }
+                        
+                        dropZone.addEventListener('drop', handleDrop, false);
+                        
+                        function handleDrop(e) {
+                            const dt = e.dataTransfer;
+                            const files = dt.files;
+                            
+                            if (files.length > 0) {
+                                const file = files[0];
+                                imageInput.files = files;
+                                handleFileSelect(file);
+                            }
+                        }
+                    }
+                    
+                    // Handle regular file input
+                    if (imageInput) {
+                        imageInput.addEventListener('change', function(e) {
+                            const file = e.target.files[0];
+                            if (file) {
+                                handleFileSelect(file);
+                            }
+                        });
+                    }
+                    
+                    // Handle image URL input
+                    if (imageUrlInput) {
+                        imageUrlInput.addEventListener('input', function(e) {
+                            const url = e.target.value;
+                            if (url) {
+                                previewImg.src = url;
+                                previewDiv.style.display = 'block';
+                                
+                                // Clear file input when URL is provided
+                                if (imageInput) {
+                                    imageInput.value = '';
+                                }
+                                
+                                // Reset drop zone
+                                resetDropZone();
+                            } else {
+                                previewDiv.style.display = 'none';
+                            }
+                        });
+                    }
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                    alert('Error loading categories');
+                });
+        }
+
+        function showEditMenuModal(itemId) {
+            // Fetch item details and categories
+            Promise.all([
+                fetch(`/api/menu/${itemId}`).then(r => r.json()),
+                fetch('/api/categories').then(r => r.json())
+            ])
+            .then(([item, categories]) => {
+                const modalHtml = `
+                    <div class="modal fade" id="editMenuModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Menu Item</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="editMenuForm" enctype="multipart/form-data">
+                                        <input type="hidden" name="item_id" value="${itemId}">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Name</label>
+                                                    <input type="text" class="form-control" name="name" value="${item.name}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Price (ETB)</label>
+                                                    <input type="number" class="form-control" name="price" step="0.01" value="${item.price}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Category</label>
+                                                    <select class="form-select" name="category" required>
+                                                        ${categories.map(cat => `
+                                                            <option value="${cat.name.toLowerCase()}" ${item.category === cat.name.toLowerCase() ? 'selected' : ''}>
+                                                                ${cat.name}
+                                                            </option>
+                                                        `).join('')}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Available</label>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="available" ${item.available ? 'checked' : ''}>
+                                                        <label class="form-check-label">Item is available for order</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Description</label>
+                                                    <textarea class="form-control" name="description" rows="3" required>${item.description}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Current Image</label>
+                                                    <div class="mb-2">
+                                                        <img src="${item.image_url}" alt="${item.name}" style="max-width: 200px; max-height: 150px; object-fit: cover;" class="img-thumbnail">
+                                                    </div>
+                                                    <input type="file" class="form-control" name="image" accept="image/*">
+                                                    <div class="form-text">Upload new image or leave empty to keep current</div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Image URL (Alternative)</label>
+                                                    <input type="url" class="form-control" name="image_url" value="${item.image_url}" placeholder="https://example.com/image.jpg">
+                                                    <div class="form-text">Or update image URL instead</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" onclick="submitEditMenuItem()">
+                                        <i class="fas fa-save"></i> Update Menu Item
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('editMenuModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('editMenuModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading menu item:', error);
+                alert('Error loading menu item details');
+            });
+        }
+
+        function submitAddMenuItem() {
+            const form = document.getElementById('addMenuForm');
+            const formData = new FormData(form);
+            
+            fetch('/api/menu', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.message) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addMenuModal'));
+                    modal.hide();
+                    
+                    // Reload menu items
+                    loadMenuItems();
+                    
+                    alert('Menu item added successfully!');
+                } else {
+                    alert('Error adding menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding menu item:', error);
+                alert('Error adding menu item');
+            });
+        }
+
+        function submitEditMenuItem() {
+            const form = document.getElementById('editMenuForm');
+            const formData = new FormData(form);
+            const itemId = formData.get('item_id');
+            
+            fetch(`/api/menu/${itemId}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success || data.message) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editMenuModal'));
+                    modal.hide();
+                    
+                    // Reload menu items
+                    loadMenuItems();
+                    
+                    alert('Menu item updated successfully!');
+                } else {
+                    alert('Error updating menu item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating menu item:', error);
+                alert('Error updating menu item');
+            });
+        }
+
+        // Order management functions
+        function deleteOrder(orderId) {
+            if (confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+                fetch(`/api/orders/${orderId}/delete`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order deleted successfully!');
+                        loadOrders();
+                    } else {
+                        alert('Error deleting order: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting order:', error);
+                    alert('Error deleting order');
+                });
+            }
+        }
+
+        function clearOrders(type) {
+            let confirmMessage;
+            let typeLabel;
+            
+            switch(type) {
+                case 'day':
+                    confirmMessage = 'Are you sure you want to delete all orders from today?';
+                    typeLabel = 'today\'s orders';
+                    break;
+                case 'week':
+                    confirmMessage = 'Are you sure you want to delete all orders from this week?';
+                    typeLabel = 'this week\'s orders';
+                    break;
+                case 'month':
+                    confirmMessage = 'Are you sure you want to delete all orders from this month?';
+                    typeLabel = 'this month\'s orders';
+                    break;
+                case 'year':
+                    confirmMessage = 'Are you sure you want to delete all orders from this year?';
+                    typeLabel = 'this year\'s orders';
+                    break;
+                case 'all':
+                    confirmMessage = 'WARNING: This will delete ALL orders permanently!\n\nAre you absolutely sure?';
+                    typeLabel = 'all orders';
+                    break;
+                default:
+                    return;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // Show loading state
+                const originalBtn = event.target.closest('.btn');
+                const originalText = originalBtn.innerHTML;
+                originalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                originalBtn.disabled = true;
+                
+                fetch('/api/orders/clear', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        date: new Date().toISOString()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully deleted ${data.deleted_count} orders from ${typeLabel}`);
+                        loadOrders();
+                    } else {
+                        alert('Error clearing orders: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing orders:', error);
+                    alert('Error clearing orders');
+                })
+                .finally(() => {
+                    // Restore button state
+                    originalBtn.innerHTML = originalText;
+                    originalBtn.disabled = false;
+                });
+            }
+        }
+
+        // Tab navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tab = this.getAttribute('data-tab');
+                loadTabContent(tab);
+            });
+        });
+
+        function loadTabContent(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Load content based on tab
+            if (tabName === 'dashboard') {
+                loadDashboardData();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'menu') {
+                loadMenuItems();
+            } else if (tabName === 'categories') {
+                loadCategories();
+            } else if (tabName === 'kitchen-staff') {
+                loadKitchenStaff();
+            } else if (tabName === 'drivers') {
+                loadDrivers();
+                startDriversAutoRefresh();
+            } else {
+                stopDriversAutoRefresh();
+            }
+        }
+
+        // Missing order management functions
+        function viewOrderDetails(orderId) {
+            fetch(`/api/orders/${orderId}`)
+                .then(response => response.json())
+                .then(order => {
+                    if (order.error) {
+                        alert('Error loading order details: ' + order.error);
+                        return;
+                    }
+                    
+                    // Parse items
+                    let items = [];
+                    try {
+                        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                    } catch (e) {
+                        console.error('Error parsing items:', e);
+                        items = [];
+                    }
+                    
+                    const itemsList = items.map(item => `• ${item.name} (x${item.quantity}) - ETB ${(item.price * item.quantity).toFixed(2)}`).join('\n');
+                    
+                    const orderDetails = `
+ORDER #${order.id} DETAILS
+
+Customer: ${order.customer_name}
+Phone: ${order.customer_phone}
+Email: ${order.customer_email || 'N/A'}
+Address: ${order.customer_address}
+
+Items:
+${itemsList}
+
+Total: ETB ${order.total_amount.toFixed(2)}
+Payment: ${order.payment_method}
+Status: ${order.status}
+
+Transaction ID: ${order.transaction_id || 'N/A'}
+
+Created: ${new Date(order.created_at).toLocaleString()}
+Updated: ${new Date(order.updated_at).toLocaleString()}
+                    `;
+                    
+                    alert(orderDetails);
+                })
+                .catch(error => {
+                    console.error('Error loading order details:', error);
+                    alert('Error loading order details');
+                });
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            if (confirm(`Change order status to "${newStatus}"?`)) {
+                fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status: newStatus})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Order status updated successfully!');
+                        loadOrders();
+                    } else {
+                        alert('Error updating order status: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating order status:', error);
+                    alert('Error updating order status');
+                });
+            }
+        }
+
+        async function manuallyAssignDriver(orderId) {
+            try {
+                const response = await fetch('/api/orders/' + orderId + '/available-drivers');
+                const drivers = await response.json();
+                
+                const availableDrivers = drivers.filter(driver => 
+                    driver.is_active && driver.is_available && driver.is_approved
+                );
+                
+                if (availableDrivers.length === 0) {
+                    alert('No available drivers found. Please ensure drivers are active and available.');
+                    return;
+                }
+                
+                // Simple driver selection for now
+                const driverNames = availableDrivers.map((driver, index) => 
+                    `${index + 1}. ${driver.name} (${driver.vehicle_type}) - ${driver.phone_number}`
+                ).join('\n');
+                
+                const selection = prompt(`Select driver (enter number):\n\n${driverNames}`);
+                
+                if (selection) {
+                    const driverIndex = parseInt(selection) - 1;
+                    if (driverIndex >= 0 && driverIndex < availableDrivers.length) {
+                        const selectedDriver = availableDrivers[driverIndex];
+                        
+                        fetch(`/api/orders/${orderId}/manual-assign-driver`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({driver_id: selectedDriver.id})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(`Driver ${selectedDriver.name} successfully assigned to Order #${orderId}`);
+                                loadOrders();
+                            } else {
+                                alert(`Error assigning driver: ${data.message}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error assigning driver:', error);
+                            alert('Error assigning driver');
+                        });
+                    } else {
+                        alert('Invalid selection');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error loading drivers:', error);
+                alert('Error loading available drivers');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadTabContent('dashboard');
+        });
+
+        // Add CSS for tab content
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

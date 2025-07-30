@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD - Driver Panel</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .driver-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .driver-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .driver-header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        
+        .driver-header .subtitle {
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .order-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .order-id {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+        
+        .order-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #4caf50;
+            color: white;
+        }
+        
+        .restaurant-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .restaurant-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .restaurant-icon {
+            width: 40px;
+            height: 40px;
+            background: #ff6b35;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        
+        .restaurant-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .restaurant-address {
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        
+        .customer-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            color: #ffffff;
+            font-weight: 500;
+            text-align: right;
+            flex: 1;
+            margin-left: 10px;
+        }
+        
+        .distance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .distance-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .distance-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .order-items {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .items-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+        
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .item-name {
+            font-size: 14px;
+        }
+        
+        .item-details {
+            text-align: right;
+            color: #e0e0e0;
+            font-size: 12px;
+        }
+        
+        .total-amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4caf50;
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-accept {
+            flex: 1;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-reject {
+            flex: 1;
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-accept:hover, .btn-reject:hover {
+            transform: translateY(-2px);
+        }
+        
+        .action-links {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-link {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            text-align: center;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .action-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .loading i {
+            font-size: 48px;
+            color: #4fc3f7;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-orders {
+            text-align: center;
+            padding: 50px 20px;
+            color: #e0e0e0;
+        }
+        
+        .no-orders i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .success-message, .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+        
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+        
+        .bot-indicator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .bot-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .bot-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-track, .btn-override {
+            flex: 1;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-track {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        }
+        
+        .btn-override {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .btn-track:hover, .btn-override:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="driver-container">
+        <div class="driver-header">
+            <h1><i class="fas fa-truck"></i> Driver Panel</h1>
+            <div class="subtitle">ET-FOOD Delivery Management</div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Loading order details...</p>
+        </div>
+        
+        <div id="orderContent" style="display: none;">
+            <!-- Order content will be loaded here -->
+        </div>
+        
+        <div id="noOrders" class="no-orders" style="display: none;">
+            <i class="fas fa-clipboard-list"></i>
+            <h3>No Active Orders</h3>
+            <p>You don't have any active orders assigned right now.</p>
+            <p>Wait for new assignments or contact dispatch.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Set theme
+        document.body.style.background = tg.themeParams.bg_color || '#1e3c72';
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+        const driverId = urlParams.get('driver_id');
+        
+        // Load order data
+        async function loadOrderData() {
+            try {
+                if (orderId) {
+                    // Load specific order
+                    const response = await fetch(`/api/orders/${orderId}`);
+                    const order = await response.json();
+                    
+                    if (order.error) {
+                        showError('Order not found');
+                        return;
+                    }
+                    
+                    displayOrder(order);
+                } else {
+                    // Get current driver by Telegram user ID
+                    const telegramUserId = tg.initDataUnsafe?.user?.id || driverId;
+                    
+                    if (telegramUserId) {
+                        // Load driver's active orders using telegram user ID
+                        const response = await fetch(`/api/drivers/telegram/${telegramUserId}/orders`);
+                        const data = await response.json();
+                        
+                        if (data.orders && data.orders.length > 0) {
+                            displayOrder(data.orders[0]); // Show first active order
+                        } else {
+                            showNoOrders();
+                        }
+                    } else {
+                        showNoOrders();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading order:', error);
+                showError('Failed to load order data');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function displayOrder(order) {
+            const orderContent = document.getElementById('orderContent');
+            const distance = calculateDistance(9.145, 40.489658, order.location_lat || 9.165, order.location_lng || 40.510);
+            
+            orderContent.innerHTML = `
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="order-id">Order #${order.id}</div>
+                        <div class="order-status">${getStatusText(order.status)}</div>
+                    </div>
+                    
+                    <div class="restaurant-info">
+                        <div class="restaurant-header">
+                            <div class="restaurant-icon">
+                                ${order.driver_id && order.driver_id === 'delivery_bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-store"></i>'}
+                            </div>
+                            <div>
+                                <div class="restaurant-name">ET-FOOD Kitchen</div>
+                                <div class="restaurant-address">Addis Ababa, Ethiopia</div>
+                                ${order.driver_id && order.driver_id === 'delivery_bot' ? '<div class="bot-indicator">🤖 Automated Delivery System</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📞 Restaurant Phone:</span>
+                            <span class="info-value">+251-911-123-456</span>
+                        </div>
+                    </div>
+                    
+                    <div class="distance-card">
+                        <div class="distance-value">${distance.toFixed(1)} km</div>
+                        <div class="distance-label">Distance to Customer</div>
+                    </div>
+                    
+                    <div class="customer-info">
+                        <div class="info-row">
+                            <span class="info-label">👤 Customer:</span>
+                            <span class="info-value">${order.customer_name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📞 Phone:</span>
+                            <span class="info-value">${order.customer_phone}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📍 Address:</span>
+                            <span class="info-value">${order.customer_address}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">💳 Payment:</span>
+                            <span class="info-value">${order.payment_method}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">🕒 Order Time:</span>
+                            <span class="info-value">${formatTime(order.created_at)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="order-items">
+                        <div class="items-header">📋 Order Items</div>
+                        ${order.items.map(item => `
+                            <div class="item-row">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-details">
+                                    ${item.quantity}x - ${(item.price * item.quantity).toFixed(2)} ETB
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="total-amount">
+                        💰 Total: ${order.total_amount.toFixed(2)} ETB
+                    </div>
+                    
+                    ${order.status === 'pending' ? `
+                        <div class="action-buttons">
+                            <button class="btn-accept" onclick="acceptOrder(${order.id})">
+                                <i class="fas fa-check"></i> Accept Order
+                            </button>
+                            <button class="btn-reject" onclick="rejectOrder(${order.id})">
+                                <i class="fas fa-times"></i> Reject Order
+                            </button>
+                        </div>
+                    ` : order.driver_id && order.driver_id === 'delivery_bot' ? `
+                        <div class="bot-status">
+                            <div class="bot-indicator">🤖 Automated Delivery in Progress</div>
+                            <div class="bot-actions">
+                                <button class="btn-track" onclick="trackDelivery(${order.id})">
+                                    <i class="fas fa-map-marker-alt"></i> Track Location
+                                </button>
+                                <button class="btn-override" onclick="overrideBot(${order.id})">
+                                    <i class="fas fa-user"></i> Override Manual
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="action-links">
+                        <a href="tel:+251911123456" class="action-link">
+                            <i class="fas fa-phone"></i> Call Restaurant
+                        </a>
+                        <a href="tel:${order.customer_phone}" class="action-link">
+                            <i class="fas fa-phone"></i> Call Customer
+                        </a>
+                        <a href="https://maps.google.com/?q=${order.location_lat || 9.165},${order.location_lng || 40.510}" class="action-link" target="_blank">
+                            <i class="fas fa-map"></i> Open Map
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            orderContent.style.display = 'block';
+        }
+        
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                     Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'New',
+                'accepted': 'Accepted',
+                'confirmed': 'Confirmed', 
+                'preparing': 'Preparing',
+                'out_for_delivery': 'On Route',
+                'delivered': 'Delivered'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function formatTime(timeString) {
+            const date = new Date(timeString);
+            return date.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        async function acceptOrder(orderId) {
+            try {
+                showMessage('Processing acceptance...', 'info');
+                
+                const response = await fetch('/api/driver/accept-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        order_id: orderId,
+                        driver_id: driverId || tg.initDataUnsafe.user?.id 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Order accepted successfully!', 'success');
+                    setTimeout(() => {
+                        tg.close();
+                    }, 2000);
+                } else {
+                    showMessage('❌ Failed to accept order: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error accepting order:', error);
+                showMessage('❌ Network error occurred', 'error');
+            }
+        }
+        
+        async function rejectOrder(orderId) {
+            try {
+                showMessage('Processing rejection...', 'info');
+                
+                const response = await fetch('/api/driver/reject-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        order_id: orderId,
+                        driver_id: driverId || tg.initDataUnsafe.user?.id 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('✅ Order rejected', 'success');
+                    setTimeout(() => {
+                        tg.close();
+                    }, 2000);
+                } else {
+                    showMessage('❌ Failed to reject order: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error rejecting order:', error);
+                showMessage('❌ Network error occurred', 'error');
+            }
+        }
+        
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 
+                                  type === 'error' ? 'error-message' : 'info-message';
+            messageDiv.textContent = text;
+            
+            const container = document.querySelector('.driver-container');
+            container.insertBefore(messageDiv, container.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        function showError(message) {
+            document.getElementById('orderContent').innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i> ${message}
+                </div>
+            `;
+            document.getElementById('orderContent').style.display = 'block';
+        }
+        
+        function showNoOrders() {
+            document.getElementById('noOrders').style.display = 'block';
+        }
+        
+        function trackDelivery(orderId) {
+            showMessage('Opening delivery tracking...', 'info');
+            
+            // Open tracking map or admin dashboard
+            const trackingUrl = `https://${window.location.hostname}/admin#track-${orderId}`;
+            window.open(trackingUrl, '_blank');
+        }
+        
+        function overrideBot(orderId) {
+            if (confirm('Are you sure you want to override automated delivery and assign to a human driver?')) {
+                showMessage('Overriding bot delivery...', 'info');
+                
+                // Call API to override bot delivery
+                fetch('/api/override-bot-delivery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showMessage('✅ Bot delivery overridden. Order reassigned to human driver.', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showMessage('❌ Failed to override bot delivery: ' + result.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error overriding bot delivery:', error);
+                    showMessage('❌ Network error occurred', 'error');
+                });
+            }
+        }
+        
+        // Load order data on page load
+        loadOrderData();
+    </script>
+</body>
+</html>

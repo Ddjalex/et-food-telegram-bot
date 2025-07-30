@@ -1,0 +1,198 @@
+/* Custom styles for ET-FOOD */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.menu-item-card {
+    transition: transform 0.2s ease-in-out;
+    border: 1px solid var(--bs-border-color);
+}
+
+.menu-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.menu-item-card img {
+    transition: transform 0.2s ease-in-out;
+}
+
+.menu-item-card:hover img {
+    transform: scale(1.05);
+}
+
+/* Telegram WebApp specific styles */
+.tg-viewport {
+    background-color: var(--tg-bg-color, var(--bs-body-bg));
+    color: var(--tg-text-color, var(--bs-body-color));
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Order summary styling */
+#orderSummary {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0.5rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        justify-content: center;
+    }
+}
+
+/* Status badges */
+.badge {
+    font-size: 0.85em;
+}
+
+/* Admin dashboard improvements */
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.nav-tabs .nav-link {
+    color: var(--bs-body-color);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+/* Card hover effects */
+.card {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Form improvements */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Button improvements */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Analytics cards */
+.analytics-card {
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+    color: white;
+    border: none;
+}
+
+.analytics-card .card-body {
+    padding: 2rem;
+}
+
+/* Cart button enhancements */
+#cartBtn, #historyBtn {
+    border-radius: 25px !important;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    transition: all 0.3s ease !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+#cartBtn:hover, #historyBtn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+}
+
+#cartBtn {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+#historyBtn {
+    background-color: #0dcaf0 !important;
+    border-color: #0dcaf0 !important;
+    color: #000 !important;
+}
+
+/* Cart badge animation */
+#cartCount {
+    animation: pulse 0.5s ease-in-out;
+    font-size: 0.7rem !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    line-height: 1 !important;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Mobile optimizations */
+@media (max-width: 576px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Responsive cart buttons */
+    .position-fixed {
+        top: 10px !important;
+        right: 10px !important;
+    }
+    
+    #cartBtn, #historyBtn {
+        font-size: 0.8rem !important;
+        padding: 0.5rem 0.7rem !important;
+        min-width: 50px !important;
+        min-height: 35px !important;
+    }
+    
+    /* Hide text on very small screens */
+    .d-none.d-sm-inline {
+        display: none !important;
+    }
+    
+    /* Bottom navigation styling */
+    .fixed-bottom {
+        z-index: 1030 !important;
+    }
+    
+    /* Add padding to body to account for fixed bottom nav */
+    body {
+        padding-bottom: 70px;
+    }
+}
