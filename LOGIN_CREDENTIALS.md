@@ -6,11 +6,26 @@
 - **Role**: Super Administrator (Access to all restaurants)
 - **Status**: ✅ Active and Ready
 
-## Restaurant Admin Account
+## Restaurant Admin Accounts
+### Flavour Cafe Admin
 - **Username**: `flavour`
 - **Password**: `flavour123`
 - **Role**: Restaurant Administrator (Flavour Cafe only)
 - **Restaurant**: Flavour cafe | E.Fabrica
+- **Status**: ✅ Active and Ready
+
+### Test Restaurant Admin
+- **Username**: `test_restaurant_admin`
+- **Password**: `test123`
+- **Role**: Restaurant Administrator (Flavour Cafe only)
+- **Restaurant**: Flavour cafe | E.Fabrica
+- **Status**: ✅ Active and Ready
+
+### Rich Cafe Admin
+- **Username**: `rich_cafe_admin`
+- **Password**: `richadmin123`
+- **Role**: Restaurant Administrator (Y Factory Restaurant only)
+- **Restaurant**: Y Factory Restaurant
 - **Status**: ✅ Active and Ready
 
 ## Kitchen Staff Account
