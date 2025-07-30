@@ -1,40 +1,41 @@
 # ET-FOOD Login Credentials
 
-## Super Admin Login
-Access URL: http://localhost:5000/superadmin
+## Super Admin Accounts
+- **Username**: `admin`
+- **Password**: `admin123`
+- **Role**: Super Administrator (Access to all restaurants)
 
-### Credentials:
-1. **Primary Super Admin**
-   - Username: `admin`
-   - Password: `admin123`
-   - Role: super_admin
+- **Username**: `superadmin`
+- **Password**: `superadmin`
+- **Role**: Super Administrator (Access to all restaurants)
 
-2. **Backup Super Admin**
-   - Username: `superadmin`
-   - Password: `superadmin123`
-   - Role: super_admin
+## Restaurant Admin Account
+- **Username**: `flavour`
+- **Password**: `flavour123`
+- **Role**: Restaurant Administrator (Flavour Cafe only)
+- **Restaurant**: Flavour cafe | E.Fabrica
 
-## Features Access:
-- Restaurant Management
-- Menu Management
-- Order Management
-- Driver Management
-- System Settings
-- Analytics & Reports
+## Kitchen Staff Account
+- **Username**: `kitchen`
+- **Password**: `kitchen123`
+- **Role**: Kitchen Manager
+- **Restaurant**: Flavour cafe | E.Fabrica
+- **Position**: Head Chef
 
-## Food Images Status:
-✅ All 6 menu items now use real food images from static/uploads:
-- Classic Burger: `/uploads/1751892160_22.JPG`
-- Chicken Burger: `/uploads/1751892507_languge_2.jpg`
-- Beef Shawarma: `/uploads/1751974703_Beef_Shawarama_Large.jpg`
-- Mixed Platter: `/uploads/1751965845_Chicken_Burger_Special.jpg`
-- French Fries: `/uploads/1751898445_st3.jpg`
-- Coca Cola: `/uploads/1751974754_images_22.jpg`
+## Login URLs
+- Super Admin Dashboard: `/superadmin/login`
+- Restaurant Admin Dashboard: `/admin/login`
+- Kitchen Dashboard: `/kitchen/login`
 
-## Flask Static File Configuration:
-- Flask app configured with `static_folder='static'`
-- Dedicated `/uploads/<filename>` route for image serving
-- Both `/static/uploads/` and `/uploads/` paths working correctly
-- All image URLs return HTTP 200 responses
+## Notes
+- All accounts are active and approved
+- Super admin accounts have access to all restaurants
+- Restaurant admin and kitchen staff are restricted to their assigned restaurant
+- Passwords are securely hashed using Werkzeug security functions
 
-Last Updated: July 29, 2025
+## Troubleshooting
+If login issues persist:
+1. Ensure you're using the correct login URL for your role
+2. Check that cookies and sessions are enabled
+3. Clear browser cache and try again
+4. Verify the Flask server is running properly
