@@ -707,6 +707,13 @@
             flex-wrap: wrap;
         }
         
+        .location-buttons-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        
         .location-btn {
             border: none;
             padding: 10px 16px;
@@ -2274,10 +2281,10 @@
                                     
                                     <!-- Enhanced Location Buttons -->
                                     <div class="location-buttons-container">
-                                        <button type="button" class="location-btn primary-btn" onclick="openLocationPicker()" title="Pick Location on Map">
+                                        <button type="button" class="location-btn primary" onclick="openLocationPicker()" title="Pick Location on Map">
                                             🗺️ Pick on Map
                                         </button>
-                                        <button type="button" class="location-btn secondary-btn" onclick="shareLocationInCheckout()" title="Share Current Location">
+                                        <button type="button" class="location-btn secondary" onclick="shareLocationInCheckout()" title="Share Current Location">
                                             📍 Current Location
                                         </button>
                                     </div>
