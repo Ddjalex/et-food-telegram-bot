@@ -5,7 +5,7 @@ Handles kitchen staff operations for food availability management
 
 from flask import Blueprint, request, jsonify, session
 from models import MenuItem, Order, AdminUser, Restaurant, Category
-from extensions import db
+from app import db
 from food_availability_system import (
     mark_item_unavailable, 
     mark_item_available,

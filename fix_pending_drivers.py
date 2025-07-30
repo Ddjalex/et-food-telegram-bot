@@ -6,7 +6,7 @@ Fix pending drivers with missing data
 import os
 import sys
 from app import app
-from extensions import db
+from app import db
 from models import Driver
 
 def fix_pending_drivers():

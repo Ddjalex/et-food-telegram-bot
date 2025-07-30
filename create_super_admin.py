@@ -4,7 +4,7 @@ Create super admin user for login access
 """
 
 from app import app
-from extensions import db
+from app import db
 from models import AdminUser
 from werkzeug.security import generate_password_hash
 

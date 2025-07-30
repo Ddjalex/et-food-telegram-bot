@@ -11,7 +11,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import app
-from extensions import db
+from app import db
 from models import SystemSettings
 
 def initialize_driver_radius():

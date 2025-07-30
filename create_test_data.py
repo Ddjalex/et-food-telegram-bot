@@ -6,7 +6,7 @@ Create test data for kitchen driver notification system
 import json
 from datetime import datetime, timedelta
 from app import app
-from extensions import db
+from app import db
 from models import Order, Driver, AdminUser
 
 def create_test_order():

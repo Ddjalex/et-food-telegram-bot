@@ -6,7 +6,7 @@ Handles driver assignment, location tracking, and delivery completion
 import logging
 from datetime import datetime, timedelta
 from models import Driver, Order, AdminUser
-from extensions import db
+from app import db
 from app import app
 from driver_bot import send_driver_message, notify_driver_assignment_via_driver_bot
 from enhanced_driver_system import (

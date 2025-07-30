@@ -6,7 +6,7 @@ This script updates the database to use actual uploaded food images instead of p
 
 import os
 from app import app
-from extensions import db
+from app import db
 from models import MenuItem
 
 # Mapping of food items to their actual uploaded images

@@ -9,7 +9,7 @@ import json
 import requests
 from datetime import datetime, timedelta
 from app import app
-from extensions import db
+from app import db
 from models import Driver, Order, AdminUser, SystemSettings
 
 class DriverIntegrationSystem:

@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import app
-from extensions import db
+from app import db
 from models import Driver
 from datetime import datetime
 

@@ -7,7 +7,7 @@ This demonstrates the complete workflow from order placement to driver notificat
 import json
 import time
 from datetime import datetime, timedelta
-from extensions import db
+from app import db
 from models import Order, Driver, MenuItem
 from app import app
 

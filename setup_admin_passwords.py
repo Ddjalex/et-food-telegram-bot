@@ -5,7 +5,7 @@ This script creates admin users with default passwords that can be changed later
 """
 
 from app import app
-from extensions import db
+from app import db
 from models import AdminUser
 from werkzeug.security import generate_password_hash
 

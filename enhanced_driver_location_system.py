@@ -134,7 +134,7 @@ class DriverLocationTracker:
         """Handle incoming location update from driver"""
         try:
             from models import Driver
-            from extensions import db
+            from app import db
             from main import app
             
             with app.app_context():

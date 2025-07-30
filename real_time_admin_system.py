@@ -8,7 +8,7 @@ import logging
 import json
 from datetime import datetime
 from models import Order, AdminUser
-from extensions import db
+from app import db
 from bot_minimal import send_message_to_admin
 
 logger = logging.getLogger(__name__)

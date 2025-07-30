@@ -8,7 +8,7 @@ import logging
 import json
 from datetime import datetime
 from models import Order, Driver, AdminUser
-from extensions import db
+from app import db
 from driver_bot import send_driver_message
 
 logger = logging.getLogger(__name__)

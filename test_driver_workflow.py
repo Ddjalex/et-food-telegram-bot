@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import app
 from models import Driver, Order
-from extensions import db
+from app import db
 from driver_bot import handle_driver_contact_share, notify_driver_about_order
 from complete_order_workflow import workflow_manager
 

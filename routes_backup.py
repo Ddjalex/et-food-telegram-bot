@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import render_template, request, jsonify, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from app import app
-from extensions import db
+from app import db
 from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change

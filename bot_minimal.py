@@ -90,7 +90,7 @@ def notify_driver_assignment(driver_id, order_id):
                 logger.error(f"Error sending admin notification: {e}")
             
             # Auto-accept the order for bot driver
-            from extensions import db
+            from app import db
             order.status = 'out_for_delivery'
             db.session.commit()
             
@@ -145,7 +145,7 @@ def send_bot_location_updates(driver_id, order_id):
             from app import app
             
             with app.app_context():
-                from extensions import db
+                from app import db
                 from models import Driver, Order
                 
                 # Simulate delivery route with location updates
@@ -700,7 +700,7 @@ def handle_callback_query(callback_query):
             return
         
         # Update order status to payment_pending (waiting for admin verification)
-        from extensions import db
+        from app import db
         order.status = 'payment_pending'
         db.session.commit()
         
@@ -753,7 +753,7 @@ def handle_callback_query(callback_query):
         
         # Update order status
         from models import Order
-        from extensions import db
+        from app import db
         order = Order.query.get(order_id)
         if order:
             order.status = 'payment_verified'
@@ -825,7 +825,7 @@ def handle_callback_query(callback_query):
 def handle_admin_callback(callback_query):
     """Handle admin callback queries"""
     try:
-        from extensions import db
+        from app import db
         from models import Order, Driver, AdminUser
         
         chat_id = callback_query["message"]["chat"]["id"]
@@ -1528,7 +1528,7 @@ def check_feedback_mode(user_id):
 def handle_order_rating(order_id, rating, user_id):
     """Handle order rating submission"""
     try:
-        from extensions import db
+        from app import db
         from models import Order
         
         order = Order.query.get(order_id)

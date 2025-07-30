@@ -193,7 +193,7 @@ def reassign_order_to_next_driver(order_id):
     """Reassign order to next available driver"""
     try:
         from models import Order, Driver
-        from extensions import db
+        from app import db
         
         order = Order.query.get(order_id)
         if not order or order.status != 'pending':
@@ -1196,7 +1196,7 @@ def handle_driver_contact_registration_flow(chat_id, contact, user_data):
     """Handle contact sharing for either new registration or existing driver linking"""
     try:
         from models import Driver
-        from extensions import db
+        from app import db
         from main import app
         
         with app.app_context():
@@ -1235,7 +1235,7 @@ def handle_driver_contact_share(chat_id, contact):
     """Handle driver contact sharing and automatic registration"""
     try:
         from models import Driver
-        from extensions import db
+        from app import db
         from app import app
         
         with app.app_context():
@@ -1357,7 +1357,7 @@ def handle_driver_location_update(chat_id, location):
         if not success:
             # Fallback to basic handling
             from models import Driver
-            from extensions import db
+            from app import db
             from main import app
             
             with app.app_context():
@@ -1546,7 +1546,7 @@ def check_driver_registration_and_welcome(chat_id):
     try:
         from models import Driver
         from app import app
-        from extensions import db
+        from app import db
         
         with app.app_context():
             # First check if driver is already linked to this Telegram ID
@@ -1978,7 +1978,7 @@ def send_driver_status_message(chat_id):
     """Send driver status information"""
     try:
         from models import Driver, Order
-        from extensions import db
+        from app import db
         
         driver = Driver.query.filter_by(telegram_user_id=chat_id).first()
         if not driver:
@@ -2222,7 +2222,7 @@ def toggle_driver_availability(chat_id):
     """Toggle driver availability status"""
     try:
         from models import Driver
-        from extensions import db
+        from app import db
         from main import app
         
         with app.app_context():
@@ -2465,7 +2465,7 @@ def handle_pickup_complete(chat_id, order_id):
     """Handle pickup completion notification"""
     try:
         from models import Order
-        from extensions import db
+        from app import db
         from main import app
         
         with app.app_context():

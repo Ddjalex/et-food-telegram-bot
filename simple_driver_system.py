@@ -9,7 +9,7 @@ import requests
 import json
 from datetime import datetime
 from flask import request, jsonify
-from extensions import db
+from app import db
 from models import Driver
 
 # Set up logging

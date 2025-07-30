@@ -6,7 +6,7 @@ Handles driver linking, approval notifications, and complete delivery process
 import logging
 from datetime import datetime
 from models import Driver, Order, AdminUser
-from extensions import db
+from app import db
 from app import app
 from driver_bot import send_driver_message, send_driver_welcome_message
 from admin_approval_system import notify_admin_new_driver_registration

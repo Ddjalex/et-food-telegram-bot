@@ -7,7 +7,7 @@ Creates a proper driver onboarding flow with real Telegram integration
 import os
 from datetime import datetime
 from app import app
-from extensions import db
+from app import db
 from models import Driver, AdminUser
 
 def create_real_driver_system():

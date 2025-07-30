@@ -6,7 +6,7 @@ Handles notifications and approval workflow for driver registrations
 import logging
 from datetime import datetime
 from models import Driver, AdminUser
-from extensions import db
+from app import db
 from driver_bot import send_driver_message
 
 def send_driver_approval_notification(chat_id, driver_name):

@@ -8,7 +8,7 @@ import logging
 import requests
 import json
 from flask import request, jsonify
-from extensions import db
+from app import db
 from models import Driver, Order
 
 # Set up logging

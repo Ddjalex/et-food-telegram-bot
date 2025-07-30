@@ -7,7 +7,7 @@ import os
 import sys
 from datetime import datetime
 from app import app
-from extensions import db
+from app import db
 from models import Order
 from complete_order_workflow import process_new_order
 

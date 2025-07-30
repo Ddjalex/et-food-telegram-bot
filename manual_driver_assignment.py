@@ -6,7 +6,7 @@ Handles manual driver assignment workflow replacing automatic notifications
 import logging
 from datetime import datetime, timedelta
 from models import Order, Driver, AdminUser
-from extensions import db
+from app import db
 from bot_minimal import send_message_to_admin
 
 logger = logging.getLogger(__name__)

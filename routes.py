@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from flask import render_template, request, jsonify, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from app import app
-from extensions import db
+from app import db
 from sqlalchemy import func
 from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant, KitchenStaff
 from bot_minimal import send_order_notification, notify_customer_status_change

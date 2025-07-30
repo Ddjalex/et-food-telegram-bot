@@ -7,7 +7,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from app import app
-from extensions import db
+from app import db
 from models import Driver
 
 def create_test_drivers():
