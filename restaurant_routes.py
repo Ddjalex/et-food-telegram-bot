@@ -1,6 +1,6 @@
 from flask import request, jsonify, render_template, session, redirect, url_for
 from app import app, db
-from models import Restaurant, MenuItem, Order, AdminUser
+from models import Restaurant, MenuItem, Order, AdminUser, Category, Driver
 from datetime import datetime
 import logging
 
@@ -179,8 +179,10 @@ def admin_update_restaurant(restaurant_id):
 
 @app.route('/api/admin/restaurants/<int:restaurant_id>', methods=['DELETE'])
 def admin_delete_restaurant(restaurant_id):
-    """Admin endpoint to delete a restaurant"""
+    """Admin endpoint to delete a restaurant with proper dependency checking"""
     try:
+        from models import Category, AdminUser, Driver
+        
         restaurant = Restaurant.query.get_or_404(restaurant_id)
         
         # Check if restaurant has orders
@@ -199,6 +201,30 @@ def admin_delete_restaurant(restaurant_id):
                 'error': f'Cannot delete restaurant with {menu_count} menu items. Remove menu items first.'
             }), 400
         
+        # Check if restaurant has categories
+        category_count = Category.query.filter_by(restaurant_id=restaurant_id).count()
+        if category_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete restaurant with {category_count} categories. Remove categories first.'
+            }), 400
+        
+        # Check if restaurant has admin users
+        admin_count = AdminUser.query.filter_by(restaurant_id=restaurant_id).count()
+        if admin_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete restaurant with {admin_count} admin users. Reassign or remove admin users first.'
+            }), 400
+        
+        # Check if restaurant has drivers
+        driver_count = Driver.query.filter_by(restaurant_id=restaurant_id).count()
+        if driver_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete restaurant with {driver_count} drivers. Reassign drivers first.'
+            }), 400
+        
         db.session.delete(restaurant)
         db.session.commit()
         
@@ -209,6 +235,64 @@ def admin_delete_restaurant(restaurant_id):
     
     except Exception as e:
         logger.error(f"Error deleting restaurant {restaurant_id}: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/restaurants/<int:restaurant_id>/cleanup', methods=['POST'])
+def admin_cleanup_restaurant_dependencies(restaurant_id):
+    """Admin endpoint to clean up restaurant dependencies before deletion"""
+    try:
+        from models import Category, AdminUser, Driver
+        
+        restaurant = Restaurant.query.get_or_404(restaurant_id)
+        cleanup_summary = []
+        
+        # Don't clean up if there are orders - those should be preserved
+        order_count = Order.query.filter_by(restaurant_id=restaurant_id).count()
+        if order_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot cleanup restaurant with {order_count} orders. Orders must be preserved.'
+            }), 400
+        
+        # Clean up menu items
+        menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+        if menu_items:
+            for item in menu_items:
+                db.session.delete(item)
+            cleanup_summary.append(f'Removed {len(menu_items)} menu items')
+        
+        # Clean up categories
+        categories = Category.query.filter_by(restaurant_id=restaurant_id).all()
+        if categories:
+            for category in categories:
+                db.session.delete(category)
+            cleanup_summary.append(f'Removed {len(categories)} categories')
+        
+        # Reassign admin users to null (unassign from restaurant)
+        admin_users = AdminUser.query.filter_by(restaurant_id=restaurant_id).all()
+        if admin_users:
+            for admin in admin_users:
+                admin.restaurant_id = None
+            cleanup_summary.append(f'Reassigned {len(admin_users)} admin users')
+        
+        # Reassign drivers to null (unassign from restaurant)
+        drivers = Driver.query.filter_by(restaurant_id=restaurant_id).all()
+        if drivers:
+            for driver in drivers:
+                driver.restaurant_id = None
+            cleanup_summary.append(f'Reassigned {len(drivers)} drivers')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Restaurant dependencies cleaned up successfully',
+            'cleanup_summary': cleanup_summary
+        })
+    
+    except Exception as e:
+        logger.error(f"Error cleaning up restaurant {restaurant_id} dependencies: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
