@@ -127,13 +127,6 @@ def create_tables():
 # Create tables
 create_tables()
 
-# Auto-sync menu with uploaded images (solves the 3 main issues)
-try:
-    from auto_menu_sync import check_and_sync_menu
-    check_and_sync_menu()
-except Exception as e:
-    print(f"Menu auto-sync warning: {e}")
-
 # Import routes to register them
 from routes import *  # noqa: F401
 from restaurant_routes import *  # noqa: F401
