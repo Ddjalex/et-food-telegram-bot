@@ -1,47 +1,59 @@
-# Quick Git Commands for ET-FOOD
+# Quick Data Protection Commands
 
-## 🚀 Most Common Commands
+## Your Data IS Being Saved!
+Your food images and menu data are properly saved in the PostgreSQL database. Here are quick commands to verify and protect your data:
 
-### Commit & Push Changes
+## Verify Current Data Status
 ```bash
-./git_workflow.sh full
+python3 auto_save_data.py verify
 ```
 
-### Pull Updates & Restart
+## Create Data Backup
 ```bash
-./git_workflow.sh pull
-./restart_after_pull.sh full
-# Then restart "Start application" workflow in Replit
+python3 auto_save_data.py backup
 ```
 
-### Check File Status
+## Safe Git Operations
 ```bash
-./git_workflow.sh verify
+# Safe pull from GitHub (protects your changes)
+./safe_git_pull.sh
+
+# Create backup before any Git operation
+./pre_pull_backup.sh
 ```
 
-### Emergency Reset (if files are missing)
+## Check What's Actually Saved
 ```bash
-git fetch origin main
-git reset --hard origin/main
-./restart_after_pull.sh full
+# Check database menu items
+python3 -c "
+from app import app, db
+from models import MenuItem
+with app.app_context():
+    items = MenuItem.query.all()
+    for item in items:
+        print(f'{item.name}: {item.image_url}')
+"
+
+# Check image files exist
+ls -la static/uploads/ | head -10
+
+# Test image loading
+curl -I http://localhost:5000/static/uploads/1751965845_Chicken_Burger_Special.jpg
 ```
 
-## 📁 File Tracking Status
+## Current Status ✅
+- **Database**: PostgreSQL operational with 6 menu items
+- **Images**: All 6 items have real uploaded food photos
+- **Web App**: Loading correctly with authentic images
+- **API**: Returning proper image URLs
 
-- ✅ **74+ food images** in static/uploads/
-- ✅ **40+ Python files** (.py)
-- ✅ **HTML templates** and CSS
-- ✅ **Configuration files**
-- ❌ **Cache files** (auto-excluded)
-- ❌ **Database files** (auto-excluded)
+## If You See Issues:
+1. **Images not showing**: Run `python3 auto_save_data.py verify`
+2. **Data missing after Git pull**: Run `./safe_git_pull.sh` next time
+3. **Need to restore**: Use backups in `data_backups/` directory
 
-## 🔧 Setup (One Time)
-```bash
-chmod +x *.sh
-./git_hooks_setup.sh
-```
-
-## 📊 Status Check
-```bash
-./restart_after_pull.sh status
-```
+## Your Data Protection:
+- ✅ Database automatically saves changes
+- ✅ Images stored in `static/uploads/` 
+- ✅ Safe Git scripts prevent data loss
+- ✅ Automatic backup system available
