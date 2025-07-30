@@ -2051,10 +2051,23 @@ def delete_restaurant_super_admin(restaurant_id):
                 'error': f'Cannot delete restaurant with {admins_count} admin users. Please reassign or remove admins first.'
             }), 400
         
-        # Delete associated menu items and categories
-        from models import MenuItem, Category
-        MenuItem.query.filter_by(restaurant_id=restaurant_id).delete()
-        Category.query.filter_by(restaurant_id=restaurant_id).delete()
+        # Delete associated data in proper order to avoid foreign key violations
+        from models import MenuItem, Category, Driver
+        
+        # First delete menu items (they reference categories)
+        menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+        for item in menu_items:
+            db.session.delete(item)
+        
+        # Then delete categories (they reference restaurant)
+        categories = Category.query.filter_by(restaurant_id=restaurant_id).all()
+        for category in categories:
+            db.session.delete(category)
+        
+        # Delete any drivers assigned to this restaurant
+        drivers = Driver.query.filter_by(restaurant_id=restaurant_id).all()
+        for driver in drivers:
+            driver.restaurant_id = None  # Unassign rather than delete
         
         # Delete the restaurant
         restaurant_name = restaurant.name
