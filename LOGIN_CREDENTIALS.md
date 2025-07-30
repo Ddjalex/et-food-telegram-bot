@@ -1,19 +1,17 @@
 # ET-FOOD Login Credentials
 
-## Super Admin Accounts
+## Super Admin Account
 - **Username**: `admin`
 - **Password**: `admin123`
 - **Role**: Super Administrator (Access to all restaurants)
-
-- **Username**: `superadmin`
-- **Password**: `superadmin`
-- **Role**: Super Administrator (Access to all restaurants)
+- **Status**: ✅ Active and Ready
 
 ## Restaurant Admin Account
 - **Username**: `flavour`
 - **Password**: `flavour123`
 - **Role**: Restaurant Administrator (Flavour Cafe only)
 - **Restaurant**: Flavour cafe | E.Fabrica
+- **Status**: ✅ Active and Ready
 
 ## Kitchen Staff Account
 - **Username**: `kitchen`
