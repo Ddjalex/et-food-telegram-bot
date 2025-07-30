@@ -16,7 +16,7 @@ db = SQLAlchemy(model_class=Base)
 
 # Create the app with explicit static configuration
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-app.secret_key = os.environ.get("SESSION_SECRET")
+app.secret_key = os.environ.get("SESSION_SECRET", "et-food-secret-key-2025-replit-migration-success")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1) # needed for url_for to generate with https
 
 # configure the database, relative to the app instance folder

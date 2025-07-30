@@ -112,6 +112,11 @@ def test_restaurants():
     """Test page for restaurant routing"""
     return send_file('test_restaurant_routing.html')
 
+@app.route('/delivery-location')
+def delivery_location_picker():
+    """Delivery location picker with OpenStreetMap"""
+    return render_template('delivery_location_picker.html')
+
 # Separate login routes for different user roles
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():

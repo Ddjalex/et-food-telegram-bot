@@ -2270,10 +2270,30 @@
                             <div class="address-container">
                                 <div class="address-input-wrapper">
                                     <div class="address-label" id="addressLabel">Delivery Address</div>
-                                    <textarea id="customerAddress" placeholder="Enter delivery address or search below" rows="2" required></textarea>
-                                    <button type="button" class="address-search-btn" onclick="toggleMapSearch()" title="Search on Map">
-                                        🗺️
-                                    </button>
+                                    <textarea id="customerAddress" placeholder="Enter delivery address or click 'Pick on Map' for precise location" rows="2" required></textarea>
+                                    
+                                    <!-- Enhanced Location Buttons -->
+                                    <div class="location-buttons-container">
+                                        <button type="button" class="location-btn primary-btn" onclick="openLocationPicker()" title="Pick Location on Map">
+                                            🗺️ Pick on Map
+                                        </button>
+                                        <button type="button" class="location-btn secondary-btn" onclick="shareLocationInCheckout()" title="Share Current Location">
+                                            📍 Current Location
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Location Status Display -->
+                                    <div id="selectedLocationInfo" class="selected-location-display" style="display: none;">
+                                        <div class="location-preview-card">
+                                            <div class="location-icon">📍</div>
+                                            <div class="location-details">
+                                                <div class="location-title">Selected Location:</div>
+                                                <div id="locationAddress" class="location-address">No location selected</div>
+                                                <div id="locationCoords" class="location-coords">GPS: --</div>
+                                                <div id="orderTypeInfo" class="order-type-badge"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Advanced Map Search Interface -->
@@ -2658,6 +2678,20 @@
                     order_note: orderNote,
                     is_gift_order: true
                 };
+            }
+            
+            // Add delivery location data if available from location picker
+            if (deliveryLocationData) {
+                orderData.delivery_location_data = deliveryLocationData;
+                orderData.delivery_notes = deliveryLocationData.deliveryNotes || '';
+                
+                // Override recipient info with location picker data if available
+                if (deliveryLocationData.orderType === 'others' && deliveryLocationData.recipient) {
+                    orderData.recipient_name = deliveryLocationData.recipient.name;
+                    orderData.recipient_phone = deliveryLocationData.recipient.phone;
+                    orderData.order_note = deliveryLocationData.recipient.message;
+                    orderData.is_gift_order = true;
+                }
             }
 
             await submitOrder(orderData);
@@ -4040,7 +4074,125 @@
             setTimeout(() => {
                 loadUserProfile();
             }, 500);
+            
+            // Check for saved delivery location data
+            checkDeliveryData();
         });
+        
+        // Enhanced Location Picker Functions
+        let deliveryLocationData = null;
+        
+        // Open location picker in new window/popup
+        function openLocationPicker() {
+            const width = 400;
+            const height = 600;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            
+            const popup = window.open(
+                '/delivery-location',
+                'locationPicker',
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+            );
+            
+            // Listen for location selection
+            window.addEventListener('message', function(event) {
+                if (event.origin !== window.location.origin) return;
+                
+                if (event.data.type === 'deliveryLocationSelected') {
+                    handleLocationSelection(event.data.data);
+                    popup.close();
+                }
+            }, false);
+        }
+        
+        // Handle location selection from picker
+        function handleLocationSelection(locationData) {
+            deliveryLocationData = locationData;
+            
+            // Update address field
+            const addressField = document.getElementById('customerAddress');
+            if (addressField && locationData.location) {
+                addressField.value = locationData.location.address || `Location: ${locationData.location.lat.toFixed(6)}, ${locationData.location.lng.toFixed(6)}`;
+            }
+            
+            // Update location display
+            updateLocationDisplay(locationData);
+            
+            // Handle order type (self vs others)
+            if (locationData.orderType === 'others' && locationData.recipient) {
+                // Switch to "For Someone Else" mode
+                const othersRadio = document.querySelector('input[name="orderType"][value="others"]');
+                if (othersRadio) {
+                    othersRadio.checked = true;
+                    toggleOrderType();
+                    
+                    // Fill recipient information
+                    const recipientNameField = document.getElementById('recipientName');
+                    const recipientPhoneField = document.getElementById('recipientPhone');
+                    const orderNoteField = document.getElementById('orderNote');
+                    
+                    if (recipientNameField) recipientNameField.value = locationData.recipient.name || '';
+                    if (recipientPhoneField) recipientPhoneField.value = locationData.recipient.phone || '';
+                    if (orderNoteField) orderNoteField.value = locationData.recipient.message || '';
+                }
+            }
+            
+            // Store location data globally for order submission
+            window.currentOrderLocation = {
+                latitude: locationData.location.lat,
+                longitude: locationData.location.lng,
+                source: 'map_selection',
+                accuracy: 1
+            };
+            
+            console.log('Location selected:', locationData);
+        }
+        
+        // Update location display in UI
+        function updateLocationDisplay(locationData) {
+            const locationInfo = document.getElementById('selectedLocationInfo');
+            const locationAddress = document.getElementById('locationAddress');
+            const locationCoords = document.getElementById('locationCoords');
+            const orderTypeInfo = document.getElementById('orderTypeInfo');
+            
+            if (locationInfo && locationData.location) {
+                locationInfo.style.display = 'block';
+                
+                if (locationAddress) {
+                    locationAddress.textContent = locationData.location.address || 'Custom location';
+                }
+                
+                if (locationCoords) {
+                    locationCoords.textContent = `GPS: ${locationData.location.lat.toFixed(6)}, ${locationData.location.lng.toFixed(6)}`;
+                }
+                
+                if (orderTypeInfo) {
+                    if (locationData.orderType === 'others') {
+                        orderTypeInfo.textContent = '🎁 Gift Order';
+                        orderTypeInfo.className = 'delivery-location-badge gift-order';
+                    } else {
+                        orderTypeInfo.textContent = '📦 Personal Order';
+                        orderTypeInfo.className = 'delivery-location-badge';
+                    }
+                }
+            }
+        }
+        
+        // Check for delivery data from localStorage on page load
+        function checkDeliveryData() {
+            const savedDeliveryData = localStorage.getItem('deliveryData');
+            if (savedDeliveryData) {
+                try {
+                    const locationData = JSON.parse(savedDeliveryData);
+                    handleLocationSelection(locationData);
+                    // Clear the saved data after using it
+                    localStorage.removeItem('deliveryData');
+                } catch (error) {
+                    console.error('Error loading saved delivery data:', error);
+                }
+            }
+        }
     </script>
 </body>
 </html>
