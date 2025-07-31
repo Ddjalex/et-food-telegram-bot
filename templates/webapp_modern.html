@@ -321,10 +321,12 @@
         async function loadMenuItems() {
             try {
                 const response = await fetch('/api/menu');
-                menuItems = await response.json();
+                const data = await response.json();
+                menuItems = data.menu_items || [];
                 displayProducts();
             } catch (error) {
                 console.error('Error loading menu:', error);
+                menuItems = [];
             }
         }
 
