@@ -880,6 +880,50 @@ def api_driver_registration_simple():
 
 
 
+@app.route('/api/restaurant-info')
+def get_restaurant_info():
+    """Get restaurant information for frontend"""
+    try:
+        restaurant_id = request.args.get('restaurant_id')
+        
+        # Handle 'first available' request
+        if restaurant_id == 'first available':
+            restaurant = Restaurant.query.filter_by(is_active=True).first()
+        else:
+            restaurant_id = int(restaurant_id) if restaurant_id else 1
+            restaurant = Restaurant.query.get(restaurant_id)
+        
+        if not restaurant:
+            return jsonify({
+                'success': False,
+                'error': 'No restaurants available',
+                'company': {'name': 'ET-FOOD', 'description': 'Food Delivery Service'},
+                'restaurant': {'name': 'Restaurant', 'description': 'Delicious Food', 'logo_url': None, 'cover_image_url': None}
+            })
+        
+        return jsonify({
+            'success': True,
+            'company': {'name': 'ET-FOOD', 'description': 'Food Delivery Service'},
+            'restaurant': {
+                'id': restaurant.id,
+                'name': restaurant.name,
+                'description': restaurant.description,
+                'address': restaurant.address,
+                'phone': restaurant.phone,
+                'logo_url': restaurant.logo_url,
+                'cover_image_url': restaurant.cover_image_url,
+                'estimated_delivery_time': restaurant.estimated_delivery_time
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting restaurant info: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'No restaurants available',
+            'company': {'name': 'ET-FOOD', 'description': 'Food Delivery Service'},
+            'restaurant': {'name': 'Restaurant', 'description': 'Delicious Food', 'logo_url': None, 'cover_image_url': None}
+        })
+
 @app.route('/api/menu')
 def get_menu():
     """Get menu items organized by categories"""
