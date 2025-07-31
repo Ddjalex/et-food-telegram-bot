@@ -2965,6 +2965,15 @@ def kitchen_login():
     
     return render_template("kitchen_login.html")
 
+@app.route('/kitchen/logout', methods=['GET', 'POST'])
+def kitchen_logout():
+    """Kitchen staff logout"""
+    session.clear()
+    if request.is_json:
+        return jsonify({'success': True, 'message': 'Logged out successfully', 'redirect': '/kitchen/login'})
+    else:
+        return redirect(url_for('kitchen_login'))
+
 @app.route("/kitchen")
 @kitchen_staff_required
 def kitchen_dashboard():
