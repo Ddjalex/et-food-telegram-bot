@@ -18,7 +18,8 @@ class MongoDBAtlasClient:
         self.base_url = f"https://eu-west-1.aws.data.mongodb-api.com/app/{self.app_id}/endpoint/data/v1"
         self.database = "etfood_delivery"
         
-        # For now, use direct MongoDB Atlas connection string data
+        # MongoDB Atlas connection string (using your provided connection)
+        self.connection_string = "mongodb+srv://almeseged:A1l2m3e4s5@cluster0.t6sz6bo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
         self.connection_data = {
             "cluster": "cluster0",
             "database": "etfood_delivery"
