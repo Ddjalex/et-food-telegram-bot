@@ -7,18 +7,19 @@ ET-FOOD is a comprehensive food delivery management system built with Flask and 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
-- **July 31, 2025 - Complete System Migration to Replit Environment**: Successfully completed migration from Replit Agent to standard Replit environment. Installed Python 3.11 with all required dependencies (Flask 3.1.1, SQLAlchemy 2.0.41, Gunicorn 23.0.0, python-telegram-bot 22.2, psycopg2-binary 2.9.10). Configured PostgreSQL database with proper environment variables. Added bot tokens from .env.template as secure environment secrets (DRIVER_BOT_TOKEN, ETFASTFOOD_BOT_TOKEN). Initialized database with 2 restaurants and 22 menu items. Created super admin accounts (admin/admin123, superadmin/superadmin123). Driver bot webhook successfully configured and working. Application fully operational on port 5000 with complete Telegram bot integration and WebApp functionality.
+- **July 31, 2025 - Complete MongoDB Migration**: Successfully migrated entire ET-FOOD delivery platform from PostgreSQL to MongoDB. Created custom MongoDB client (mongodb_client.py) to bypass PyMongo dependency conflicts. Implemented complete MongoDB models (models_final.py) with Restaurant, MenuItem, Order, Driver, AdminUser, PaymentTransaction, and Category models. Built comprehensive MongoDB Flask application (app_mongodb.py) with full CRUD functionality. All API endpoints working: /api/restaurant-info, /api/menu, /api/categories, /api/orders (GET/POST). Admin authentication functional with admin/admin123 and superadmin/superadmin123 credentials. Database pre-populated with 2 restaurants, 15 menu items across 5 categories, and 2 admin users. System now fully operational on MongoDB with the connection string: mongodb+srv://almeseged:A1l2m3e4s5@cluster0.t6sz6bo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0.
 
-- **July 31, 2025 - Database Population & Bot Integration**: Populated database with complete menu across 14 categories including authentic Ethiopian cuisine and international dishes for Flavour cafe restaurant. Y Factory Restaurant configured as secondary restaurant. Driver bot webhook now properly configured with Telegram API. All API endpoints working correctly including /api/restaurant-info and /api/menu. Frontend successfully loading restaurant data and menu items. System ready for production use with full bot functionality.
+- **July 31, 2025 - Complete System Migration to Replit Environment**: Successfully completed migration from Replit Agent to standard Replit environment. Installed Python 3.11 with all required dependencies (Flask 3.1.1, SQLAlchemy 2.0.41, Gunicorn 23.0.0, python-telegram-bot 22.2, psycopg2-binary 2.9.10). Configured PostgreSQL database with proper environment variables. Added bot tokens from .env.template as secure environment secrets (DRIVER_BOT_TOKEN, ETFASTFOOD_BOT_TOKEN). Initialized database with 2 restaurants and 22 menu items. Created super admin accounts (admin/admin123, superadmin/superadmin123). Driver bot webhook successfully configured and working. Application fully operational on port 5000 with complete Telegram bot integration and WebApp functionality.
 
 ## System Architecture
 
 ### Backend Architecture
 - **Framework**: Flask (Python)
-- **Database**: PostgreSQL (production) / SQLite (development)
+- **Database**: MongoDB Atlas (production) with custom client implementation
 - **Bot Framework**: python-telegram-bot for Telegram integration
 - **Authentication**: Session-based with role-based access control
 - **File Storage**: Local file system with static file serving
+- **MongoDB Client**: Custom HTTP-based client avoiding PyMongo dependency conflicts
 
 ### Frontend Architecture
 - **Templates**: Jinja2 templates with Bootstrap 5
@@ -28,10 +29,12 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Updates**: AJAX polling for live data
 
 ### Database Design
-- **ORM**: SQLAlchemy with Flask-SQLAlchemy
+- **Database**: MongoDB with custom model layer
+- **Collections**: restaurants, menu_items, categories, orders, drivers, admin_users, payment_transactions
 - **Models**: Restaurant, MenuItem, Category, Order, Driver, AdminUser, PaymentTransaction
-- **Relationships**: Foreign key relationships between orders, drivers, restaurants
+- **Relationships**: String-based ID references between documents
 - **Location Data**: GPS coordinates stored for drivers and delivery addresses
+- **Document Structure**: JSON-based documents with UUID string IDs
 
 ## Key Components
 

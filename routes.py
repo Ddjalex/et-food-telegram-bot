@@ -8,7 +8,11 @@ from werkzeug.utils import secure_filename
 from app import app
 from app import db
 from sqlalchemy import func
-from models import MenuItem, Order, AdminUser, UserProfile, Category, Driver, SystemSettings, Restaurant, KitchenStaff
+# MongoDB models
+from models_final import (
+    restaurant_model, menu_item_model, order_model, admin_user_model, 
+    driver_model, category_model, payment_transaction_model
+)
 from bot_minimal import send_order_notification, notify_customer_status_change
 from complete_order_workflow import process_new_order, handle_order_status_change
 import logging

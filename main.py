@@ -1,1 +1,1 @@
-from app import app  # noqa: F401
+from app_mongodb import app  # noqa: F401
