@@ -717,9 +717,21 @@
                 selectedItems[itemId] = newQty;
             }
             
+            // Add bounce animation to the button
+            const button = event.target;
+            button.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 150);
+            
             displayProducts();
             updateCartInfo();
             updateMainButton();
+            
+            // Show success feedback
+            if (change > 0) {
+                showAddedToCartFeedback(itemId);
+            }
         }
 
         // Update cart info
@@ -832,6 +844,55 @@
                 
                 grid.appendChild(productCard);
             });
+        }
+
+        // Show feedback when item is added to cart
+        function showAddedToCartFeedback(itemId) {
+            const item = menuItems.find(m => m.id === itemId);
+            if (!item) return;
+            
+            // Create a temporary feedback element
+            const feedback = document.createElement('div');
+            feedback.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, var(--success-color), #2ecc71);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                font-weight: 700;
+                z-index: 10000;
+                box-shadow: 0 8px 30px rgba(39, 174, 96, 0.4);
+                animation: popIn 0.3s ease-out;
+            `;
+            feedback.innerHTML = `✓ ${item.name} added to cart!`;
+            
+            // Add animation styles
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes popIn {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(feedback);
+            
+            // Remove after 1.5 seconds
+            setTimeout(() => {
+                feedback.style.animation = 'popIn 0.3s ease-out reverse';
+                setTimeout(() => {
+                    if (feedback.parentNode) {
+                        feedback.parentNode.removeChild(feedback);
+                    }
+                    if (style.parentNode) {
+                        style.parentNode.removeChild(style);
+                    }
+                }, 300);
+            }, 1500);
         }
     </script>
 </body>

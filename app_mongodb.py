@@ -292,7 +292,7 @@ def admin_login():
         # Find admin user
         admin_user = admin_user_model.find_by_username(username)
         
-        if admin_user and admin_user['password_hash'] == password:  # In production, use proper password hashing
+        if admin_user and admin_user.get('password') == password:  # Simple password check for demo
             session['admin_logged_in'] = True
             session['admin_user_id'] = admin_user['id']
             session['admin_username'] = admin_user['username']
@@ -348,11 +348,11 @@ def super_admin_login():
         # Find admin user
         admin_user = admin_user_model.find_by_username(username)
         
-        if admin_user and admin_user['password_hash'] == password and admin_user.get('role') == 'super_admin':
+        if admin_user and admin_user.get('password') == password and admin_user.get('role') == 'superadmin':
             session['admin_logged_in'] = True
             session['admin_user_id'] = admin_user['id']
             session['admin_username'] = admin_user['username']
-            session['admin_role'] = 'super_admin'
+            session['admin_role'] = 'superadmin'
             
             # Update last login
             admin_user_model.update_last_login(admin_user['id'])

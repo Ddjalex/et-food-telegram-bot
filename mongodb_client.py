@@ -145,8 +145,9 @@ class MongoDBAtlasClient:
             {
                 'id': self._generate_id(),
                 'username': 'admin',
+                'password': 'admin123',
                 'password_hash': 'admin123',
-                'role': 'super_admin',
+                'role': 'admin',
                 'is_active': True,
                 'created_at': self._get_current_time(),
                 'updated_at': self._get_current_time()
@@ -154,8 +155,9 @@ class MongoDBAtlasClient:
             {
                 'id': self._generate_id(),
                 'username': 'superadmin',
+                'password': 'superadmin123',
                 'password_hash': 'superadmin123',
-                'role': 'super_admin',
+                'role': 'superadmin',
                 'is_active': True,
                 'created_at': self._get_current_time(),
                 'updated_at': self._get_current_time()
