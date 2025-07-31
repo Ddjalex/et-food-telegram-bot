@@ -11,6 +11,25 @@ from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
+def kitchen_staff_required(f):
+    """Decorator to require kitchen staff or admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_id' not in session:
+            return redirect(url_for('kitchen_login'))
+        
+        admin = AdminUser.query.get(session['admin_id'])
+        if not admin or not admin.is_active:
+            session.clear()
+            return redirect(url_for('kitchen_login'))
+        
+        # Allow kitchen staff, restaurant admin, and super admin to access kitchen dashboard
+        if admin.role not in ['kitchen_staff', 'admin', 'restaurant_admin', 'super_admin']:
+            return redirect(url_for('kitchen_login'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 def admin_required(f):
     """Decorator to require admin authentication"""
     @wraps(f)
@@ -2893,3 +2912,83 @@ def get_admin_nearby_drivers():
     except Exception as e:
         logger.error(f"Error fetching nearby drivers for admin: {e}")
         return jsonify({'error': 'Failed to fetch nearby drivers'}), 500
+
+# Kitchen Dashboard Routes Added for Working Kitchen Staff Dashboard
+@app.route("/kitchen/login", methods=["GET", "POST"])
+def kitchen_login():
+    """Kitchen staff login page"""
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        admin = AdminUser.query.filter_by(username=username).first()
+        
+        if admin and check_password_hash(admin.password_hash, password):
+            if admin.is_blocked or not admin.is_active:
+                return render_template("kitchen_login.html", error="Account is not active")
+            
+            # Check if user has kitchen access
+            if admin.role not in ["kitchen_staff", "admin", "restaurant_admin", "super_admin"]:
+                return render_template("kitchen_login.html", error="No kitchen access permissions")
+            
+            session["admin_id"] = admin.id
+            session["admin_role"] = admin.role
+            
+            # Update last login
+            admin.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            return redirect("/kitchen")
+        
+        return render_template("kitchen_login.html", error="Invalid credentials")
+    
+    return render_template("kitchen_login.html")
+
+@app.route("/kitchen")
+@kitchen_staff_required
+def kitchen_dashboard():
+    """Kitchen staff dashboard"""
+    admin = AdminUser.query.get(session["admin_id"])
+    restaurant = None
+    if admin and admin.restaurant_id:
+        restaurant = Restaurant.query.get(admin.restaurant_id)
+    
+    return render_template("kitchen_dashboard.html", admin=admin, restaurant=restaurant)
+
+@app.route("/api/kitchen/dashboard-stats", methods=["GET"])
+@kitchen_staff_required
+def api_kitchen_dashboard_stats():
+    """API endpoint for kitchen dashboard statistics"""
+    try:
+        admin = AdminUser.query.get(session["admin_id"])
+        restaurant_id = admin.restaurant_id if admin and admin.restaurant_id else 1
+        
+        # Get today orders
+        from datetime import date
+        today = date.today()
+        today_orders = Order.query.filter_by(restaurant_id=restaurant_id).filter(
+            db.func.date(Order.created_at) == today
+        ).count()
+        
+        # Get pending orders
+        pending_orders = Order.query.filter_by(restaurant_id=restaurant_id, status="pending").count()
+        
+        # Get total menu items
+        total_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).count()
+        
+        # Get available items
+        available_items = MenuItem.query.filter_by(restaurant_id=restaurant_id, available=True).count()
+        
+        return jsonify({
+            "success": True,
+            "stats": {
+                "today_orders": today_orders,
+                "pending_orders": pending_orders,
+                "total_items": total_items,
+                "available_items": available_items
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting kitchen statistics: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+

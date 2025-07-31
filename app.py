@@ -34,6 +34,11 @@ with app.app_context():
 
     db.create_all()
 
+# Import main route modules to register them with the app
+import routes  # noqa: F401
+import admin_routes  # noqa: F401
+import restaurant_routes  # noqa: F401
+
 def create_tables():
     """Create database tables and initialize default data"""
     with app.app_context():
