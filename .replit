@@ -1,4 +1,4 @@
-modules = ["web", "python-3.11", "nodejs-20", "bash", "postgresql-16"]
+modules = ["web", "nodejs-20", "bash", "python-3.11"]
 run = "node index.js"
 
 [nix]
@@ -7,7 +7,7 @@ packages = ["cacert", "glibcLocales", "nano", "openssl", "postgresql", "sqlite"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+run = ["sh", "-c", "node index.js"]
 
 [workflows]
 runButton = "Project"
@@ -36,3 +36,4 @@ externalPort = 80
 
 [agent]
 integrations = ["python_log_in_with_replit==1.0.0", "flask_stripe==1.0.0", "python_database==1.0.0"]
+expertMode = true

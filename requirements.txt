@@ -50,3 +50,28 @@ dnspython==2.7.0
 
 # Legacy Support
 telegram==0.0.1
+blinker
+cachetools
+certifi
+charset-normalizer
+click
+dnspython
+email-validator
+Flask
+Flask-SQLAlchemy
+greenlet
+gunicorn
+httpx
+idna
+itsdangerous
+Jinja2
+MarkupSafe
+packaging
+psycopg2-binary
+python-telegram-bot
+requests
+SQLAlchemy
+telegram
+typing_extensions
+urllib3
+Werkzeug
