@@ -321,6 +321,9 @@ def super_admin_dashboard():
         return redirect(url_for('super_admin_login'))
     
     try:
+        # Get current admin user
+        admin_user = admin_user_model.find_by_id(session.get('admin_user_id'))
+        
         # Get comprehensive statistics
         stats = {
             'total_orders': order_model.count(),
@@ -329,20 +332,30 @@ def super_admin_dashboard():
             'total_admins': admin_user_model.count()
         }
         
-        return render_template('super_admin_dashboard.html', stats=stats)
+        return render_template('super_admin_dashboard.html', stats=stats, admin=admin_user)
         
     except Exception as e:
         logger.error(f"Error loading super admin dashboard: {e}")
-        return render_template('super_admin_dashboard.html', stats={})
+        # Create default admin object if none found
+        default_admin = {'username': 'superadmin', 'full_name': 'Super Administrator'}
+        return render_template('super_admin_dashboard.html', stats={}, admin=default_admin)
 
 @app.route('/superadmin/login', methods=['GET', 'POST'])
 def super_admin_login():
     """Super admin login page"""
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            username = data.get('username')
+            password = data.get('password')
+        else:
+            username = request.form.get('username')
+            password = request.form.get('password')
         
         if not username or not password:
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Username and password are required'}), 400
             return render_template('superadmin_login.html', error='Username and password are required')
         
         # Find admin user
@@ -357,8 +370,12 @@ def super_admin_login():
             # Update last login
             admin_user_model.update_last_login(admin_user['id'])
             
+            if request.is_json:
+                return jsonify({'success': True, 'redirect': '/superadmin'})
             return redirect(url_for('super_admin_dashboard'))
         else:
+            if request.is_json:
+                return jsonify({'success': False, 'message': 'Invalid credentials or insufficient privileges'}), 401
             return render_template('superadmin_login.html', error='Invalid credentials or insufficient privileges')
     
     return render_template('superadmin_login.html')
