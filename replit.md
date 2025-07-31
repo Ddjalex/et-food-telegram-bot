@@ -7,7 +7,7 @@ ET-FOOD is a comprehensive food delivery management system built with Flask and 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
-- **July 31, 2025 - Migration Complete**: Successfully migrated ET-FOOD project from Replit Agent to Replit environment. All dependencies installed, PostgreSQL database created and configured, menu items and restaurants populated. Application now running successfully on port 5000 with full restaurant and menu functionality. Fixed superadmin login credentials (username: superadmin, password: admin123) and restored menu item placeholder images.
+- **July 31, 2025 - Migration Complete**: Successfully migrated ET-FOOD project from Replit Agent to Replit environment. All dependencies installed, PostgreSQL database created and configured, menu items and restaurants populated. Application now running successfully on port 5000 with full restaurant and menu functionality. Fixed superadmin login credentials (username: superadmin, password: admin123) and restored authentic food product images from the uploads folder.
 
 ## System Architecture
 
