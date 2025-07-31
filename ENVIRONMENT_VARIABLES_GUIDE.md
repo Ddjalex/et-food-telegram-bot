@@ -90,21 +90,23 @@ os.environ.get('REPLIT_DEV_DOMAIN')
 ```
 
 ## Current .env File Status
-The .env file is currently empty but can be populated with:
+For security reasons, Replit doesn't allow direct editing of .env files. Instead:
 
+1. **Environment Variables Template**: See `.env.template` for all available variables
+2. **Replit Secrets**: Use Replit's built-in secrets manager for sensitive values
+3. **Auto-configured**: Database variables are already set up in the environment
+
+### Required Environment Variables for Full Functionality:
 ```env
-# Database Configuration
-DATABASE_URL=postgresql://username:password@host:port/database
-
-# Telegram Bot Tokens
+# Critical for Telegram bot functionality
 BOT_TOKEN=your_customer_bot_token_here
 DRIVER_BOT_TOKEN=your_driver_bot_token_here
 
-# Security
+# Enhanced security (optional - has fallbacks)
 SESSION_SECRET=your_secure_session_key_here
 ADMIN_PASSWORD=your_admin_password_here
 
-# Deployment
+# Production deployment (optional)
 WEBHOOK_URL=https://your-domain.com
 RENDER_EXTERNAL_URL=https://your-app.onrender.com
 ```
@@ -129,9 +131,29 @@ The system currently has these PostgreSQL environment variables available:
 - PGPORT
 - PGUSER
 
-## Next Steps
-To complete the configuration:
-1. Obtain bot tokens from @BotFather
-2. Set SESSION_SECRET to a secure random string
-3. Configure WEBHOOK_URL for production deployment
-4. Set ADMIN_PASSWORD for enhanced security
+## How to Configure Environment Variables in Replit
+
+### Method 1: Using Replit Secrets (Recommended)
+1. Go to your Replit project settings
+2. Navigate to the "Secrets" tab
+3. Add key-value pairs for sensitive variables like:
+   - `BOT_TOKEN`
+   - `DRIVER_BOT_TOKEN`
+   - `SESSION_SECRET`
+
+### Method 2: Using .env.template
+1. Copy `.env.template` to `.env` locally (if working outside Replit)
+2. Fill in your actual values
+3. Never commit the actual .env file to version control
+
+### Current Status
+- **Database**: ✅ Already configured (PostgreSQL ready)
+- **Web Application**: ✅ Working with fallback values
+- **Bot Integration**: ⚠️ Needs bot tokens for full functionality
+- **Security**: ✅ Has secure fallbacks, can be enhanced
+
+### Next Steps
+1. Get bot tokens from @BotFather on Telegram
+2. Add tokens to Replit Secrets or use the provided ask_secrets tool
+3. Configure WEBHOOK_URL for production deployment (optional)
+4. Test bot functionality with real tokens
