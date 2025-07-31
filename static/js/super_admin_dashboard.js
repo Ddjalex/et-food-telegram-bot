@@ -622,9 +622,13 @@ function updateRestaurantsTable(restaurants) {
 }
 
 function deleteRestaurant(restaurantId, restaurantName) {
-    if (confirm(`Are you sure you want to delete "${restaurantName}"? This action cannot be undone and will remove all associated menu items and categories.`)) {
-        fetch(`/api/admin/restaurants/${restaurantId}`, {
-            method: 'DELETE',
+    if (confirm(`Are you sure you want to delete "${restaurantName}"?\n\nThis action will:\n• Remove all menu items and categories\n• Unassign admin users and drivers\n• Cannot be undone\n\nClick OK to proceed with deletion.`)) {
+        // Show loading message
+        showAlert('info', 'Cleaning up restaurant dependencies...');
+        
+        // First clean up dependencies
+        fetch(`/api/admin/restaurants/${restaurantId}/cleanup`, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -632,15 +636,31 @@ function deleteRestaurant(restaurantId, restaurantName) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showAlert('success', data.message);
+                showAlert('info', 'Dependencies cleaned up. Deleting restaurant...');
+                
+                // Now delete the restaurant
+                return fetch(`/api/admin/restaurants/${restaurantId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } else {
+                throw new Error(data.error || 'Failed to cleanup dependencies');
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', `Restaurant "${restaurantName}" deleted successfully!`);
                 loadRestaurants(); // Reload the table
             } else {
-                showAlert('error', data.error);
+                showAlert('error', data.error || 'Failed to delete restaurant');
             }
         })
         .catch(error => {
             console.error('Error deleting restaurant:', error);
-            showAlert('error', 'Failed to delete restaurant');
+            showAlert('error', error.message || 'Failed to delete restaurant');
         });
     }
 }
