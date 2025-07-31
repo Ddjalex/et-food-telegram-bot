@@ -380,6 +380,153 @@ def super_admin_login():
     
     return render_template('superadmin_login.html')
 
+
+
+# ==============================================================================
+# SUPER ADMIN API ROUTES
+# ==============================================================================
+
+@app.route('/api/restaurants/super-admin')
+def get_restaurants_super_admin():
+    """Get all restaurants for super admin dashboard"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        restaurants = restaurant_model.get_all_restaurants()
+        
+        # Format restaurants for dashboard
+        formatted_restaurants = []
+        for restaurant in restaurants:
+            formatted_restaurants.append({
+                'id': restaurant['id'],
+                'name': restaurant['name'],
+                'description': restaurant['description'],
+                'address': restaurant['address'],
+                'phone': restaurant['phone'],
+                'logo_url': restaurant.get('logo_url'),
+                'cover_image_url': restaurant.get('cover_image_url'),
+                'estimated_delivery_time': restaurant['estimated_delivery_time'],
+                'is_active': restaurant.get('is_active', True),
+                'created_at': restaurant.get('created_at', ''),
+                'orders_today': 0  # Will implement later
+            })
+        
+        return jsonify({
+            'success': True,
+            'restaurants': formatted_restaurants
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching restaurants for super admin: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch restaurants'
+        }), 500
+
+@app.route('/api/super-admin/admins')
+def get_admins_super_admin():
+    """Get all admin users for super admin dashboard"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        admins = admin_user_model.get_all_admins()
+        
+        # Format admins for dashboard
+        formatted_admins = []
+        for admin in admins:
+            formatted_admins.append({
+                'id': admin['id'],
+                'username': admin['username'],
+                'role': admin.get('role', 'admin'),
+                'restaurant_id': admin.get('restaurant_id'),
+                'restaurant_name': admin.get('restaurant_name', 'N/A'),
+                'is_active': admin.get('is_active', True),
+                'last_login': admin.get('last_login', 'Never'),
+                'created_at': admin.get('created_at', '')
+            })
+        
+        return jsonify({
+            'success': True,
+            'admins': formatted_admins
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching admins for super admin: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch admins'
+        }), 500
+
+@app.route('/api/super-admin/drivers')
+def get_drivers_super_admin():
+    """Get all drivers for super admin dashboard"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        drivers = driver_model.get_all_drivers()
+        
+        # Format drivers for dashboard
+        formatted_drivers = []
+        for driver in drivers:
+            formatted_drivers.append({
+                'id': driver['id'],
+                'name': driver['name'],
+                'phone': driver['phone'],
+                'vehicle_type': driver.get('vehicle_type', 'Unknown'),
+                'is_approved': driver.get('is_approved', False),
+                'is_active': driver.get('is_active', True),
+                'location_lat': driver.get('location_lat'),
+                'location_lng': driver.get('location_lng'),
+                'last_location_update': driver.get('last_location_update', 'Never'),
+                'created_at': driver.get('created_at', '')
+            })
+        
+        return jsonify({
+            'success': True,
+            'drivers': formatted_drivers
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching drivers for super admin: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch drivers'
+        }), 500
+
+@app.route('/api/super-admin/stats')
+def get_super_admin_stats():
+    """Get dashboard statistics for super admin"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        stats = {
+            'total_restaurants': restaurant_model.count(),
+            'total_menu_items': menu_item_model.count(),
+            'total_orders': order_model.count(),
+            'total_drivers': driver_model.count(),
+            'total_admins': admin_user_model.count(),
+            'pending_drivers': driver_model.count_pending(),
+            'active_drivers': driver_model.count_active(),
+            'orders_today': order_model.count_today(),
+            'revenue_today': 0  # Will implement later
+        }
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching super admin stats: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch statistics'
+        }), 500
+
 # ==============================================================================
 # STATIC FILE SERVING
 # ==============================================================================

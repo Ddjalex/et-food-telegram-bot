@@ -77,6 +77,10 @@ class Restaurant(BaseModel):
         """Get all active restaurants"""
         return self.find_many({'is_active': True})
     
+    def get_all_restaurants(self) -> List[Dict]:
+        """Get all restaurants"""
+        return self.find_many({})
+    
     def get_featured_restaurants(self) -> List[Dict]:
         """Get featured restaurants"""
         return self.find_many({'is_active': True, 'is_featured': True})
@@ -172,6 +176,11 @@ class Order(BaseModel):
         if 'estimated_delivery_time' in kwargs:
             update_data['estimated_delivery_time'] = kwargs['estimated_delivery_time']
         return self.update_by_id(order_id, update_data)
+    
+    def count_today(self) -> int:
+        """Count orders for today"""
+        # For now, return total count - will implement date filtering later
+        return self.count({})
 
 class Driver(BaseModel):
     def __init__(self):
@@ -221,6 +230,18 @@ class Driver(BaseModel):
     def update_availability(self, driver_id: str, is_available: bool) -> bool:
         """Update driver availability"""
         return self.update_by_id(driver_id, {'is_available': is_available})
+    
+    def get_all_drivers(self) -> List[Dict]:
+        """Get all drivers"""
+        return self.find_many({})
+    
+    def count_pending(self) -> int:
+        """Count pending drivers"""
+        return self.count({'is_approved': False})
+    
+    def count_active(self) -> int:
+        """Count active drivers"""
+        return self.count({'is_active': True, 'is_approved': True})
 
 class AdminUser(BaseModel):
     def __init__(self):
@@ -247,6 +268,10 @@ class AdminUser(BaseModel):
     def update_last_login(self, user_id: str) -> bool:
         """Update last login time"""
         return self.update_by_id(user_id, {'last_login': datetime.utcnow()})
+    
+    def get_all_admins(self) -> List[Dict]:
+        """Get all admin users"""
+        return self.find_many({})
 
 class PaymentTransaction(BaseModel):
     def __init__(self):
