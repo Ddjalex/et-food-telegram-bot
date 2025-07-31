@@ -2392,21 +2392,32 @@ def get_kitchen_staff_admin():
         admin = AdminUser.query.get(session['admin_id'])
         logger.info(f"Getting kitchen staff for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
-        # Get kitchen staff users for this restaurant
-        kitchen_staff = AdminUser.query.filter_by(
-            restaurant_id=admin.restaurant_id,
-            role='kitchen_staff'
-        ).all()
+        # For super admin, show all kitchen staff; for restaurant admin, show only their restaurant's staff
+        if admin.role == 'super_admin':
+            kitchen_staff = AdminUser.query.filter_by(role='kitchen_staff').all()
+        else:
+            kitchen_staff = AdminUser.query.filter_by(
+                restaurant_id=admin.restaurant_id,
+                role='kitchen_staff'
+            ).all()
         
         logger.info(f"Found {len(kitchen_staff)} kitchen staff members")
         
         staff_data = []
         for staff in kitchen_staff:
+            # Get restaurant name for display
+            restaurant_name = None
+            if staff.restaurant_id:
+                restaurant = Restaurant.query.get(staff.restaurant_id)
+                restaurant_name = restaurant.name if restaurant else f"Restaurant {staff.restaurant_id}"
+            
             staff_data.append({
                 'id': staff.id,
                 'username': staff.username,
-                'full_name': staff.full_name,
-                'phone': staff.phone,
+                'full_name': staff.full_name or staff.username,
+                'phone': staff.phone or 'Not provided',
+                'restaurant_name': restaurant_name,
+                'restaurant_id': staff.restaurant_id,
                 'is_active': staff.is_active,
                 'created_at': staff.created_at.isoformat() if staff.created_at else None
             })
