@@ -1685,11 +1685,13 @@ def create_admin_category():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/admin/menu/items', methods=['GET'])
+@app.route('/api/admin/menu-items', methods=['GET'])
 @admin_required
 def get_admin_menu_items():
     """Get menu items for admin's restaurant"""
     try:
         admin = AdminUser.query.get(session['admin_id'])
+        logger.info(f"Getting menu items for admin {admin.username} (ID: {admin.id}, Restaurant: {admin.restaurant_id})")
         
         if admin.role == 'super_admin':
             # Super admin can see all items
@@ -1698,10 +1700,18 @@ def get_admin_menu_items():
             # Regular admin sees only their restaurant's items
             items = MenuItem.query.filter_by(restaurant_id=admin.restaurant_id).all()
         
-        return jsonify({
-            'success': True,
-            'items': [item.to_dict() for item in items]
-        })
+        logger.info(f"Found {len(items)} menu items")
+        
+        # Format for frontend
+        items_data = []
+        for item in items:
+            item_dict = item.to_dict()
+            # Add category name if available
+            if hasattr(item, 'category'):
+                item_dict['category_name'] = item.category
+            items_data.append(item_dict)
+        
+        return jsonify(items_data)  # Return array directly for compatibility
     
     except Exception as e:
         logger.error(f"Error fetching menu items: {e}")
