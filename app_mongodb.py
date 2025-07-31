@@ -45,12 +45,12 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Home page"""
-    return render_template('webapp_modern.html')
+    return render_template('webapp_beu_style.html')
 
 @app.route('/webapp')
 def webapp():
     """Main web application interface"""
-    return render_template('webapp_modern.html')
+    return render_template('webapp_beu_style.html')
 
 # ==============================================================================
 # API ROUTES
