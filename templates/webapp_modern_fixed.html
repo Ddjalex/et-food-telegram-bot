@@ -2682,14 +2682,66 @@
                                     </div>
                                 </div>
                                 
-                                <div class="location-options">
-                                    <button type="button" class="location-btn primary" onclick="shareLocationInCheckout()" title="Share Live Location">
-                                        📍 Share Current Location
+                                <!-- Enhanced Location Buttons -->
+                                <div class="location-buttons-container">
+                                    <button type="button" class="location-btn primary" onclick="openLocationPicker()" title="Pick Location on Map">
+                                        🗺️ Pick on Map
                                     </button>
-                                    <button type="button" class="location-btn secondary" onclick="requestTelegramLocation()" title="Use Telegram Location">
-                                        🔄 Use Telegram Location
+                                    <button type="button" class="location-btn secondary" onclick="shareLocationInCheckout()" title="Share Current Location">
+                                        📍 Current Location
                                     </button>
                                 </div>
+                                
+                                <!-- Location Status Display -->
+                                <div id="selectedLocationInfo" class="selected-location-display" style="display: none;">
+                                    <div class="location-preview-card">
+                                        <div class="location-icon">📍</div>
+                                        <div class="location-details">
+                                            <div class="location-title">Selected Location:</div>
+                                            <div id="locationAddress" class="location-address">No location selected</div>
+                                            <div id="locationCoords" class="location-coords">GPS: --</div>
+                                            <div id="orderTypeInfo" class="order-type-badge"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Advanced Map Search Interface -->
+                                <div class="map-search-container" id="mapSearchContainer" style="display: none;">
+                                    <div class="map-search-header">
+                                        <h5>📍 Choose Delivery Location</h5>
+                                        <button type="button" class="map-close-btn" onclick="closeMapSearch()">✕</button>
+                                    </div>
+                                    
+                                    <div class="map-search-input">
+                                        <input type="text" id="mapSearchInput" placeholder="Search for addresses, landmarks, or places..." 
+                                               onkeyup="searchPlaces(this.value)" onkeypress="handleSearchKeyPress(event)">
+                                        <button type="button" class="search-btn" onclick="searchPlaces(document.getElementById('mapSearchInput').value)">
+                                            🔍
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="map-container" id="mapContainer">
+                                        <div id="map" style="height: 250px; border-radius: 8px;"></div>
+                                    </div>
+                                    
+                                    <div class="search-results" id="searchResults" style="display: none;">
+                                        <div class="results-header">
+                                            <span>Search Results</span>
+                                            <button type="button" onclick="clearSearchResults()" class="clear-results">Clear</button>
+                                        </div>
+                                        <div class="results-list" id="resultsList"></div>
+                                    </div>
+                                    
+                                    <div class="location-tools">
+                                        <button type="button" class="location-tool-btn" onclick="getCurrentLocationOnMap()" title="Use Current Location">
+                                            📍 Current Location
+                                        </button>
+                                        <button type="button" class="location-tool-btn" onclick="useSelectedLocation()" title="Use Selected Location">
+                                            ✅ Use This Location
+                                        </button>
+                                    </div>
+                                </div>
+                                
                                 <div class="location-status" id="locationStatus" style="display: none;">
                                     <span id="locationText">Location not shared</span>
                                 </div>
