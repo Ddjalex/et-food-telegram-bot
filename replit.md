@@ -99,11 +99,15 @@ Preferred communication style: Simple, everyday language.
 - **File Storage**: Local static file serving for images
 
 ### Environment Variables
-- `BOT_TOKEN`: Customer bot token from @BotFather
-- `DRIVER_BOT_TOKEN`: Driver bot token from @BotFather
-- `DATABASE_URL`: PostgreSQL connection string
-- `SESSION_SECRET`: Flask session encryption key
-- `WEBHOOK_URL`: External webhook URL for bot communication
+- `DATABASE_URL`: PostgreSQL connection string (configured)
+- `PGDATABASE`, `PGHOST`, `PGPASSWORD`, `PGPORT`, `PGUSER`: PostgreSQL credentials (configured)
+- `BOT_TOKEN`: Customer bot token from @BotFather (needs configuration)
+- `DRIVER_BOT_TOKEN`: Driver bot token from @BotFather (needs configuration)
+- `SESSION_SECRET`: Flask session encryption key (has fallback)
+- `WEBHOOK_URL`: External webhook URL for bot communication (optional)
+- `RENDER_EXTERNAL_URL`: Render.com deployment URL (optional)
+- `REPLIT_DEV_DOMAIN`: Replit development domain (auto-configured)
+- `ADMIN_PASSWORD`: Admin dashboard password (defaults to admin123)
 
 ### Third-party Integrations
 - **OpenStreetMap**: Location services and mapping
