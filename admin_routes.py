@@ -1,6 +1,6 @@
 from flask import request, jsonify, render_template, session, redirect, url_for, flash
 from app import app, db
-from models import AdminUser, AdminActivity, AdminSession, Restaurant, MenuItem, Category, Driver, Order, MenuItemModification
+from models import AdminUser, AdminActivity, AdminSession, Restaurant, MenuItem, Category, Driver, Order, MenuItemModification, KitchenStaff
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
