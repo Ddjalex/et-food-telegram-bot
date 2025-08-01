@@ -49,15 +49,11 @@ def create_default_categories():
     print(f"Created {len(categories)} default categories")
 
 def create_default_menu_items():
-    """Create complete ET-FOOD menu with all 64 items"""
-    complete_menu = [
-        # BURGERS CATEGORY (6 items)
-        {"name": "Beef Burger Normal", "price": 400.0, "description": "Delicious beef burger with classic toppings", "category": "Burgers", "image_url": "/static/uploads/beef_burger_normal.jpg"},
-        {"name": "Chicken Burger Special", "price": 540.0, "description": "Premium chicken burger with special sauce", "category": "Burgers", "image_url": "/static/uploads/chicken_burger_special.jpg"},
-        {"name": "Cheese Burger", "price": 450.0, "description": "Juicy burger with melted cheese", "category": "Burgers", "image_url": "/static/uploads/cheese_burger.jpg"},
-        {"name": "BBQ Burger", "price": 480.0, "description": "Smoky BBQ flavored burger", "category": "Burgers", "image_url": "/static/uploads/bbq_burger.jpg"},
-        {"name": "Veggie Burger", "price": 350.0, "description": "Healthy vegetarian burger option", "category": "Burgers", "image_url": "/static/uploads/veggie_burger.jpg"},
-        {"name": "Double Beef Burger", "price": 650.0, "description": "Double patty beef burger for big appetite", "category": "Burgers", "image_url": "/static/uploads/double_beef_burger.jpg"},
+    """DISABLED - Create complete ET-FOOD menu with all 66 items - DISABLED TO PREVENT OVERRIDE"""
+    # This function has been disabled to prevent overriding the correct 66-item menu
+    # The menu is now managed by MongoDB scripts that maintain the correct data
+    print("⚠️ Default menu creation disabled to preserve 66-item menu data")
+    return
         
         # SHAWARMA CATEGORY (6 items)
         {"name": "Beef Shawarma Large", "price": 495.0, "description": "Large beef shawarma with traditional spices", "category": "Shawarma", "image_url": "/static/uploads/beef_shawarma_large.jpg"},
