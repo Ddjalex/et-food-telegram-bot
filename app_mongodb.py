@@ -429,7 +429,14 @@ def super_admin_login():
 # SUPER ADMIN API ROUTES
 # ==============================================================================
 
-@app.route('/api/restaurants/super-admin')
+@app.route('/api/restaurants/super-admin', methods=['GET', 'POST'])
+def handle_restaurants_super_admin():
+    """Handle restaurants for super admin dashboard"""
+    if request.method == 'GET':
+        return get_restaurants_super_admin()
+    elif request.method == 'POST':
+        return create_restaurant_super_admin()
+
 def get_restaurants_super_admin():
     """Get all restaurants for super admin dashboard with accurate menu items count"""
     try:
@@ -443,9 +450,9 @@ def get_restaurants_super_admin():
         for restaurant in restaurants:
             restaurant_id = restaurant['id']
             
-            # Calculate accurate menu items count
-            menu_items_count = menu_item_model.count({'restaurant_id': restaurant_id, 'available': True})
-            total_menu_items = menu_item_model.count({'restaurant_id': restaurant_id})
+            # Calculate accurate menu items count - force fresh database query
+            menu_items_count = menu_item_model.count({'restaurant_id': restaurant_id})
+            total_menu_items = menu_items_count  # Use same value for consistency
             
             # Calculate orders for today
             today = datetime.now().strftime('%Y-%m-%d')
@@ -489,7 +496,75 @@ def get_restaurants_super_admin():
             'error': 'Failed to fetch restaurants'
         }), 500
 
-@app.route('/api/super-admin/admins')
+def create_restaurant_super_admin():
+    """Create new restaurant (super admin only)"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        # Handle both JSON and FormData
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+        
+        # Validation
+        required_fields = ['name', 'address', 'phone']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        # Check if restaurant name already exists
+        existing_restaurant = restaurant_model.find_one({'name': data['name']})
+        if existing_restaurant:
+            return jsonify({'success': False, 'message': 'Restaurant name already exists'}), 400
+        
+        # Convert numeric values safely
+        try:
+            delivery_fee = float(data.get('delivery_fee', 0.0))
+            minimum_order = float(data.get('minimum_order', 0.0))
+        except (ValueError, TypeError):
+            delivery_fee = 0.0
+            minimum_order = 0.0
+        
+        # Create restaurant
+        restaurant_id = restaurant_model.create(
+            name=data['name'],
+            address=data['address'],
+            phone=data['phone'],
+            description=data.get('description', ''),
+            estimated_delivery_time=data.get('estimated_delivery_time', '30-45 minutes'),
+            delivery_fee=delivery_fee,
+            minimum_order=minimum_order,
+            is_active=data.get('is_active', True),
+            is_featured=data.get('is_featured', False),
+            logo_url=data.get('logo_url'),
+            cover_image_url=data.get('cover_image_url')
+        )
+        
+        logger.info(f"✅ Created new restaurant: {data['name']} (ID: {restaurant_id})")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Restaurant {data["name"]} created successfully',
+            'restaurant_id': restaurant_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error creating restaurant: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to create restaurant'
+        }), 500
+
+@app.route('/api/super-admin/admins', methods=['GET', 'POST'])
+def handle_admins_super_admin():
+    """Handle admin users for super admin dashboard"""
+    if request.method == 'GET':
+        return get_admins_super_admin()
+    elif request.method == 'POST':
+        return create_admin_super_admin()
+
 def get_admins_super_admin():
     """Get all admin users for super admin dashboard"""
     try:
@@ -522,6 +597,56 @@ def get_admins_super_admin():
         return jsonify({
             'success': False,
             'error': 'Failed to fetch admins'
+        }), 500
+
+def create_admin_super_admin():
+    """Create new admin user (super admin only)"""
+    try:
+        if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        data = request.get_json()
+        
+        # Validation
+        required_fields = ['username', 'password', 'full_name']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        # Check if username already exists
+        existing_admin = admin_user_model.find_one({'username': data['username']})
+        if existing_admin:
+            return jsonify({'success': False, 'message': 'Username already exists'}), 400
+        
+        # Hash password
+        import hashlib
+        password_hash = hashlib.sha256(data['password'].encode()).hexdigest()
+        
+        # Create admin
+        admin_id = admin_user_model.create(
+            username=data['username'],
+            password_hash=password_hash,
+            full_name=data['full_name'],
+            email=data.get('email', ''),
+            phone=data.get('phone', ''),
+            role=data.get('role', 'admin'),
+            restaurant_id=data.get('restaurant_id'),
+            is_active=True
+        )
+        
+        logger.info(f"✅ Created new admin: {data['username']} (ID: {admin_id})")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Admin {data["username"]} created successfully',
+            'admin_id': admin_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error creating admin: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to create admin'
         }), 500
 
 @app.route('/api/super-admin/drivers')
