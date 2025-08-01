@@ -103,6 +103,49 @@ def get_restaurant_info():
             'error': 'Failed to fetch restaurant information'
         }), 500
 
+@app.route('/api/restaurants')
+def get_restaurants():
+    """Get all restaurants with menu counts for webapp"""
+    try:
+        restaurants = restaurant_model.get_active_restaurants()
+        
+        formatted_restaurants = []
+        for restaurant in restaurants:
+            restaurant_id = restaurant['id']
+            
+            # Count available menu items
+            menu_items_count = menu_item_model.count({'restaurant_id': restaurant_id, 'available': True})
+            
+            formatted_restaurants.append({
+                'id': restaurant_id,
+                'name': restaurant['name'],
+                'description': restaurant.get('description', ''),
+                'address': restaurant.get('address', ''),
+                'phone': restaurant.get('phone', ''),
+                'logo_url': restaurant.get('logo_url'),
+                'cover_image_url': restaurant.get('cover_image_url'),
+                'estimated_delivery_time': restaurant.get('estimated_delivery_time', '30-45 minutes'),
+                'delivery_fee': restaurant.get('delivery_fee', 0.0),
+                'minimum_order': restaurant.get('minimum_order', 0.0),
+                'is_active': restaurant.get('is_active', True),
+                'menu_items_count': menu_items_count,
+                'rating': restaurant.get('rating', 4.5),
+                'is_featured': restaurant.get('is_featured', False)
+            })
+        
+        return jsonify({
+            'success': True,
+            'restaurants': formatted_restaurants,
+            'total': len(formatted_restaurants)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching restaurants: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch restaurants'
+        }), 500
+
 @app.route('/api/menu')
 def get_menu():
     """Get menu items for a restaurant"""
@@ -388,18 +431,34 @@ def super_admin_login():
 
 @app.route('/api/restaurants/super-admin')
 def get_restaurants_super_admin():
-    """Get all restaurants for super admin dashboard"""
+    """Get all restaurants for super admin dashboard with accurate menu items count"""
     try:
         if not session.get('admin_logged_in') or session.get('admin_role') != 'superadmin':
             return jsonify({'success': False, 'error': 'Unauthorized'}), 401
         
         restaurants = restaurant_model.get_all_restaurants()
         
-        # Format restaurants for dashboard
+        # Format restaurants for dashboard with accurate counts
         formatted_restaurants = []
         for restaurant in restaurants:
+            restaurant_id = restaurant['id']
+            
+            # Calculate accurate menu items count
+            menu_items_count = menu_item_model.count({'restaurant_id': restaurant_id, 'available': True})
+            total_menu_items = menu_item_model.count({'restaurant_id': restaurant_id})
+            
+            # Calculate orders for today
+            today = datetime.now().strftime('%Y-%m-%d')
+            orders_today = order_model.count({
+                'restaurant_id': restaurant_id,
+                'created_at': {'$gte': today}
+            })
+            
+            # Calculate total orders for this restaurant
+            total_orders = order_model.count({'restaurant_id': restaurant_id})
+            
             formatted_restaurants.append({
-                'id': restaurant['id'],
+                'id': restaurant_id,
                 'name': restaurant['name'],
                 'description': restaurant['description'],
                 'address': restaurant['address'],
@@ -409,12 +468,18 @@ def get_restaurants_super_admin():
                 'estimated_delivery_time': restaurant['estimated_delivery_time'],
                 'is_active': restaurant.get('is_active', True),
                 'created_at': restaurant.get('created_at', ''),
-                'orders_today': 0  # Will implement later
+                'menu_items_count': menu_items_count,
+                'total_menu_items': total_menu_items,
+                'orders_today': orders_today,
+                'total_orders': total_orders,
+                'delivery_fee': restaurant.get('delivery_fee', 0.0),
+                'minimum_order': restaurant.get('minimum_order', 0.0)
             })
         
         return jsonify({
             'success': True,
-            'restaurants': formatted_restaurants
+            'restaurants': formatted_restaurants,
+            'total_restaurants': len(formatted_restaurants)
         })
         
     except Exception as e:
