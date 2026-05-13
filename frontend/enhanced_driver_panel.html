@@ -612,7 +612,7 @@ async function init() {
     driverTelegramId = String(user.id);
   } else {
     const params = new URLSearchParams(location.search);
-    driverTelegramId = params.get('tid') || params.get('telegram_user_id');
+    driverTelegramId = params.get('driver_id') || params.get('tid') || params.get('telegram_user_id');
   }
   if (!driverTelegramId) {
     document.getElementById('authScreen').innerHTML = `
