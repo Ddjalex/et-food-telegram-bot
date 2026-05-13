@@ -305,6 +305,133 @@
 
         .all-restaurant-card-arrow { display: none; }
 
+        /* Star rating styles */
+        .star-rating-display {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-top: 4px;
+        }
+
+        .star-rating-display .star {
+            font-size: 11px;
+            color: #ddd;
+        }
+
+        .star-rating-display .star.filled {
+            color: #f59e0b;
+        }
+
+        .star-rating-display .star.half {
+            background: linear-gradient(90deg, #f59e0b 50%, #ddd 50%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .star-rating-display .rating-num {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-left: 2px;
+            -webkit-text-fill-color: initial;
+        }
+
+        .rate-btn {
+            background: none;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: auto;
+            transition: all 0.15s;
+        }
+
+        .rate-btn:active { background: var(--primary-color); color: #fff; }
+
+        /* Rating Modal */
+        .rating-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 9999;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .rating-modal {
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            padding: 28px 24px 36px;
+            width: 100%;
+            max-width: 480px;
+            animation: slideUp 0.25s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
+
+        .rating-modal h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .rating-modal p {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+
+        .rating-stars-input {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .rating-stars-input .star-btn {
+            font-size: 36px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #ddd;
+            transition: color 0.15s, transform 0.15s;
+            line-height: 1;
+        }
+
+        .rating-stars-input .star-btn.active { color: #f59e0b; }
+        .rating-stars-input .star-btn:hover  { transform: scale(1.2); }
+
+        .rating-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .rating-cancel-btn {
+            width: 100%;
+            padding: 10px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 13px;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+
         /* Nearby Restaurants — compact circle style */
         .restaurants-section {
             padding: 16px 20px 8px;
@@ -2221,6 +2348,110 @@
             });
         }
 
+        // Build star HTML for a given rating value (0-5, supports halves)
+        function buildStarsHtml(rating) {
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                if (rating >= i) {
+                    html += '<span class="star filled">★</span>';
+                } else if (rating >= i - 0.5) {
+                    html += '<span class="star half">★</span>';
+                } else {
+                    html += '<span class="star">★</span>';
+                }
+            }
+            return html;
+        }
+
+        // Open the rating modal
+        let _ratingRestaurantId = null;
+        let _ratingSelected = 0;
+
+        function openRatingModal(restaurantId, restaurantName) {
+            _ratingRestaurantId = restaurantId;
+            _ratingSelected = 0;
+            const overlay = document.createElement('div');
+            overlay.className = 'rating-modal-overlay';
+            overlay.id = 'ratingModalOverlay';
+            overlay.onclick = (e) => { if (e.target === overlay) closeRatingModal(); };
+            overlay.innerHTML = `
+                <div class="rating-modal">
+                    <h3>Rate ${restaurantName}</h3>
+                    <p>How was your experience? Tap a star to rate.</p>
+                    <div class="rating-stars-input" id="ratingStarsInput">
+                        ${[1,2,3,4,5].map(n => `<button class="star-btn" data-value="${n}" onclick="setRating(${n})">★</button>`).join('')}
+                    </div>
+                    <button class="rating-submit-btn" id="ratingSubmitBtn" onclick="submitRating()" disabled style="opacity:0.5">Submit Rating</button>
+                    <button class="rating-cancel-btn" onclick="closeRatingModal()">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function setRating(value) {
+            _ratingSelected = value;
+            document.querySelectorAll('#ratingStarsInput .star-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.value) <= value);
+            });
+            const submitBtn = document.getElementById('ratingSubmitBtn');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+        }
+
+        function closeRatingModal() {
+            const overlay = document.getElementById('ratingModalOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        async function submitRating() {
+            if (!_ratingSelected || !_ratingRestaurantId) return;
+            const tgUserId = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user)
+                ? String(window.Telegram.WebApp.initDataUnsafe.user.id)
+                : 'guest_' + (localStorage.getItem('guestId') || (() => { const id = Date.now().toString(); localStorage.setItem('guestId', id); return id; })());
+
+            const submitBtn = document.getElementById('ratingSubmitBtn');
+            if (submitBtn) { submitBtn.textContent = 'Submitting…'; submitBtn.disabled = true; }
+
+            try {
+                const resp = await fetch(`/api/restaurants/${_ratingRestaurantId}/rate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_user_id: tgUserId, rating: _ratingSelected })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    closeRatingModal();
+                    // Update the card live without full reload
+                    const card = document.querySelector(`.all-restaurant-card[data-restaurant-id="${_ratingRestaurantId}"]`);
+                    if (card) {
+                        const starDiv = card.querySelector('.star-rating-display');
+                        if (starDiv) starDiv.innerHTML = buildStarsHtml(data.new_rating) + `<span class="rating-num">${data.new_rating.toFixed(1)}</span>`;
+                    }
+                    // Update the restaurants array
+                    const r = restaurants.find(r => r.id === _ratingRestaurantId);
+                    if (r) r.rating = data.new_rating;
+                    showToast('Thanks for your rating! ⭐');
+                } else {
+                    if (submitBtn) { submitBtn.textContent = 'Submit Rating'; submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+                    showToast(data.error || 'Failed to submit rating');
+                }
+            } catch (e) {
+                if (submitBtn) { submitBtn.textContent = 'Submit Rating'; submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+                showToast('Network error. Try again.');
+            }
+        }
+
+        // Simple toast notification
+        function showToast(message) {
+            const existing = document.getElementById('appToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'appToast';
+            toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9998;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         // Select restaurant from dropdown
         function selectRestaurantFromDropdown(restaurantId) {
             if (!restaurantId) return;
@@ -2269,6 +2500,9 @@
                     ? ` · ${restaurant.distance_km < 1 ? (restaurant.distance_km * 1000).toFixed(0) + 'm' : restaurant.distance_km.toFixed(1) + 'km'}`
                     : '';
 
+                const ratingVal = parseFloat(restaurant.rating) || 0;
+                const starsHtml = buildStarsHtml(ratingVal);
+
                 card.innerHTML = `
                     <div class="all-restaurant-card-avatar">
                         ${restaurant.logo_url
@@ -2279,12 +2513,17 @@
                     <div class="all-restaurant-card-info">
                         <div class="all-restaurant-card-name">${restaurant.name}</div>
                         <div class="all-restaurant-card-desc">${restaurant.description || 'Delicious food'}</div>
+                        <div class="star-rating-display">
+                            ${starsHtml}
+                            <span class="rating-num">${ratingVal > 0 ? ratingVal.toFixed(1) : 'New'}</span>
+                        </div>
                         <div class="all-restaurant-card-meta">
                             <span class="all-restaurant-card-badge ${restaurant.is_active ? 'badge-open' : 'badge-closed'}">
                                 ${restaurant.is_active ? 'Open' : 'Closed'}
                             </span>
                             <span class="all-restaurant-card-fee">${feeText}${distanceText}</span>
                         </div>
+                        <button class="rate-btn" onclick="event.stopPropagation(); openRatingModal('${restaurant.id}', '${restaurant.name.replace(/'/g, "\\'")}')">⭐ Rate</button>
                     </div>
                     <div class="all-restaurant-card-arrow">›</div>
                 `;

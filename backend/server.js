@@ -212,6 +212,35 @@ app.get('/api/restaurants', async (req, res) => {
     }
 });
 
+app.post('/api/restaurants/:id/rate', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { telegram_user_id, rating } = req.body;
+        if (!telegram_user_id) return res.status(400).json({ success: false, error: 'User ID required' });
+        const ratingVal = parseInt(rating);
+        if (!ratingVal || ratingVal < 1 || ratingVal > 5) return res.status(400).json({ success: false, error: 'Rating must be 1-5' });
+        const restaurant = await store.findById('restaurants', id);
+        if (!restaurant) return res.status(404).json({ success: false, error: 'Restaurant not found' });
+
+        await query(`
+            INSERT INTO restaurant_ratings (restaurant_id, telegram_user_id, rating)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (restaurant_id, telegram_user_id)
+            DO UPDATE SET rating = $3, updated_at = NOW()
+        `, [id, telegram_user_id, ratingVal]);
+
+        const result = await query(`SELECT ROUND(AVG(rating)::numeric, 2) as avg_rating, COUNT(*) as total FROM restaurant_ratings WHERE restaurant_id = $1`, [id]);
+        const avg = parseFloat(result.rows[0].avg_rating) || ratingVal;
+        const count = parseInt(result.rows[0].total) || 1;
+        await store.updateById('restaurants', id, { rating: avg, rating_count: count });
+
+        res.json({ success: true, message: 'Rating submitted', new_rating: avg, rating_count: count });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to submit rating' });
+    }
+});
+
 app.get('/api/menu', async (req, res) => {
     try {
         let { restaurant_id, category } = req.query;

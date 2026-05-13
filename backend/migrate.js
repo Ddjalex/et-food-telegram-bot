@@ -146,6 +146,19 @@ async function createTables() {
     await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS lat DECIMAL(10,8)`);
     await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS lng DECIMAL(11,8)`);
     await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS location_url TEXT`);
+    await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0`);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS restaurant_ratings (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
+            telegram_user_id VARCHAR(100) NOT NULL,
+            rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(restaurant_id, telegram_user_id)
+        )
+    `);
 
     await query(`
         CREATE TABLE IF NOT EXISTS customer_live_locations (
