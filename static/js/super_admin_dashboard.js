@@ -241,10 +241,10 @@ function updateDriverLocationTable(drivers) {
                                 <i class="fas fa-map"></i>
                             </button>` : ''
                         }
-                        <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation(${driver.id})">
+                        <button class="btn btn-outline-info btn-sm" onclick="requestDriverLocation('${driver.id}')">
                             <i class="fas fa-location-arrow"></i>
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="deleteDriver(${driver.id}, '${driver.name}')">
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteDriver('${driver.id}', '${driver.name}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -605,16 +605,16 @@ function updateRestaurantsTable(restaurants) {
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="viewRestaurantDetails(${restaurant.id})">
+                        <button class="btn btn-outline-primary" onclick="viewRestaurantDetails('${restaurant.id}')">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-outline-success" onclick="uploadRestaurantImages(${restaurant.id}, '${restaurant.name}')">
+                        <button class="btn btn-outline-success" onclick="uploadRestaurantImages('${restaurant.id}', '${restaurant.name}')">
                             <i class="fas fa-images"></i>
                         </button>
-                        <button class="btn btn-outline-warning" onclick="editRestaurant(${restaurant.id})">
+                        <button class="btn btn-outline-warning" onclick="editRestaurant('${restaurant.id}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="deleteRestaurant(${restaurant.id}, '${restaurant.name}')">
+                        <button class="btn btn-outline-danger" onclick="deleteRestaurant('${restaurant.id}', '${restaurant.name}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -987,14 +987,14 @@ function updateAdminsTable(admins) {
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-warning" title="Edit" onclick="editAdmin(${admin.id}, '${admin.username}', '${admin.full_name || ''}', '${admin.email || ''}', '${admin.phone || ''}', '${admin.role}', '${admin.restaurant_id || ''}')">
+                        <button class="btn btn-outline-warning" title="Edit" onclick="editAdmin('${admin.id}', '${admin.username}', '${admin.full_name || ''}', '${admin.email || ''}', '${admin.phone || ''}', '${admin.role}', '${admin.restaurant_id || ''}')">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button class="btn btn-outline-${admin.is_blocked ? 'success' : 'secondary'}" title="${admin.is_blocked ? 'Unblock' : 'Block'}"
-                                onclick="toggleAdminBlock(${admin.id}, ${admin.is_blocked})">
+                                onclick="toggleAdminBlock('${admin.id}', ${admin.is_blocked})">
                             <i class="fas fa-${admin.is_blocked ? 'unlock' : 'lock'}"></i>
                         </button>
-                        <button class="btn btn-outline-danger" title="Delete" onclick="deleteAdmin(${admin.id}, '${admin.username}')">
+                        <button class="btn btn-outline-danger" title="Delete" onclick="deleteAdmin('${admin.id}', '${admin.username}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
