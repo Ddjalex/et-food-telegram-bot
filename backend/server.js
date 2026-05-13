@@ -1021,6 +1021,165 @@ app.delete('/api/categories/:id', async (req, res) => {
 });
 
 // ============================================================
+// DRIVER TELEGRAM-BASED ENDPOINTS (used by driver Mini WebApp)
+// ============================================================
+
+app.get('/api/drivers/telegram/:telegramId', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        res.json(driver);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch driver' });
+    }
+});
+
+app.get('/api/drivers/telegram/:telegramId/status', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        res.json({
+            driver_id: driver.id,
+            name: driver.name,
+            is_available: driver.is_available,
+            is_approved: driver.is_approved,
+            is_active: driver.is_active,
+            current_lat: driver.current_lat,
+            current_lng: driver.current_lng,
+            last_location_update: driver.last_location_update,
+            total_deliveries: driver.total_deliveries || 0,
+            rating: driver.rating || 5.0
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch driver status' });
+    }
+});
+
+app.post('/api/drivers/telegram/:telegramId/toggle', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        if (!driver.is_approved) return res.status(403).json({ success: false, error: 'Account not approved yet' });
+        await store.updateById('drivers', driver.id, { is_available: req.body.is_available });
+        res.json({ success: true, is_available: req.body.is_available });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to toggle status' });
+    }
+});
+
+app.post('/api/drivers/telegram/:telegramId/location', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        const { lat, lng } = req.body;
+        await store.updateById('drivers', driver.id, {
+            current_lat: parseFloat(lat),
+            current_lng: parseFloat(lng),
+            last_location_update: new Date()
+        });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update location' });
+    }
+});
+
+app.get('/api/drivers/telegram/:telegramId/orders', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        const allOrders = await store.findMany('orders', {}, 'created_at');
+        const driverOrders = allOrders.filter(o =>
+            o.driver_id === driver.id ||
+            ['out_for_delivery', 'ready'].includes(o.status)
+        );
+        res.json({ success: true, orders: driverOrders, driver_id: driver.id });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch orders' });
+    }
+});
+
+app.get('/api/drivers/telegram/:telegramId/documents', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        const docs = await store.findMany('driver_documents', { driver_id: driver.id }, 'uploaded_at');
+        res.json({ success: true, documents: docs, driver_id: driver.id });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch documents' });
+    }
+});
+
+app.post('/api/orders/:id/accept', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        const { driver_telegram_id } = req.body;
+        let driverUpdate = { status: 'out_for_delivery' };
+        if (driver_telegram_id) {
+            const driver = await store.findOne('drivers', { telegram_user_id: String(driver_telegram_id) });
+            if (driver) {
+                driverUpdate.driver_id = driver.id;
+                await store.updateById('drivers', driver.id, { is_available: false });
+            }
+        }
+        await store.updateById('orders', req.params.id, driverUpdate);
+        const updated = await store.findById('orders', req.params.id);
+        res.json({ success: true, ...updated });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to accept order' });
+    }
+});
+
+app.post('/api/orders/:id/reject', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        res.json({ success: true, message: 'Order rejected — looking for another driver' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to reject order' });
+    }
+});
+
+// Public endpoint — no admin session needed, driver identifies by telegram ID
+app.post('/api/driver/upload-document', upload.single('document'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+        const { telegram_user_id, doc_type } = req.body;
+        if (!telegram_user_id) return res.status(400).json({ success: false, error: 'telegram_user_id required' });
+
+        const driver = await store.findOne('drivers', { telegram_user_id: String(telegram_user_id) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+
+        const filename = `doc_${driver.id}_${Date.now()}_${req.file.originalname}`;
+        const destDir = path.join(__dirname, '../static/driver_documents');
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+        fs.renameSync(req.file.path, path.join(destDir, filename));
+
+        const url = `/static/driver_documents/${filename}`;
+        const docId = await store.insertOne('driver_documents', {
+            driver_id: driver.id,
+            doc_type: doc_type || 'document',
+            file_url: url,
+            filename,
+            uploaded_at: new Date()
+        });
+
+        res.json({ success: true, url, doc_id: docId, message: 'Document uploaded successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to upload document' });
+    }
+});
+
+// ============================================================
 // FILE UPLOAD
 // ============================================================
 

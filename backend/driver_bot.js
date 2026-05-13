@@ -21,23 +21,47 @@ async function getDriver(telegramUserId) {
     return store.findOne('drivers', { telegram_user_id: String(telegramUserId) });
 }
 
-async function sendMainMenu(chatId, driver) {
-    const statusText = driver.is_available ? '🟢 Available' : '🔴 Busy';
+function getWebAppUrl(telegramUserId) {
+    const base = process.env.WEBAPP_URL ||
+        (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
+    return `${base}/driver-panel?driver_id=${telegramUserId}`;
+}
+
+async function sendMainMenu(chatId, driver, telegramUserId) {
+    const statusText = driver.is_available ? '🟢 Online' : '🔴 Offline';
     const approvedText = driver.is_approved ? '✅ Approved' : '⏳ Pending Approval';
+    const webAppUrl = getWebAppUrl(telegramUserId || driver.telegram_user_id);
+
     await bot.sendMessage(chatId,
-        `🚗 *Driver Panel*\n\nName: ${driver.name}\nStatus: ${statusText}\nAccount: ${approvedText}`,
+        `🚗 *Driver Panel*\n\n👤 Name: ${driver.name}\n📊 Status: ${statusText}\n🏷️ Account: ${approvedText}\n\nUse the *Driver WebApp* to manage orders, track GPS, and upload documents.`,
         {
             parse_mode: 'Markdown',
             reply_markup: {
-                keyboard: [
-                    [{ text: '📦 My Orders' }, { text: driver.is_available ? '🔴 Go Offline' : '🟢 Go Online' }],
-                    [{ text: '📍 Share Location', request_location: true }, { text: '📊 My Stats' }],
-                    [{ text: '🆘 Help' }]
-                ],
-                resize_keyboard: true
+                inline_keyboard: [
+                    [{ text: '🗂️ Open Driver Panel', web_app: { url: webAppUrl } }],
+                    [
+                        { text: driver.is_available ? '🔴 Go Offline' : '🟢 Go Online', callback_data: driver.is_available ? 'go_offline' : 'go_online' },
+                        { text: '📊 My Stats', callback_data: 'my_stats' }
+                    ],
+                    [
+                        { text: '📦 My Orders', callback_data: 'my_orders' },
+                        { text: '📁 Upload Docs', callback_data: 'upload_docs' }
+                    ]
+                ]
             }
         }
     );
+
+    // Also show location keyboard
+    await bot.sendMessage(chatId, '📍 Tap below to share your live location:', {
+        reply_markup: {
+            keyboard: [
+                [{ text: '📍 Share My Location', request_location: true }],
+                [{ text: '🆘 Help' }]
+            ],
+            resize_keyboard: true
+        }
+    });
 }
 
 bot.onText(/\/start/, async (msg) => {
@@ -49,18 +73,111 @@ bot.onText(/\/start/, async (msg) => {
         const existing = await getDriver(telegramUserId);
         if (existing) {
             await bot.sendMessage(chatId, `👋 Welcome back, *${existing.name}*!`, { parse_mode: 'Markdown' });
-            return sendMainMenu(chatId, existing);
+            return sendMainMenu(chatId, existing, telegramUserId);
         }
 
         session.step = 'register_name';
         session.data = {};
         bot.sendMessage(chatId,
             `👋 Welcome to *ET-FOOD Driver Bot*!\n\nTo get started, I need a few details. You'll be verified by our team before you can accept deliveries.\n\n📝 *Step 1/3:* Please enter your *full name*:`,
-            { parse_mode: 'Markdown' }
+            { parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }
         );
     } catch (e) {
         console.error('Start error:', e);
         bot.sendMessage(chatId, '❌ An error occurred. Please try again.');
+    }
+});
+
+bot.onText(/\/panel/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = String(msg.from.id);
+    try {
+        const driver = await getDriver(telegramUserId);
+        if (!driver) return bot.sendMessage(chatId, '❌ You are not registered. Use /start to register.');
+        const webAppUrl = getWebAppUrl(telegramUserId);
+        bot.sendMessage(chatId, '🗂️ Open your Driver Panel:', {
+            reply_markup: {
+                inline_keyboard: [[{ text: '🚗 Open Driver Panel', web_app: { url: webAppUrl } }]]
+            }
+        });
+    } catch (e) {
+        console.error(e);
+    }
+});
+
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const telegramUserId = String(query.from.id);
+    const data = query.data;
+
+    try {
+        const driver = await getDriver(telegramUserId);
+        if (!driver) {
+            bot.answerCallbackQuery(query.id, { text: 'You are not registered.' });
+            return;
+        }
+
+        if (data === 'go_online' || data === 'go_offline') {
+            const goOnline = data === 'go_online';
+            if (!driver.is_approved && goOnline) {
+                bot.answerCallbackQuery(query.id, { text: '⏳ Your account is still pending approval.', show_alert: true });
+                return;
+            }
+            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: goOnline });
+            bot.answerCallbackQuery(query.id, { text: goOnline ? '🟢 You are now Online!' : '🔴 You are now Offline.' });
+            const updated = await getDriver(telegramUserId);
+            return sendMainMenu(chatId, updated, telegramUserId);
+        }
+
+        if (data === 'my_stats') {
+            bot.answerCallbackQuery(query.id);
+            bot.sendMessage(chatId,
+                `📊 *Your Statistics*\n\n🚚 Total Deliveries: ${driver.total_deliveries || 0}\n⭐ Rating: ${driver.rating || 5.0}\n📊 Status: ${driver.is_available ? 'Online' : 'Offline'}\n✅ Account: ${driver.is_approved ? 'Approved' : 'Pending'}`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        if (data === 'my_orders') {
+            bot.answerCallbackQuery(query.id);
+            const orders = await store.findMany('orders', {}, 'created_at');
+            const myOrders = orders.filter(o => o.driver_id === driver.id && o.status === 'out_for_delivery');
+            if (!myOrders.length) {
+                return bot.sendMessage(chatId, '📭 No active deliveries right now.');
+            }
+            for (const o of myOrders) {
+                const webAppUrl = getWebAppUrl(telegramUserId) + `&order_id=${o.id}`;
+                bot.sendMessage(chatId,
+                    `🚗 *Active Delivery*\n\nOrder: #${o.order_number}\nCustomer: ${o.customer_name}\nPhone: ${o.customer_phone}\nAddress: ${o.customer_address || 'Not provided'}\nTotal: ${o.total_amount} ETB`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[{ text: '🗺️ View Order on Map', web_app: { url: webAppUrl } }]]
+                        }
+                    }
+                );
+            }
+            return;
+        }
+
+        if (data === 'upload_docs') {
+            bot.answerCallbackQuery(query.id);
+            const webAppUrl = getWebAppUrl(telegramUserId) + '&section=documents';
+            bot.sendMessage(chatId,
+                `📁 *Upload Documents*\n\nYou can upload your required documents (ID, driver\'s license, vehicle registration) via the Driver Panel.`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [[{ text: '📁 Open Document Upload', web_app: { url: webAppUrl } }]]
+                    }
+                }
+            );
+            return;
+        }
+
+    } catch (e) {
+        console.error('Callback query error:', e);
+        bot.answerCallbackQuery(query.id, { text: 'An error occurred.' });
     }
 });
 
@@ -79,7 +196,7 @@ bot.on('message', async (msg) => {
                 current_lng: msg.location.longitude,
                 last_location_update: new Date()
             });
-            bot.sendMessage(chatId, '📍 Location updated successfully!');
+            bot.sendMessage(chatId, '📍 Location updated successfully! ✅');
         } catch (e) {
             console.error('Location update error:', e);
         }
@@ -143,48 +260,18 @@ bot.on('message', async (msg) => {
         return;
     }
 
+    if (text === '🆘 Help') {
+        bot.sendMessage(chatId,
+            `🆘 *Driver Help*\n\n• *Open Driver Panel* — Full web interface with map, orders, documents\n• *Share Location* — Update your GPS location\n• *Go Online/Offline* — Set your availability\n• *Upload Docs* — Submit required documents\n\nCommands:\n/start — Main menu\n/panel — Open Driver WebApp\n\nFor support contact your restaurant admin.`,
+            { parse_mode: 'Markdown' }
+        );
+        return;
+    }
+
     try {
         const driver = await getDriver(telegramUserId);
-        if (!driver) return;
-
-        if (text === '📦 My Orders') {
-            const orders = await store.findMany('orders', { status: 'out_for_delivery' }, 'created_at');
-            const myOrders = orders.filter(o => o.driver_id === driver.id);
-            if (!myOrders.length) {
-                return bot.sendMessage(chatId, '📭 No active deliveries right now.');
-            }
-            for (const o of myOrders) {
-                bot.sendMessage(chatId,
-                    `🚗 *Active Delivery*\n\nOrder: #${o.order_number}\nCustomer: ${o.customer_name}\nPhone: ${o.customer_phone}\nAddress: ${o.customer_address || 'Not provided'}\nTotal: ${o.total_amount} ETB`,
-                    { parse_mode: 'Markdown' }
-                );
-            }
-            return;
-        }
-
-        if (text === '🟢 Go Online' || text === '🔴 Go Offline') {
-            const goOnline = text === '🟢 Go Online';
-            if (!driver.is_approved && goOnline) {
-                return bot.sendMessage(chatId, '⏳ Your account is still pending approval. Please wait for admin confirmation.');
-            }
-            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: goOnline });
-            const updated = await getDriver(telegramUserId);
-            bot.sendMessage(chatId, goOnline ? '🟢 You are now *online* and available for deliveries!' : '🔴 You are now *offline*.', { parse_mode: 'Markdown' });
-            return sendMainMenu(chatId, updated);
-        }
-
-        if (text === '📊 My Stats') {
-            return bot.sendMessage(chatId,
-                `📊 *Your Stats*\n\nTotal Deliveries: ${driver.total_deliveries || 0}\nRating: ${driver.rating || 5.0} ⭐\nStatus: ${driver.is_available ? 'Online' : 'Offline'}\nAccount: ${driver.is_approved ? 'Approved' : 'Pending'}`,
-                { parse_mode: 'Markdown' }
-            );
-        }
-
-        if (text === '🆘 Help') {
-            return bot.sendMessage(chatId,
-                `🆘 *Driver Help*\n\n• *Go Online/Offline* — Set your availability\n• *My Orders* — View active deliveries\n• *Share Location* — Update your GPS location\n• *My Stats* — View your performance\n\nFor support contact your restaurant admin.`,
-                { parse_mode: 'Markdown' }
-            );
+        if (driver && !session.step) {
+            return sendMainMenu(chatId, driver, telegramUserId);
         }
     } catch (e) {
         console.error('Message handler error:', e);

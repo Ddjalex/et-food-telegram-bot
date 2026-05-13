@@ -128,6 +128,19 @@ async function createTables() {
         )
     `);
 
+    await query(`
+        CREATE TABLE IF NOT EXISTS driver_documents (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            driver_id UUID REFERENCES drivers(id) ON DELETE CASCADE,
+            doc_type VARCHAR(100) DEFAULT 'document',
+            file_url TEXT,
+            filename VARCHAR(255),
+            uploaded_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    await query(`ALTER TABLE drivers ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
+
     console.log('All tables created successfully');
 }
 

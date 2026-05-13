@@ -845,6 +845,37 @@
             <p>Make sure your location is shared for nearby orders.</p>
         </div>
         
+        <!-- Document Upload Section -->
+        <div id="documentsSection" class="status-toggle" style="margin-top: 20px;">
+            <div class="info-title" style="text-align:center; margin-bottom: 15px;">
+                <i class="fas fa-folder-open"></i> Driver Documents
+            </div>
+            <p style="color:#e0e0e0; font-size:13px; text-align:center; margin-bottom:15px;">
+                Upload your ID, driver's license, and vehicle registration. All documents are reviewed by admin.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div>
+                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">📄 National ID / Passport</label>
+                    <input type="file" id="docNationalId" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
+                </div>
+                <div>
+                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">🪪 Driver's License</label>
+                    <input type="file" id="docLicense" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
+                </div>
+                <div>
+                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">🚗 Vehicle Registration</label>
+                    <input type="file" id="docVehicle" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
+                </div>
+            </div>
+            <button onclick="uploadDocuments()" style="width:100%; margin-top:15px; padding:12px; background:linear-gradient(135deg,#4caf50,#388e3c); border:none; border-radius:12px; color:#fff; font-size:15px; font-weight:bold; cursor:pointer;">
+                <i class="fas fa-cloud-upload-alt"></i> Upload Documents
+            </button>
+            <div id="uploadProgress" style="display:none; margin-top:10px; text-align:center; color:#e0e0e0; font-size:13px;">
+                <i class="fas fa-spinner fa-spin"></i> Uploading...
+            </div>
+            <div id="uploadedDocs" style="margin-top:15px;"></div>
+        </div>
+
         <!-- Messages -->
         <div id="successMessage" class="success-message" style="display: none;"></div>
         <div id="errorMessage" class="error-message" style="display: none;"></div>
@@ -856,9 +887,6 @@
         tg.ready();
         tg.expand();
         
-        // Set theme
-        document.body.style.background = tg.themeParams.bg_color || '#667eea';
-        
         // Global variables
         let currentOrderId = null;
         let countdownInterval = null;
@@ -869,6 +897,7 @@
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const orderIdParam = urlParams.get('order_id');
+        const sectionParam = urlParams.get('section');
         driverId = urlParams.get('driver_id') || tg.initDataUnsafe?.user?.id;
         
         // Initialize page
@@ -881,8 +910,18 @@
                 toggleDriverStatus();
             });
             
+            // Auto-scroll to section if specified
+            if (sectionParam === 'documents') {
+                setTimeout(() => {
+                    document.getElementById('documentsSection').scrollIntoView({ behavior: 'smooth' });
+                }, 500);
+            }
+
             // Auto-refresh every 30 seconds
             setInterval(checkForNewOrders, 30000);
+
+            // Load uploaded documents list
+            if (driverId) loadUploadedDocs();
         });
         
         async function initializeDriverPanel() {
@@ -1606,6 +1645,68 @@
             currentPosition = null;
             destinationPosition = null;
             showSuccess('Navigation stopped');
+        }
+
+        async function uploadDocuments() {
+            if (!driverId) { showError('Driver ID not found. Open panel from the bot.'); return; }
+            const files = [
+                { input: document.getElementById('docNationalId'), type: 'national_id', label: 'National ID' },
+                { input: document.getElementById('docLicense'), type: 'drivers_license', label: "Driver's License" },
+                { input: document.getElementById('docVehicle'), type: 'vehicle_registration', label: 'Vehicle Registration' }
+            ].filter(f => f.input.files.length > 0);
+
+            if (!files.length) { showError('Please select at least one document to upload.'); return; }
+
+            document.getElementById('uploadProgress').style.display = 'block';
+            let uploaded = 0, failed = 0;
+
+            for (const { input, type, label } of files) {
+                const formData = new FormData();
+                formData.append('document', input.files[0]);
+                formData.append('telegram_user_id', String(driverId));
+                formData.append('doc_type', type);
+
+                try {
+                    const res = await fetch('/api/driver/upload-document', { method: 'POST', body: formData });
+                    if (res.ok) { uploaded++; input.value = ''; }
+                    else { failed++; console.error(`Failed to upload ${label}`); }
+                } catch (e) {
+                    failed++;
+                    console.error('Upload error:', e);
+                }
+            }
+
+            document.getElementById('uploadProgress').style.display = 'none';
+            if (uploaded > 0) { showSuccess(`${uploaded} document(s) uploaded successfully!`); loadUploadedDocs(); }
+            if (failed > 0) showError(`${failed} document(s) failed to upload.`);
+        }
+
+        async function loadUploadedDocs() {
+            if (!driverId) return;
+            try {
+                const res = await fetch(`/api/drivers/telegram/${driverId}/documents`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const container = document.getElementById('uploadedDocs');
+                if (!data.documents || !data.documents.length) {
+                    container.innerHTML = '<p style="color:#aaa;font-size:12px;text-align:center;">No documents uploaded yet.</p>';
+                    return;
+                }
+                const docIcons = { national_id: '📄', drivers_license: '🪪', vehicle_registration: '🚗', document: '📎' };
+                const docLabels = { national_id: 'National ID', drivers_license: "Driver's License", vehicle_registration: 'Vehicle Reg.', document: 'Document' };
+                container.innerHTML = '<div style="font-size:12px;color:#b0c4de;margin-bottom:8px;">Uploaded Documents:</div>' +
+                    data.documents.map(d => {
+                        const icon = docIcons[d.doc_type] || '📎';
+                        const label = docLabels[d.doc_type] || d.doc_type;
+                        const date = new Date(d.uploaded_at).toLocaleDateString();
+                        return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                            <span>${icon} ${label}</span>
+                            <span style="color:#aaa;font-size:11px;">${date} ✅</span>
+                        </div>`;
+                    }).join('');
+            } catch (e) {
+                console.error('Failed to load documents:', e);
+            }
         }
     </script>
 </body>
