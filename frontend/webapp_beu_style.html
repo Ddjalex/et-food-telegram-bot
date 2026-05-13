@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ET-FOOD - Ethiopian Food Delivery</title>
+    <title>Cloud Kitchen</title>
+    <link rel="icon" type="image/png" href="/static/cloud-kitchen-favicon.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -512,16 +513,25 @@
         .nearby-detecting {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             padding: 14px 4px;
             color: var(--text-light);
             font-size: 13px;
             font-weight: 500;
         }
 
-        .nearby-detecting-icon {
-            font-size: 18px;
-            animation: pulse 1.5s infinite;
+        .nearby-detecting-spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #e0e0e0;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin-location 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin-location {
+            to { transform: rotate(360deg); }
         }
 
         .restaurants-scroll {
@@ -1771,8 +1781,8 @@
         <div class="restaurants-section" id="nearbySection">
             <h2 class="section-title">Nearby Restaurants</h2>
             <div class="restaurants-scroll" id="restaurantsContainer">
-                <div class="nearby-detecting">
-                    <span class="nearby-detecting-icon">📡</span>
+                <div class="nearby-detecting" id="nearbyDetecting">
+                    <div class="nearby-detecting-spinner"></div>
                     <span>Detecting your location…</span>
                 </div>
             </div>
@@ -2400,15 +2410,21 @@
         // Display nearby restaurants (only called after location is detected)
         function displayRestaurants() {
             const container = document.getElementById('restaurantsContainer');
+            const NEARBY_RADIUS_KM = 10;
 
-            if (restaurants.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants nearby</div></div>';
+            // Filter to only restaurants within the radius that have valid distance
+            const nearby = restaurants.filter(r =>
+                r.distance_km !== null && r.distance_km !== undefined && r.distance_km <= NEARBY_RADIUS_KM
+            );
+
+            if (nearby.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants nearby</div><div style="font-size:12px;color:#999;margin-top:4px;">within 10km of your location</div></div>';
                 return;
             }
 
             container.innerHTML = '';
             
-            restaurants.forEach((restaurant, index) => {
+            nearby.forEach((restaurant, index) => {
                 const restaurantCard = document.createElement('div');
                 restaurantCard.className = 'restaurant-card fade-in';
                 restaurantCard.style.animationDelay = `${index * 0.1}s`;

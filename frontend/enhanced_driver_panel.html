@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ET-FOOD - Enhanced Driver Panel</title>
+    <title>Cloud Kitchen - Driver Panel</title>
+    <link rel="icon" type="image/png" href="/static/cloud-kitchen-favicon.png">
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -713,7 +714,7 @@
     <div class="driver-container">
         <div class="driver-header">
             <h1><i class="fas fa-truck"></i> Driver Panel</h1>
-            <div class="driver-subtitle">BeU Delivery Style - ET-FOOD</div>
+            <div class="driver-subtitle">Cloud Kitchen - Driver Panel</div>
         </div>
         
         <!-- Status Toggle -->
@@ -883,7 +884,7 @@
                         <i class="fas fa-store"></i>
                     </div>
                     <div>
-                        <div class="restaurant-name">ET-FOOD Kitchen</div>
+                        <div class="restaurant-name">Cloud Kitchen</div>
                         <div class="restaurant-address">Addis Ababa, Ethiopia</div>
                     </div>
                 </div>
@@ -1056,7 +1057,7 @@
             } else {
                 restaurantMarker = L.marker(restaurantLatLng, { icon: makeIcon('#ff6b35', '🍽️') })
                     .addTo(liveMap)
-                    .bindPopup(`<b>Restaurant</b><br>${name || 'ET-FOOD Kitchen'}`);
+                    .bindPopup(`<b>Restaurant</b><br>${name || 'Cloud Kitchen'}`);
             }
             fitMapBounds();
         }
@@ -1221,10 +1222,10 @@
                     })
                     .catch(() => {
                         // Fallback: place restaurant near Addis Ababa center
-                        updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+                        updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
                     });
             } else {
-                updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+                updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
             }
         }
         
@@ -1526,7 +1527,7 @@
 
             // Pin customer on live map
             updateMapCustomerPin(cLat, cLng, order.customer_name);
-            updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+            updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
 
             document.getElementById('orderNotification').style.display = 'block';
             document.getElementById('noOrders').style.display = 'none';
@@ -1641,7 +1642,7 @@
         
         function callRestaurant() {
             if (tg.showAlert) {
-                tg.showAlert('Restaurant: ET-FOOD Kitchen\nPhone: +251-911-123-456');
+                tg.showAlert('Restaurant: Cloud Kitchen\nPhone: +251-911-123-456');
             }
         }
         

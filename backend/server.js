@@ -95,12 +95,12 @@ app.get('/api/restaurant-info', async (req, res) => {
     try {
         const restaurants = await store.findMany('restaurants', { is_active: true });
         if (!restaurants.length) {
-            return res.json({ success: false, error: 'No restaurants available', company: { name: 'ET-FOOD' }, restaurant: { name: 'Restaurant' } });
+            return res.json({ success: false, error: 'No restaurants available', company: { name: 'Cloud Kitchen' }, restaurant: { name: 'Restaurant' } });
         }
         const r = restaurants[0];
         res.json({
             success: true,
-            company: { name: 'ET-FOOD', description: 'Food Delivery Service' },
+            company: { name: 'Cloud Kitchen', description: 'Good Food. No Boundaries.' },
             restaurant: { id: r.id, name: r.name, description: r.description, address: r.address, phone: r.phone, logo_url: r.logo_url, cover_image_url: r.cover_image_url, estimated_delivery_time: r.estimated_delivery_time }
         });
     } catch (e) {
@@ -1786,7 +1786,7 @@ async function startServer() {
     try {
         await runMigration();
         app.listen(PORT, '0.0.0.0', () => {
-            console.log(`ET-FOOD Node.js server running on port ${PORT}`);
+            console.log(`Cloud Kitchen server running on port ${PORT}`);
             console.log(`Database: Neon PostgreSQL`);
         });
     } catch (err) {
