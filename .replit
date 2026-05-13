@@ -30,7 +30,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node backend/server.js"
+args = "npm start"
 waitForPort = 5000
 
 [[ports]]
@@ -49,3 +49,4 @@ FLASK_ENV = "production"
 FLASK_DEBUG = "false"
 UPLOAD_FOLDER = "static/uploads"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_o6EwDcRLMig5@ep-tiny-field-aqocs6iz.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
+PORT = "5000"
