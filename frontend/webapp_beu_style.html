@@ -2410,7 +2410,7 @@
         // Display nearby restaurants (only called after location is detected)
         function displayRestaurants() {
             const container = document.getElementById('restaurantsContainer');
-            const NEARBY_RADIUS_KM = 10;
+            const NEARBY_RADIUS_KM = 3;
 
             // Filter to only restaurants within the radius that have valid distance
             const nearby = restaurants.filter(r =>
