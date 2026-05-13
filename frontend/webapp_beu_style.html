@@ -151,6 +151,52 @@
             padding: 16px 20px 4px;
         }
 
+        .all-restaurants-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .all-restaurants-header .section-title {
+            margin-bottom: 0;
+        }
+
+        .restaurant-dropdown-wrap {
+            position: relative;
+        }
+
+        .restaurant-dropdown-wrap::after {
+            content: '▾';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: var(--primary-color);
+            pointer-events: none;
+        }
+
+        .restaurant-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background: #fff;
+            border: 1.5px solid #ffe0d0;
+            border-radius: 20px;
+            padding: 6px 28px 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            outline: none;
+            max-width: 140px;
+            box-shadow: 0 1px 6px rgba(255,107,53,0.08);
+        }
+
+        .restaurant-select:focus {
+            border-color: var(--primary-color);
+        }
+
         .all-restaurants-grid {
             display: flex;
             flex-direction: row;
@@ -1509,7 +1555,14 @@
 
         <!-- All Restaurants -->
         <div class="all-restaurants-section">
-            <h2 class="section-title">All Restaurants</h2>
+            <div class="all-restaurants-header">
+                <h2 class="section-title">All Restaurants</h2>
+                <div class="restaurant-dropdown-wrap">
+                    <select class="restaurant-select" id="restaurantDropdown" onchange="selectRestaurantFromDropdown(this.value)">
+                        <option value="">Select…</option>
+                    </select>
+                </div>
+            </div>
             <div class="all-restaurants-grid" id="allRestaurantsContainer">
                 <div class="loading">
                     <div class="loading-spinner"></div>
@@ -2168,9 +2221,19 @@
             });
         }
 
-        // Display all restaurants as a vertical list
+        // Select restaurant from dropdown
+        function selectRestaurantFromDropdown(restaurantId) {
+            if (!restaurantId) return;
+            selectRestaurant(restaurantId);
+            // Scroll the matching card into view
+            const card = document.querySelector(`.all-restaurant-card[data-restaurant-id="${restaurantId}"]`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        // Display all restaurants as a horizontal scroll
         function displayAllRestaurants() {
             const container = document.getElementById('allRestaurantsContainer');
+            const dropdown = document.getElementById('restaurantDropdown');
             if (!container) return;
 
             if (restaurants.length === 0) {
@@ -2179,6 +2242,17 @@
             }
 
             container.innerHTML = '';
+
+            // Populate dropdown
+            if (dropdown) {
+                dropdown.innerHTML = '<option value="">Select…</option>';
+                restaurants.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.name;
+                    dropdown.appendChild(opt);
+                });
+            }
 
             restaurants.forEach((restaurant, index) => {
                 const card = document.createElement('div');
