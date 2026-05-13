@@ -7,11 +7,21 @@ if (!DRIVER_BOT_TOKEN) { console.error('DRIVER_BOT_TOKEN secret is not set'); pr
 const bot = new TelegramBot(DRIVER_BOT_TOKEN, { polling: false });
 
 bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
-    bot.startPolling({ restart: false });
+    bot.startPolling({
+        restart: false,
+        params: {
+            allowed_updates: ['message', 'edited_message', 'callback_query']
+        }
+    });
     console.log('Driver bot started.');
 }).catch(err => {
     console.error('Driver bot webhook delete error:', err.message);
-    bot.startPolling({ restart: false });
+    bot.startPolling({
+        restart: false,
+        params: {
+            allowed_updates: ['message', 'edited_message', 'callback_query']
+        }
+    });
 });
 
 const driverSessions = {};
@@ -56,16 +66,21 @@ async function sendMainMenu(chatId, driver, telegramUserId) {
         }
     );
 
-    // Also show location keyboard
-    await bot.sendMessage(chatId, '📍 Tap below to share your live location:', {
-        reply_markup: {
-            keyboard: [
-                [{ text: '📍 Share My Location', request_location: true }],
-                [{ text: '🆘 Help' }]
-            ],
-            resize_keyboard: true
+    // Show location sharing keyboard — prompt for live location
+    await bot.sendMessage(chatId,
+        `📍 *Share your live location* so orders can be matched to you in real-time.\n\n` +
+        `Choose *"Share My Live Location for..."* (not just current location) so the system always knows where you are.`,
+        {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                keyboard: [
+                    [{ text: '📍 Share My Live Location', request_location: true }],
+                    [{ text: '🆘 Help' }]
+                ],
+                resize_keyboard: true
+            }
         }
-    });
+    );
 }
 
 bot.onText(/\/start/, async (msg) => {
@@ -168,7 +183,7 @@ bot.on('callback_query', async (query) => {
             bot.answerCallbackQuery(query.id);
             const webAppUrl = getWebAppUrl(telegramUserId) + '&section=documents';
             bot.sendMessage(chatId,
-                `📁 *Upload Documents*\n\nYou can upload your required documents (ID, driver\'s license, vehicle registration) via the Driver Panel.`,
+                `📁 *Upload Documents*\n\nUpload your required documents (ID, driver\'s license, vehicle registration) via the Driver Panel.`,
                 {
                     parse_mode: 'Markdown',
                     reply_markup: {
@@ -185,6 +200,10 @@ bot.on('callback_query', async (query) => {
     }
 });
 
+// ============================================================
+// LOCATION MESSAGES — initial location share
+// ============================================================
+
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const telegramUserId = String(msg.from.id);
@@ -195,12 +214,26 @@ bot.on('message', async (msg) => {
         try {
             const driver = await getDriver(telegramUserId);
             if (!driver) return bot.sendMessage(chatId, '❌ You are not registered. Use /start to register.');
+
+            const isLive = msg.location.live_period && msg.location.live_period > 0;
+
             await store.updateOne('drivers', { telegram_user_id: telegramUserId }, {
                 current_lat: msg.location.latitude,
                 current_lng: msg.location.longitude,
                 last_location_update: new Date()
             });
-            bot.sendMessage(chatId, '📍 Location updated successfully! ✅');
+
+            if (isLive) {
+                bot.sendMessage(chatId,
+                    `🔴 *Live Location Active!*\n\nYour position will update automatically as you move.\nYou will now receive nearby order assignments.\n\nStay online to receive orders! 📦`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else {
+                bot.sendMessage(chatId,
+                    `📍 Location updated! ✅\n\n💡 *Tip:* Share your *Live Location* for real-time order matching — choose "Share My Live Location for..." instead of current location.`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
         } catch (e) {
             console.error('Location update error:', e);
         }
@@ -266,7 +299,7 @@ bot.on('message', async (msg) => {
 
     if (text === '🆘 Help') {
         bot.sendMessage(chatId,
-            `🆘 *Driver Help*\n\n• *Open Driver Panel* — Full web interface with map, orders, documents\n• *Share Location* — Update your GPS location\n• *Go Online/Offline* — Set your availability\n• *Upload Docs* — Submit required documents\n\nCommands:\n/start — Main menu\n/panel — Open Driver WebApp\n\nFor support contact your restaurant admin.`,
+            `🆘 *Driver Help*\n\n• *Open Driver Panel* — Full web interface with map, orders, documents\n• *Share Live Location* — Update your GPS in real-time (choose "Share Live Location for...")\n• *Go Online/Offline* — Set your availability\n• *Upload Docs* — Submit required documents\n\nCommands:\n/start — Main menu\n/panel — Open Driver WebApp\n\nFor support contact your restaurant admin.`,
             { parse_mode: 'Markdown' }
         );
         return;
@@ -279,6 +312,32 @@ bot.on('message', async (msg) => {
         }
     } catch (e) {
         console.error('Message handler error:', e);
+    }
+});
+
+// ============================================================
+// LIVE LOCATION UPDATES — Telegram sends edited_message as driver moves
+// This is the correct Telegram API for real-time location (not message, but edited_message)
+// ============================================================
+
+bot.on('edited_message', async (msg) => {
+    if (!msg.location) return;
+    const telegramUserId = String(msg.from.id);
+    const { latitude, longitude, live_period } = msg.location;
+
+    try {
+        const driver = await getDriver(telegramUserId);
+        if (!driver) return;
+
+        await store.updateOne('drivers', { telegram_user_id: telegramUserId }, {
+            current_lat: latitude,
+            current_lng: longitude,
+            last_location_update: new Date()
+        });
+
+        console.log(`📍 Driver live location update — ${driver.name} (${telegramUserId}): ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${live_period ? ` (live)` : ''}`);
+    } catch (e) {
+        console.error('Driver live location update error:', e.message);
     }
 });
 

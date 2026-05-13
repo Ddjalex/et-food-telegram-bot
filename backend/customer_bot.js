@@ -10,11 +10,21 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}`;
 
 bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
-    bot.startPolling({ restart: false });
+    bot.startPolling({
+        restart: false,
+        params: {
+            allowed_updates: ['message', 'edited_message', 'callback_query']
+        }
+    });
     console.log('Customer bot started. WebApp URL:', WEBAPP_URL);
 }).catch(err => {
     console.error('Customer bot webhook delete error:', err.message);
-    bot.startPolling({ restart: false });
+    bot.startPolling({
+        restart: false,
+        params: {
+            allowed_updates: ['message', 'edited_message', 'callback_query']
+        }
+    });
 });
 
 // ============================================================
@@ -29,7 +39,9 @@ async function getValidLocation(telegramUserId) {
         );
         const row = result.rows[0];
         if (!row) return null;
-        if (row.expires_at && new Date(row.expires_at) < new Date()) return null; // expired
+        // For live locations, never expire them prematurely — keep until Telegram stops sending updates
+        if (row.live_period > 0) return row; // live location — always valid while active
+        if (row.expires_at && new Date(row.expires_at) < new Date()) return null; // static expired
         return row;
     } catch (e) {
         console.error('getValidLocation error:', e.message);
@@ -39,9 +51,10 @@ async function getValidLocation(telegramUserId) {
 
 async function saveCustomerLocation(telegramUserId, lat, lng, livePeriod) {
     try {
-        // For live locations, keep until live_period ends; for one-time, keep 6 hours
+        // live location: keep 8 hours from last update (Telegram max live period is 8h)
+        // static location: keep 6 hours
         const expiresAt = livePeriod
-            ? new Date(Date.now() + livePeriod * 1000)
+            ? new Date(Date.now() + 8 * 60 * 60 * 1000)
             : new Date(Date.now() + 6 * 60 * 60 * 1000);
         await dbQuery(
             `INSERT INTO customer_live_locations (telegram_user_id, lat, lng, live_period, expires_at, updated_at)
@@ -50,9 +63,27 @@ async function saveCustomerLocation(telegramUserId, lat, lng, livePeriod) {
              SET lat=$2, lng=$3, live_period=$4, expires_at=$5, updated_at=NOW()`,
             [String(telegramUserId), lat, lng, livePeriod || 0, expiresAt]
         );
+        // Also update any active orders with this customer's latest location
+        await dbQuery(
+            `UPDATE orders SET location_lat=$2, location_lng=$3, updated_at=NOW()
+             WHERE telegram_user_id=$1 AND status NOT IN ('delivered','cancelled')`,
+            [String(telegramUserId), lat, lng]
+        );
     } catch (e) {
         console.error('Error saving customer location:', e.message);
     }
+}
+
+// Persistent reply keyboard shown after location is set
+function mainKeyboard() {
+    return {
+        keyboard: [
+            [{ text: '🍔 Order Food' }, { text: '📦 My Orders' }],
+            [{ text: '📍 Update Location' }, { text: '🆘 Help' }]
+        ],
+        resize_keyboard: true,
+        persistent: true
+    };
 }
 
 // Inline keyboard with the web app button
@@ -67,15 +98,151 @@ function menuKeyboard() {
 // Reply keyboard that requests location
 function locationRequestKeyboard() {
     return {
-        keyboard: [[{ text: '📍 Share My Location', request_location: true }]],
+        keyboard: [
+            [{ text: '📍 Send My Current Location', request_location: true }],
+            [{ text: '🔴 Share Live Location (Recommended)', request_location: true }]
+        ],
         resize_keyboard: true,
         one_time_keyboard: true
     };
 }
 
-// Remove reply keyboard
-function removeKeyboard() {
-    return { remove_keyboard: true };
+const STATUS_EMOJI = {
+    pending: '⏳',
+    confirmed: '✅',
+    kitchen_confirmed: '👨‍🍳',
+    preparing: '👨‍🍳',
+    ready: '🔔',
+    out_for_delivery: '🚗',
+    delivered: '✅',
+    cancelled: '❌'
+};
+
+const STATUS_LABEL = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    kitchen_confirmed: 'Preparing',
+    preparing: 'Preparing',
+    ready: 'Ready for Pickup',
+    out_for_delivery: 'On the Way',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled'
+};
+
+const ACTIVE_STATUSES = ['pending', 'confirmed', 'kitchen_confirmed', 'preparing', 'ready', 'out_for_delivery'];
+const DONE_STATUSES = ['delivered', 'cancelled'];
+
+// ============================================================
+// ORDERS PANEL HELPERS
+// ============================================================
+
+async function getCustomerOrders(telegramUserId) {
+    try {
+        const result = await dbQuery(
+            `SELECT * FROM orders WHERE telegram_user_id=$1 ORDER BY created_at DESC LIMIT 30`,
+            [String(telegramUserId)]
+        );
+        return result.rows;
+    } catch (e) {
+        console.error('getCustomerOrders error:', e.message);
+        return [];
+    }
+}
+
+async function sendOrdersPanel(chatId, telegramUserId, tab = 'active') {
+    const orders = await getCustomerOrders(telegramUserId);
+    const activeOrders = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
+    const doneOrders = orders.filter(o => DONE_STATUSES.includes(o.status));
+
+    const list = tab === 'active' ? activeOrders : doneOrders;
+    const tabLabel = tab === 'active' ? 'Active Orders' : 'Order History';
+
+    let text = `📦 *${tabLabel}*\n`;
+    text += `Active: ${activeOrders.length}  |  History: ${doneOrders.length}\n\n`;
+
+    if (list.length === 0) {
+        text += tab === 'active'
+            ? '✅ No active orders right now.\n\nTap 🍔 *Order Food* to place a new order!'
+            : '📭 No completed orders yet.';
+    } else {
+        for (const o of list.slice(0, 8)) {
+            const emoji = STATUS_EMOJI[o.status] || '📦';
+            const label = STATUS_LABEL[o.status] || o.status;
+            const date = new Date(o.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+            text += `${emoji} *#${o.order_number}* — ${label}\n`;
+            text += `   ${o.total_amount} ETB · ${date}\n`;
+        }
+        if (list.length > 8) text += `\n_...and ${list.length - 8} more_`;
+    }
+
+    const tabButtons = [
+        { text: tab === 'active' ? '🟢 Active Orders ✓' : '🟢 Active Orders', callback_data: 'orders:active' },
+        { text: tab === 'done' ? '📋 History ✓' : '📋 History', callback_data: 'orders:done' }
+    ];
+
+    const orderButtons = list.slice(0, 6).map(o => ([{
+        text: `${STATUS_EMOJI[o.status] || '📦'} #${o.order_number} — ${STATUS_LABEL[o.status] || o.status}`,
+        callback_data: `order:${o.id}`
+    }]));
+
+    const bottomRow = [[{ text: '🍔 New Order', web_app: { url: WEBAPP_URL } }]];
+
+    return bot.sendMessage(chatId, text, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+            inline_keyboard: [tabButtons, ...orderButtons, ...bottomRow]
+        }
+    });
+}
+
+async function sendOrderDetail(chatId, orderId) {
+    try {
+        const result = await dbQuery(`SELECT * FROM orders WHERE id=$1`, [orderId]);
+        const o = result.rows[0];
+        if (!o) return bot.sendMessage(chatId, '❌ Order not found.');
+
+        const emoji = STATUS_EMOJI[o.status] || '📦';
+        const label = STATUS_LABEL[o.status] || o.status;
+        const date = new Date(o.created_at).toLocaleString('en-GB', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        let items = '';
+        try {
+            const parsed = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+            if (Array.isArray(parsed)) {
+                items = parsed.map(i => `  • ${i.name} x${i.quantity} — ${i.price * i.quantity} ETB`).join('\n');
+            }
+        } catch (_) {}
+
+        let text = `📦 *Order #${o.order_number}*\n`;
+        text += `${emoji} Status: *${label}*\n\n`;
+        if (items) text += `🛒 *Items:*\n${items}\n\n`;
+        text += `💰 Total: *${o.total_amount} ETB*\n`;
+        text += `💳 Payment: ${o.payment_method || 'N/A'} (${o.payment_status || 'pending'})\n`;
+        text += `📅 Placed: ${date}\n`;
+        if (o.special_instructions) text += `📝 Notes: ${o.special_instructions}\n`;
+
+        let driver = null;
+        if (o.driver_id) {
+            const dr = await dbQuery(`SELECT * FROM drivers WHERE id=$1`, [o.driver_id]);
+            if (dr.rows[0]) driver = dr.rows[0];
+        }
+        if (driver) {
+            text += `\n🚗 *Driver:* ${driver.name}\n📞 ${driver.phone_number}`;
+        }
+
+        const backButton = [[{ text: '⬅️ Back to Orders', callback_data: 'orders:active' }]];
+
+        return bot.sendMessage(chatId, text, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: backButton }
+        });
+    } catch (e) {
+        console.error('sendOrderDetail error:', e.message);
+        return bot.sendMessage(chatId, '❌ Failed to load order details.');
+    }
 }
 
 // ============================================================
@@ -91,29 +258,23 @@ bot.onText(/\/start/, async (msg) => {
         const loc = await getValidLocation(telegramUserId);
 
         if (loc) {
-            // User has a valid saved location — show menu directly
             const isLive = loc.live_period > 0;
-            const locStatus = isLive
-                ? `🔴 Live location active`
-                : `📍 Location saved`;
-
+            const locStatus = isLive ? '🔴 Live location active' : '📍 Location saved';
             await bot.sendMessage(chatId,
-                `👋 Welcome back, *${firstName}*!\n\n` +
-                `${locStatus} — we know where to deliver.\n\n` +
-                `Tap below to browse our menu and order:`,
+                `👋 Welcome back, *${firstName}*!\n\n${locStatus} — we know where to deliver.\n\nTap below to browse our menu and order:`,
                 {
                     parse_mode: 'Markdown',
-                    reply_markup: menuKeyboard()
+                    reply_markup: mainKeyboard()
                 }
             );
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
         } else {
-            // No valid location — ask for location before showing menu
             await bot.sendMessage(chatId,
                 `👋 Welcome to *ET-FOOD*, ${firstName}!\n\n` +
                 `🚀 Fresh Ethiopian food delivered to your door.\n\n` +
                 `📍 *First, share your location* so we can deliver accurately.\n\n` +
-                `Tap the button below 👇\n\n` +
-                `_💡 Tip: Choose "Share Live Location" for real-time driver tracking!_`,
+                `💡 *Tip: Choose "Share Live Location"* — your location updates in real-time as you move, ` +
+                `so your driver always knows where to find you!`,
                 {
                     parse_mode: 'Markdown',
                     reply_markup: locationRequestKeyboard()
@@ -122,7 +283,6 @@ bot.onText(/\/start/, async (msg) => {
         }
     } catch (e) {
         console.error('Error in /start:', e);
-        // Fallback — show menu anyway so user is never blocked
         await bot.sendMessage(chatId,
             `👋 Welcome to *ET-FOOD*, ${firstName}!\n\nTap below to order:`,
             { parse_mode: 'Markdown', reply_markup: menuKeyboard() }
@@ -131,7 +291,7 @@ bot.onText(/\/start/, async (msg) => {
 });
 
 // ============================================================
-// /menu — quick menu shortcut (no location gate)
+// /menu
 // ============================================================
 
 bot.onText(/\/menu/, async (msg) => {
@@ -142,53 +302,33 @@ bot.onText(/\/menu/, async (msg) => {
 });
 
 // ============================================================
-// /orders — view recent orders
+// /orders
 // ============================================================
 
 bot.onText(/\/orders/, async (msg) => {
     const chatId = msg.chat.id;
     const telegramUserId = String(msg.from.id);
-    try {
-        const orders = await store.findMany('orders', { telegram_user_id: telegramUserId }, 'created_at');
-        if (!orders.length) {
-            return bot.sendMessage(chatId, '📭 You have no orders yet. Use /start to place your first order!');
-        }
-        const recent = orders.slice(-5).reverse();
-        let text = '📦 *Your Recent Orders:*\n\n';
-        for (const o of recent) {
-            const statusEmoji = {
-                pending: '⏳', confirmed: '✅', preparing: '👨‍🍳',
-                ready: '🔔', out_for_delivery: '🚗', delivered: '✅', cancelled: '❌'
-            }[o.status] || '📦';
-            text += `${statusEmoji} *#${o.order_number}*\n`;
-            text += `Status: ${o.status.replace(/_/g, ' ')}\n`;
-            text += `Total: ${o.total_amount} ETB\n`;
-            text += `Date: ${new Date(o.created_at).toLocaleDateString()}\n\n`;
-        }
-        bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
-    } catch (e) {
-        console.error('Error fetching orders:', e);
-        bot.sendMessage(chatId, '❌ Failed to fetch orders. Please try again.');
-    }
+    await sendOrdersPanel(chatId, telegramUserId, 'active');
 });
 
 // ============================================================
-// /status — check specific order
+// /status <order_number>
 // ============================================================
 
 bot.onText(/\/status (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const orderNumber = match[1].trim().toUpperCase();
     try {
-        const orders = await store.findMany('orders', {}, 'created_at');
-        const order = orders.find(o => o.order_number === orderNumber || o.order_number === `ET${orderNumber}`);
+        const result = await dbQuery(
+            `SELECT * FROM orders WHERE order_number=$1 OR order_number=$2`,
+            [orderNumber, `ET${orderNumber}`]
+        );
+        const order = result.rows[0];
         if (!order) return bot.sendMessage(chatId, `❌ Order *${orderNumber}* not found.`, { parse_mode: 'Markdown' });
-        const statusEmoji = {
-            pending: '⏳', confirmed: '✅', preparing: '👨‍🍳',
-            ready: '🔔', out_for_delivery: '🚗', delivered: '✅', cancelled: '❌'
-        }[order.status] || '📦';
+        const emoji = STATUS_EMOJI[order.status] || '📦';
+        const label = STATUS_LABEL[order.status] || order.status;
         bot.sendMessage(chatId,
-            `📦 *Order ${order.order_number}*\n\n${statusEmoji} Status: *${order.status.replace(/_/g, ' ')}*\nTotal: ${order.total_amount} ETB\nPayment: ${order.payment_method}`,
+            `📦 *Order ${order.order_number}*\n\n${emoji} Status: *${label}*\nTotal: ${order.total_amount} ETB\nPayment: ${order.payment_method}`,
             { parse_mode: 'Markdown' }
         );
     } catch (e) {
@@ -198,7 +338,7 @@ bot.onText(/\/status (.+)/, async (msg, match) => {
 });
 
 // ============================================================
-// /location — prompt user to share/update location
+// /location — prompt user to update location
 // ============================================================
 
 bot.onText(/\/location/, async (msg) => {
@@ -210,11 +350,11 @@ bot.onText(/\/location/, async (msg) => {
         const isLive = loc.live_period > 0;
         const updatedAgo = Math.round((Date.now() - new Date(loc.updated_at)) / 60000);
         await bot.sendMessage(chatId,
-            `📍 *Your current location*\n\n` +
-            `${isLive ? '🔴 Live location' : '📍 One-time location'}\n` +
-            `Updated: ${updatedAgo} min ago\n\n` +
-            `To update your location, tap the button below 👇\n\n` +
-            `_💡 Tip: Choose "Share Live Location" for real-time driver tracking!_`,
+            `📍 *Your Current Location*\n\n` +
+            `${isLive ? '🔴 Live location — updating in real-time' : '📍 Static location'}\n` +
+            `Last updated: ${updatedAgo} min ago\n\n` +
+            `To update, share your location again below:\n\n` +
+            `💡 *Choose "Share Live Location"* so your driver always knows where you are!`,
             {
                 parse_mode: 'Markdown',
                 reply_markup: locationRequestKeyboard()
@@ -223,8 +363,8 @@ bot.onText(/\/location/, async (msg) => {
     } else {
         await bot.sendMessage(chatId,
             `📍 *Share Your Location*\n\n` +
-            `Tap the button below to share your location 👇\n\n` +
-            `_💡 Choose "Share Live Location" for real-time driver tracking!_`,
+            `Tap below to share your location 👇\n\n` +
+            `💡 *Choose "Share Live Location"* — updates automatically as you move!`,
             {
                 parse_mode: 'Markdown',
                 reply_markup: locationRequestKeyboard()
@@ -241,66 +381,146 @@ bot.onText(/\/help/, async (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId,
         `🤖 *ET-FOOD Bot Commands*\n\n` +
-        `/start — Start ordering (shares your location first)\n` +
-        `/menu — Browse available dishes\n` +
-        `/location — Update your delivery location\n` +
-        `/orders — View your recent orders\n` +
-        `/status <order_number> — Check a specific order\n` +
-        `/help — Show this help message`,
+        `🍔 *Order Food* — Browse menu and order\n` +
+        `📦 *My Orders* — View active & completed orders\n` +
+        `📍 *Update Location* — Change delivery location\n\n` +
+        `/start — Welcome screen\n` +
+        `/menu — Open menu\n` +
+        `/orders — View orders\n` +
+        `/location — Update location\n` +
+        `/status <order#> — Check specific order\n` +
+        `/help — This help message\n\n` +
+        `📞 *For support*, contact the restaurant directly.`,
         { parse_mode: 'Markdown' }
     );
 });
 
 // ============================================================
-// LOCATION MESSAGES — one-time & live location from keyboard button
+// REPLY KEYBOARD BUTTON HANDLERS
 // ============================================================
 
 bot.on('message', async (msg) => {
-    if (!msg.location) return;
+    // Handle location messages (both static and initial live location)
+    if (msg.location) {
+        const chatId = msg.chat.id;
+        const telegramUserId = String(msg.from.id);
+        const { latitude, longitude, live_period } = msg.location;
+
+        await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
+
+        if (live_period) {
+            await bot.sendMessage(chatId,
+                `🔴 *Live Location Active!*\n\n` +
+                `Your location updates automatically as you move.\n` +
+                `Your driver will always see your exact position.\n\n` +
+                `Use the buttons below to order 🍔`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: mainKeyboard()
+                }
+            );
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
+        } else {
+            await bot.sendMessage(chatId,
+                `✅ *Location Saved!*\n\n` +
+                `Your delivery location has been set.\n\n` +
+                `💡 _Next time, try "Share Live Location" so your driver can track you in real-time!_`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: mainKeyboard()
+                }
+            );
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
+        }
+        return;
+    }
 
     const chatId = msg.chat.id;
     const telegramUserId = String(msg.from.id);
-    const { latitude, longitude, live_period } = msg.location;
+    const text = msg.text || '';
 
-    await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
+    if (text.startsWith('/')) return;
 
-    if (live_period) {
-        // Customer shared a live location — best case!
-        await bot.sendMessage(chatId,
-            `🔴 *Live Location Active!*\n\n` +
-            `Your location is being tracked in real-time.\n` +
-            `Drivers will see your exact position as your order is on the way.\n\n` +
-            `Tap below to start ordering 🍔`,
+    if (text === '🍔 Order Food') {
+        return bot.sendMessage(chatId, '🍔 Tap below to browse our full menu and order:', {
+            reply_markup: menuKeyboard()
+        });
+    }
+
+    if (text === '📦 My Orders') {
+        return sendOrdersPanel(chatId, telegramUserId, 'active');
+    }
+
+    if (text === '📍 Update Location') {
+        return bot.sendMessage(chatId,
+            `📍 *Update Your Delivery Location*\n\n` +
+            `Tap the button below 👇\n\n` +
+            `💡 *Choose "Share Live Location"* — updates automatically as you move!`,
             {
                 parse_mode: 'Markdown',
-                reply_markup: menuKeyboard()
+                reply_markup: locationRequestKeyboard()
             }
         );
-    } else {
-        // One-time location — still good, just not live
-        await bot.sendMessage(chatId,
-            `✅ *Location Saved!*\n\n` +
-            `Your delivery location has been set.\n\n` +
-            `💡 _Next time, try "Share Live Location" so drivers can track you in real-time!_\n\n` +
-            `Tap below to start ordering 🍔`,
-            {
-                parse_mode: 'Markdown',
-                reply_markup: menuKeyboard()
-            }
+    }
+
+    if (text === '🆘 Help') {
+        return bot.sendMessage(chatId,
+            `🤖 *ET-FOOD Help*\n\n` +
+            `🍔 *Order Food* — Browse menu and order\n` +
+            `📦 *My Orders* — View active & completed orders\n` +
+            `📍 *Update Location* — Change delivery address\n\n` +
+            `Commands: /start /menu /orders /location /help`,
+            { parse_mode: 'Markdown' }
         );
     }
 });
 
 // ============================================================
 // LIVE LOCATION UPDATES — Telegram sends edited_message when customer moves
+// This is the correct Telegram API approach for real-time location tracking
 // ============================================================
 
 bot.on('edited_message', async (msg) => {
     if (!msg.location) return;
     const telegramUserId = String(msg.from.id);
     const { latitude, longitude, live_period } = msg.location;
+
+    // Save the updated live location — this is what keeps the driver's view current
     await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
-    console.log(`Live location update — user ${telegramUserId}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+    console.log(`📍 Live location update — customer ${telegramUserId}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${live_period ? ` (live, ${live_period}s)` : ' (static updated)'}`);
+});
+
+// ============================================================
+// CALLBACK QUERIES — Orders panel navigation
+// ============================================================
+
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const telegramUserId = String(query.from.id);
+    const data = query.data;
+
+    try {
+        await bot.answerCallbackQuery(query.id);
+
+        if (data === 'orders:active' || data === 'orders:done') {
+            const tab = data === 'orders:active' ? 'active' : 'done';
+            try {
+                await bot.deleteMessage(chatId, query.message.message_id);
+            } catch (_) {}
+            return sendOrdersPanel(chatId, telegramUserId, tab);
+        }
+
+        if (data.startsWith('order:')) {
+            const orderId = data.replace('order:', '');
+            try {
+                await bot.deleteMessage(chatId, query.message.message_id);
+            } catch (_) {}
+            return sendOrderDetail(chatId, orderId);
+        }
+
+    } catch (e) {
+        console.error('Callback query error:', e.message);
+    }
 });
 
 bot.on('polling_error', (err) => console.error('Customer bot polling error:', err.message));

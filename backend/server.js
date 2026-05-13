@@ -6,7 +6,14 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./store');
 const { runMigration } = require('./migrate');
-const { notifyDriverApproved, notifyDriverRejected, notifyCustomerOrderStatus } = require('./notifier');
+const {
+    notifyDriverApproved, notifyDriverRejected, notifyDriverNewOrder,
+    notifyCustomerOrderStatus, notifyCustomerOrderReceived,
+    notifyCustomerKitchenAccepted, notifyCustomerKitchenRejected,
+    notifyCustomerPaymentVerified, notifyCustomerDriverAssigned,
+    notifyCustomerOrderPickedUp, notifyCustomerOrderDelivered,
+    notifyCustomerOrderCancelled
+} = require('./notifier');
 
 async function logAudit(req, action, targetType, targetId, targetName, details) {
     try {
@@ -179,6 +186,11 @@ app.post('/api/orders', async (req, res) => {
         });
         const order = await store.findById('orders', order_id);
         res.json({ success: true, order_id, order, message: 'Order created successfully' });
+
+        // Notify customer that order was received
+        if (order.telegram_user_id) {
+            notifyCustomerOrderReceived(order.telegram_user_id, order).catch(e => console.error('notify error:', e.message));
+        }
     } catch (e) {
         console.error('Error creating order:', e);
         res.status(500).json({ success: false, error: 'Failed to create order' });
@@ -642,9 +654,26 @@ app.patch('/api/super-admin/orders/:id/status', async (req, res) => {
         if (!status) return res.status(400).json({ success: false, error: 'status is required' });
         const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        const prevStatus = order.status;
         await store.updateById('orders', req.params.id, { status });
         logAudit(req, 'update_order_status', 'order', req.params.id, req.params.id, `Status → ${status}`);
         res.json({ success: true, message: 'Order status updated' });
+
+        // Fire customer notification after response
+        if (order.telegram_user_id && status !== prevStatus) {
+            const updated = { ...order, status };
+            if (status === 'delivered') {
+                notifyCustomerOrderDelivered(order.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+            } else if (status === 'cancelled') {
+                notifyCustomerOrderCancelled(order.telegram_user_id, updated, req.body.reason).catch(e => console.error('notify error:', e.message));
+            } else if (status === 'kitchen_confirmed' || status === 'confirmed' || status === 'preparing') {
+                notifyCustomerKitchenAccepted(order.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+            } else if (status === 'out_for_delivery') {
+                let driver = null;
+                if (order.driver_id) driver = await store.findById('drivers', order.driver_id).catch(() => null);
+                notifyCustomerOrderPickedUp(order.telegram_user_id, updated, driver).catch(e => console.error('notify error:', e.message));
+            }
+        }
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order status' });
@@ -960,8 +989,21 @@ app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
     try {
         const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        const prevStatus = order.status;
         await store.updateById('orders', req.params.id, req.body);
-        res.json({ success: true, order: await store.findById('orders', req.params.id) });
+        const updated = await store.findById('orders', req.params.id);
+        res.json({ success: true, order: updated });
+
+        // Send customer notification based on new status
+        const newStatus = req.body.status;
+        if (updated.telegram_user_id && newStatus && newStatus !== prevStatus) {
+            if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed' || newStatus === 'preparing') {
+                notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'cancelled') {
+                const reason = req.body.rejection_reason || req.body.cancel_reason || null;
+                notifyCustomerKitchenRejected(updated.telegram_user_id, updated, reason).catch(e => console.error('notify error:', e.message));
+            }
+        }
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order' });
@@ -1208,8 +1250,28 @@ app.put('/api/orders/:id/status', async (req, res) => {
     try {
         const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-        await store.updateById('orders', req.params.id, { status: req.body.status });
-        res.json({ success: true, order: await store.findById('orders', req.params.id) });
+        const prevStatus = order.status;
+        const newStatus = req.body.status;
+        await store.updateById('orders', req.params.id, { status: newStatus });
+        const updated = await store.findById('orders', req.params.id);
+        res.json({ success: true, order: updated });
+
+        // Fire notifications after response
+        if (updated.telegram_user_id && newStatus && newStatus !== prevStatus) {
+            if (newStatus === 'delivered') {
+                notifyCustomerOrderDelivered(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'cancelled') {
+                notifyCustomerOrderCancelled(updated.telegram_user_id, updated, req.body.reason).catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed' || newStatus === 'preparing') {
+                notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'out_for_delivery') {
+                let driver = null;
+                if (updated.driver_id) driver = await store.findById('drivers', updated.driver_id).catch(() => null);
+                notifyCustomerOrderPickedUp(updated.telegram_user_id, updated, driver).catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'ready') {
+                notifyCustomerOrderStatus(updated.telegram_user_id, updated, '🔔 Your order is ready and waiting for a driver!').catch(e => console.error('notify error:', e.message));
+            }
+        }
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order status' });
@@ -1422,16 +1484,27 @@ app.post('/api/orders/:id/accept', async (req, res) => {
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
         const { driver_telegram_id } = req.body;
         let driverUpdate = { status: 'out_for_delivery' };
+        let assignedDriver = null;
         if (driver_telegram_id) {
             const driver = await store.findOne('drivers', { telegram_user_id: String(driver_telegram_id) });
             if (driver) {
                 driverUpdate.driver_id = driver.id;
+                assignedDriver = driver;
                 await store.updateById('drivers', driver.id, { is_available: false });
             }
         }
         await store.updateById('orders', req.params.id, driverUpdate);
         const updated = await store.findById('orders', req.params.id);
         res.json({ success: true, ...updated });
+
+        // Notify customer that driver accepted and is on the way
+        if (updated.telegram_user_id) {
+            if (assignedDriver) {
+                notifyCustomerDriverAssigned(updated.telegram_user_id, updated, assignedDriver).catch(e => console.error('notify error:', e.message));
+            } else {
+                notifyCustomerOrderPickedUp(updated.telegram_user_id, updated, null).catch(e => console.error('notify error:', e.message));
+            }
+        }
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to accept order' });
