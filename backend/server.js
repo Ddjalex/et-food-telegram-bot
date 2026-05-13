@@ -422,15 +422,171 @@ app.get('/api/super-admin/drivers', async (req, res) => {
         const drivers = await store.findMany('drivers');
         const formatted = drivers.map(d => ({
             id: d.id, name: d.name, phone: d.phone || d.phone_number,
+            phone_number: d.phone_number || d.phone,
             vehicle_type: d.vehicle_type || 'Unknown',
             is_approved: d.is_approved || false, is_active: d.is_active !== false,
-            location_lat: d.current_lat, location_lng: d.current_lng,
-            last_location_update: d.last_location_update || 'Never', created_at: d.created_at
+            is_available: d.is_available || false,
+            current_lat: d.current_lat, current_lng: d.current_lng,
+            last_location_update: d.last_location_update || null, created_at: d.created_at
         }));
         res.json({ success: true, drivers: formatted });
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch drivers' });
+    }
+});
+
+app.get('/api/super-admin/drivers/pending', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const drivers = await store.findMany('drivers', { is_approved: false });
+        const formatted = drivers.map(d => ({
+            id: d.id, name: d.name, phone_number: d.phone_number || d.phone,
+            vehicle_type: d.vehicle_type || 'Unknown',
+            is_active: d.is_active !== false, created_at: d.created_at
+        }));
+        res.json({ success: true, drivers: formatted });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch pending drivers' });
+    }
+});
+
+app.get('/api/super-admin/drivers/approved', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const drivers = await store.findMany('drivers', { is_approved: true });
+        const formatted = drivers.map(d => ({
+            id: d.id, name: d.name, phone_number: d.phone_number || d.phone,
+            vehicle_type: d.vehicle_type || 'Unknown',
+            is_active: d.is_active !== false, is_available: d.is_available || false,
+            current_lat: d.current_lat, current_lng: d.current_lng,
+            last_location_update: d.last_location_update || null, created_at: d.created_at,
+            total_deliveries: d.total_deliveries || 0, rating: d.rating || 5.0
+        }));
+        res.json({ success: true, drivers: formatted });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch approved drivers' });
+    }
+});
+
+app.get('/api/super-admin/drivers/stats', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const [total, approved, pending, active] = await Promise.all([
+            store.count('drivers'),
+            store.count('drivers', { is_approved: true }),
+            store.count('drivers', { is_approved: false }),
+            store.count('drivers', { is_active: true, is_approved: true })
+        ]);
+        res.json({ success: true, stats: { total, approved, pending, active } });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch driver stats' });
+    }
+});
+
+app.post('/api/super-admin/drivers/:id/approve', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        await store.updateById('drivers', req.params.id, { is_approved: true, is_active: true });
+        res.json({ success: true, message: 'Driver approved successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to approve driver' });
+    }
+});
+
+app.post('/api/super-admin/drivers/:id/reject', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        await store.updateById('drivers', req.params.id, { is_approved: false, is_active: false, rejection_reason: req.body.reason || 'Rejected by admin' });
+        res.json({ success: true, message: 'Driver rejected successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to reject driver' });
+    }
+});
+
+app.delete('/api/super-admin/drivers/:id', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        await store.deleteOne('drivers', { id: req.params.id });
+        res.json({ success: true, message: 'Driver deleted successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to delete driver' });
+    }
+});
+
+app.get('/api/super-admin/drivers/:id/documents', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        res.json({
+            success: true,
+            driver_info: { id: driver.id, name: driver.name, phone: driver.phone_number, vehicle_type: driver.vehicle_type },
+            documents: []
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to fetch driver documents' });
+    }
+});
+
+app.post('/api/super-admin/drivers/:id/request-location', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        res.json({ success: true, message: `Location request sent to ${driver.name}` });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to request location' });
+    }
+});
+
+app.get('/api/dashboard-stats', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const [totalAdmins, totalRestaurants, totalOrders, totalRevenue] = await Promise.all([
+            store.count('admin_users'),
+            store.count('restaurants', { is_active: true }),
+            store.count('orders'),
+            store.findMany('orders', {}, 'created_at')
+        ]);
+        const revenue = totalRevenue.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+        res.json({ success: true, totalAdmins, totalRestaurants, todayOrders: totalOrders, totalRevenue: revenue });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch dashboard stats' });
+    }
+});
+
+app.get('/api/overview-data', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const orders = await store.findMany('orders', {}, 'created_at');
+        const statusData = {};
+        const revenueByDate = {};
+        for (const o of orders) {
+            statusData[o.status] = (statusData[o.status] || 0) + 1;
+            const date = new Date(o.created_at).toLocaleDateString();
+            revenueByDate[date] = (revenueByDate[date] || 0) + parseFloat(o.total_amount || 0);
+        }
+        const revenueData = Object.entries(revenueByDate).slice(-7).map(([date, amount]) => ({ date, amount }));
+        res.json({ success: true, status_data: statusData, revenue_data: revenueData });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch overview data' });
     }
 });
 

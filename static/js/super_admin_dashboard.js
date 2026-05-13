@@ -1205,16 +1205,16 @@ function updatePendingDriversTable(drivers) {
                     <span class="text-muted">${formatDate(driver.created_at)}</span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                    <button class="btn btn-sm btn-outline-info" onclick="viewDriverDocuments('${driver.id}')">
                         <i class="fas fa-eye"></i> View
                     </button>
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-success" onclick="approveDriver(${driver.id})">
+                        <button class="btn btn-success" onclick="approveDriver('${driver.id}')">
                             <i class="fas fa-check"></i> Approve
                         </button>
-                        <button class="btn btn-danger" onclick="rejectDriver(${driver.id})">
+                        <button class="btn btn-danger" onclick="rejectDriver('${driver.id}')">
                             <i class="fas fa-times"></i> Reject
                         </button>
                     </div>
@@ -1274,10 +1274,10 @@ function updateApprovedDriversTable(drivers) {
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-info" onclick="viewDriverDocuments(${driver.id})">
+                        <button class="btn btn-outline-info" onclick="viewDriverDocuments('${driver.id}')">
                             <i class="fas fa-eye"></i> View
                         </button>
-                        <button class="btn btn-outline-danger" onclick="deleteDriver(${driver.id}, '${driver.name}')">
+                        <button class="btn btn-outline-danger" onclick="deleteDriver('${driver.id}', '${driver.name}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
