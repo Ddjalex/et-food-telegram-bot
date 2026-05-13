@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ET-FOOD - Ethiopian Food Delivery</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
@@ -1070,6 +1072,144 @@
             margin-bottom: 20px;
             opacity: 0.5;
         }
+
+        /* ===== ORDER TRACKING SCREEN ===== */
+        .tracking-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #f5f6fa;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .tracking-screen.active { display: flex; }
+
+        .tracking-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 24px 20px 20px;
+            text-align: center;
+        }
+        .tracking-header h3 { font-size: 1.4em; margin-bottom: 4px; }
+        .tracking-order-num { font-size: 0.9em; opacity: 0.85; }
+
+        .tracking-body { padding: 20px; flex: 1; }
+
+        /* Status Timeline */
+        .status-timeline {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-light);
+        }
+        .status-timeline h4 { margin-bottom: 16px; color: var(--text-dark); font-size: 1em; }
+        .timeline-steps { display: flex; flex-direction: column; gap: 0; }
+        .timeline-step {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 10px 0;
+            position: relative;
+        }
+        .timeline-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px; top: 36px;
+            width: 2px; height: calc(100% - 16px);
+            background: #e0e0e0;
+        }
+        .timeline-step.done::after { background: var(--success-color); }
+        .timeline-step.active-step::after { background: linear-gradient(to bottom, var(--primary-color), #e0e0e0); }
+        .step-dot {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0; z-index: 1;
+            background: #e0e0e0; color: #aaa;
+        }
+        .timeline-step.done .step-dot {
+            background: var(--success-color); color: white;
+        }
+        .timeline-step.active-step .step-dot {
+            background: var(--primary-color); color: white;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,53,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(255,107,53,0); }
+        }
+        .step-info { flex: 1; padding-top: 5px; }
+        .step-label { font-weight: 600; font-size: 0.9em; color: var(--text-dark); }
+        .step-desc { font-size: 0.78em; color: var(--text-light); margin-top: 2px; }
+        .timeline-step.pending .step-label, .timeline-step.pending .step-desc { color: #bbb; }
+
+        /* Driver card */
+        .driver-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-light);
+            display: none;
+        }
+        .driver-card.visible { display: flex; align-items: center; gap: 14px; }
+        .driver-avatar-circle {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; flex-shrink: 0;
+        }
+        .driver-info-text .driver-name { font-weight: 700; font-size: 1em; color: var(--text-dark); }
+        .driver-info-text .driver-sub { font-size: 0.8em; color: var(--text-light); margin-top: 2px; }
+        .driver-call-btn {
+            margin-left: auto;
+            background: var(--success-color);
+            color: white; border: none;
+            border-radius: 50%; width: 40px; height: 40px;
+            font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Live map */
+        .tracking-map-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-light);
+            display: none;
+        }
+        .tracking-map-card.visible { display: block; }
+        .tracking-map-card h4 { margin-bottom: 12px; color: var(--text-dark); font-size: 0.95em; }
+        #trackingMap { width: 100%; height: 240px; border-radius: 12px; }
+        .map-legend {
+            display: flex; gap: 16px; margin-top: 10px;
+            font-size: 0.78em; color: var(--text-light); flex-wrap: wrap;
+        }
+
+        .tracking-actions {
+            padding: 0 0 20px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .track-new-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white; border: none; padding: 14px;
+            border-radius: 12px; font-size: 1em; font-weight: 600;
+            cursor: pointer; width: 100%;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .status-badge.pending { background: #fff3cd; color: #856404; }
+        .status-badge.confirmed, .status-badge.preparing { background: #cce5ff; color: #004085; }
+        .status-badge.ready { background: #d4edda; color: #155724; }
+        .status-badge.out_for_delivery { background: #d1ecf1; color: #0c5460; }
+        .status-badge.delivered { background: #d4edda; color: #155724; }
+        .status-badge.rejected, .status-badge.cancelled { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
@@ -1077,11 +1217,13 @@
         <!-- Header -->
         <div class="header">
             <div class="header-content">
-                <div class="location-section">
+                <div class="location-section" onclick="requestUserLocation()" style="cursor:pointer">
                     <span class="location-icon">📍</span>
                     <div>
                         <div class="location-text">Delivering to</div>
-                        <div class="location-name">Addis Ababa</div>
+                        <div class="location-name" id="locationName">
+                            <span id="locationSpinner" style="font-size:12px;opacity:0.8">Detecting location...</span>
+                        </div>
                     </div>
                 </div>
                 <div class="greeting">Good day!</div>
@@ -1237,18 +1379,50 @@
         </div>
     </div>
 
-    <!-- Success Screen -->
-    <div class="success-screen" id="successScreen">
-        <div class="success-content">
-            <div class="success-icon">✓</div>
-            <h3>Order Placed Successfully!</h3>
-            <p>Your order has been received and is being processed.</p>
-            <div class="order-id">
-                Order ID: <span id="orderIdDisplay"></span>
+    <!-- Order Tracking Screen -->
+    <div class="tracking-screen" id="trackingScreen">
+        <div class="tracking-header">
+            <h3>🎉 Order Placed!</h3>
+            <div class="tracking-order-num">Order <span id="trackingOrderNum"></span></div>
+            <div style="margin-top:8px">
+                <span class="status-badge" id="trackingStatusBadge">pending</span>
             </div>
-            <button class="new-order-btn" onclick="startNewOrder()">
-                Place Another Order
-            </button>
+        </div>
+
+        <div class="tracking-body">
+            <!-- Status Timeline -->
+            <div class="status-timeline">
+                <h4>📋 Order Status</h4>
+                <div class="timeline-steps" id="timelineSteps">
+                    <!-- filled by JS -->
+                </div>
+            </div>
+
+            <!-- Driver Card (shown when assigned) -->
+            <div class="driver-card" id="driverCard">
+                <div class="driver-avatar-circle">🚗</div>
+                <div class="driver-info-text">
+                    <div class="driver-name" id="driverCardName"></div>
+                    <div class="driver-sub" id="driverCardSub"></div>
+                </div>
+                <button class="driver-call-btn" id="driverCallBtn" onclick="callDriver()">📞</button>
+            </div>
+
+            <!-- Live Map Card (shown when driver has GPS) -->
+            <div class="tracking-map-card" id="trackingMapCard">
+                <h4>🗺️ Live Driver Location</h4>
+                <div id="trackingMap"></div>
+                <div class="map-legend">
+                    <span>🟢 Restaurant</span>
+                    <span>🔵 Your location</span>
+                    <span>🔴 Driver</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="tracking-actions">
+                <button class="track-new-btn" onclick="startNewOrder()">🛒 Place Another Order</button>
+            </div>
         </div>
     </div>
 
@@ -1258,6 +1432,20 @@
         let currentCategory = 'all';
         let restaurants = [];
         let currentRestaurantId = null;
+
+        // ===== GPS / LOCATION STATE =====
+        let customerLat = null;
+        let customerLng = null;
+        let customerAddressText = '';
+
+        // ===== TRACKING STATE =====
+        let currentOrderId = null;
+        let trackingInterval = null;
+        let trackingMap = null;
+        let driverMarker = null;
+        let customerMarker = null;
+        let restaurantMarker = null;
+        let driverPhone = null;
 
         // Initialize Telegram WebApp
         if (window.Telegram && window.Telegram.WebApp) {
@@ -1282,7 +1470,74 @@
             loadRestaurants();
             loadMenuItems();
             setupAnimations();
+            requestUserLocation();
         });
+
+        // ===== LOCATION DETECTION =====
+        function requestUserLocation() {
+            const nameEl = document.getElementById('locationName');
+            nameEl.innerHTML = '<span style="font-size:12px;opacity:0.8">📡 Detecting...</span>';
+
+            // Try Telegram WebApp LocationManager (Bot API 8.0+)
+            const tg = window.Telegram && window.Telegram.WebApp;
+            if (tg && tg.LocationManager && tg.LocationManager.isInited !== false) {
+                try {
+                    tg.LocationManager.init(() => {
+                        if (tg.LocationManager.isLocationAvailable) {
+                            tg.LocationManager.getLocation((loc) => {
+                                if (loc && loc.latitude) {
+                                    setCustomerLocation(loc.latitude, loc.longitude);
+                                } else {
+                                    fallbackGeolocation();
+                                }
+                            });
+                        } else {
+                            fallbackGeolocation();
+                        }
+                    });
+                    return;
+                } catch(e) { /* fall through */ }
+            }
+            fallbackGeolocation();
+        }
+
+        function fallbackGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => setCustomerLocation(pos.coords.latitude, pos.coords.longitude),
+                    () => setLocationName('Addis Ababa'),
+                    { timeout: 8000, enableHighAccuracy: true }
+                );
+            } else {
+                setLocationName('Addis Ababa');
+            }
+        }
+
+        async function setCustomerLocation(lat, lng) {
+            customerLat = lat;
+            customerLng = lng;
+            try {
+                const resp = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                    { headers: { 'Accept-Language': 'en' } }
+                );
+                const geo = await resp.json();
+                const addr = geo.address || {};
+                const label = addr.neighbourhood || addr.suburb || addr.quarter ||
+                              addr.city_district || addr.town || addr.city ||
+                              addr.county || 'Your location';
+                customerAddressText = geo.display_name || label;
+                setLocationName(label);
+            } catch(e) {
+                setLocationName('Your location');
+                customerAddressText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+        }
+
+        function setLocationName(name) {
+            const el = document.getElementById('locationName');
+            if (el) el.textContent = name;
+        }
 
         // Setup animations
         function setupAnimations() {
@@ -1671,6 +1926,12 @@
             
             // Update checkout summary
             updateCheckoutSummary();
+
+            // Autofill delivery address with detected GPS location
+            const addrField = document.getElementById('customerAddress');
+            if (addrField && !addrField.value && customerAddressText) {
+                addrField.value = customerAddressText;
+            }
             
             // Hide cart and show checkout
             closeCart();
@@ -1762,7 +2023,10 @@
                 payment_method: document.getElementById('paymentMethod').value,
                 special_instructions: document.getElementById('specialInstructions').value,
                 items: orderItems,
-                total_amount: total
+                total_amount: total,
+                location_lat: customerLat,
+                location_lng: customerLng,
+                restaurant_id: currentRestaurantId
             };
             
             try {
@@ -1779,16 +2043,15 @@
                 if (result.success) {
                     // Hide checkout screen
                     closeCheckout();
-                    
-                    // Show success screen
-                    document.getElementById('orderIdDisplay').textContent = result.order_id;
-                    document.getElementById('successScreen').classList.add('active');
-                    
+
                     // Clear cart
                     selectedItems = {};
                     updateCartInfo();
                     updateMainButton();
                     displayProducts();
+
+                    // Open live tracking screen
+                    showOrderTracking(result.order_id);
                 } else {
                     alert('Error placing order: ' + (result.error || 'Unknown error'));
                 }
@@ -1805,11 +2068,150 @@
 
         // Start new order
         function startNewOrder() {
-            document.getElementById('successScreen').classList.remove('active');
+            // Close tracking screen and stop polling
+            document.getElementById('trackingScreen').classList.remove('active');
             document.body.style.overflow = '';
-            
+            if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
+            if (trackingMap) { trackingMap.remove(); trackingMap = null; driverMarker = null; customerMarker = null; restaurantMarker = null; }
+            currentOrderId = null;
             // Clear form
             document.getElementById('checkoutForm').reset();
+        }
+
+        // ===== ORDER TRACKING =====
+        const ORDER_STEPS = [
+            { key: 'pending',          icon: '🕐', label: 'Order Received',    desc: 'We received your order' },
+            { key: 'confirmed',        icon: '✅', label: 'Confirmed',          desc: 'Restaurant accepted your order' },
+            { key: 'preparing',        icon: '👨‍🍳', label: 'Preparing',         desc: 'Kitchen is preparing your food' },
+            { key: 'ready',            icon: '📦', label: 'Ready for Pickup',   desc: 'Order is ready, finding driver' },
+            { key: 'out_for_delivery', icon: '🚗', label: 'Out for Delivery',   desc: 'Driver is on the way' },
+            { key: 'delivered',        icon: '🎉', label: 'Delivered',          desc: 'Enjoy your meal!' }
+        ];
+        const REJECTED_STEPS = [
+            { key: 'pending',   icon: '🕐', label: 'Order Received', desc: 'We received your order' },
+            { key: 'rejected',  icon: '❌', label: 'Rejected',       desc: 'Restaurant could not fulfill this order' }
+        ];
+
+        function showOrderTracking(orderId) {
+            currentOrderId = orderId;
+            document.getElementById('trackingOrderNum').textContent = '#' + orderId.slice(-6).toUpperCase();
+            document.getElementById('trackingScreen').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            // Immediate first fetch then poll every 5s
+            fetchTrackingData(orderId);
+            trackingInterval = setInterval(() => fetchTrackingData(orderId), 5000);
+        }
+
+        async function fetchTrackingData(orderId) {
+            try {
+                const resp = await fetch('/api/orders/' + orderId + '/tracking');
+                const data = await resp.json();
+                if (data.success) updateTrackingUI(data);
+            } catch(e) { /* silent fail */ }
+        }
+
+        function updateTrackingUI(data) {
+            const { order, driver, restaurant } = data;
+            const status = order.status || 'pending';
+
+            // Status badge
+            const badge = document.getElementById('trackingStatusBadge');
+            badge.textContent = status.replace(/_/g, ' ');
+            badge.className = 'status-badge ' + status;
+
+            // Stop polling if terminal state
+            if ((status === 'delivered' || status === 'rejected' || status === 'cancelled') && trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
+
+            // Render timeline
+            const steps = (status === 'rejected' || status === 'cancelled') ? REJECTED_STEPS : ORDER_STEPS;
+            const currentIdx = steps.findIndex(s => s.key === status);
+            let html = '';
+            steps.forEach((step, i) => {
+                let cls = 'pending';
+                if (i < currentIdx) cls = 'done';
+                else if (i === currentIdx) cls = 'active-step';
+                html += `
+                    <div class="timeline-step ${cls}">
+                        <div class="step-dot">${i < currentIdx ? '✓' : step.icon}</div>
+                        <div class="step-info">
+                            <div class="step-label">${step.label}</div>
+                            <div class="step-desc">${step.desc}</div>
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('timelineSteps').innerHTML = html;
+
+            // Driver card
+            const driverCard = document.getElementById('driverCard');
+            if (driver) {
+                driverPhone = driver.phone;
+                document.getElementById('driverCardName').textContent = '🚗 ' + driver.name;
+                document.getElementById('driverCardSub').textContent =
+                    (driver.vehicle_type || 'motorcycle') + (driver.phone ? ' · ' + driver.phone : '');
+                driverCard.classList.add('visible');
+            } else {
+                driverCard.classList.remove('visible');
+            }
+
+            // Map — show when driver has GPS or we have any location to display
+            const hasDriverGPS = driver && driver.current_lat && driver.current_lng;
+            const hasCustomerGPS = order.customer_lat && order.customer_lng;
+            const mapCard = document.getElementById('trackingMapCard');
+
+            if (hasDriverGPS || hasCustomerGPS) {
+                mapCard.classList.add('visible');
+                initOrUpdateTrackingMap(order, driver, restaurant);
+            }
+        }
+
+        function initOrUpdateTrackingMap(order, driver, restaurant) {
+            const restLat = restaurant ? restaurant.lat : 9.0248;
+            const restLng = restaurant ? restaurant.lng : 38.7468;
+            const custLat = order.customer_lat || customerLat || restLat;
+            const custLng = order.customer_lng || customerLng || restLng;
+            const centerLat = driver && driver.current_lat ? driver.current_lat : custLat;
+            const centerLng = driver && driver.current_lng ? driver.current_lng : custLng;
+
+            if (!trackingMap) {
+                // Initialize map centered on driver/customer
+                trackingMap = L.map('trackingMap', { zoomControl: true }).setView([centerLat, centerLng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(trackingMap);
+
+                // Restaurant marker (green)
+                const restIcon = L.divIcon({ html: '<div style="font-size:22px">🟢</div>', iconSize:[28,28], iconAnchor:[14,14], className:'' });
+                L.marker([restLat, restLng], { icon: restIcon })
+                 .addTo(trackingMap)
+                 .bindPopup(restaurant ? restaurant.name : 'Restaurant');
+
+                // Customer marker (blue)
+                if (custLat && custLng) {
+                    const custIcon = L.divIcon({ html: '<div style="font-size:22px">🔵</div>', iconSize:[28,28], iconAnchor:[14,14], className:'' });
+                    customerMarker = L.marker([custLat, custLng], { icon: custIcon })
+                        .addTo(trackingMap).bindPopup('Your location');
+                }
+            }
+
+            // Driver marker (red) — update position or create
+            if (driver && driver.current_lat && driver.current_lng) {
+                const driverIcon = L.divIcon({ html: '<div style="font-size:24px">🚗</div>', iconSize:[30,30], iconAnchor:[15,15], className:'' });
+                if (!driverMarker) {
+                    driverMarker = L.marker([driver.current_lat, driver.current_lng], { icon: driverIcon })
+                        .addTo(trackingMap).bindPopup(driver.name || 'Driver');
+                } else {
+                    driverMarker.setLatLng([driver.current_lat, driver.current_lng]);
+                }
+                // Pan map to keep driver visible
+                trackingMap.panTo([driver.current_lat, driver.current_lng]);
+            }
+        }
+
+        function callDriver() {
+            if (driverPhone) window.location.href = 'tel:' + driverPhone;
         }
 
         // Search functionality

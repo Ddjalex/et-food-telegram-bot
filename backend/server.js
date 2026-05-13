@@ -1116,6 +1116,52 @@ app.get('/api/orders/:id', async (req, res) => {
     }
 });
 
+app.get('/api/orders/:id/tracking', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+
+        let driver = null;
+        if (order.driver_id) {
+            const d = await store.findById('drivers', order.driver_id);
+            if (d) driver = {
+                id: d.id, name: d.name, phone: d.phone_number,
+                vehicle_type: d.vehicle_type,
+                current_lat: d.current_lat ? parseFloat(d.current_lat) : null,
+                current_lng: d.current_lng ? parseFloat(d.current_lng) : null,
+                last_location_update: d.last_location_update
+            };
+        }
+
+        let restaurant = null;
+        if (order.restaurant_id) {
+            const r = await store.findById('restaurants', order.restaurant_id);
+            if (r) restaurant = {
+                name: r.name, address: r.address,
+                lat: r.lat ? parseFloat(r.lat) : 9.0248,
+                lng: r.lng ? parseFloat(r.lng) : 38.7468
+            };
+        }
+
+        res.json({
+            success: true,
+            order: {
+                id: order.id, order_number: order.order_number, status: order.status,
+                customer_name: order.customer_name,
+                customer_lat: order.location_lat ? parseFloat(order.location_lat) : null,
+                customer_lng: order.location_lng ? parseFloat(order.location_lng) : null,
+                total_amount: order.total_amount, payment_method: order.payment_method,
+                created_at: order.created_at
+            },
+            driver,
+            restaurant
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch tracking info' });
+    }
+});
+
 app.put('/api/orders/:id/status', async (req, res) => {
     try {
         const order = await store.findById('orders', req.params.id);
