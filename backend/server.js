@@ -14,6 +14,7 @@ const {
     notifyCustomerOrderPickedUp, notifyCustomerOrderDelivered,
     notifyCustomerOrderCancelled
 } = require('./notifier');
+const { dispatchOrderToDrivers } = require('./driver_assignment');
 
 async function logAudit(req, action, targetType, targetId, targetName, details) {
     try {
@@ -999,6 +1000,8 @@ app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
         if (updated.telegram_user_id && newStatus && newStatus !== prevStatus) {
             if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed' || newStatus === 'preparing') {
                 notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
+                // Auto-dispatch to nearest available drivers
+                dispatchOrderToDrivers(updated).catch(e => console.error('[DriverAssignment] dispatch error:', e.message));
             } else if (newStatus === 'cancelled') {
                 const reason = req.body.rejection_reason || req.body.cancel_reason || null;
                 notifyCustomerKitchenRejected(updated.telegram_user_id, updated, reason).catch(e => console.error('notify error:', e.message));

@@ -146,126 +146,99 @@
             color: var(--text-light);
         }
 
-        /* Nearby Restaurants */
+        /* Nearby Restaurants — compact circle style */
         .restaurants-section {
-            padding: 20px;
-            margin-bottom: 10px;
+            padding: 16px 20px 8px;
         }
 
         .restaurants-scroll {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             overflow-x: auto;
-            padding-bottom: 10px;
+            padding-bottom: 6px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
 
-        .restaurants-scroll::-webkit-scrollbar {
-            height: 4px;
-        }
-
-        .restaurants-scroll::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-
-        .restaurants-scroll::-webkit-scrollbar-thumb {
-            background: var(--primary-color);
-            border-radius: 4px;
-        }
+        .restaurants-scroll::-webkit-scrollbar { display: none; }
 
         .restaurant-card {
-            min-width: 280px;
-            background: white;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-light);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 88px;
+            flex-shrink: 0;
             cursor: pointer;
+            transition: transform 0.2s ease;
             position: relative;
+            text-align: center;
         }
 
-        .restaurant-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-medium);
+        .restaurant-card:active {
+            transform: scale(0.94);
         }
 
-        .restaurant-card.selected {
-            border: 2px solid var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+        .restaurant-card.selected .restaurant-avatar {
+            border: 2.5px solid var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
         }
 
-        .restaurant-image {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
+        .restaurant-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-size: 48px;
+            font-size: 30px;
+            overflow: hidden;
+            border: 2px solid #f0f0f0;
+            transition: all 0.2s ease;
+            position: relative;
         }
 
-        .restaurant-info {
-            padding: 16px;
+        .restaurant-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .restaurant-status-dot {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--success-color);
+            border: 2px solid white;
+        }
+
+        .restaurant-status-dot.closed {
+            background: #e74c3c;
         }
 
         .restaurant-name {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 4px;
+            font-size: 12px;
+            font-weight: 600;
             color: var(--text-dark);
+            margin-top: 7px;
             line-height: 1.3;
+            word-break: break-word;
+            max-width: 88px;
         }
 
         .restaurant-description {
-            font-size: 13px;
+            font-size: 10.5px;
             color: var(--text-light);
-            margin-bottom: 8px;
-            line-height: 1.4;
+            margin-top: 2px;
+            line-height: 1.35;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-        }
-
-        .restaurant-stats {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--text-light);
-        }
-
-        .restaurant-menu-count {
-            background: var(--light-color);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-weight: 600;
-        }
-
-        .restaurant-delivery-time {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .restaurant-status-badge {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: var(--success-color);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .restaurant-status-badge.closed {
-            background: #e74c3c;
+            max-width: 88px;
         }
 
         /* Categories */
@@ -1941,24 +1914,15 @@
                 const statusText = restaurant.is_active ? 'Open' : 'Closed';
                 
                 restaurantCard.innerHTML = `
-                    <div class="restaurant-status-badge ${statusClass}">${statusText}</div>
-                    <div class="restaurant-image">
-                        ${restaurant.logo_url ? 
-                            `<img src="${restaurant.logo_url}" alt="${restaurant.name}" style="width:100%;height:100%;object-fit:cover;">` : 
-                            '🍽️'
+                    <div class="restaurant-avatar">
+                        ${restaurant.logo_url
+                            ? `<img src="${restaurant.logo_url}" alt="${restaurant.name}">`
+                            : '🍽️'
                         }
+                        <span class="restaurant-status-dot ${restaurant.is_active ? '' : 'closed'}"></span>
                     </div>
-                    <div class="restaurant-info">
-                        <div class="restaurant-name">${restaurant.name}</div>
-                        <div class="restaurant-description">${restaurant.description || 'Delicious food and great service'}</div>
-                        <div class="restaurant-stats">
-                            <div class="restaurant-menu-count">${restaurant.menu_items_count} items</div>
-                            <div class="restaurant-delivery-time">
-                                <span>⏱️</span>
-                                <span>${restaurant.estimated_delivery_time}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="restaurant-name">${restaurant.name}</div>
+                    <div class="restaurant-description">${restaurant.description || 'Delicious food'}</div>
                 `;
                 
                 container.appendChild(restaurantCard);

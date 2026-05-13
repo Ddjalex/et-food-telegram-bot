@@ -194,6 +194,60 @@ bot.on('callback_query', async (query) => {
             return;
         }
 
+        // ── ORDER ACCEPT / DECLINE ──────────────────────────────
+        if (data.startsWith('accept_order:')) {
+            const orderId = data.split(':')[1];
+            bot.answerCallbackQuery(query.id, { text: '⏳ Processing...' });
+
+            const { handleDriverAccept } = require('./driver_assignment');
+            const result = await handleDriverAccept(orderId, telegramUserId);
+
+            if (result.alreadyTaken) {
+                return bot.sendMessage(chatId,
+                    `⚡ *Too Late!*\n\nAnother driver already accepted this order. Keep an eye out for the next one!`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
+
+            if (!result.success) {
+                return bot.sendMessage(chatId,
+                    `❌ Could not accept order: ${result.error || 'Unknown error'}`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
+
+            const { order, driver: assignedDriver } = result;
+
+            // Notify the driver
+            await bot.sendMessage(chatId,
+                `✅ *Order Accepted!*\n\n` +
+                `📦 Order: *#${order.order_number}*\n` +
+                `👤 Customer: ${order.customer_name || 'N/A'}\n` +
+                `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
+                `📍 Deliver to: ${order.customer_address || 'See address'}\n\n` +
+                `💰 Total: *${order.total_amount} ETB*\n` +
+                `💳 Payment: ${order.payment_method || 'cash'}\n\n` +
+                `🚗 Head to the restaurant to pick up the order.\n` +
+                `📍 Share your *live location* so the customer can track you!`,
+                { parse_mode: 'Markdown' }
+            );
+
+            // Notify the customer
+            const { notifyCustomerDriverAssigned } = require('./notifier');
+            if (order.telegram_user_id) {
+                notifyCustomerDriverAssigned(order.telegram_user_id, order, assignedDriver)
+                    .catch(e => console.error('[DriverBot] customer notify error:', e.message));
+            }
+
+            return;
+        }
+
+        if (data.startsWith('decline_order:')) {
+            bot.answerCallbackQuery(query.id, { text: '❌ Order declined.' });
+            bot.sendMessage(chatId, `✅ You declined that order. Stay ready for the next one!`);
+            return;
+        }
+
     } catch (e) {
         console.error('Callback query error:', e);
         bot.answerCallbackQuery(query.id, { text: 'An error occurred.' });
