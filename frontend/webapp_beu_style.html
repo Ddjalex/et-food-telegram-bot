@@ -41,6 +41,7 @@
             min-height: 100vh;
             position: relative;
             box-shadow: var(--shadow-medium);
+            padding-bottom: 62px;
         }
 
         /* Header */
@@ -484,7 +485,7 @@
         /* Cart Info */
         .cart-info {
             position: fixed;
-            bottom: 20px;
+            bottom: 72px;
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, var(--dark-color), #34495e);
@@ -621,7 +622,7 @@
         /* Cart Info */
         .cart-info {
             position: fixed;
-            bottom: 20px;
+            bottom: 72px;
             right: 20px;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
@@ -1224,17 +1225,35 @@
         @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
         /* ===== MY ORDERS BUTTON ===== */
-        .my-orders-fab {
-            position: fixed; bottom: 80px; right: 16px;
-            background: white; border: none;
-            border-radius: 50px; padding: 10px 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-            cursor: pointer; z-index: 900;
-            display: flex; align-items: center; gap: 6px;
-            font-size: 0.85em; font-weight: 700; color: var(--primary-color);
-            transition: transform 0.2s;
+        /* ===== BOTTOM NAVIGATION BAR ===== */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 414px;
+            background: white; z-index: 900;
+            display: flex; align-items: stretch;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+            border-top: 1px solid #f0f0f0;
         }
-        .my-orders-fab:active { transform: scale(0.96); }
+        .bottom-nav-tab {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 10px 8px 12px;
+            background: none; border: none; cursor: pointer;
+            color: var(--text-light); font-size: 0.7em; font-weight: 600;
+            gap: 4px; transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bottom-nav-tab .nav-icon { font-size: 22px; }
+        .bottom-nav-tab.active { color: var(--primary-color); }
+        .bottom-nav-tab:active { opacity: 0.7; }
+        .nav-orders-badge {
+            position: absolute; top: 6px;
+            background: var(--primary-color); color: white;
+            border-radius: 50%; width: 18px; height: 18px;
+            font-size: 10px; font-weight: 700;
+            display: none; align-items: center; justify-content: center;
+        }
+        .nav-tab-wrapper { position: relative; }
 
         /* ===== MY ORDERS PANEL ===== */
         .my-orders-overlay {
@@ -1244,21 +1263,41 @@
         .my-orders-overlay.active { display: flex; }
         .my-orders-sheet {
             background: #f5f6fa; width: 100%; border-radius: 24px 24px 0 0;
-            max-height: 80vh; display: flex; flex-direction: column;
+            max-height: 88vh; display: flex; flex-direction: column;
             animation: slideUp 0.3s ease-out;
         }
         @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
         .orders-sheet-header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white; padding: 18px 20px;
+            color: white; padding: 18px 20px 0;
             display: flex; align-items: center; justify-content: space-between;
             border-radius: 24px 24px 0 0;
+            flex-direction: column; gap: 0;
         }
-        .orders-sheet-header h3 { font-size: 1.1em; }
+        .orders-header-top {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; margin-bottom: 12px;
+        }
+        .orders-sheet-header h3 { font-size: 1.1em; margin: 0; }
         .close-sheet-btn {
             background: rgba(255,255,255,0.25); border: none; color: white;
             border-radius: 50%; width: 32px; height: 32px;
             font-size: 18px; cursor: pointer; line-height: 1;
+        }
+        /* Tabs inside the header */
+        .orders-tabs {
+            display: flex; width: 100%; gap: 0;
+        }
+        .orders-tab-btn {
+            flex: 1; padding: 10px 8px; background: rgba(255,255,255,0.15);
+            border: none; color: rgba(255,255,255,0.75); font-size: 0.8em;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .orders-tab-btn:first-child { border-radius: 0; }
+        .orders-tab-btn:last-child { border-radius: 0; }
+        .orders-tab-btn.active {
+            background: rgba(255,255,255,0.28); color: white;
+            border-bottom: 2px solid white;
         }
         .orders-sheet-body { overflow-y: auto; padding: 16px; flex: 1; }
         .order-list-item {
@@ -1272,14 +1311,21 @@
         .order-list-info { flex: 1; }
         .order-list-num { font-weight: 700; font-size: 0.9em; color: var(--text-dark); }
         .order-list-sub { font-size: 0.78em; color: var(--text-light); margin-top: 2px; }
-        .order-list-status { font-size: 0.75em; font-weight: 700; }
-        .order-list-status.pending { color: #856404; }
-        .order-list-status.confirmed,.order-list-status.preparing { color: #004085; }
-        .order-list-status.out_for_delivery { color: #0c5460; }
-        .order-list-status.delivered { color: #155724; }
-        .order-list-status.rejected,.order-list-status.cancelled { color: #721c24; }
-        .orders-empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        .order-list-status { font-size: 0.75em; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+        .order-list-status.pending { color: #856404; background: #fff3cd; }
+        .order-list-status.confirmed,.order-list-status.kitchen_confirmed,.order-list-status.preparing { color: #004085; background: #cce5ff; }
+        .order-list-status.ready { color: #155724; background: #d4edda; }
+        .order-list-status.out_for_delivery { color: #0c5460; background: #d1ecf1; }
+        .order-list-status.delivered { color: #155724; background: #d4edda; }
+        .order-list-status.rejected,.order-list-status.cancelled { color: #721c24; background: #f8d7da; }
+        .order-live-indicator {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: #27ae60; margin-left: 4px;
+            animation: livePulse 1.5s infinite;
+        }
+        .orders-empty { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 0.9em; }
         .orders-loading { text-align: center; padding: 30px; color: var(--text-light); }
+        .orders-refresh-hint { text-align: center; font-size: 0.7em; color: var(--text-light); padding: 8px 0 0; }
     </style>
 </head>
 <body>
@@ -1361,23 +1407,40 @@
         </div>
     </div>
 
-    <!-- My Orders FAB -->
-    <button class="my-orders-fab" id="myOrdersFab" onclick="openMyOrders()" style="display:none">
-        📦 My Orders
-    </button>
-
     <!-- My Orders Panel -->
     <div class="my-orders-overlay" id="myOrdersOverlay" onclick="closeMyOrders(event)">
         <div class="my-orders-sheet">
             <div class="orders-sheet-header">
-                <h3>📦 My Orders</h3>
-                <button class="close-sheet-btn" onclick="closeMyOrders()">×</button>
+                <div class="orders-header-top">
+                    <h3>📦 My Orders</h3>
+                    <button class="close-sheet-btn" onclick="closeMyOrders()">×</button>
+                </div>
+                <div class="orders-tabs">
+                    <button class="orders-tab-btn active" id="tabActive" onclick="switchOrdersTab('active')">🟢 Active</button>
+                    <button class="orders-tab-btn" id="tabHistory" onclick="switchOrdersTab('history')">📋 History</button>
+                </div>
             </div>
             <div class="orders-sheet-body" id="ordersSheetBody">
                 <div class="orders-loading">Loading your orders...</div>
             </div>
+            <div class="orders-refresh-hint" id="ordersRefreshHint"></div>
         </div>
     </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-tab active" id="navHome" onclick="switchNavTab('home')">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="bottom-nav-tab" id="navOrders" onclick="switchNavTab('orders')">
+            <div class="nav-tab-wrapper">
+                <span class="nav-icon">📦</span>
+                <span class="nav-orders-badge" id="activeOrdersBadge"></span>
+            </div>
+            <span>My Orders</span>
+        </button>
+    </nav>
 
     <!-- Cart Info -->
     <div class="cart-info" id="cartInfo" style="display: none;" onclick="openCart()">
@@ -1565,10 +1628,7 @@
             loadMenuItems();
             setupAnimations();
             initLocation();
-            // Show My Orders button if we have a Telegram user
-            if (tgUserId) {
-                document.getElementById('myOrdersFab').style.display = 'flex';
-            }
+            startActiveOrdersPoller();
         });
 
         // ===== INIT LOCATION — check bot live location first, then GPS =====
@@ -1677,8 +1737,25 @@
             }
         }
 
-        // ===== MY ORDERS =====
+        // ===== BOTTOM NAV & MY ORDERS =====
+        const STATUS_EMOJI = { pending:'⏳', confirmed:'✅', kitchen_confirmed:'👨‍🍳', preparing:'👨‍🍳', ready:'🔔', out_for_delivery:'🚗', delivered:'🎉', cancelled:'❌', rejected:'❌' };
+        const STATUS_LABEL = { pending:'Pending', confirmed:'Confirmed', kitchen_confirmed:'Preparing', preparing:'Preparing', ready:'Ready', out_for_delivery:'On the Way', delivered:'Delivered', cancelled:'Cancelled', rejected:'Rejected' };
+        const ACTIVE_STATUSES = ['pending','confirmed','kitchen_confirmed','preparing','ready','out_for_delivery'];
+        const DONE_STATUSES = ['delivered','cancelled','rejected'];
+
+        let currentOrdersTab = 'active';
+        let ordersPollerInterval = null;
+        let allMyOrders = [];
+
+        function switchNavTab(tab) {
+            document.getElementById('navHome').classList.toggle('active', tab === 'home');
+            document.getElementById('navOrders').classList.toggle('active', tab === 'orders');
+            if (tab === 'orders') openMyOrders();
+        }
+
         function openMyOrders() {
+            document.getElementById('navOrders').classList.add('active');
+            document.getElementById('navHome').classList.remove('active');
             document.getElementById('myOrdersOverlay').classList.add('active');
             loadMyOrders();
         }
@@ -1686,40 +1763,123 @@
         function closeMyOrders(e) {
             if (e && e.target !== document.getElementById('myOrdersOverlay') && e.type === 'click') return;
             document.getElementById('myOrdersOverlay').classList.remove('active');
+            document.getElementById('navHome').classList.add('active');
+            document.getElementById('navOrders').classList.remove('active');
         }
 
-        async function loadMyOrders() {
+        function switchOrdersTab(tab) {
+            currentOrdersTab = tab;
+            document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+            document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+            renderOrdersList(allMyOrders);
+        }
+
+        async function loadMyOrders(silent = false) {
             const body = document.getElementById('ordersSheetBody');
-            body.innerHTML = '<div class="orders-loading">⏳ Loading your orders...</div>';
+            if (!silent) body.innerHTML = '<div class="orders-loading">⏳ Loading your orders...</div>';
+
             if (!tgUserId) {
-                body.innerHTML = '<div class="orders-empty">Open this app through the Telegram bot to see your orders.</div>';
+                body.innerHTML = `<div class="orders-empty">
+                    <div style="font-size:48px;margin-bottom:12px">📱</div>
+                    <strong>Open via Telegram Bot</strong><br><br>
+                    To see your orders, open this app through the ET-FOOD Telegram bot.
+                </div>`;
                 return;
             }
             try {
                 const resp = await fetch('/api/customer/orders/' + tgUserId);
                 const data = await resp.json();
-                if (!data.success || !data.orders.length) {
-                    body.innerHTML = '<div class="orders-empty">🛒 No orders yet.<br>Place your first order now!</div>';
-                    return;
-                }
-                const statusEmoji = { pending:'⏳', confirmed:'✅', preparing:'👨‍🍳', ready:'🔔', out_for_delivery:'🚗', delivered:'🎉', cancelled:'❌', rejected:'❌' };
-                body.innerHTML = data.orders.map(o => {
-                    const emoji = statusEmoji[o.status] || '📦';
-                    const statusLabel = (o.status || 'pending').replace(/_/g, ' ');
-                    const date = new Date(o.created_at).toLocaleDateString('en-ET', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-                    return `
-                        <div class="order-list-item" onclick="openOrderFromList('${o.id}')">
-                            <div class="order-list-icon">${emoji}</div>
-                            <div class="order-list-info">
-                                <div class="order-list-num">#${(o.order_number || o.id).slice(-8).toUpperCase()}</div>
-                                <div class="order-list-sub">${Math.round(o.total_amount || 0)} ETB · ${date}</div>
-                            </div>
-                            <div class="order-list-status ${o.status}">${statusLabel}</div>
-                        </div>`;
-                }).join('');
+                if (!data.success) throw new Error('API error');
+                allMyOrders = data.orders || [];
+                renderOrdersList(allMyOrders);
+                updateActiveOrdersBadge(allMyOrders);
+                const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+                const hint = document.getElementById('ordersRefreshHint');
+                if (hint) hint.textContent = `Updated ${now} · Auto-refreshes every 15s`;
             } catch(e) {
-                body.innerHTML = '<div class="orders-empty">❌ Failed to load orders. Please try again.</div>';
+                if (!silent) body.innerHTML = '<div class="orders-empty">❌ Failed to load orders.<br>Please try again.</div>';
             }
+        }
+
+        function renderOrdersList(orders) {
+            const body = document.getElementById('ordersSheetBody');
+            const list = currentOrdersTab === 'active'
+                ? orders.filter(o => ACTIVE_STATUSES.includes(o.status))
+                : orders.filter(o => DONE_STATUSES.includes(o.status));
+
+            if (orders.length === 0) {
+                body.innerHTML = `<div class="orders-empty">
+                    <div style="font-size:48px;margin-bottom:12px">🛒</div>
+                    <strong>No orders yet</strong><br><br>
+                    Place your first order and it will appear here!
+                </div>`;
+                return;
+            }
+
+            if (list.length === 0) {
+                const msg = currentOrdersTab === 'active'
+                    ? '✅ No active orders right now.'
+                    : '📋 No completed orders yet.';
+                body.innerHTML = `<div class="orders-empty">${msg}</div>`;
+                return;
+            }
+
+            body.innerHTML = list.map(o => {
+                const emoji = STATUS_EMOJI[o.status] || '📦';
+                const statusLabel = STATUS_LABEL[o.status] || (o.status || 'pending').replace(/_/g,' ');
+                const date = new Date(o.created_at).toLocaleDateString('en-ET', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+                const isActive = ACTIVE_STATUSES.includes(o.status);
+                const liveDot = isActive ? '<span class="order-live-indicator"></span>' : '';
+                return `
+                    <div class="order-list-item" onclick="openOrderFromList('${o.id}')">
+                        <div class="order-list-icon">${emoji}</div>
+                        <div class="order-list-info">
+                            <div class="order-list-num">#${(o.order_number || o.id).slice(-8).toUpperCase()}${liveDot}</div>
+                            <div class="order-list-sub">${Math.round(o.total_amount || 0)} ETB · ${date}</div>
+                        </div>
+                        <div class="order-list-status ${o.status}">${statusLabel}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function updateActiveOrdersBadge(orders) {
+            const count = orders.filter(o => ACTIVE_STATUSES.includes(o.status)).length;
+            const badge = document.getElementById('activeOrdersBadge');
+            if (!badge) return;
+            if (count > 0) {
+                badge.textContent = count > 9 ? '9+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function startActiveOrdersPoller() {
+            if (!tgUserId) return;
+            // Initial badge check
+            fetch('/api/customer/orders/' + tgUserId)
+                .then(r => r.json())
+                .then(data => { if (data.success) updateActiveOrdersBadge(data.orders || []); })
+                .catch(() => {});
+            // Poll every 15 seconds
+            ordersPollerInterval = setInterval(async () => {
+                if (!tgUserId) return;
+                try {
+                    const resp = await fetch('/api/customer/orders/' + tgUserId);
+                    const data = await resp.json();
+                    if (data.success) {
+                        allMyOrders = data.orders || [];
+                        updateActiveOrdersBadge(allMyOrders);
+                        // If panel is open, silently refresh
+                        if (document.getElementById('myOrdersOverlay').classList.contains('active')) {
+                            renderOrdersList(allMyOrders);
+                            const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+                            const hint = document.getElementById('ordersRefreshHint');
+                            if (hint) hint.textContent = `Updated ${now} · Auto-refreshes every 15s`;
+                        }
+                    }
+                } catch(_) {}
+            }, 15000);
         }
 
         function openOrderFromList(orderId) {
