@@ -2220,7 +2220,7 @@
             
             tg.MainButton.onClick(() => {
                 if (Object.keys(selectedItems).length > 0) {
-                    showOrderForm();
+                    openCart();
                 }
             });
         }
@@ -3084,17 +3084,7 @@
 
         // Show order form
         function showOrderForm() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                const orderData = {
-                    items: selectedItems,
-                    menuItems: menuItems
-                };
-                tg.sendData(JSON.stringify(orderData));
-            } else {
-                // Fallback for non-Telegram users
-                openCart();
-            }
+            openCart();
         }
 
         // Open cart
