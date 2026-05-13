@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET-FOOD Super Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --dark-color: #34495e;
+        }
+
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .sidebar {
+            background: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar .nav-pills {
+            padding: 0;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            margin: 2px 0;
+            padding: 8px 12px;
+            color: var(--dark-color);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+        }
+
+        .nav-pills .nav-link:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .main-content {
+            padding: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .role-super_admin {
+            background: linear-gradient(135deg, #e74c3c 0%, #f39c12 100%);
+            color: white;
+        }
+
+        .role-admin {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .role-kitchen_staff {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+        }
+
+        .performance-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .performance-excellent { background: #27ae60; }
+        .performance-good { background: #f39c12; }
+        .performance-poor { background: #e74c3c; }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            height: 350px;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .avatar-circle {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .action-btn {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            margin: 0 2px;
+        }
+
+        /* Real-time notification styles */
+        .flash-highlight {
+            animation: flashHighlight 2s ease-in-out;
+            border: 2px solid #28a745 !important;
+        }
+
+        @keyframes flashHighlight {
+            0% { 
+                background: rgba(40, 167, 69, 0.1);
+                box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+            }
+            50% { 
+                background: rgba(40, 167, 69, 0.2);
+                box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+            }
+            100% { 
+                background: transparent;
+                box-shadow: none;
+            }
+        }
+
+        /* Badge styles for tab notifications */
+        .nav-link .badge {
+            font-size: 0.7em;
+            padding: 0.2em 0.4em;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-utensils"></i> ET-FOOD Super Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <%= admin.full_name || admin.username %>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/admin/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="sidebar p-2">
+                    <ul class="nav nav-pills flex-column" id="adminTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#overview" data-tab="overview">
+                                <i class="fas fa-tachometer-alt"></i> Overview
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#admins" data-tab="admins">
+                                <i class="fas fa-users-cog"></i> Admin Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#restaurants" data-tab="restaurants">
+                                <i class="fas fa-store"></i> Restaurants
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#driver-approval" data-tab="driver-approval" data-target="driver-approval">
+                                <i class="fas fa-user-check"></i> Driver Approval
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#analytics" data-tab="analytics">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#system" data-tab="system">
+                                <i class="fas fa-cogs"></i> System Settings
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="main-content">
+                    <!-- Overview Tab -->
+                    <div id="overview" class="tab-content active">
+                        <!-- Real-time Status Banner -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info d-flex align-items-center justify-content-between" id="realTimeStatus">
+                                    <div>
+                                        <i class="fas fa-satellite-dish me-2"></i>
+                                        <strong>Real-time System Monitoring</strong> - 
+                                        <span id="lastUpdate">Loading...</span>
+                                        <span class="badge bg-success ms-2" id="systemStatus">Online</span>
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="refreshRealTimeData()">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enhanced Statistics Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="fas fa-users-cog"></i>
+                                    </div>
+                                    <div class="stat-number text-primary" id="totalAdmins">0</div>
+                                    <div class="stat-label">Total Admins</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-store"></i>
+                                    </div>
+                                    <div class="stat-number text-success" id="totalRestaurants">0</div>
+                                    <div class="stat-label">Active Restaurants</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="stat-number text-warning" id="todayOrders">0</div>
+                                    <div class="stat-label">Today's Orders</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </div>
+                                    <div class="stat-number text-danger" id="totalRevenue">0</div>
+                                    <div class="stat-label">Total Revenue</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                        <i class="fas fa-car"></i>
+                                    </div>
+                                    <div class="stat-number text-info" id="totalDrivers">0</div>
+                                    <div class="stat-label">Total Drivers</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </div>
+                                    <div class="stat-number text-success" id="liveLocationDrivers">0</div>
+                                    <div class="stat-label">Live Location</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Health Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-container">
+                                    <div class="table-header">
+                                        <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>System Health Status</h5>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="card bg-success bg-opacity-10 border-success">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-check-circle text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">Database</div>
+                                                        <div class="small text-success">Operational</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-success bg-opacity-10 border-success">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-server text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">Web Server</div>
+                                                        <div class="small text-success">Running</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-warning bg-opacity-10 border-warning">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-robot text-warning"></i>
+                                                        <div class="fw-bold text-warning ms-2">Telegram Bot</div>
+                                                        <div class="small text-warning">Needs Config</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="card bg-success bg-opacity-10 border-success">
+                                                    <div class="card-body text-center py-2">
+                                                        <i class="fas fa-globe text-success"></i>
+                                                        <div class="fw-bold text-success ms-2">API</div>
+                                                        <div class="small text-success">Active</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-container">
+                                    <div class="table-header">
+                                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activity</h5>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Time</th>
+                                                        <th>User</th>
+                                                        <th>Action</th>
+                                                        <th>Details</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="recentActivityTable">
+                                                    <tr>
+                                                        <td>10:30 AM</td>
+                                                        <td>Super Admin</td>
+                                                        <td>Dashboard Access</td>
+                                                        <td>Accessed admin dashboard</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>10:25 AM</td>
+                                                        <td>System</td>
+                                                        <td>Database Check</td>
+                                                        <td>Automatic health check completed</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>10:20 AM</td>
+                                                        <td>System</td>
+                                                        <td>Service Status</td>
+                                                        <td>All services running normally</td>
+                                                        <td><span class="badge bg-success">Success</span></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Admin Activity Overview</h5>
+                                    <canvas id="adminActivityChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Performance Distribution</h5>
+                                    <canvas id="performanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Management Tab -->
+                    <div id="admins" class="tab-content">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2>Admin Management</h2>
+                            <button class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#addAdminModal">
+                                <i class="fas fa-plus"></i> Add New Admin
+                            </button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-users-cog"></i> System Administrators
+                                </h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Admin</th>
+                                            <th>Role</th>
+                                            <th>Restaurant</th>
+                                            <th>Performance</th>
+                                            <th>Last Active</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <div class="loading-spinner">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading admins...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Restaurants Tab -->
+                    <div id="restaurants" class="tab-content">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>Restaurant Management</h2>
+                            <button class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#addRestaurantModal">
+                                <i class="fas fa-plus"></i> Add New Restaurant
+                            </button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-store"></i> All Restaurants
+                                </h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Restaurant</th>
+                                            <th>Logo</th>
+                                            <th>Cover Image</th>
+                                            <th>Location</th>
+                                            <th>Orders Today</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="restaurantTable">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <div class="loading-spinner">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading restaurants...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Driver Approval Tab -->
+                    <div id="driver-approval" class="tab-content">
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h2 class="mb-3">Driver Approval Management</h2>
+                                <p class="text-muted">Review and approve driver registration applications</p>
+                            </div>
+                        </div>
+
+                        <!-- Driver Status Stats -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-number text-warning" id="pendingDrivers">0</div>
+                                    <div class="stat-label">Pending Approval</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div class="stat-number text-success" id="approvedDrivers">0</div>
+                                    <div class="stat-label">Approved Drivers</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </div>
+                                    <div class="stat-number text-primary" id="activeDrivers">0</div>
+                                    <div class="stat-label">Active w/ Location</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                        <i class="fas fa-motorcycle"></i>
+                                    </div>
+                                    <div class="stat-number text-info" id="availableDrivers">0</div>
+                                    <div class="stat-label">Available for Orders</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Drivers Section -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="stat-card">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-clock text-warning"></i> Pending Driver Applications
+                                            <span class="badge bg-info ms-2" id="realTimeStatus">Real-time</span>
+                                        </h5>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="loadPendingDrivers()">
+                                            <i class="fas fa-sync-alt"></i> Refresh
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Driver Name</th>
+                                                    <th>Phone</th>
+                                                    <th>Vehicle Type</th>
+                                                    <th>Registration Date</th>
+                                                    <th>Documents</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pendingDriversTable">
+                                                <tr>
+                                                    <td colspan="6" class="text-center py-4">
+                                                        <div class="loading-spinner">
+                                                            <i class="fas fa-spinner fa-spin"></i> Loading pending drivers...
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Approved Drivers Section -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="stat-card">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-check-circle text-success"></i> Approved Drivers
+                                        </h5>
+                                        <button class="btn btn-sm btn-outline-success" onclick="loadApprovedDrivers()">
+                                            <i class="fas fa-sync-alt"></i> Refresh
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Driver Name</th>
+                                                    <th>Phone</th>
+                                                    <th>Vehicle Type</th>
+                                                    <th>Location Status</th>
+                                                    <th>Last Location Update</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="approvedDriversTable">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-4">
+                                                        <div class="loading-spinner">
+                                                            <i class="fas fa-spinner fa-spin"></i> Loading approved drivers...
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Tab -->
+                    <div id="analytics" class="tab-content">
+                        <h2 class="mb-4">System Analytics</h2>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Monthly Revenue Trend</h5>
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Order Status Distribution</h5>
+                                    <canvas id="orderStatusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="chart-container">
+                                    <h5 class="mb-3">Restaurant Performance Comparison</h5>
+                                    <canvas id="restaurantPerformanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Settings Tab -->
+                    <div id="system" class="tab-content">
+                        <h2 class="mb-4">System Settings</h2>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>Change Password</h5>
+                                    <p class="text-muted mb-3">Update your administrator password</p>
+                                    <form id="changePasswordForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="currentPassword" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="newPassword" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirmPassword" required />
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-key"></i> Change Password
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>System Information</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">System Name</label>
+                                        <input type="text" class="form-control" value="ET-FOOD" readonly />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Version</label>
+                                        <input type="text" class="form-control" value="1.0.0" readonly />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Last Updated</label>
+                                        <input type="text" class="form-control" value="July 15, 2025" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>Application Settings</h5>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Currency</label>
+                                        <select class="form-select">
+                                            <option value="ETB">Ethiopian Birr (ETB)</option>
+                                            <option value="USD">US Dollar (USD)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Delivery Fee</label>
+                                        <input type="number" class="form-control" value="30" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Order Timeout (minutes)</label>
+                                        <input type="number" class="form-control" value="15" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-card">
+                                    <h5>Notification Settings</h5>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                        <label class="form-check-label" for="emailNotifications">
+                                            Email Notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="telegramNotifications" checked>
+                                        <label class="form-check-label" for="telegramNotifications">
+                                            Telegram Notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="driverNotifications" checked>
+                                        <label class="form-check-label" for="driverNotifications">
+                                            Driver Auto-Assignment
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Admin Modal -->
+    <div class="modal fade" id="addAdminModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus"></i> Add New Admin
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAdminForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Username *</label>
+                                    <input type="text" class="form-control" name="username" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" name="full_name">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Role *</label>
+                                    <select class="form-select" name="role" required>
+                                        <option value="admin">Restaurant Admin</option>
+                                        <option value="kitchen_staff">Kitchen Staff</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Restaurant</label>
+                                    <select class="form-select" name="restaurant_id" id="restaurantSelect">
+                                        <option value="">Select Restaurant</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-gradient" onclick="createAdmin()">
+                        <i class="fas fa-plus"></i> Create Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Performance Modal -->
+    <div class="modal fade" id="performanceModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-line"></i> Admin Performance Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="performanceModalBody">
+                    <!-- Performance details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Restaurant Modal -->
+    <div class="modal fade" id="addRestaurantModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus"></i> Add New Restaurant
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addRestaurantForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Restaurant Name *</label>
+                                    <input type="text" class="form-control" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number *</label>
+                                    <input type="tel" class="form-control" name="phone" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address *</label>
+                            <textarea class="form-control" name="address" rows="2" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" class="form-control" name="latitude" step="0.000001" value="9.047658">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" class="form-control" name="longitude" step="0.000001" value="38.741143">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Delivery Fee (ETB)</label>
+                                    <input type="number" class="form-control" name="delivery_fee" step="0.01" value="50.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Minimum Order (ETB)</label>
+                                    <input type="number" class="form-control" name="minimum_order" step="0.01" value="100.00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Estimated Delivery Time</label>
+                            <input type="text" class="form-control" name="estimated_delivery_time" value="30-45 minutes">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Restaurant Logo</label>
+                                    <input type="file" class="form-control" name="logo" accept="image/*" onchange="previewImage(this, 'logoPreview')">
+                                    <div id="logoPreview" class="mt-2" style="display: none;">
+                                        <img id="logoImage" src="" alt="Logo Preview" style="max-width: 100px; max-height: 100px; border-radius: 8px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Cover Image</label>
+                                    <input type="file" class="form-control" name="cover_image" accept="image/*" onchange="previewImage(this, 'coverPreview')">
+                                    <div id="coverPreview" class="mt-2" style="display: none;">
+                                        <img id="coverImage" src="" alt="Cover Preview" style="max-width: 150px; max-height: 100px; border-radius: 8px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="is_active" checked>
+                                        <label class="form-check-label">Active</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="is_featured">
+                                        <label class="form-check-label">Featured</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-gradient" onclick="createRestaurant()">
+                        <i class="fas fa-plus"></i> Create Restaurant
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/super_admin_dashboard.js"></script>
+    <script>
+        // Image preview function
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            const imageElement = preview.querySelector('img');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imageElement.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

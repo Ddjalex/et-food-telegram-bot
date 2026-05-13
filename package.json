@@ -1,0 +1,21 @@
+{
+  "name": "et-food-delivery",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "ET-FOOD Delivery Platform - Node.js Backend",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "ejs": "^5.0.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "multer": "^2.1.1",
+    "uuid": "^14.0.0"
+  }
+}
