@@ -187,6 +187,24 @@ async function createTables() {
     `);
     await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
 
+    // System settings table
+    await query(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key VARCHAR(100) PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    // Default price per km if not set
+    await query(`
+        INSERT INTO system_settings (key, value) VALUES ('price_per_km', '10')
+        ON CONFLICT (key) DO NOTHING
+    `);
+
+    // Driver fee columns on orders
+    await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_fee DECIMAL(10,2) DEFAULT 0`);
+    await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_distance_km DECIMAL(8,2) DEFAULT 0`);
+
     console.log('All tables created successfully');
 }
 

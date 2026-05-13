@@ -2098,9 +2098,20 @@
             <div class="order-summary">
                 <h4>Order Summary</h4>
                 <div id="checkoutItems"></div>
-                <div class="final-total">
-                    <span>Total: </span>
+                <div class="checkout-item" style="margin-top:6px;padding-top:8px;border-top:1px dashed #eee;">
+                    <span>Food subtotal</span>
+                    <span id="checkoutSubtotal">0 ETB</span>
+                </div>
+                <div class="checkout-item" id="driverFeeRow">
+                    <span>🛵 Est. delivery fee <span id="driverFeeKmNote" style="font-size:10px;color:#aaa"></span></span>
+                    <span id="checkoutDriverFee">calculating…</span>
+                </div>
+                <div class="final-total" style="margin-top:6px;">
+                    <span>Total</span>
                     <span id="checkoutTotal">0 ETB</span>
+                </div>
+                <div style="font-size:10.5px;color:#aaa;margin-top:5px;line-height:1.4;">
+                    * Delivery fee is estimated. Exact amount is calculated after delivery based on actual distance × driver rate.
                 </div>
             </div>
             
@@ -2814,7 +2825,6 @@
                         </div>
                         <div class="pro-rc-meta">
                             <div class="pro-rc-meta-item"><span>⏱</span><span>${r.estimated_delivery_time || '30-45 min'}</span></div>
-                            <div class="pro-rc-meta-item"><span>🛵</span><span>${deliveryFee}</span></div>
                             ${minOrder ? `<div class="pro-rc-meta-item"><span>🧾</span><span>${minOrder}</span></div>` : ''}
                             <div class="pro-rc-meta-item"><span>🍴</span><span>${r.menu_items_count || 0} items</span></div>
                         </div>
@@ -3186,21 +3196,57 @@
             document.body.style.overflow = '';
         }
 
+        // Cached delivery rate
+        let _pricePerKm = null;
+
+        async function getDeliveryRate() {
+            if (_pricePerKm !== null) return _pricePerKm;
+            try {
+                const r = await fetch('/api/settings/delivery-rate');
+                const d = await r.json();
+                _pricePerKm = d.price_per_km || 10;
+            } catch (e) { _pricePerKm = 10; }
+            return _pricePerKm;
+        }
+
+        // Estimate delivery fee: need restaurant coords and customer coords
+        async function estimateDriverFee() {
+            const rate = await getDeliveryRate();
+            // Try to get restaurant coordinates from loaded restaurants list
+            const rest = restaurants.find(r => r.id === currentRestaurantId) || restaurants[0];
+            if (!rest || !rest.lat || !rest.lng || !customerLat || !customerLng) {
+                return { fee: null, dist: null, rate };
+            }
+            const dist = distanceKmFn(customerLat, customerLng, rest.lat, rest.lng);
+            const fee = Math.round(dist * rate);
+            return { fee, dist: Math.round(dist * 10) / 10, rate };
+        }
+
+        function distanceKmFn(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
         // Update checkout summary
-        function updateCheckoutSummary() {
+        async function updateCheckoutSummary() {
             const checkoutItems = document.getElementById('checkoutItems');
+            const checkoutSubtotal = document.getElementById('checkoutSubtotal');
             const checkoutTotal = document.getElementById('checkoutTotal');
-            
-            let total = 0;
+            const checkoutDriverFee = document.getElementById('checkoutDriverFee');
+            const driverFeeKmNote = document.getElementById('driverFeeKmNote');
+
+            let subtotal = 0;
             let itemsHtml = '';
-            
+
             for (let itemId in selectedItems) {
                 const item = menuItems.find(m => m.id === itemId);
                 const quantity = selectedItems[itemId];
                 if (item && quantity > 0) {
                     const itemTotal = item.price * quantity;
-                    total += itemTotal;
-                    
+                    subtotal += itemTotal;
                     itemsHtml += `
                         <div class="checkout-item">
                             <span>${item.name} x${quantity}</span>
@@ -3209,9 +3255,21 @@
                     `;
                 }
             }
-            
+
             checkoutItems.innerHTML = itemsHtml;
-            checkoutTotal.textContent = `${Math.round(total)} ETB`;
+            if (checkoutSubtotal) checkoutSubtotal.textContent = `${Math.round(subtotal)} ETB`;
+
+            // Estimate driver fee
+            const { fee, dist, rate } = await estimateDriverFee();
+            if (fee !== null) {
+                if (checkoutDriverFee) checkoutDriverFee.textContent = `~${fee} ETB`;
+                if (driverFeeKmNote) driverFeeKmNote.textContent = `(${dist}km × ${rate} ETB/km)`;
+                if (checkoutTotal) checkoutTotal.textContent = `${Math.round(subtotal + fee)} ETB`;
+            } else {
+                if (checkoutDriverFee) checkoutDriverFee.textContent = 'Calculated after delivery';
+                if (driverFeeKmNote) driverFeeKmNote.textContent = '';
+                if (checkoutTotal) checkoutTotal.textContent = `${Math.round(subtotal)} ETB`;
+            }
         }
 
         // Submit order
@@ -3250,6 +3308,9 @@
                     });
                 }
             }
+
+            // Estimate driver fee to save with the order
+            const { fee: estFee, dist: estDist } = await estimateDriverFee();
             
             const orderData = {
                 customer_name: customerName,
@@ -3259,6 +3320,8 @@
                 special_instructions: document.getElementById('specialInstructions').value,
                 items: orderItems,
                 total_amount: total,
+                estimated_driver_fee: estFee || 0,
+                driver_distance_km: estDist || 0,
                 location_lat: customerLat,
                 location_lng: customerLng,
                 restaurant_id: currentRestaurantId,

@@ -991,22 +991,20 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="stat-card">
-                                    <h5>Application Settings</h5>
+                                    <h5><i class="fas fa-motorcycle me-2"></i>Driver Fee Settings</h5>
+                                    <p class="text-muted small mb-3">The delivery fee is calculated automatically: distance (km) × price per km. This is charged to customers after the driver completes delivery.</p>
                                     <div class="mb-3">
-                                        <label class="form-label">Default Currency</label>
-                                        <select class="form-select">
-                                            <option value="ETB">Ethiopian Birr (ETB)</option>
-                                            <option value="USD">US Dollar (USD)</option>
-                                        </select>
+                                        <label class="form-label fw-bold">Price Per Km (ETB)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="pricePerKmInput" min="0" step="0.5" placeholder="e.g. 10" />
+                                            <span class="input-group-text">ETB / km</span>
+                                        </div>
+                                        <div class="form-text">e.g. if set to 10 ETB/km and distance is 5km → driver fee = 50 ETB</div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Default Delivery Fee</label>
-                                        <input type="number" class="form-control" value="30" />
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Order Timeout (minutes)</label>
-                                        <input type="number" class="form-control" value="15" />
-                                    </div>
+                                    <button class="btn btn-primary" onclick="saveDeliverySettings()">
+                                        <i class="fas fa-save"></i> Save Rate
+                                    </button>
+                                    <div id="deliverySettingMsg" class="mt-2 small"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1329,6 +1327,52 @@
                 preview.style.display = 'none';
             }
         }
+
+        // Load and save delivery rate settings
+        async function loadDeliverySettings() {
+            try {
+                const r = await fetch('/api/settings/delivery-rate');
+                const d = await r.json();
+                const input = document.getElementById('pricePerKmInput');
+                if (input && d.price_per_km) input.value = d.price_per_km;
+            } catch (e) {}
+        }
+
+        async function saveDeliverySettings() {
+            const input = document.getElementById('pricePerKmInput');
+            const msgEl = document.getElementById('deliverySettingMsg');
+            const val = parseFloat(input ? input.value : '');
+            if (!input || isNaN(val) || val < 0) {
+                if (msgEl) { msgEl.textContent = 'Please enter a valid number.'; msgEl.className = 'mt-2 small text-danger'; }
+                return;
+            }
+            try {
+                const r = await fetch('/api/super-admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ price_per_km: val })
+                });
+                const d = await r.json();
+                if (msgEl) {
+                    msgEl.textContent = d.success ? '✓ Rate saved successfully.' : (d.error || 'Failed to save.');
+                    msgEl.className = 'mt-2 small ' + (d.success ? 'text-success' : 'text-danger');
+                }
+            } catch (e) {
+                if (msgEl) { msgEl.textContent = 'Network error. Please try again.'; msgEl.className = 'mt-2 small text-danger'; }
+            }
+        }
+
+        // Load settings when System tab is opened
+        document.addEventListener('DOMContentLoaded', () => {
+            const systemTab = document.querySelector('[data-tab="system"]');
+            if (systemTab) {
+                systemTab.addEventListener('click', loadDeliverySettings);
+            }
+            // Also load immediately if system tab is active
+            if (document.getElementById('system') && document.getElementById('system').classList.contains('active')) {
+                loadDeliverySettings();
+            }
+        });
     </script>
 </body>
 </html>

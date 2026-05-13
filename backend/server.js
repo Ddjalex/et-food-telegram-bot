@@ -91,6 +91,48 @@ app.get('/webapp', (req, res) => {
 // PUBLIC API ROUTES
 // ============================================================
 
+// ============================================================
+// SYSTEM SETTINGS — public + super admin
+// ============================================================
+
+app.get('/api/settings/delivery-rate', async (req, res) => {
+    try {
+        const row = await query(`SELECT value FROM system_settings WHERE key = 'price_per_km'`);
+        const price_per_km = row.rows[0] ? parseFloat(row.rows[0].value) : 10;
+        res.json({ success: true, price_per_km });
+    } catch (e) {
+        res.json({ success: true, price_per_km: 10 });
+    }
+});
+
+app.get('/api/super-admin/settings', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const rows = await query(`SELECT key, value FROM system_settings`);
+        const settings = {};
+        rows.rows.forEach(r => { settings[r.key] = r.value; });
+        res.json({ success: true, settings });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'Failed to fetch settings' });
+    }
+});
+
+app.post('/api/super-admin/settings', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const { price_per_km } = req.body;
+        if (price_per_km !== undefined) {
+            const val = parseFloat(price_per_km);
+            if (isNaN(val) || val < 0) return res.status(400).json({ success: false, error: 'Invalid price_per_km' });
+            await query(`INSERT INTO system_settings (key, value, updated_at) VALUES ('price_per_km', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [String(val)]);
+        }
+        logAudit(req, 'update_settings', 'system', null, 'system_settings', JSON.stringify(req.body));
+        res.json({ success: true, message: 'Settings saved' });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'Failed to save settings' });
+    }
+});
+
 app.get('/api/restaurant-info', async (req, res) => {
     try {
         const restaurants = await store.findMany('restaurants', { is_active: true });
@@ -291,7 +333,8 @@ app.post('/api/orders', async (req, res) => {
             telegram_user_id: data.telegram_user_id,
             items: data.items,
             total_amount: data.total_amount || 0,
-            delivery_fee: data.delivery_fee || 0,
+            delivery_fee: data.estimated_driver_fee || 0,
+            driver_distance_km: data.driver_distance_km || 0,
             status: 'pending',
             payment_method: data.payment_method || 'cash',
             payment_status: 'pending',
@@ -793,6 +836,26 @@ app.patch('/api/super-admin/orders/:id/status', async (req, res) => {
         if (order.telegram_user_id && status !== prevStatus) {
             const updated = { ...order, status };
             if (status === 'delivered') {
+                // Calculate actual driver fee based on distance × price_per_km and save to order
+                (async () => {
+                    try {
+                        const rateRow = await query(`SELECT value FROM system_settings WHERE key = 'price_per_km'`);
+                        const pricePerKm = rateRow.rows[0] ? parseFloat(rateRow.rows[0].value) : 10;
+                        const restaurant = order.restaurant_id ? await store.findById('restaurants', order.restaurant_id).catch(() => null) : null;
+                        const restLat = restaurant ? parseFloat(restaurant.lat) : null;
+                        const restLng = restaurant ? parseFloat(restaurant.lng) : null;
+                        const custLat = order.location_lat ? parseFloat(order.location_lat) : null;
+                        const custLng = order.location_lng ? parseFloat(order.location_lng) : null;
+                        if (restLat && restLng && custLat && custLng) {
+                            const actualDist = distanceKm(restLat, restLng, custLat, custLng);
+                            const actualFee = Math.round(actualDist * pricePerKm * 10) / 10;
+                            await store.updateById('orders', order.id, {
+                                driver_fee: actualFee,
+                                driver_distance_km: Math.round(actualDist * 10) / 10
+                            });
+                        }
+                    } catch (e) { console.error('driver fee calc error:', e.message); }
+                })();
                 notifyCustomerOrderDelivered(order.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
             } else if (status === 'cancelled') {
                 notifyCustomerOrderCancelled(order.telegram_user_id, updated, req.body.reason).catch(e => console.error('notify error:', e.message));
