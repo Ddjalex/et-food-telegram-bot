@@ -143,6 +143,9 @@ async function createTables() {
     await query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT false`);
     await query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
     await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_id UUID`);
+    await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS lat DECIMAL(10,8)`);
+    await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS lng DECIMAL(11,8)`);
+    await query(`ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS location_url TEXT`);
 
     await query(`
         CREATE TABLE IF NOT EXISTS customer_live_locations (

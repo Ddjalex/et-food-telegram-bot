@@ -108,18 +108,103 @@ app.get('/api/restaurant-info', async (req, res) => {
     }
 });
 
+// Parse a Google Maps URL and return lat/lng
+function parseGoogleMapsUrl(url) {
+    if (!url) return null;
+    // Match @lat,lng pattern (most common)
+    let m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    // Match ?q=lat,lng or &q=lat,lng
+    m = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    // Match ll=lat,lng
+    m = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    return null;
+}
+
+// Haversine distance in km
+function distanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Parse location URL endpoint
+app.post('/api/restaurants/parse-location', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ success: false, error: 'url is required' });
+
+        // Try to parse directly first
+        let coords = parseGoogleMapsUrl(url);
+        if (coords) return res.json({ success: true, ...coords });
+
+        // For short URLs (goo.gl/maps, maps.app.goo.gl), follow the redirect
+        const https = require('https');
+        const http = require('http');
+        const followRedirect = (u, maxRedirects = 5) => new Promise((resolve, reject) => {
+            if (maxRedirects === 0) return reject(new Error('Too many redirects'));
+            const mod = u.startsWith('https') ? https : http;
+            mod.get(u, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (resp) => {
+                if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
+                    return resolve(followRedirect(resp.headers.location, maxRedirects - 1));
+                }
+                resolve(u);
+            }).on('error', reject);
+        });
+
+        const resolved = await followRedirect(url);
+        coords = parseGoogleMapsUrl(resolved);
+        if (coords) return res.json({ success: true, ...coords });
+
+        res.status(422).json({ success: false, error: 'Could not extract coordinates from URL. Try a full Google Maps URL.' });
+    } catch (e) {
+        console.error('parse-location error:', e.message);
+        res.status(500).json({ success: false, error: 'Failed to parse location' });
+    }
+});
+
 app.get('/api/restaurants', async (req, res) => {
     try {
+        const customerLat = req.query.lat ? parseFloat(req.query.lat) : null;
+        const customerLng = req.query.lng ? parseFloat(req.query.lng) : null;
+
         const restaurants = await store.findMany('restaurants', { is_active: true });
-        const formatted = await Promise.all(restaurants.map(async r => ({
-            id: r.id, name: r.name, description: r.description || '', address: r.address || '', phone: r.phone || '',
-            logo_url: r.logo_url, cover_image_url: r.cover_image_url,
-            estimated_delivery_time: r.estimated_delivery_time || '30-45 minutes',
-            delivery_fee: parseFloat(r.delivery_fee) || 0, minimum_order: parseFloat(r.minimum_order) || 0,
-            is_active: r.is_active !== false,
-            menu_items_count: await store.count('menu_items', { restaurant_id: r.id, available: true }),
-            rating: parseFloat(r.rating) || 4.5, is_featured: r.is_featured || false
-        })));
+        let formatted = await Promise.all(restaurants.map(async r => {
+            const restLat = r.lat ? parseFloat(r.lat) : null;
+            const restLng = r.lng ? parseFloat(r.lng) : null;
+            let distance_km = null;
+            if (customerLat && customerLng && restLat && restLng) {
+                distance_km = Math.round(distanceKm(customerLat, customerLng, restLat, restLng) * 10) / 10;
+            }
+            return {
+                id: r.id, name: r.name, description: r.description || '', address: r.address || '', phone: r.phone || '',
+                logo_url: r.logo_url, cover_image_url: r.cover_image_url,
+                estimated_delivery_time: r.estimated_delivery_time || '30-45 minutes',
+                delivery_fee: parseFloat(r.delivery_fee) || 0, minimum_order: parseFloat(r.minimum_order) || 0,
+                is_active: r.is_active !== false,
+                menu_items_count: await store.count('menu_items', { restaurant_id: r.id, available: true }),
+                rating: parseFloat(r.rating) || 4.5, is_featured: r.is_featured || false,
+                lat: restLat, lng: restLng, location_url: r.location_url || null,
+                distance_km
+            };
+        }));
+
+        // Sort by distance if customer location is known
+        if (customerLat && customerLng) {
+            formatted.sort((a, b) => {
+                if (a.distance_km === null && b.distance_km === null) return 0;
+                if (a.distance_km === null) return 1;
+                if (b.distance_km === null) return -1;
+                return a.distance_km - b.distance_km;
+            });
+        }
+
         res.json({ success: true, restaurants: formatted, total: formatted.length });
     } catch (e) {
         console.error(e);
@@ -363,6 +448,16 @@ app.post('/api/restaurants/super-admin', async (req, res) => {
             if (!data[f]) return res.status(400).json({ success: false, message: `${f} is required` });
         }
         if (await store.findOne('restaurants', { name: data.name })) return res.status(400).json({ success: false, message: 'Restaurant name already exists' });
+
+        // Auto-parse location URL if provided
+        let lat = data.lat ? parseFloat(data.lat) : null;
+        let lng = data.lng ? parseFloat(data.lng) : null;
+        const location_url = data.location_url || null;
+        if (location_url && (!lat || !lng)) {
+            const coords = parseGoogleMapsUrl(location_url);
+            if (coords) { lat = coords.lat; lng = coords.lng; }
+        }
+
         const id = await store.insertOne('restaurants', {
             name: data.name, address: data.address, phone: data.phone,
             description: data.description || '',
@@ -371,7 +466,8 @@ app.post('/api/restaurants/super-admin', async (req, res) => {
             minimum_order: parseFloat(data.minimum_order) || 0,
             is_active: data.is_active !== false,
             is_featured: data.is_featured || false,
-            logo_url: data.logo_url || null, cover_image_url: data.cover_image_url || null
+            logo_url: data.logo_url || null, cover_image_url: data.cover_image_url || null,
+            lat, lng, location_url
         });
         logAudit(req, 'create_restaurant', 'restaurant', id, data.name);
         res.json({ success: true, message: `Restaurant ${data.name} created successfully`, restaurant_id: id });

@@ -1165,19 +1165,22 @@
                             <label class="form-label">Address *</label>
                             <textarea class="form-control" name="address" rows="2" required></textarea>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Latitude</label>
-                                    <input type="number" class="form-control" name="latitude" step="0.000001" value="9.047658">
-                                </div>
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                Location (Google Maps URL)
+                            </label>
+                            <div class="input-group">
+                                <input type="url" class="form-control" name="location_url" id="locationUrlInput"
+                                    placeholder="Paste Google Maps link here…">
+                                <button type="button" class="btn btn-outline-secondary" onclick="parseLocationUrl()">
+                                    <i class="fas fa-crosshairs"></i> Extract
+                                </button>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Longitude</label>
-                                    <input type="number" class="form-control" name="longitude" step="0.000001" value="38.741143">
-                                </div>
-                            </div>
+                            <div class="mt-1" id="locationStatus" style="display:none;"></div>
+                            <input type="hidden" name="lat" id="hiddenLat">
+                            <input type="hidden" name="lng" id="hiddenLng">
+                            <small class="text-muted">Paste a Google Maps URL and click Extract — coordinates are set automatically.</small>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -1279,6 +1282,37 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/super_admin_dashboard.js"></script>
     <script>
+        // Parse Google Maps URL and populate hidden lat/lng fields
+        async function parseLocationUrl() {
+            const urlInput = document.getElementById('locationUrlInput');
+            const statusEl = document.getElementById('locationStatus');
+            const url = urlInput ? urlInput.value.trim() : '';
+            if (!url) {
+                statusEl.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Please paste a Google Maps URL first.</span>';
+                statusEl.style.display = 'block';
+                return;
+            }
+            statusEl.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Extracting coordinates…</span>';
+            statusEl.style.display = 'block';
+            try {
+                const resp = await fetch('/api/restaurants/parse-location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('hiddenLat').value = data.lat;
+                    document.getElementById('hiddenLng').value = data.lng;
+                    statusEl.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Coordinates extracted: ${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${data.error}</span>`;
+                }
+            } catch(e) {
+                statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Network error. Please try again.</span>';
+            }
+        }
+
         // Image preview function
         function previewImage(input, previewId) {
             const preview = document.getElementById(previewId);

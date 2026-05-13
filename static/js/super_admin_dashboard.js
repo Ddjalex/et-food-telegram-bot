@@ -604,6 +604,14 @@ function updateRestaurantsTable(restaurants) {
                     <div class="text-muted small">
                         ${restaurant.address}
                     </div>
+                    ${restaurant.location_url
+                        ? `<a href="${restaurant.location_url}" target="_blank" class="badge bg-success text-decoration-none mt-1" title="View on Google Maps">
+                               <i class="fas fa-map-marker-alt me-1"></i>Map
+                           </a>`
+                        : restaurant.lat
+                            ? `<span class="badge bg-secondary mt-1" title="Coordinates set"><i class="fas fa-map-marker-alt me-1"></i>${parseFloat(restaurant.lat).toFixed(4)}, ${parseFloat(restaurant.lng).toFixed(4)}</span>`
+                            : `<span class="badge bg-light text-muted mt-1"><i class="fas fa-map-marker-alt me-1"></i>No location</span>`
+                    }
                 </td>
                 <td>
                     <div class="fw-bold text-primary">${restaurant.orders_today || 0}</div>
@@ -1177,10 +1185,26 @@ function createRestaurant() {
     createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
     createBtn.disabled = true;
     
-    // First create the restaurant with all data including images
+    // Build JSON payload (images handled separately via uploadRestaurantImages)
+    const payload = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        description: formData.get('description') || '',
+        estimated_delivery_time: formData.get('estimated_delivery_time') || '30-45 minutes',
+        delivery_fee: formData.get('delivery_fee') || '50.00',
+        minimum_order: formData.get('minimum_order') || '100.00',
+        is_active: form.querySelector('[name="is_active"]') ? form.querySelector('[name="is_active"]').checked : true,
+        is_featured: form.querySelector('[name="is_featured"]') ? form.querySelector('[name="is_featured"]').checked : false,
+        location_url: formData.get('location_url') || null,
+        lat: formData.get('lat') || null,
+        lng: formData.get('lng') || null
+    };
+
     fetch('/api/restaurants/super-admin', {
         method: 'POST',
-        body: formData // Send FormData directly to handle both text and files
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(data => {
@@ -1193,6 +1217,8 @@ function createRestaurant() {
             
             // Reset form
             form.reset();
+            const statusEl = document.getElementById('locationStatus');
+            if (statusEl) statusEl.style.display = 'none';
             
             // Clear image previews
             const logoPreview = document.getElementById('logoPreview');

@@ -241,6 +241,18 @@
             max-width: 88px;
         }
 
+        .restaurant-distance {
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--primary-color);
+            border-radius: 999px;
+            padding: 1px 7px;
+            margin-top: 4px;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+
         /* Categories */
         .section {
             padding: 0 20px 20px;
@@ -1769,6 +1781,8 @@
                 customerAddressText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                 setLocationName('Your location', isLive);
             }
+            // Re-sort restaurants by distance from the new location
+            loadRestaurants();
         }
 
         function setLocationName(name, isLive) {
@@ -1949,7 +1963,11 @@
         // Load restaurants
         async function loadRestaurants() {
             try {
-                const response = await fetch('/api/restaurants');
+                let url = '/api/restaurants';
+                if (customerLat && customerLng) {
+                    url += `?lat=${customerLat}&lng=${customerLng}`;
+                }
+                const response = await fetch(url);
                 const data = await response.json();
                 restaurants = data.restaurants || [];
                 displayRestaurants();
@@ -1981,8 +1999,9 @@
                 restaurantCard.style.animationDelay = `${index * 0.1}s`;
                 restaurantCard.onclick = () => selectRestaurant(restaurant.id);
                 
-                const statusClass = restaurant.is_active ? 'open' : 'closed';
-                const statusText = restaurant.is_active ? 'Open' : 'Closed';
+                const distanceChip = (restaurant.distance_km !== null && restaurant.distance_km !== undefined)
+                    ? `<div class="restaurant-distance">${restaurant.distance_km < 1 ? (restaurant.distance_km * 1000).toFixed(0) + 'm' : restaurant.distance_km.toFixed(1) + 'km'}</div>`
+                    : '';
                 
                 restaurantCard.innerHTML = `
                     <div class="restaurant-avatar">
@@ -1994,6 +2013,7 @@
                     </div>
                     <div class="restaurant-name">${restaurant.name}</div>
                     <div class="restaurant-description">${restaurant.description || 'Delicious food'}</div>
+                    ${distanceChip}
                 `;
                 
                 container.appendChild(restaurantCard);
