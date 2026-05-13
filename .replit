@@ -62,3 +62,6 @@ stack = "BEST_EFFORT_FALLBACK"
 [userenv.shared]
 PORT = "5000"
 NODE_ENV = "production"
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_o6EwDcRLMig5@ep-tiny-field-aqocs6iz-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+BOT_TOKEN = "8676451924:AAHl8QO2jKFyFbJ6fGELwlLjHvvSex8UE3g"
+DRIVER_BOT_TOKEN = "7430779389:AAEpMvZOBuZNRpp_nPULwA23rcNFjw47iNA"
