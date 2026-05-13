@@ -3,8 +3,8 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
 const store = require('./store');
+const { runMigration } = require('./migrate');
 
 const app = express();
 
@@ -63,11 +63,11 @@ app.get('/webapp', (req, res) => {
 // PUBLIC API ROUTES
 // ============================================================
 
-app.get('/api/restaurant-info', (req, res) => {
+app.get('/api/restaurant-info', async (req, res) => {
     try {
-        const restaurants = store.findMany('restaurants', { is_active: true });
+        const restaurants = await store.findMany('restaurants', { is_active: true });
         if (!restaurants.length) {
-            return res.json({ success: false, error: 'No restaurants available', company: { name: 'ET-FOOD', description: 'Food Delivery Service' }, restaurant: { name: 'Restaurant', description: 'Delicious Food' } });
+            return res.json({ success: false, error: 'No restaurants available', company: { name: 'ET-FOOD' }, restaurant: { name: 'Restaurant' } });
         }
         const r = restaurants[0];
         res.json({
@@ -76,55 +76,59 @@ app.get('/api/restaurant-info', (req, res) => {
             restaurant: { id: r.id, name: r.name, description: r.description, address: r.address, phone: r.phone, logo_url: r.logo_url, cover_image_url: r.cover_image_url, estimated_delivery_time: r.estimated_delivery_time }
         });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch restaurant information' });
     }
 });
 
-app.get('/api/restaurants', (req, res) => {
+app.get('/api/restaurants', async (req, res) => {
     try {
-        const restaurants = store.findMany('restaurants', { is_active: true });
-        const formatted = restaurants.map(r => ({
+        const restaurants = await store.findMany('restaurants', { is_active: true });
+        const formatted = await Promise.all(restaurants.map(async r => ({
             id: r.id, name: r.name, description: r.description || '', address: r.address || '', phone: r.phone || '',
             logo_url: r.logo_url, cover_image_url: r.cover_image_url,
             estimated_delivery_time: r.estimated_delivery_time || '30-45 minutes',
-            delivery_fee: r.delivery_fee || 0, minimum_order: r.minimum_order || 0,
+            delivery_fee: parseFloat(r.delivery_fee) || 0, minimum_order: parseFloat(r.minimum_order) || 0,
             is_active: r.is_active !== false,
-            menu_items_count: store.count('menu_items', { restaurant_id: r.id, available: true }),
-            rating: r.rating || 4.5, is_featured: r.is_featured || false
-        }));
+            menu_items_count: await store.count('menu_items', { restaurant_id: r.id, available: true }),
+            rating: parseFloat(r.rating) || 4.5, is_featured: r.is_featured || false
+        })));
         res.json({ success: true, restaurants: formatted, total: formatted.length });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch restaurants' });
     }
 });
 
-app.get('/api/menu', (req, res) => {
+app.get('/api/menu', async (req, res) => {
     try {
         let { restaurant_id, category } = req.query;
         if (!restaurant_id) {
-            const rests = store.findMany('restaurants', { is_active: true });
+            const rests = await store.findMany('restaurants', { is_active: true });
             if (rests.length) restaurant_id = rests[0].id;
             else return res.status(404).json({ success: false, error: 'No restaurants available' });
         }
         const filter = { restaurant_id, available: true };
         if (category) filter.category = category;
-        const items = store.findMany('menu_items', filter, 'category');
+        const items = await store.findMany('menu_items', filter, 'category');
         res.json({ success: true, menu_items: items, restaurant_id });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch menu' });
     }
 });
 
-app.get('/api/categories', (req, res) => {
+app.get('/api/categories', async (req, res) => {
     try {
-        const cats = store.findMany('categories', { is_active: true }, 'sort_order');
+        const cats = await store.findMany('categories', { is_active: true }, 'sort_order');
         res.json({ success: true, categories: cats });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch categories' });
     }
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
     try {
         const data = req.body;
         if (!data) return res.status(400).json({ success: false, error: 'No data provided' });
@@ -133,11 +137,11 @@ app.post('/api/orders', (req, res) => {
         }
         let restaurant_id = data.restaurant_id;
         if (!restaurant_id) {
-            const rests = store.findMany('restaurants', { is_active: true });
+            const rests = await store.findMany('restaurants', { is_active: true });
             if (rests.length) restaurant_id = rests[0].id;
             else return res.status(404).json({ success: false, error: 'No restaurants available' });
         }
-        const order_id = store.insertOne('orders', {
+        const order_id = await store.insertOne('orders', {
             customer_name: data.customer_name,
             customer_phone: data.customer_phone,
             customer_address: data.customer_address,
@@ -154,7 +158,7 @@ app.post('/api/orders', (req, res) => {
             special_instructions: data.special_instructions,
             order_number: `ET${Date.now()}`
         });
-        const order = store.findById('orders', order_id);
+        const order = await store.findById('orders', order_id);
         res.json({ success: true, order_id, order, message: 'Order created successfully' });
     } catch (e) {
         console.error('Error creating order:', e);
@@ -162,27 +166,29 @@ app.post('/api/orders', (req, res) => {
     }
 });
 
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders', async (req, res) => {
     try {
         const { restaurant_id, status, customer_id } = req.query;
         let filter = {};
         if (customer_id) filter.telegram_user_id = customer_id;
         else if (restaurant_id) { filter.restaurant_id = restaurant_id; if (status) filter.status = status; }
         else if (status) filter.status = status;
-        const orders = store.findMany('orders', filter, 'created_at');
+        const orders = await store.findMany('orders', filter, 'created_at');
         res.json({ success: true, orders, total: orders.length });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch orders' });
     }
 });
 
-app.patch('/api/orders/:id', (req, res) => {
+app.patch('/api/orders/:id', async (req, res) => {
     try {
-        const order = store.findById('orders', req.params.id);
+        const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-        store.updateById('orders', req.params.id, req.body);
-        res.json({ success: true, order: store.findById('orders', req.params.id) });
+        await store.updateById('orders', req.params.id, req.body);
+        res.json({ success: true, order: await store.findById('orders', req.params.id) });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order' });
     }
 });
@@ -199,19 +205,24 @@ app.get('/admin/login', (req, res) => {
     res.render('admin_login', { error: null });
 });
 
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.render('admin_login', { error: 'Username and password are required' });
-    const admin = store.findOne('admin_users', { username });
-    if (admin && admin.password === password && (admin.role === 'admin' || admin.role === 'superadmin')) {
-        req.session.admin_logged_in = true;
-        req.session.admin_user_id = admin.id;
-        req.session.admin_username = admin.username;
-        req.session.admin_role = admin.role;
-        store.updateById('admin_users', admin.id, { last_login: new Date() });
-        return res.redirect('/admin');
+    try {
+        const admin = await store.findOne('admin_users', { username });
+        if (admin && admin.password === password && (admin.role === 'admin' || admin.role === 'superadmin')) {
+            req.session.admin_logged_in = true;
+            req.session.admin_user_id = admin.id;
+            req.session.admin_username = admin.username;
+            req.session.admin_role = admin.role;
+            await store.updateById('admin_users', admin.id, { last_login: new Date() });
+            return res.redirect('/admin');
+        }
+        res.render('admin_login', { error: 'Invalid username or password' });
+    } catch (e) {
+        console.error(e);
+        res.render('admin_login', { error: 'Login failed, please try again' });
     }
-    res.render('admin_login', { error: 'Invalid username or password' });
 });
 
 app.get('/admin/logout', (req, res) => {
@@ -219,91 +230,107 @@ app.get('/admin/logout', (req, res) => {
     res.redirect('/admin/login');
 });
 
-app.get('/admin/dashboard', requireAdmin, (req, res) => {
-    const admin = store.findById('admin_users', req.session.admin_user_id);
-    let adminWithRestaurant = { ...admin };
-    if (admin && admin.restaurant_id) {
-        const restaurant = store.findById('restaurants', admin.restaurant_id);
-        adminWithRestaurant.restaurant = restaurant;
+app.get('/admin/dashboard', requireAdmin, async (req, res) => {
+    try {
+        const admin = await store.findById('admin_users', req.session.admin_user_id);
+        let adminWithRestaurant = { ...admin };
+        if (admin && admin.restaurant_id) {
+            adminWithRestaurant.restaurant = await store.findById('restaurants', admin.restaurant_id);
+        }
+        res.render('restaurant_admin_dashboard', { admin: adminWithRestaurant });
+    } catch (e) {
+        console.error(e);
+        res.render('restaurant_admin_dashboard', { admin: { username: req.session.admin_username } });
     }
-    res.render('restaurant_admin_dashboard', { admin: adminWithRestaurant });
 });
 
 // ============================================================
 // SUPER ADMIN ROUTES
 // ============================================================
 
-app.get(['/superadmin', '/superadmin/'], requireSuperAdmin, (req, res) => {
-    const admin = store.findById('admin_users', req.session.admin_user_id);
-    const stats = {
-        total_orders: store.count('orders'),
-        total_restaurants: store.count('restaurants'),
-        total_drivers: store.count('drivers'),
-        total_admins: store.count('admin_users')
-    };
-    res.render('super_admin_dashboard', { stats, admin: admin || { username: 'superadmin', full_name: 'Super Administrator' } });
+app.get(['/superadmin', '/superadmin/'], requireSuperAdmin, async (req, res) => {
+    try {
+        const admin = await store.findById('admin_users', req.session.admin_user_id);
+        const stats = {
+            total_orders: await store.count('orders'),
+            total_restaurants: await store.count('restaurants'),
+            total_drivers: await store.count('drivers'),
+            total_admins: await store.count('admin_users')
+        };
+        res.render('super_admin_dashboard', { stats, admin: admin || { username: 'superadmin', full_name: 'Super Administrator' } });
+    } catch (e) {
+        console.error(e);
+        res.render('super_admin_dashboard', { stats: {}, admin: { username: 'superadmin', full_name: 'Super Administrator' } });
+    }
 });
 
 app.get('/superadmin/login', (req, res) => {
     res.render('superadmin_login', { error: null });
 });
 
-app.post('/superadmin/login', (req, res) => {
-    const data = req.is('json') ? req.body : req.body;
-    const { username, password } = data;
+app.post('/superadmin/login', async (req, res) => {
+    const { username, password } = req.body;
     if (!username || !password) {
         if (req.is('json')) return res.status(400).json({ success: false, message: 'Username and password are required' });
         return res.render('superadmin_login', { error: 'Username and password are required' });
     }
-    const admin = store.findOne('admin_users', { username });
-    if (admin && admin.password === password && admin.role === 'superadmin') {
-        req.session.admin_logged_in = true;
-        req.session.admin_user_id = admin.id;
-        req.session.admin_username = admin.username;
-        req.session.admin_role = 'superadmin';
-        store.updateById('admin_users', admin.id, { last_login: new Date() });
-        if (req.is('json')) return res.json({ success: true, redirect: '/superadmin' });
-        return res.redirect('/superadmin');
+    try {
+        const admin = await store.findOne('admin_users', { username });
+        if (admin && admin.password === password && admin.role === 'superadmin') {
+            req.session.admin_logged_in = true;
+            req.session.admin_user_id = admin.id;
+            req.session.admin_username = admin.username;
+            req.session.admin_role = 'superadmin';
+            await store.updateById('admin_users', admin.id, { last_login: new Date() });
+            if (req.is('json')) return res.json({ success: true, redirect: '/superadmin' });
+            return res.redirect('/superadmin');
+        }
+        if (req.is('json')) return res.status(401).json({ success: false, message: 'Invalid credentials or insufficient privileges' });
+        res.render('superadmin_login', { error: 'Invalid credentials or insufficient privileges' });
+    } catch (e) {
+        console.error(e);
+        if (req.is('json')) return res.status(500).json({ success: false, message: 'Login failed' });
+        res.render('superadmin_login', { error: 'Login failed, please try again' });
     }
-    if (req.is('json')) return res.status(401).json({ success: false, message: 'Invalid credentials or insufficient privileges' });
-    res.render('superadmin_login', { error: 'Invalid credentials or insufficient privileges' });
 });
 
 // ============================================================
 // SUPER ADMIN API ROUTES
 // ============================================================
 
-app.get('/api/restaurants/super-admin', (req, res) => {
+app.get('/api/restaurants/super-admin', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        const restaurants = store.findMany('restaurants');
-        const formatted = restaurants.map(r => ({
+        const restaurants = await store.findMany('restaurants');
+        const formatted = await Promise.all(restaurants.map(async r => ({
             id: r.id, name: r.name, description: r.description, address: r.address, phone: r.phone,
             logo_url: r.logo_url, cover_image_url: r.cover_image_url,
             estimated_delivery_time: r.estimated_delivery_time,
             is_active: r.is_active !== false,
             created_at: r.created_at,
-            menu_items_count: store.count('menu_items', { restaurant_id: r.id }),
-            total_menu_items: store.count('menu_items', { restaurant_id: r.id }),
-            orders_today: store.count('orders', { restaurant_id: r.id }),
-            total_orders: store.count('orders', { restaurant_id: r.id }),
-            delivery_fee: r.delivery_fee || 0, minimum_order: r.minimum_order || 0
-        }));
+            menu_items_count: await store.count('menu_items', { restaurant_id: r.id }),
+            total_menu_items: await store.count('menu_items', { restaurant_id: r.id }),
+            orders_today: await store.count('orders', { restaurant_id: r.id }),
+            total_orders: await store.count('orders', { restaurant_id: r.id }),
+            delivery_fee: parseFloat(r.delivery_fee) || 0,
+            minimum_order: parseFloat(r.minimum_order) || 0
+        })));
         res.json({ success: true, restaurants: formatted, total_restaurants: formatted.length });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch restaurants' });
     }
 });
 
-app.post('/api/restaurants/super-admin', (req, res) => {
+app.post('/api/restaurants/super-admin', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
         const data = req.body;
         for (const f of ['name', 'address', 'phone']) {
             if (!data[f]) return res.status(400).json({ success: false, message: `${f} is required` });
         }
-        if (store.findOne('restaurants', { name: data.name })) return res.status(400).json({ success: false, message: 'Restaurant name already exists' });
-        const id = store.insertOne('restaurants', {
+        if (await store.findOne('restaurants', { name: data.name })) return res.status(400).json({ success: false, message: 'Restaurant name already exists' });
+        const id = await store.insertOne('restaurants', {
             name: data.name, address: data.address, phone: data.phone,
             description: data.description || '',
             estimated_delivery_time: data.estimated_delivery_time || '30-45 minutes',
@@ -315,66 +342,82 @@ app.post('/api/restaurants/super-admin', (req, res) => {
         });
         res.json({ success: true, message: `Restaurant ${data.name} created successfully`, restaurant_id: id });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, message: 'Failed to create restaurant' });
     }
 });
 
-app.put('/api/restaurants/super-admin/:id', (req, res) => {
+app.put('/api/restaurants/super-admin/:id', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        const r = store.findById('restaurants', req.params.id);
+        const r = await store.findById('restaurants', req.params.id);
         if (!r) return res.status(404).json({ success: false, error: 'Restaurant not found' });
-        store.updateById('restaurants', req.params.id, req.body);
+        await store.updateById('restaurants', req.params.id, req.body);
         res.json({ success: true, message: 'Restaurant updated successfully' });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, message: 'Failed to update restaurant' });
     }
 });
 
-app.delete('/api/restaurants/super-admin/:id', (req, res) => {
-    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
-    store.deleteOne('restaurants', { id: req.params.id });
-    res.json({ success: true, message: 'Restaurant deleted successfully' });
-});
-
-app.get('/api/super-admin/admins', (req, res) => {
+app.delete('/api/restaurants/super-admin/:id', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        const admins = store.findMany('admin_users');
-        const formatted = admins.map(a => ({
-            id: a.id, username: a.username, role: a.role || 'admin',
-            restaurant_id: a.restaurant_id, restaurant_name: a.restaurant_id ? (store.findById('restaurants', a.restaurant_id) || {}).name || 'N/A' : 'N/A',
-            is_active: a.is_active !== false, last_login: a.last_login || 'Never', created_at: a.created_at
+        await store.deleteOne('restaurants', { id: req.params.id });
+        res.json({ success: true, message: 'Restaurant deleted successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to delete restaurant' });
+    }
+});
+
+app.get('/api/super-admin/admins', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const admins = await store.findMany('admin_users');
+        const formatted = await Promise.all(admins.map(async a => {
+            let restaurant_name = 'N/A';
+            if (a.restaurant_id) {
+                const r = await store.findById('restaurants', a.restaurant_id);
+                if (r) restaurant_name = r.name;
+            }
+            return {
+                id: a.id, username: a.username, role: a.role || 'admin',
+                restaurant_id: a.restaurant_id, restaurant_name,
+                is_active: a.is_active !== false, last_login: a.last_login || 'Never', created_at: a.created_at
+            };
         }));
         res.json({ success: true, admins: formatted });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch admins' });
     }
 });
 
-app.post('/api/super-admin/admins', (req, res) => {
+app.post('/api/super-admin/admins', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
         const data = req.body;
         for (const f of ['username', 'password', 'full_name']) {
             if (!data[f]) return res.status(400).json({ success: false, message: `${f} is required` });
         }
-        if (store.findOne('admin_users', { username: data.username })) return res.status(400).json({ success: false, message: 'Username already exists' });
-        const id = store.insertOne('admin_users', {
+        if (await store.findOne('admin_users', { username: data.username })) return res.status(400).json({ success: false, message: 'Username already exists' });
+        const id = await store.insertOne('admin_users', {
             username: data.username, password: data.password,
             full_name: data.full_name, email: data.email || '',
             role: data.role || 'admin', restaurant_id: data.restaurant_id || null, is_active: true
         });
         res.json({ success: true, message: `Admin ${data.username} created successfully`, admin_id: id });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, message: 'Failed to create admin' });
     }
 });
 
-app.get('/api/super-admin/drivers', (req, res) => {
+app.get('/api/super-admin/drivers', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        const drivers = store.findMany('drivers');
+        const drivers = await store.findMany('drivers');
         const formatted = drivers.map(d => ({
             id: d.id, name: d.name, phone: d.phone || d.phone_number,
             vehicle_type: d.vehicle_type || 'Unknown',
@@ -384,28 +427,26 @@ app.get('/api/super-admin/drivers', (req, res) => {
         }));
         res.json({ success: true, drivers: formatted });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch drivers' });
     }
 });
 
-app.get('/api/super-admin/stats', (req, res) => {
+app.get('/api/super-admin/stats', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        res.json({
-            success: true,
-            stats: {
-                total_restaurants: store.count('restaurants'),
-                total_menu_items: store.count('menu_items'),
-                total_orders: store.count('orders'),
-                total_drivers: store.count('drivers'),
-                total_admins: store.count('admin_users'),
-                pending_drivers: store.count('drivers', { is_approved: false }),
-                active_drivers: store.count('drivers', { is_active: true, is_approved: true }),
-                orders_today: store.count('orders'),
-                revenue_today: 0
-            }
-        });
+        const [total_restaurants, total_menu_items, total_orders, total_drivers, total_admins, pending_drivers, active_drivers] = await Promise.all([
+            store.count('restaurants'),
+            store.count('menu_items'),
+            store.count('orders'),
+            store.count('drivers'),
+            store.count('admin_users'),
+            store.count('drivers', { is_approved: false }),
+            store.count('drivers', { is_active: true, is_approved: true })
+        ]);
+        res.json({ success: true, stats: { total_restaurants, total_menu_items, total_orders, total_drivers, total_admins, pending_drivers, active_drivers, orders_today: total_orders, revenue_today: 0 } });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
     }
 });
@@ -414,24 +455,25 @@ app.get('/api/super-admin/stats', (req, res) => {
 // MENU MANAGEMENT API (Admin)
 // ============================================================
 
-app.get('/api/admin/menu', (req, res) => {
+app.get('/api/admin/menu', async (req, res) => {
     if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
         const { restaurant_id } = req.query;
         const filter = restaurant_id ? { restaurant_id } : {};
-        const items = store.findMany('menu_items', filter);
+        const items = await store.findMany('menu_items', filter);
         res.json({ success: true, menu_items: items });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch menu items' });
     }
 });
 
-app.post('/api/admin/menu', (req, res) => {
+app.post('/api/admin/menu', async (req, res) => {
     if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
         const data = req.body;
         if (!data.name || !data.price || !data.restaurant_id) return res.status(400).json({ success: false, error: 'name, price, restaurant_id are required' });
-        const id = store.insertOne('menu_items', {
+        const id = await store.insertOne('menu_items', {
             name: data.name, price: parseFloat(data.price), restaurant_id: data.restaurant_id,
             description: data.description || '', image_url: data.image_url || null,
             category: data.category || 'main', available: data.available !== false,
@@ -439,26 +481,33 @@ app.post('/api/admin/menu', (req, res) => {
         });
         res.json({ success: true, message: 'Menu item created', item_id: id });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to create menu item' });
     }
 });
 
-app.put('/api/admin/menu/:id', (req, res) => {
+app.put('/api/admin/menu/:id', async (req, res) => {
     if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
-        const item = store.findById('menu_items', req.params.id);
+        const item = await store.findById('menu_items', req.params.id);
         if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
-        store.updateById('menu_items', req.params.id, req.body);
+        await store.updateById('menu_items', req.params.id, req.body);
         res.json({ success: true, message: 'Menu item updated' });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update menu item' });
     }
 });
 
-app.delete('/api/admin/menu/:id', (req, res) => {
+app.delete('/api/admin/menu/:id', async (req, res) => {
     if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
-    store.deleteOne('menu_items', { id: req.params.id });
-    res.json({ success: true, message: 'Menu item deleted' });
+    try {
+        await store.deleteOne('menu_items', { id: req.params.id });
+        res.json({ success: true, message: 'Menu item deleted' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to delete menu item' });
+    }
 });
 
 // ============================================================
@@ -469,18 +518,23 @@ app.get('/kitchen/login', (req, res) => {
     res.render('kitchen_login', { message: null });
 });
 
-app.post('/kitchen/login', (req, res) => {
+app.post('/kitchen/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.render('kitchen_login', { message: 'Username and password are required' });
-    const user = store.findOne('admin_users', { username });
-    if (user && user.password === password && (user.role === 'kitchen' || user.role === 'admin' || user.role === 'superadmin')) {
-        req.session.kitchen_logged_in = true;
-        req.session.kitchen_user_id = user.id;
-        req.session.kitchen_username = user.username;
-        req.session.kitchen_restaurant_id = user.restaurant_id;
-        return res.redirect('/kitchen/dashboard');
+    try {
+        const user = await store.findOne('admin_users', { username });
+        if (user && user.password === password && (user.role === 'kitchen' || user.role === 'admin' || user.role === 'superadmin')) {
+            req.session.kitchen_logged_in = true;
+            req.session.kitchen_user_id = user.id;
+            req.session.kitchen_username = user.username;
+            req.session.kitchen_restaurant_id = user.restaurant_id;
+            return res.redirect('/kitchen/dashboard');
+        }
+        res.render('kitchen_login', { message: 'Invalid username or password' });
+    } catch (e) {
+        console.error(e);
+        res.render('kitchen_login', { message: 'Login failed, please try again' });
     }
-    res.render('kitchen_login', { message: 'Invalid username or password' });
 });
 
 app.get('/kitchen/logout', (req, res) => {
@@ -492,62 +546,73 @@ app.get(['/kitchen', '/kitchen/'], requireKitchen, (req, res) => {
     res.redirect('/kitchen/dashboard');
 });
 
-app.get('/kitchen/dashboard', requireKitchen, (req, res) => {
-    const restaurant = req.session.kitchen_restaurant_id
-        ? store.findById('restaurants', req.session.kitchen_restaurant_id)
-        : null;
-    res.render('kitchen_dashboard', { restaurant });
+app.get('/kitchen/dashboard', requireKitchen, async (req, res) => {
+    try {
+        const restaurant = req.session.kitchen_restaurant_id
+            ? await store.findById('restaurants', req.session.kitchen_restaurant_id)
+            : null;
+        res.render('kitchen_dashboard', { restaurant });
+    } catch (e) {
+        res.render('kitchen_dashboard', { restaurant: null });
+    }
 });
 
-app.get('/kitchen/food-management', requireKitchen, (req, res) => {
-    const restaurant = req.session.kitchen_restaurant_id
-        ? store.findById('restaurants', req.session.kitchen_restaurant_id)
-        : null;
-    res.render('kitchen_food_management', { restaurant });
+app.get('/kitchen/food-management', requireKitchen, async (req, res) => {
+    try {
+        const restaurant = req.session.kitchen_restaurant_id
+            ? await store.findById('restaurants', req.session.kitchen_restaurant_id)
+            : null;
+        res.render('kitchen_food_management', { restaurant });
+    } catch (e) {
+        res.render('kitchen_food_management', { restaurant: null });
+    }
 });
 
 // Kitchen API
-app.get('/api/kitchen/orders', requireKitchen, (req, res) => {
+app.get('/api/kitchen/orders', requireKitchen, async (req, res) => {
     try {
         const restaurant_id = req.session.kitchen_restaurant_id;
-        const filter = {};
-        if (restaurant_id) filter.restaurant_id = restaurant_id;
-        const orders = store.findMany('orders', filter, 'created_at');
+        const filter = restaurant_id ? { restaurant_id } : {};
+        const orders = await store.findMany('orders', filter, 'created_at');
         res.json({ success: true, orders });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch orders' });
     }
 });
 
-app.patch('/api/kitchen/orders/:id', requireKitchen, (req, res) => {
+app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
     try {
-        const order = store.findById('orders', req.params.id);
+        const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-        store.updateById('orders', req.params.id, req.body);
-        res.json({ success: true, order: store.findById('orders', req.params.id) });
+        await store.updateById('orders', req.params.id, req.body);
+        res.json({ success: true, order: await store.findById('orders', req.params.id) });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order' });
     }
 });
 
-app.get('/api/kitchen/menu-items', requireKitchen, (req, res) => {
+app.get('/api/kitchen/menu-items', requireKitchen, async (req, res) => {
     try {
         const restaurant_id = req.session.kitchen_restaurant_id;
         const filter = restaurant_id ? { restaurant_id } : {};
-        const items = store.findMany('menu_items', filter);
+        const items = await store.findMany('menu_items', filter);
         res.json({ success: true, menu_items: items });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch menu items' });
     }
 });
 
-app.patch('/api/kitchen/menu-items/:id/availability', requireKitchen, (req, res) => {
+app.patch('/api/kitchen/menu-items/:id/availability', requireKitchen, async (req, res) => {
     try {
-        const item = store.findById('menu_items', req.params.id);
+        const item = await store.findById('menu_items', req.params.id);
         if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
-        store.updateById('menu_items', req.params.id, { available: req.body.available });
+        await store.updateById('menu_items', req.params.id, { available: req.body.available });
         res.json({ success: true });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update availability' });
     }
 });
@@ -560,22 +625,23 @@ app.get('/driver-panel', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/enhanced_driver_panel.html'));
 });
 
-app.post('/api/driver/location', (req, res) => {
+app.post('/api/driver/location', async (req, res) => {
     try {
         const { driver_id, lat, lng } = req.body;
         if (!driver_id) return res.status(400).json({ success: false, error: 'driver_id required' });
-        store.updateById('drivers', driver_id, { current_lat: lat, current_lng: lng, last_location_update: new Date() });
+        await store.updateById('drivers', driver_id, { current_lat: lat, current_lng: lng, last_location_update: new Date() });
         res.json({ success: true });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update location' });
     }
 });
 
-app.post('/api/driver/register', (req, res) => {
+app.post('/api/driver/register', async (req, res) => {
     try {
         const data = req.body;
         if (!data.name || !data.phone_number) return res.status(400).json({ success: false, error: 'name and phone_number are required' });
-        const id = store.insertOne('drivers', {
+        const id = await store.insertOne('drivers', {
             name: data.name, phone_number: data.phone_number,
             telegram_user_id: data.telegram_user_id,
             vehicle_type: data.vehicle_type || 'motorcycle',
@@ -585,6 +651,7 @@ app.post('/api/driver/register', (req, res) => {
         });
         res.json({ success: true, driver_id: id });
     } catch (e) {
+        console.error(e);
         res.status(500).json({ success: false, error: 'Failed to register driver' });
     }
 });
@@ -610,15 +677,20 @@ app.get('/admin/change-password', requireAdmin, (req, res) => {
     res.render('change_password', { error: null, success: null });
 });
 
-app.post('/admin/change-password', requireAdmin, (req, res) => {
+app.post('/admin/change-password', requireAdmin, async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
-    const admin = store.findById('admin_users', req.session.admin_user_id);
-    if (!admin) return res.render('change_password', { error: 'Admin not found', success: null });
-    if (admin.password !== current_password) return res.render('change_password', { error: 'Current password is incorrect', success: null });
-    if (new_password !== confirm_password) return res.render('change_password', { error: 'Passwords do not match', success: null });
-    if (new_password.length < 8) return res.render('change_password', { error: 'Password must be at least 8 characters', success: null });
-    store.updateById('admin_users', admin.id, { password: new_password });
-    res.render('change_password', { error: null, success: 'Password changed successfully' });
+    try {
+        const admin = await store.findById('admin_users', req.session.admin_user_id);
+        if (!admin) return res.render('change_password', { error: 'Admin not found', success: null });
+        if (admin.password !== current_password) return res.render('change_password', { error: 'Current password is incorrect', success: null });
+        if (new_password !== confirm_password) return res.render('change_password', { error: 'Passwords do not match', success: null });
+        if (new_password.length < 8) return res.render('change_password', { error: 'Password must be at least 8 characters', success: null });
+        await store.updateById('admin_users', admin.id, { password: new_password });
+        res.render('change_password', { error: null, success: 'Password changed successfully' });
+    } catch (e) {
+        console.error(e);
+        res.render('change_password', { error: 'Failed to change password', success: null });
+    }
 });
 
 // ============================================================
@@ -634,13 +706,25 @@ app.use((err, req, res, next) => {
     res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
+// ============================================================
+// START SERVER
+// ============================================================
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`ET-FOOD Node.js server running on port ${PORT}`);
-    console.log(`Restaurants: ${store.count('restaurants')}`);
-    console.log(`Menu Items: ${store.count('menu_items')}`);
-    console.log(`Categories: ${store.count('categories')}`);
-    console.log(`Admin Users: ${store.count('admin_users')}`);
-});
+
+async function startServer() {
+    try {
+        await runMigration();
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`ET-FOOD Node.js server running on port ${PORT}`);
+            console.log(`Database: Neon PostgreSQL`);
+        });
+    } catch (err) {
+        console.error('Failed to start server:', err.message);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 module.exports = app;

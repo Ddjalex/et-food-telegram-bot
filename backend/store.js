@@ -1,139 +1,116 @@
-const { v4: uuidv4 } = require('uuid');
+const { query } = require('./db');
 
-class Store {
-    constructor() {
-        this.collections = {
-            restaurants: [],
-            menu_items: [],
-            orders: [],
-            drivers: [],
-            admin_users: [],
-            payment_transactions: [],
-            categories: []
-        };
-        this._initializeDefaults();
-    }
+const TABLES = {
+    restaurants: 'restaurants',
+    menu_items: 'menu_items',
+    categories: 'categories',
+    orders: 'orders',
+    drivers: 'drivers',
+    admin_users: 'admin_users',
+    payment_transactions: 'payment_transactions'
+};
 
-    _generateId() { return uuidv4(); }
-    _now() { return new Date(); }
-
-    _initializeDefaults() {
-        const flavourId = this._generateId();
-        const yFactoryId = this._generateId();
-
-        this.collections.restaurants = [
-            { id: flavourId, name: 'Flavour cafe | E.Fabrica', description: 'Authentic Ethiopian and International Cuisine', address: 'Addis Ababa, Ethiopia', phone: '+251911123456', logo_url: null, cover_image_url: null, is_active: true, is_featured: true, delivery_fee: 0, minimum_order: 0, estimated_delivery_time: '30-45 minutes', rating: 4.5, created_at: this._now(), updated_at: this._now() },
-            { id: yFactoryId, name: 'Y Factory Restaurant', description: 'Modern restaurant with diverse cuisine', address: 'Addis Ababa, Ethiopia', phone: '+251922334455', logo_url: null, cover_image_url: null, is_active: true, is_featured: false, delivery_fee: 0, minimum_order: 0, estimated_delivery_time: '25-40 minutes', rating: 4.3, created_at: this._now(), updated_at: this._now() }
-        ];
-
-        this.collections.categories = [
-            { id: this._generateId(), name: 'Burgers', description: 'Delicious beef and chicken burgers', icon: '🍔', sort_order: 1, is_active: true },
-            { id: this._generateId(), name: 'Shawarma', description: 'Traditional Middle Eastern wraps', icon: '🌯', sort_order: 2, is_active: true },
-            { id: this._generateId(), name: 'Pizza', description: 'Italian style pizzas', icon: '🍕', sort_order: 3, is_active: true },
-            { id: this._generateId(), name: 'Traditional Ethiopian Breakfast', description: 'Authentic Ethiopian breakfast', icon: '☕', sort_order: 4, is_active: true },
-            { id: this._generateId(), name: 'Drinks', description: 'Beverages and drinks', icon: '🥤', sort_order: 5, is_active: true }
-        ];
-
-        const menuItems = [
-            { name: 'Beef Burger Normal', price: 400, description: 'Delicious beef burger with classic toppings', category: 'Burgers', image_url: '/static/uploads/1751975047_images_25.jpg' },
-            { name: 'Chicken Burger Special', price: 540, description: 'Premium chicken burger with special sauce', category: 'Burgers', image_url: '/static/uploads/1751975080_images_26.jpg' },
-            { name: 'Cheese Burger', price: 450, description: 'Juicy burger with melted cheese', category: 'Burgers', image_url: '/static/uploads/1751975114_images_27.jpg' },
-            { name: 'Beef Shawarma Large', price: 495, description: 'Large beef shawarma with traditional spices', category: 'Shawarma', image_url: '/static/uploads/1751975388_images_28.jpg' },
-            { name: 'Chicken Shawarma Small', price: 430, description: 'Small chicken shawarma with authentic taste', category: 'Shawarma', image_url: '/static/uploads/1751975863_images_33.jpg' },
-            { name: 'Chicken Shawarma Large', price: 520, description: 'Large chicken shawarma with extra filling', category: 'Shawarma', image_url: '/static/uploads/1751975907_fried-egg-sandwich_1.webp' },
-            { name: 'Injera with Doro Wat', price: 350, description: 'Traditional Ethiopian injera with spicy chicken stew', category: 'Traditional Ethiopian Breakfast', image_url: '/static/uploads/1751975047_images_25.jpg' },
-            { name: 'Kitfo', price: 280, description: 'Ethiopian beef tartare', category: 'Traditional Ethiopian Breakfast', image_url: '/static/uploads/1751975080_images_26.jpg' },
-            { name: 'Tibs', price: 320, description: 'Ethiopian sautéed meat', category: 'Traditional Ethiopian Breakfast', image_url: '/static/uploads/1751975388_images_28.jpg' },
-            { name: 'Shiro Wat', price: 180, description: 'Ethiopian chickpea stew', category: 'Traditional Ethiopian Breakfast', image_url: '/static/uploads/1751975114_images_27.jpg' },
-            { name: 'Margherita Pizza', price: 450, description: 'Classic pizza with tomato and mozzarella', category: 'Pizza', image_url: '/static/uploads/1751976198_ALR-recipe-16895-fluffy-french-toast-hero-01-ddmfs-4x3-7fd61e054f2c4f0f868b7ab0dd8767ae.jpg' },
-            { name: 'Pepperoni Pizza', price: 520, description: 'Pizza with pepperoni and cheese', category: 'Pizza', image_url: '/static/uploads/1751976242_images_35.jpg' },
-            { name: 'Ethiopian Coffee', price: 80, description: 'Traditional Ethiopian coffee', category: 'Drinks', image_url: '/static/uploads/1751975047_images_25.jpg' },
-            { name: 'Fresh Juice', price: 120, description: 'Freshly squeezed fruit juice', category: 'Drinks', image_url: '/static/uploads/1751975080_images_26.jpg' },
-            { name: 'Soft Drink', price: 60, description: 'Carbonated soft drink', category: 'Drinks', image_url: '/static/uploads/1751975114_images_27.jpg' }
-        ];
-
-        for (const item of menuItems) {
-            this.collections.menu_items.push({
-                id: this._generateId(),
-                restaurant_id: flavourId,
-                available: true,
-                ingredients: [],
-                allergens: [],
-                nutritional_info: {},
-                preparation_time: 15,
-                created_at: this._now(),
-                updated_at: this._now(),
-                ...item
-            });
+function buildWhere(filter) {
+    const entries = Object.entries(filter || {});
+    if (entries.length === 0) return { clause: '', values: [] };
+    const conditions = [];
+    const values = [];
+    for (const [key, val] of entries) {
+        if (val !== undefined && val !== null && typeof val === 'object' && !Array.isArray(val) && '$gte' in val) {
+            values.push(val['$gte']);
+            conditions.push(`${key} >= $${values.length}`);
+        } else {
+            values.push(val);
+            conditions.push(`${key} = $${values.length}`);
         }
-
-        this.collections.admin_users = [
-            { id: this._generateId(), username: 'admin', password: 'admin123', full_name: 'Admin User', role: 'admin', is_active: true, restaurant_id: flavourId, created_at: this._now(), updated_at: this._now() },
-            { id: this._generateId(), username: 'superadmin', password: 'superadmin123', full_name: 'Super Administrator', role: 'superadmin', is_active: true, created_at: this._now(), updated_at: this._now() },
-            { id: this._generateId(), username: 'kitchen', password: 'kitchen123', full_name: 'Kitchen Staff', role: 'kitchen', is_active: true, restaurant_id: flavourId, created_at: this._now(), updated_at: this._now() }
-        ];
     }
-
-    _matches(doc, filter) {
-        if (!filter || Object.keys(filter).length === 0) return true;
-        for (const [key, value] of Object.entries(filter)) {
-            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                if ('$gte' in value && doc[key] < value['$gte']) return false;
-            } else {
-                if (doc[key] !== value) return false;
-            }
-        }
-        return true;
-    }
-
-    insertOne(collection, document) {
-        const now = this._now();
-        const doc = { id: this._generateId(), created_at: now, updated_at: now, ...document };
-        if (!this.collections[collection]) this.collections[collection] = [];
-        this.collections[collection].push(doc);
-        return doc.id;
-    }
-
-    findOne(collection, filter = {}) {
-        const col = this.collections[collection] || [];
-        if (!filter || Object.keys(filter).length === 0) return col[0] || null;
-        return col.find(doc => this._matches(doc, filter)) || null;
-    }
-
-    findById(collection, id) {
-        return this.findOne(collection, { id });
-    }
-
-    findMany(collection, filter = {}, sortField = null, limit = null) {
-        let docs = (this.collections[collection] || []).filter(doc => this._matches(doc, filter));
-        if (sortField) docs = [...docs].sort((a, b) => (a[sortField] > b[sortField] ? 1 : -1));
-        if (limit) docs = docs.slice(0, limit);
-        return docs;
-    }
-
-    updateOne(collection, filter, update) {
-        const col = this.collections[collection] || [];
-        const idx = col.findIndex(doc => this._matches(doc, filter));
-        if (idx === -1) return false;
-        Object.assign(col[idx], update, { updated_at: this._now() });
-        return true;
-    }
-
-    updateById(collection, id, update) {
-        return this.updateOne(collection, { id }, update);
-    }
-
-    deleteOne(collection, filter) {
-        const col = this.collections[collection] || [];
-        const idx = col.findIndex(doc => this._matches(doc, filter));
-        if (idx === -1) return false;
-        col.splice(idx, 1);
-        return true;
-    }
-
-    count(collection, filter = {}) {
-        return this.findMany(collection, filter).length;
-    }
+    return { clause: 'WHERE ' + conditions.join(' AND '), values };
 }
 
-module.exports = new Store();
+function toSqlValue(val) {
+    if (Array.isArray(val) || (val !== null && typeof val === 'object' && !(val instanceof Date))) {
+        return JSON.stringify(val);
+    }
+    return val;
+}
+
+async function insertOne(collection, document) {
+    const table = TABLES[collection];
+    const doc = { ...document };
+    delete doc.id;
+    delete doc.created_at;
+    delete doc.updated_at;
+
+    const keys = Object.keys(doc);
+    const values = keys.map(k => toSqlValue(doc[k]));
+    const placeholders = keys.map((_, i) => `$${i + 1}`);
+
+    const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING id`;
+    const result = await query(sql, values);
+    return result.rows[0].id;
+}
+
+async function findOne(collection, filter = {}) {
+    const table = TABLES[collection];
+    const { clause, values } = buildWhere(filter);
+    const result = await query(`SELECT * FROM ${table} ${clause} LIMIT 1`, values);
+    return result.rows[0] || null;
+}
+
+async function findById(collection, id) {
+    return findOne(collection, { id });
+}
+
+async function findMany(collection, filter = {}, sortField = null, limit = null) {
+    const table = TABLES[collection];
+    const { clause, values } = buildWhere(filter);
+    let sql = `SELECT * FROM ${table} ${clause}`;
+    if (sortField) sql += ` ORDER BY ${sortField} ASC`;
+    if (limit) sql += ` LIMIT ${parseInt(limit)}`;
+    const result = await query(sql, values);
+    return result.rows;
+}
+
+async function updateOne(collection, filter, update) {
+    const table = TABLES[collection];
+    const { clause, values: whereValues } = buildWhere(filter);
+    if (!clause) return false;
+
+    const entries = Object.entries(update || {}).filter(([k]) => k !== 'id' && k !== 'created_at');
+    if (entries.length === 0) return false;
+
+    const sets = [];
+    const setValues = [];
+    for (const [key, val] of entries) {
+        setValues.push(toSqlValue(val));
+        sets.push(`${key} = $${setValues.length}`);
+    }
+    sets.push(`updated_at = NOW()`);
+
+    const offset = setValues.length;
+    const adjustedWhere = clause.replace(/\$(\d+)/g, (_, n) => `$${parseInt(n) + offset}`);
+    const sql = `UPDATE ${table} SET ${sets.join(', ')} ${adjustedWhere}`;
+    await query(sql, [...setValues, ...whereValues]);
+    return true;
+}
+
+async function updateById(collection, id, update) {
+    return updateOne(collection, { id }, update);
+}
+
+async function deleteOne(collection, filter) {
+    const table = TABLES[collection];
+    const { clause, values } = buildWhere(filter);
+    if (!clause) return false;
+    await query(`DELETE FROM ${table} ${clause}`, values);
+    return true;
+}
+
+async function countDocs(collection, filter = {}) {
+    const table = TABLES[collection];
+    const { clause, values } = buildWhere(filter);
+    const result = await query(`SELECT COUNT(*) FROM ${table} ${clause}`, values);
+    return parseInt(result.rows[0].count);
+}
+
+module.exports = { insertOne, findOne, findById, findMany, updateOne, updateById, deleteOne, count: countDocs };
