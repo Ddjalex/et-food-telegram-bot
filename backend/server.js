@@ -866,7 +866,7 @@ app.post('/kitchen/login', async (req, res) => {
     if (!username || !password) return res.render('kitchen_login', { message: 'Username and password are required' });
     try {
         const user = await store.findOne('admin_users', { username });
-        if (user && user.password === password && (user.role === 'kitchen' || user.role === 'admin' || user.role === 'superadmin')) {
+        if (user && user.password === password && (user.role === 'kitchen' || user.role === 'kitchen_staff' || user.role === 'admin' || user.role === 'superadmin')) {
             req.session.kitchen_logged_in = true;
             req.session.kitchen_user_id = user.id;
             req.session.kitchen_username = user.username;

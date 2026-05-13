@@ -4,9 +4,15 @@ const store = require('./store');
 const DRIVER_BOT_TOKEN = process.env.DRIVER_BOT_TOKEN;
 if (!DRIVER_BOT_TOKEN) { console.error('DRIVER_BOT_TOKEN secret is not set'); process.exit(1); }
 
-const bot = new TelegramBot(DRIVER_BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(DRIVER_BOT_TOKEN, { polling: false });
 
-console.log('Driver bot started.');
+bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
+    bot.startPolling({ restart: false });
+    console.log('Driver bot started.');
+}).catch(err => {
+    console.error('Driver bot webhook delete error:', err.message);
+    bot.startPolling({ restart: false });
+});
 
 const driverSessions = {};
 

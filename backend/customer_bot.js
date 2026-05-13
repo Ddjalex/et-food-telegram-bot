@@ -4,11 +4,17 @@ const store = require('./store');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) { console.error('BOT_TOKEN secret is not set'); process.exit(1); }
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}`;
 
-console.log('Customer bot started. WebApp URL:', WEBAPP_URL);
+bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
+    bot.startPolling({ restart: false });
+    console.log('Customer bot started. WebApp URL:', WEBAPP_URL);
+}).catch(err => {
+    console.error('Customer bot webhook delete error:', err.message);
+    bot.startPolling({ restart: false });
+});
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
