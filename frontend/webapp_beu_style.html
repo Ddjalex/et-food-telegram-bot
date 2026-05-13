@@ -1210,6 +1210,76 @@
         .status-badge.out_for_delivery { background: #d1ecf1; color: #0c5460; }
         .status-badge.delivered { background: #d4edda; color: #155724; }
         .status-badge.rejected, .status-badge.cancelled { background: #f8d7da; color: #721c24; }
+
+        /* ===== LIVE LOCATION INDICATOR ===== */
+        .live-loc-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 20px; padding: 2px 8px;
+            font-size: 0.72em; font-weight: 700;
+            margin-left: 6px; vertical-align: middle;
+            animation: livePulse 2s ease-in-out infinite;
+        }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff3b3b; display: inline-block; }
+        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* ===== MY ORDERS BUTTON ===== */
+        .my-orders-fab {
+            position: fixed; bottom: 80px; right: 16px;
+            background: white; border: none;
+            border-radius: 50px; padding: 10px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+            cursor: pointer; z-index: 900;
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.85em; font-weight: 700; color: var(--primary-color);
+            transition: transform 0.2s;
+        }
+        .my-orders-fab:active { transform: scale(0.96); }
+
+        /* ===== MY ORDERS PANEL ===== */
+        .my-orders-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 1500; display: none; align-items: flex-end;
+        }
+        .my-orders-overlay.active { display: flex; }
+        .my-orders-sheet {
+            background: #f5f6fa; width: 100%; border-radius: 24px 24px 0 0;
+            max-height: 80vh; display: flex; flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        .orders-sheet-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white; padding: 18px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-radius: 24px 24px 0 0;
+        }
+        .orders-sheet-header h3 { font-size: 1.1em; }
+        .close-sheet-btn {
+            background: rgba(255,255,255,0.25); border: none; color: white;
+            border-radius: 50%; width: 32px; height: 32px;
+            font-size: 18px; cursor: pointer; line-height: 1;
+        }
+        .orders-sheet-body { overflow-y: auto; padding: 16px; flex: 1; }
+        .order-list-item {
+            background: white; border-radius: 14px; padding: 14px 16px;
+            margin-bottom: 10px; display: flex; align-items: center;
+            gap: 12px; cursor: pointer; box-shadow: var(--shadow-light);
+            transition: transform 0.15s;
+        }
+        .order-list-item:active { transform: scale(0.98); }
+        .order-list-icon { font-size: 28px; flex-shrink: 0; }
+        .order-list-info { flex: 1; }
+        .order-list-num { font-weight: 700; font-size: 0.9em; color: var(--text-dark); }
+        .order-list-sub { font-size: 0.78em; color: var(--text-light); margin-top: 2px; }
+        .order-list-status { font-size: 0.75em; font-weight: 700; }
+        .order-list-status.pending { color: #856404; }
+        .order-list-status.confirmed,.order-list-status.preparing { color: #004085; }
+        .order-list-status.out_for_delivery { color: #0c5460; }
+        .order-list-status.delivered { color: #155724; }
+        .order-list-status.rejected,.order-list-status.cancelled { color: #721c24; }
+        .orders-empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        .orders-loading { text-align: center; padding: 30px; color: var(--text-light); }
     </style>
 </head>
 <body>
@@ -1287,6 +1357,24 @@
                 <div class="loading">
                     <div class="loading-spinner"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Orders FAB -->
+    <button class="my-orders-fab" id="myOrdersFab" onclick="openMyOrders()" style="display:none">
+        📦 My Orders
+    </button>
+
+    <!-- My Orders Panel -->
+    <div class="my-orders-overlay" id="myOrdersOverlay" onclick="closeMyOrders(event)">
+        <div class="my-orders-sheet">
+            <div class="orders-sheet-header">
+                <h3>📦 My Orders</h3>
+                <button class="close-sheet-btn" onclick="closeMyOrders()">×</button>
+            </div>
+            <div class="orders-sheet-body" id="ordersSheetBody">
+                <div class="orders-loading">Loading your orders...</div>
             </div>
         </div>
     </div>
@@ -1465,13 +1553,52 @@
             });
         }
 
+        // Get Telegram user ID once
+        const tgUser = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe)
+            ? window.Telegram.WebApp.initDataUnsafe.user
+            : null;
+        const tgUserId = tgUser ? String(tgUser.id) : null;
+
         // Load content on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadRestaurants();
             loadMenuItems();
             setupAnimations();
-            requestUserLocation();
+            initLocation();
+            // Show My Orders button if we have a Telegram user
+            if (tgUserId) {
+                document.getElementById('myOrdersFab').style.display = 'flex';
+            }
         });
+
+        // ===== INIT LOCATION — check bot live location first, then GPS =====
+        async function initLocation() {
+            // 1. Check if customer shared a live location in the bot chat
+            if (tgUserId) {
+                try {
+                    const resp = await fetch('/api/customer-location/' + tgUserId);
+                    const data = await resp.json();
+                    if (data.success && data.location) {
+                        const loc = data.location;
+                        if (loc.is_live) {
+                            // Live Telegram location is active — use it and show indicator
+                            customerLat = loc.lat;
+                            customerLng = loc.lng;
+                            await reverseGeocodeAndSet(loc.lat, loc.lng, true);
+                            return; // don't need browser GPS
+                        } else {
+                            // One-time location from bot — use as fallback
+                            customerLat = loc.lat;
+                            customerLng = loc.lng;
+                            await reverseGeocodeAndSet(loc.lat, loc.lng, false);
+                            return;
+                        }
+                    }
+                } catch(e) { /* fall through to browser GPS */ }
+            }
+            // 2. Fall through to browser/Telegram WebApp GPS
+            requestUserLocation();
+        }
 
         // ===== LOCATION DETECTION =====
         function requestUserLocation() {
@@ -1516,6 +1643,12 @@
         async function setCustomerLocation(lat, lng) {
             customerLat = lat;
             customerLng = lng;
+            await reverseGeocodeAndSet(lat, lng, false);
+        }
+
+        async function reverseGeocodeAndSet(lat, lng, isLive) {
+            customerLat = lat;
+            customerLng = lng;
             try {
                 const resp = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
@@ -1527,16 +1660,71 @@
                               addr.city_district || addr.town || addr.city ||
                               addr.county || 'Your location';
                 customerAddressText = geo.display_name || label;
-                setLocationName(label);
+                setLocationName(label, isLive);
             } catch(e) {
-                setLocationName('Your location');
                 customerAddressText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                setLocationName('Your location', isLive);
             }
         }
 
-        function setLocationName(name) {
+        function setLocationName(name, isLive) {
             const el = document.getElementById('locationName');
-            if (el) el.textContent = name;
+            if (!el) return;
+            if (isLive) {
+                el.innerHTML = `${name}<span class="live-loc-badge"><span class="live-dot"></span> LIVE</span>`;
+            } else {
+                el.textContent = name;
+            }
+        }
+
+        // ===== MY ORDERS =====
+        function openMyOrders() {
+            document.getElementById('myOrdersOverlay').classList.add('active');
+            loadMyOrders();
+        }
+
+        function closeMyOrders(e) {
+            if (e && e.target !== document.getElementById('myOrdersOverlay') && e.type === 'click') return;
+            document.getElementById('myOrdersOverlay').classList.remove('active');
+        }
+
+        async function loadMyOrders() {
+            const body = document.getElementById('ordersSheetBody');
+            body.innerHTML = '<div class="orders-loading">⏳ Loading your orders...</div>';
+            if (!tgUserId) {
+                body.innerHTML = '<div class="orders-empty">Open this app through the Telegram bot to see your orders.</div>';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/customer/orders/' + tgUserId);
+                const data = await resp.json();
+                if (!data.success || !data.orders.length) {
+                    body.innerHTML = '<div class="orders-empty">🛒 No orders yet.<br>Place your first order now!</div>';
+                    return;
+                }
+                const statusEmoji = { pending:'⏳', confirmed:'✅', preparing:'👨‍🍳', ready:'🔔', out_for_delivery:'🚗', delivered:'🎉', cancelled:'❌', rejected:'❌' };
+                body.innerHTML = data.orders.map(o => {
+                    const emoji = statusEmoji[o.status] || '📦';
+                    const statusLabel = (o.status || 'pending').replace(/_/g, ' ');
+                    const date = new Date(o.created_at).toLocaleDateString('en-ET', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+                    return `
+                        <div class="order-list-item" onclick="openOrderFromList('${o.id}')">
+                            <div class="order-list-icon">${emoji}</div>
+                            <div class="order-list-info">
+                                <div class="order-list-num">#${(o.order_number || o.id).slice(-8).toUpperCase()}</div>
+                                <div class="order-list-sub">${Math.round(o.total_amount || 0)} ETB · ${date}</div>
+                            </div>
+                            <div class="order-list-status ${o.status}">${statusLabel}</div>
+                        </div>`;
+                }).join('');
+            } catch(e) {
+                body.innerHTML = '<div class="orders-empty">❌ Failed to load orders. Please try again.</div>';
+            }
+        }
+
+        function openOrderFromList(orderId) {
+            document.getElementById('myOrdersOverlay').classList.remove('active');
+            showOrderTracking(orderId);
         }
 
         // Setup animations

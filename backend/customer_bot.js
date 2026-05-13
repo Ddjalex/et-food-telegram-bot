@@ -104,6 +104,98 @@ bot.onText(/\/help/, async (msg) => {
     );
 });
 
+// ===== LIVE LOCATION HANDLING =====
+
+async function saveCustomerLocation(telegramUserId, lat, lng, livePeriod) {
+    try {
+        const expiresAt = livePeriod
+            ? new Date(Date.now() + livePeriod * 1000)
+            : new Date(Date.now() + 300 * 1000); // static: keep for 5 min
+        const existing = await store.findOne('customer_live_locations', { telegram_user_id: String(telegramUserId) });
+        if (existing) {
+            await store.updateOne('customer_live_locations',
+                { telegram_user_id: String(telegramUserId) },
+                { lat, lng, live_period: livePeriod || 0, expires_at: expiresAt, updated_at: new Date() }
+            );
+        } else {
+            const { query } = require('./db');
+            await query(
+                `INSERT INTO customer_live_locations (telegram_user_id, lat, lng, live_period, expires_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, NOW())
+                 ON CONFLICT (telegram_user_id) DO UPDATE
+                 SET lat=$2, lng=$3, live_period=$4, expires_at=$5, updated_at=NOW()`,
+                [String(telegramUserId), lat, lng, livePeriod || 0, expiresAt]
+            );
+        }
+    } catch (e) {
+        console.error('Error saving customer location:', e.message);
+    }
+}
+
+// Handle location messages (both one-time and live)
+bot.on('message', async (msg) => {
+    if (!msg.location) return;
+    const chatId = msg.chat.id;
+    const telegramUserId = String(msg.from.id);
+    const { latitude, longitude, live_period } = msg.location;
+    await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
+
+    if (live_period) {
+        // Live location
+        await bot.sendMessage(chatId,
+            `🔴 *Live Location Active!*\n\n` +
+            `Your live location is now being tracked and will be used for your deliveries.\n` +
+            `📍 Lat: ${latitude.toFixed(5)}, Lng: ${longitude.toFixed(5)}\n\n` +
+            `_Location updates automatically while you share it._\n\n` +
+            `Tap below to open the menu and order:`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '🍔 Open Menu & Order', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            }
+        );
+    } else {
+        // One-time location
+        await bot.sendMessage(chatId,
+            `📍 *Location Saved!*\n\nYour location has been saved for your next order.\n\nTap below to order:`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '🍔 Open Menu & Order', web_app: { url: WEBAPP_URL } }
+                    ]]
+                }
+            }
+        );
+    }
+});
+
+// Handle live location updates (Telegram sends edited_message when location changes)
+bot.on('edited_message', async (msg) => {
+    if (!msg.location) return;
+    const telegramUserId = String(msg.from.id);
+    const { latitude, longitude, live_period } = msg.location;
+    await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
+    console.log(`Customer ${telegramUserId} live location updated: ${latitude}, ${longitude}`);
+});
+
+// /location command — ask user to share location
+bot.onText(/\/location/, async (msg) => {
+    const chatId = msg.chat.id;
+    await bot.sendMessage(chatId,
+        `📍 *Share Your Location*\n\n` +
+        `To get faster and more accurate deliveries, share your location:\n\n` +
+        `1️⃣ Tap the 📎 (paperclip) button\n` +
+        `2️⃣ Choose *Location*\n` +
+        `3️⃣ Tap *Share Live Location* for real-time tracking 🔴\n\n` +
+        `_Your location is only used for delivery purposes._`,
+        { parse_mode: 'Markdown' }
+    );
+});
+
 bot.on('polling_error', (err) => console.error('Customer bot polling error:', err.message));
 
 module.exports = bot;

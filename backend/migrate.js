@@ -145,6 +145,17 @@ async function createTables() {
     await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_id UUID`);
 
     await query(`
+        CREATE TABLE IF NOT EXISTS customer_live_locations (
+            telegram_user_id VARCHAR(100) PRIMARY KEY,
+            lat DECIMAL(10,8),
+            lng DECIMAL(11,8),
+            live_period INTEGER,
+            expires_at TIMESTAMPTZ,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    await query(`
         CREATE TABLE IF NOT EXISTS audit_logs (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             admin_id VARCHAR(100),

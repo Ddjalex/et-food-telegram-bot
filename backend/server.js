@@ -1000,6 +1000,48 @@ app.get('/driver-panel', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/enhanced_driver_panel.html'));
 });
 
+// ===== CUSTOMER LIVE LOCATION API =====
+
+app.get('/api/customer-location/:telegramId', async (req, res) => {
+    try {
+        const { query: dbQuery } = require('./db');
+        const result = await dbQuery(
+            `SELECT * FROM customer_live_locations WHERE telegram_user_id = $1`,
+            [String(req.params.telegramId)]
+        );
+        const row = result.rows[0];
+        if (!row) return res.json({ success: true, location: null });
+        const isExpired = row.expires_at && new Date(row.expires_at) < new Date();
+        if (isExpired) return res.json({ success: true, location: null, expired: true });
+        const isLive = row.live_period > 0;
+        res.json({
+            success: true,
+            location: {
+                lat: parseFloat(row.lat),
+                lng: parseFloat(row.lng),
+                is_live: isLive,
+                live_period: row.live_period,
+                updated_at: row.updated_at,
+                expires_at: row.expires_at
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch customer location' });
+    }
+});
+
+app.get('/api/customer/orders/:telegramId', async (req, res) => {
+    try {
+        const orders = await store.findMany('orders', { telegram_user_id: String(req.params.telegramId) }, 'created_at');
+        const sorted = orders.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        res.json({ success: true, orders: sorted.slice(0, 20) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch customer orders' });
+    }
+});
+
 app.post('/api/driver/location', async (req, res) => {
     try {
         const { driver_id, lat, lng } = req.body;

@@ -9,7 +9,8 @@ const TABLES = {
     admin_users: 'admin_users',
     payment_transactions: 'payment_transactions',
     driver_documents: 'driver_documents',
-    audit_logs: 'audit_logs'
+    audit_logs: 'audit_logs',
+    customer_live_locations: 'customer_live_locations'
 };
 
 function buildWhere(filter) {
