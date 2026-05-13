@@ -146,6 +146,114 @@
             color: var(--text-light);
         }
 
+        /* All Restaurants grid section */
+        .all-restaurants-section {
+            padding: 16px 20px 4px;
+        }
+
+        .all-restaurants-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .all-restaurant-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            border: 2px solid transparent;
+        }
+
+        .all-restaurant-card:active,
+        .all-restaurant-card.selected {
+            transform: scale(0.98);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 18px rgba(255,107,53,0.18);
+        }
+
+        .all-restaurant-card-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .all-restaurant-card-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .all-restaurant-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .all-restaurant-card-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .all-restaurant-card-desc {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .all-restaurant-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .all-restaurant-card-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .badge-open {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-closed {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .all-restaurant-card-fee {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        .all-restaurant-card-arrow {
+            color: #ccc;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
         /* Nearby Restaurants — compact circle style */
         .restaurants-section {
             padding: 16px 20px 8px;
@@ -1394,6 +1502,16 @@
             </div>
         </div>
 
+        <!-- All Restaurants -->
+        <div class="all-restaurants-section">
+            <h2 class="section-title">All Restaurants</h2>
+            <div class="all-restaurants-grid" id="allRestaurantsContainer">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Nearby Restaurants -->
         <div class="restaurants-section">
             <h2 class="section-title">Nearby Restaurants</h2>
@@ -1994,6 +2112,7 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 restaurants = data.restaurants || [];
+                displayAllRestaurants();
                 displayRestaurants();
                 
                 // Select first restaurant by default
@@ -2044,13 +2163,67 @@
             });
         }
 
+        // Display all restaurants as a vertical list
+        function displayAllRestaurants() {
+            const container = document.getElementById('allRestaurantsContainer');
+            if (!container) return;
+
+            if (restaurants.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants available</div></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            restaurants.forEach((restaurant, index) => {
+                const card = document.createElement('div');
+                card.className = 'all-restaurant-card fade-in';
+                card.style.animationDelay = `${index * 0.08}s`;
+                card.dataset.restaurantId = restaurant.id;
+                card.onclick = () => selectRestaurant(restaurant.id);
+
+                const feeText = restaurant.delivery_fee > 0
+                    ? `Delivery: ${parseFloat(restaurant.delivery_fee).toFixed(0)} ETB`
+                    : 'Free delivery';
+
+                const distanceText = (restaurant.distance_km !== null && restaurant.distance_km !== undefined)
+                    ? ` · ${restaurant.distance_km < 1 ? (restaurant.distance_km * 1000).toFixed(0) + 'm' : restaurant.distance_km.toFixed(1) + 'km'}`
+                    : '';
+
+                card.innerHTML = `
+                    <div class="all-restaurant-card-avatar">
+                        ${restaurant.logo_url
+                            ? `<img src="${restaurant.logo_url}" alt="${restaurant.name}">`
+                            : '🍽️'
+                        }
+                    </div>
+                    <div class="all-restaurant-card-info">
+                        <div class="all-restaurant-card-name">${restaurant.name}</div>
+                        <div class="all-restaurant-card-desc">${restaurant.description || 'Delicious food'}</div>
+                        <div class="all-restaurant-card-meta">
+                            <span class="all-restaurant-card-badge ${restaurant.is_active ? 'badge-open' : 'badge-closed'}">
+                                ${restaurant.is_active ? 'Open' : 'Closed'}
+                            </span>
+                            <span class="all-restaurant-card-fee">${feeText}${distanceText}</span>
+                        </div>
+                    </div>
+                    <div class="all-restaurant-card-arrow">›</div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
         // Select restaurant and load its menu
         async function selectRestaurant(restaurantId) {
             currentRestaurantId = restaurantId;
             
-            // Update selected restaurant visual state
+            // Update selected state on both card lists
             document.querySelectorAll('.restaurant-card').forEach(card => {
                 card.classList.remove('selected');
+            });
+            document.querySelectorAll('.all-restaurant-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.restaurantId === restaurantId);
             });
             
             const selectedIndex = restaurants.findIndex(r => r.id === restaurantId);
