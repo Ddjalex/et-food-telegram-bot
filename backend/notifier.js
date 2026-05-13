@@ -234,6 +234,51 @@ async function notifyCustomerOrderDelivered(telegramUserId, order) {
     );
 }
 
+async function notifyCustomerDeliveryPriceConfirmation(telegramUserId, order) {
+    const bot = getCustomerBot();
+    if (!bot || !telegramUserId) return;
+
+    // Build items list
+    let itemsText = '';
+    let foodSubtotal = 0;
+    try {
+        const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        if (Array.isArray(items) && items.length) {
+            itemsText = items.map(i => {
+                const lineTotal = parseFloat(i.price) * parseInt(i.quantity);
+                foodSubtotal += lineTotal;
+                return `  • ${i.name} ×${i.quantity}  —  ${lineTotal.toFixed(0)} ETB`;
+            }).join('\n');
+        }
+    } catch (_) {}
+
+    const driverFee   = parseFloat(order.driver_fee || order.delivery_fee || 0);
+    const distanceKm  = parseFloat(order.driver_distance_km || 0);
+    const total       = parseFloat(order.total_amount || 0);
+
+    let text = `🛵 *Your order has arrived! #${order.order_number}*\n\n`;
+    text += `🍽️ *Order Summary*\n`;
+    if (itemsText) text += `${itemsText}\n\n`;
+    text += `─────────────────────\n`;
+    text += `🛒 Food subtotal:  *${foodSubtotal > 0 ? foodSubtotal.toFixed(0) : (total - driverFee).toFixed(0)} ETB*\n`;
+    if (distanceKm > 0) {
+        text += `📍 Delivery distance:  *${distanceKm.toFixed(1)} km*\n`;
+    }
+    text += `🚗 Delivery fee:  *${driverFee.toFixed(0)} ETB*\n`;
+    text += `─────────────────────\n`;
+    text += `💰 *Total:  ${total.toFixed(0)} ETB*\n\n`;
+    text += `Please confirm that you received your order and the price is correct.`;
+
+    await safeSend(bot, telegramUserId, text, {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '✅ Accept & Confirm Delivery', callback_data: `confirm_delivery:${order.id}` }],
+                [{ text: '📦 View Order Details', callback_data: `order:${order.id}` }]
+            ]
+        }
+    });
+}
+
 async function notifyCustomerOrderCancelled(telegramUserId, order, reason) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
@@ -258,5 +303,6 @@ module.exports = {
     notifyCustomerDriverAssigned,
     notifyCustomerOrderPickedUp,
     notifyCustomerOrderDelivered,
-    notifyCustomerOrderCancelled
+    notifyCustomerOrderCancelled,
+    notifyCustomerDeliveryPriceConfirmation
 };

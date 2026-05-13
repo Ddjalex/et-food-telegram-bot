@@ -914,12 +914,20 @@
                 </div>
             </div>
             
-            <div class="action-buttons">
+            <div class="action-buttons" id="orderActionButtons">
                 <button class="btn-accept" onclick="acceptOrder()">
                     <i class="fas fa-check"></i> ACCEPT
                 </button>
                 <button class="btn-reject" onclick="rejectOrder()">
                     <i class="fas fa-times"></i> REJECT
+                </button>
+            </div>
+            <div class="action-buttons" id="deliveryActionButtons" style="display:none;">
+                <button class="btn-accept" onclick="markDelivered()" style="flex:2;">
+                    <i class="fas fa-flag-checkered"></i> Mark as Delivered
+                </button>
+                <button class="btn-reject" onclick="closeOrder()" style="flex:1;">
+                    <i class="fas fa-times"></i> Close
                 </button>
             </div>
             
@@ -1540,9 +1548,15 @@
             updateMapCustomerPin(cLat, cLng, order.customer_name);
             updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
 
+            // Toggle buttons: out_for_delivery shows Delivered+Close, otherwise Accept+Reject
+            const isActiveDelivery = order.status === 'out_for_delivery';
+            document.getElementById('orderActionButtons').style.display   = isActiveDelivery ? 'none' : 'flex';
+            document.getElementById('deliveryActionButtons').style.display = isActiveDelivery ? 'flex' : 'none';
+            document.getElementById('countdownTimer').style.display        = isActiveDelivery ? 'none' : '';
+
             document.getElementById('orderNotification').style.display = 'block';
             document.getElementById('noOrders').style.display = 'none';
-            startCountdown(60);
+            if (!isActiveDelivery) startCountdown(60);
         }
         
         function showNoOrders() {
@@ -1625,6 +1639,38 @@
             }
         }
         
+        async function markDelivered() {
+            if (!currentOrderId) return;
+            if (!confirm('Mark this order as delivered? The customer will receive a price summary to confirm.')) return;
+
+            try {
+                const response = await fetch(`/api/orders/${currentOrderId}/delivered`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const fee = data.driver_fee ? ` — Driver fee: ${data.driver_fee} ETB` : '';
+                    showSuccess(`✅ Order delivered!${fee} Customer notified.`);
+                    hideOrderNotification();
+                    document.getElementById('liveNavigation').style.display = 'none';
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    showError(err.error || 'Failed to mark as delivered');
+                }
+            } catch (error) {
+                console.error('Error marking delivered:', error);
+                showError('Network error. Please try again.');
+            }
+        }
+
+        function closeOrder() {
+            hideOrderNotification();
+            document.getElementById('liveNavigation').style.display = 'none';
+            showSuccess('Order closed from view.');
+        }
+
         async function rejectOrder() {
             if (!currentOrderId) return;
             

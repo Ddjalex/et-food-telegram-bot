@@ -518,6 +518,44 @@ bot.on('callback_query', async (query) => {
             return sendOrderDetail(chatId, orderId);
         }
 
+        if (data.startsWith('confirm_delivery:')) {
+            const orderId = data.replace('confirm_delivery:', '');
+            try {
+                // Mark order as customer-confirmed
+                const result = await dbQuery(`SELECT * FROM orders WHERE id=$1`, [orderId]);
+                const order = result.rows[0];
+                if (!order) {
+                    return bot.sendMessage(chatId, '❌ Order not found.');
+                }
+                // Remove the confirmation buttons from the original message
+                try {
+                    await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+                        chat_id: chatId,
+                        message_id: query.message.message_id
+                    });
+                } catch (_) {}
+
+                await bot.sendMessage(chatId,
+                    `🎉 *Delivery Confirmed! #${order.order_number}*\n\n` +
+                    `Thank you for confirming your order.\n` +
+                    `We hope you enjoy your meal! 🍽️\n\n` +
+                    `Come back soon to ET-FOOD! 🙏`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '🍔 Order Again', web_app: { url: WEBAPP_URL } }
+                            ]]
+                        }
+                    }
+                );
+            } catch (e) {
+                console.error('confirm_delivery error:', e.message);
+                bot.sendMessage(chatId, '❌ Failed to confirm delivery. Please try again.');
+            }
+            return;
+        }
+
     } catch (e) {
         console.error('Callback query error:', e.message);
     }

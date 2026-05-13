@@ -13,7 +13,7 @@ const {
     notifyCustomerKitchenAccepted, notifyCustomerKitchenRejected,
     notifyCustomerPaymentVerified, notifyCustomerDriverAssigned,
     notifyCustomerOrderPickedUp, notifyCustomerOrderDelivered,
-    notifyCustomerOrderCancelled
+    notifyCustomerOrderCancelled, notifyCustomerDeliveryPriceConfirmation
 } = require('./notifier');
 const { dispatchOrderToDrivers } = require('./driver_assignment');
 
@@ -380,6 +380,63 @@ app.patch('/api/orders/:id', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order' });
+    }
+});
+
+// Driver marks order as delivered — calculates fee and sends customer price confirmation
+app.post('/api/orders/:id/delivered', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+
+        // Calculate driver fee: distance × price_per_km
+        let driverFee = parseFloat(order.driver_fee || order.delivery_fee || 0);
+        let distanceKm = parseFloat(order.driver_distance_km || 0);
+
+        try {
+            const rateRow = await query(`SELECT value FROM system_settings WHERE key = 'price_per_km'`);
+            const pricePerKm = rateRow.rows[0] ? parseFloat(rateRow.rows[0].value) : 10;
+            const restaurant = order.restaurant_id
+                ? await store.findById('restaurants', order.restaurant_id).catch(() => null)
+                : null;
+            const restLat = restaurant ? parseFloat(restaurant.lat) : null;
+            const restLng = restaurant ? parseFloat(restaurant.lng) : null;
+            const custLat = order.location_lat ? parseFloat(order.location_lat) : null;
+            const custLng = order.location_lng ? parseFloat(order.location_lng) : null;
+
+            if (restLat && restLng && custLat && custLng) {
+                const calcDist = distanceKm(restLat, restLng, custLat, custLng);
+                distanceKm = Math.round(calcDist * 10) / 10;
+                driverFee  = Math.round(calcDist * pricePerKm * 10) / 10;
+            }
+        } catch (feeErr) {
+            console.error('Driver fee calc error:', feeErr.message);
+        }
+
+        // Update order: mark delivered, store calculated fee
+        await store.updateById('orders', order.id, {
+            status: 'delivered',
+            driver_fee: driverFee,
+            driver_distance_km: distanceKm
+        });
+
+        const updated = await store.findById('orders', order.id);
+        res.json({ success: true, order: updated, driver_fee: driverFee, distance_km: distanceKm });
+
+        // Send customer a detailed price breakdown with Accept button
+        if (updated.telegram_user_id) {
+            notifyCustomerDeliveryPriceConfirmation(updated.telegram_user_id, updated)
+                .catch(e => console.error('delivery price notification error:', e.message));
+        }
+
+        // Mark driver as available again
+        if (order.driver_id) {
+            store.updateById('drivers', order.driver_id, { is_available: true, is_active: true })
+                .catch(e => console.error('driver availability reset error:', e.message));
+        }
+    } catch (e) {
+        console.error('Delivered endpoint error:', e);
+        res.status(500).json({ success: false, error: 'Failed to mark order as delivered' });
     }
 });
 
