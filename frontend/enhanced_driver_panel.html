@@ -1494,9 +1494,20 @@
                     const data = await response.json();
                     
                     if (data.orders && data.orders.length > 0) {
-                        const pendingOrder = data.orders.find(order => order.status === 'pending');
-                        if (pendingOrder) {
-                            showOrderNotification(pendingOrder);
+                        // Look for orders confirmed by kitchen and awaiting driver pickup
+                        const newOrder = data.orders.find(order =>
+                            (order.status === 'kitchen_confirmed' || order.status === 'ready') &&
+                            (!order.driver_id || order.driver_id === data.driver_id)
+                        );
+                        // Also look for the driver's active delivery
+                        const activeOrder = data.orders.find(order =>
+                            order.driver_id === data.driver_id &&
+                            order.status === 'out_for_delivery'
+                        );
+                        if (activeOrder) {
+                            showOrderNotification(activeOrder);
+                        } else if (newOrder) {
+                            showOrderNotification(newOrder);
                         } else {
                             showNoOrders();
                         }

@@ -1217,6 +1217,40 @@ app.get('/api/kitchen/menu-items', requireKitchen, async (req, res) => {
     }
 });
 
+// Kitchen confirm availability — "Available - Send Payment" / "Unavailable" buttons
+app.post('/api/kitchen/confirm-availability/:id', requireKitchen, async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        const { available, reason } = req.body;
+
+        if (available) {
+            await store.updateById('orders', req.params.id, { status: 'kitchen_confirmed' });
+            const updated = await store.findById('orders', req.params.id);
+            res.json({ success: true, message: 'Order confirmed! Notifying nearby drivers.' });
+
+            // Notify customer
+            if (updated.telegram_user_id) {
+                notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify customer error:', e.message));
+            }
+            // Dispatch to nearby drivers
+            dispatchOrderToDrivers(updated).catch(e => console.error('[DriverAssignment] dispatch error:', e.message));
+        } else {
+            const cancelReason = reason || 'Item unavailable';
+            await store.updateById('orders', req.params.id, { status: 'cancelled', rejection_reason: cancelReason });
+            const updated = await store.findById('orders', req.params.id);
+            res.json({ success: true, message: 'Order marked as unavailable.' });
+
+            if (updated.telegram_user_id) {
+                notifyCustomerKitchenRejected(updated.telegram_user_id, updated, cancelReason).catch(e => console.error('notify customer error:', e.message));
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to process availability' });
+    }
+});
+
 app.patch('/api/kitchen/menu-items/:id/availability', requireKitchen, async (req, res) => {
     try {
         const item = await store.findById('menu_items', req.params.id);
@@ -1665,7 +1699,10 @@ app.get('/api/drivers/telegram/:telegramId/orders', async (req, res) => {
         const allOrders = await store.findMany('orders', {}, 'created_at');
         const driverOrders = allOrders.filter(o =>
             o.driver_id === driver.id ||
-            ['out_for_delivery', 'ready'].includes(o.status)
+            // Show kitchen_confirmed orders (awaiting driver pickup) to available drivers
+            (o.status === 'kitchen_confirmed' && !o.driver_id && driver.is_available && driver.is_approved) ||
+            o.status === 'out_for_delivery' ||
+            o.status === 'ready'
         );
         res.json({ success: true, orders: driverOrders, driver_id: driver.id });
     } catch (e) {
