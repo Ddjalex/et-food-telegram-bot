@@ -30,10 +30,21 @@ task = "shell.exec"
 args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 waitForPort = 5000
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [agent]
-integrations = ["python_log_in_with_replit==1.0.0", "flask_stripe==1.0.0", "python_database==1.0.0"]
+integrations = ["python_log_in_with_replit:1.0.0", "flask_stripe:1.0.0", "python_database:1.0.0"]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+
+[userenv]
+
+[userenv.shared]
+FLASK_ENV = "production"
+FLASK_DEBUG = "false"
+UPLOAD_FOLDER = "static/uploads"
