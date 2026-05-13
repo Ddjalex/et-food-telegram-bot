@@ -836,6 +836,12 @@ function editRestaurant(restaurantId) {
             if (!data.success) return showAlert('error', 'Failed to load restaurant data');
             const r = data.restaurants.find(x => x.id == restaurantId);
             if (!r) return showAlert('error', 'Restaurant not found');
+            const existingLat = r.lat || '';
+            const existingLng = r.lng || '';
+            const existingLocationUrl = r.location_url || '';
+            const coordsHint = existingLat && existingLng
+                ? `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Current: ${parseFloat(existingLat).toFixed(6)}, ${parseFloat(existingLng).toFixed(6)}</span>`
+                : '<span class="text-muted">No coordinates saved yet.</span>';
             const modalHTML = `
                 <div class="modal fade" id="editRestaurantModal" tabindex="-1">
                     <div class="modal-dialog modal-lg">
@@ -862,6 +868,23 @@ function editRestaurant(restaurantId) {
                                         <div class="col-12 mb-3">
                                             <label class="form-label">Description</label>
                                             <textarea class="form-control" name="description" rows="2">${r.description || ''}</textarea>
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">
+                                                <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                                Location (Google Maps URL)
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="url" class="form-control" name="location_url" id="editLocationUrlInput"
+                                                    placeholder="Paste Google Maps link here…" value="${existingLocationUrl}">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="parseEditLocationUrl()">
+                                                    <i class="fas fa-crosshairs"></i> Extract
+                                                </button>
+                                            </div>
+                                            <div class="mt-1" id="editLocationStatus">${coordsHint}</div>
+                                            <input type="hidden" name="lat" id="editHiddenLat" value="${existingLat}">
+                                            <input type="hidden" name="lng" id="editHiddenLng" value="${existingLng}">
+                                            <small class="text-muted">Paste a Google Maps URL and click Extract to update coordinates.</small>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label">Delivery Time</label>
@@ -902,12 +925,46 @@ function editRestaurant(restaurantId) {
         .catch(() => showAlert('error', 'Failed to load restaurant'));
 }
 
+async function parseEditLocationUrl() {
+    const urlInput = document.getElementById('editLocationUrlInput');
+    const statusEl = document.getElementById('editLocationStatus');
+    const url = urlInput ? urlInput.value.trim() : '';
+    if (!url) {
+        statusEl.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Please paste a Google Maps URL first.</span>';
+        return;
+    }
+    statusEl.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Extracting coordinates…</span>';
+    try {
+        const resp = await fetch('/api/restaurants/parse-location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('editHiddenLat').value = data.lat;
+            document.getElementById('editHiddenLng').value = data.lng;
+            statusEl.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Coordinates extracted: ${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}</span>`;
+        } else {
+            statusEl.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${data.error}</span>`;
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Network error. Please try again.</span>';
+    }
+}
+
 function submitEditRestaurant(restaurantId) {
     const form = document.getElementById('editRestaurantForm');
     const formData = new FormData(form);
     const data = {};
     formData.forEach((v, k) => { data[k] = v; });
     data.is_active = data.is_active === 'true';
+
+    const latVal = document.getElementById('editHiddenLat') ? document.getElementById('editHiddenLat').value : '';
+    const lngVal = document.getElementById('editHiddenLng') ? document.getElementById('editHiddenLng').value : '';
+    if (latVal) data.lat = latVal;
+    if (lngVal) data.lng = lngVal;
+    if (!data.location_url) data.location_url = null;
 
     if (!data.name || !data.phone || !data.address) {
         return showAlert('error', 'Name, phone and address are required');
