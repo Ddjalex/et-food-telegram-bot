@@ -1135,8 +1135,8 @@
                 }, 500);
             }
 
-            // Auto-refresh orders every 30 s, map driver pin every 10 s
-            setInterval(checkForNewOrders, 30000);
+            // Poll for new orders every 5 s, map driver pin every 10 s
+            setInterval(checkForNewOrders, 5000);
             setInterval(pollDriverLocation, 10000);
 
             // Load uploaded documents list
@@ -1487,7 +1487,7 @@
         
         async function checkForNewOrders() {
             try {
-                if (!driverId || !isOnline || !locationActive) return;
+                if (!driverId || !isOnline) return;
                 
                 const response = await fetch(`/api/drivers/telegram/${driverId}/orders`);
                 if (response.ok) {
