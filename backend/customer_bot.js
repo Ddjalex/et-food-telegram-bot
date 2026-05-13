@@ -1,10 +1,8 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../.env.example') });
-
 const TelegramBot = require('node-telegram-bot-api');
 const store = require('./store');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-if (!BOT_TOKEN) { console.error('BOT_TOKEN missing in .env.example'); process.exit(1); }
+if (!BOT_TOKEN) { console.error('BOT_TOKEN secret is not set'); process.exit(1); }
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
