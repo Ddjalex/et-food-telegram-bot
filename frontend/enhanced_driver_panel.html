@@ -6,6 +6,8 @@
     <title>ET-FOOD - Enhanced Driver Panel</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -574,6 +576,73 @@
             color: #ffffff;
             font-size: 12px;
         }
+
+        /* ── Live Map ── */
+        .live-map-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 18px;
+            padding: 0;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .live-map-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px 10px 16px;
+        }
+        .live-map-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .map-pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            box-shadow: 0 0 0 0 rgba(76,175,80,0.7);
+            animation: mapPulse 1.5s infinite;
+            display: inline-block;
+        }
+        @keyframes mapPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.7); }
+            70%  { box-shadow: 0 0 0 8px rgba(76,175,80,0); }
+            100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+        }
+        .map-last-update {
+            font-size: 11px;
+            color: #b0c4de;
+        }
+        #liveMap {
+            width: 100%;
+            height: 300px;
+            z-index: 1;
+        }
+        .map-legend {
+            display: flex;
+            gap: 14px;
+            padding: 10px 16px 14px 16px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #e0e0e0;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
         
         .order-details {
             background: rgba(255, 255, 255, 0.1);
@@ -674,7 +743,33 @@
                 </button>
             </div>
         </div>
-        
+
+        <!-- Live Map -->
+        <div class="live-map-card">
+            <div class="live-map-header">
+                <div class="live-map-title">
+                    <span class="map-pulse-dot"></span>
+                    Live Delivery Map
+                </div>
+                <span class="map-last-update" id="mapLastUpdate">Waiting for GPS…</span>
+            </div>
+            <div id="liveMap"></div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#2196f3;"></div>
+                    You (Driver)
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#ff6b35;"></div>
+                    Restaurant
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#4caf50;"></div>
+                    Customer
+                </div>
+            </div>
+        </div>
+
         <!-- Order Information -->
         <div id="orderDetails" class="order-details" style="display: none;">
             <div class="order-header">
@@ -893,6 +988,127 @@
         let driverId = null;
         let isOnline = false;
         let locationActive = false;
+
+        // ── Leaflet map state ──
+        let liveMap = null;
+        let driverMarker = null;
+        let restaurantMarker = null;
+        let customerMarker = null;
+        let routeLine = null;
+        let driverLatLng = null;
+        let restaurantLatLng = null;
+        let customerLatLng = null;
+
+        // Addis Ababa default center
+        const DEFAULT_CENTER = [9.0320, 38.7469];
+
+        function makeIcon(color, emoji) {
+            return L.divIcon({
+                className: '',
+                html: `<div style="
+                    background:${color};
+                    border:3px solid #fff;
+                    border-radius:50% 50% 50% 0;
+                    transform:rotate(-45deg);
+                    width:30px;height:30px;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+                    display:flex;align-items:center;justify-content:center;">
+                    <span style="transform:rotate(45deg);font-size:14px;">${emoji}</span>
+                </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -32]
+            });
+        }
+
+        function initMap() {
+            liveMap = L.map('liveMap', { zoomControl: true, attributionControl: false })
+                .setView(DEFAULT_CENTER, 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(liveMap);
+
+            // placeholder driver marker
+            driverMarker = L.marker(DEFAULT_CENTER, { icon: makeIcon('#2196f3', '🚗') })
+                .addTo(liveMap)
+                .bindPopup('<b>You (Driver)</b>');
+        }
+
+        function updateMapDriverPin(lat, lng) {
+            driverLatLng = [lat, lng];
+            if (driverMarker) {
+                driverMarker.setLatLng(driverLatLng);
+            } else {
+                driverMarker = L.marker(driverLatLng, { icon: makeIcon('#2196f3', '🚗') })
+                    .addTo(liveMap)
+                    .bindPopup('<b>You (Driver)</b>');
+            }
+            document.getElementById('mapLastUpdate').textContent =
+                'Updated ' + new Date().toLocaleTimeString();
+            fitMapBounds();
+        }
+
+        function updateMapRestaurantPin(lat, lng, name) {
+            restaurantLatLng = [lat, lng];
+            if (restaurantMarker) {
+                restaurantMarker.setLatLng(restaurantLatLng);
+            } else {
+                restaurantMarker = L.marker(restaurantLatLng, { icon: makeIcon('#ff6b35', '🍽️') })
+                    .addTo(liveMap)
+                    .bindPopup(`<b>Restaurant</b><br>${name || 'ET-FOOD Kitchen'}`);
+            }
+            fitMapBounds();
+        }
+
+        function updateMapCustomerPin(lat, lng, name) {
+            customerLatLng = [lat, lng];
+            if (customerMarker) {
+                customerMarker.setLatLng(customerLatLng);
+            } else {
+                customerMarker = L.marker(customerLatLng, { icon: makeIcon('#4caf50', '📦') })
+                    .addTo(liveMap)
+                    .bindPopup(`<b>Customer</b><br>${name || 'Delivery Location'}`);
+            }
+            fitMapBounds();
+        }
+
+        function fitMapBounds() {
+            const pts = [driverLatLng, restaurantLatLng, customerLatLng].filter(Boolean);
+            if (pts.length === 1) {
+                liveMap.setView(pts[0], 15);
+            } else if (pts.length > 1) {
+                liveMap.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 16 });
+            }
+            drawRoute();
+        }
+
+        function drawRoute() {
+            if (routeLine) { liveMap.removeLayer(routeLine); routeLine = null; }
+            const pts = [driverLatLng, restaurantLatLng, customerLatLng].filter(Boolean);
+            if (pts.length >= 2) {
+                routeLine = L.polyline(pts, {
+                    color: '#fff',
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: '8 6'
+                }).addTo(liveMap);
+            }
+        }
+
+        // Poll server for latest driver GPS every 10 s (keeps map live even when tab is in bg)
+        async function pollDriverLocation() {
+            if (!driverId) return;
+            try {
+                const res = await fetch(`/api/drivers/telegram/${driverId}/status`);
+                if (res.ok) {
+                    const d = await res.json();
+                    if (d.current_lat && d.current_lng) {
+                        updateMapDriverPin(parseFloat(d.current_lat), parseFloat(d.current_lng));
+                    }
+                }
+            } catch (_) {}
+        }
         
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -902,6 +1118,7 @@
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
+            initMap();
             initializeDriverPanel();
             checkDriverStatus();
             
@@ -917,8 +1134,9 @@
                 }, 500);
             }
 
-            // Auto-refresh every 30 seconds
+            // Auto-refresh orders every 30 s, map driver pin every 10 s
             setInterval(checkForNewOrders, 30000);
+            setInterval(pollDriverLocation, 10000);
 
             // Load uploaded documents list
             if (driverId) loadUploadedDocs();
@@ -968,18 +1186,46 @@
         }
         
         function displayOrderInfo(order) {
-            // Update order information
-            document.getElementById('orderNumber').textContent = order.id;
+            document.getElementById('orderNumber').textContent = order.order_number || order.id;
             document.getElementById('customerName').textContent = order.customer_name;
             document.getElementById('customerPhone').textContent = order.customer_phone;
-            document.getElementById('customerAddress').textContent = order.customer_address;
+            document.getElementById('customerAddress').textContent = order.customer_address || 'Not provided';
             document.getElementById('paymentMethod').textContent = order.payment_method;
             document.getElementById('orderStatus').textContent = order.status;
-            
-            // Store customer coordinates for navigation
+
             window.customerLat = order.location_lat;
             window.customerLng = order.location_lng;
             window.customerPhone = order.customer_phone;
+
+            // Place customer pin on map
+            if (order.location_lat && order.location_lng) {
+                updateMapCustomerPin(
+                    parseFloat(order.location_lat),
+                    parseFloat(order.location_lng),
+                    order.customer_name
+                );
+            }
+
+            // Fetch restaurant and place its pin
+            if (order.restaurant_id) {
+                fetch(`/api/restaurants`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const rest = (data.restaurants || []).find(r => r.id === order.restaurant_id);
+                        if (rest) {
+                            // Restaurants in Addis Ababa — use stored coords or a sensible default
+                            const rLat = parseFloat(rest.lat) || 9.0056;
+                            const rLng = parseFloat(rest.lng) || 38.7638;
+                            updateMapRestaurantPin(rLat, rLng, rest.name);
+                        }
+                    })
+                    .catch(() => {
+                        // Fallback: place restaurant near Addis Ababa center
+                        updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+                    });
+            } else {
+                updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+            }
         }
         
         function showOrderDetails() {
@@ -1056,20 +1302,15 @@
         }
         
         async function sendLocationUpdate(lat, lng) {
+            // Update map immediately on every GPS fix
+            updateMapDriverPin(lat, lng);
             try {
-                const response = await fetch('/api/driver-location', {
+                if (!driverId) return;
+                const response = await fetch(`/api/drivers/telegram/${driverId}/location`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        driver_id: driverId,
-                        latitude: lat,
-                        longitude: lng,
-                        order_id: currentOrderId
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat, lng })
                 });
-                
                 if (response.ok) {
                     console.log('Location updated successfully');
                 }
@@ -1269,24 +1510,27 @@
         
         function showOrderNotification(order) {
             currentOrderId = order.id;
-            
-            // Update order details
-            document.getElementById('orderId').textContent = order.id;
+
+            document.getElementById('orderId').textContent = order.order_number || order.id;
             document.getElementById('customerName').textContent = order.customer_name;
             document.getElementById('customerPhone').textContent = order.customer_phone;
-            document.getElementById('orderAmount').textContent = order.total_amount.toFixed(2) + ' ETB';
+            document.getElementById('orderAmount').textContent = parseFloat(order.total_amount || 0).toFixed(2) + ' ETB';
             document.getElementById('paymentMethod').textContent = order.payment_method;
-            
-            // Calculate distance
-            const distance = calculateDistance(9.145, 40.489658, order.location_lat || 9.165, order.location_lng || 40.510);
+
+            const cLat = parseFloat(order.location_lat) || 9.0056;
+            const cLng = parseFloat(order.location_lng) || 38.7638;
+            const refLat = driverLatLng ? driverLatLng[0] : 9.0320;
+            const refLng = driverLatLng ? driverLatLng[1] : 38.7469;
+            const distance = calculateDistance(refLat, refLng, cLat, cLng);
             document.getElementById('orderDistance').textContent = distance.toFixed(1) + ' km';
-            
-            // Show order notification
+
+            // Pin customer on live map
+            updateMapCustomerPin(cLat, cLng, order.customer_name);
+            updateMapRestaurantPin(9.0056, 38.7638, 'ET-FOOD Kitchen');
+
             document.getElementById('orderNotification').style.display = 'block';
             document.getElementById('noOrders').style.display = 'none';
-            
-            // Start countdown
-            startCountdown(60); // 1 minute
+            startCountdown(60);
         }
         
         function showNoOrders() {
