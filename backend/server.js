@@ -591,6 +591,65 @@ app.delete('/api/super-admin/audit-logs', async (req, res) => {
     }
 });
 
+app.get('/api/super-admin/orders', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const { status, restaurant_id } = req.query;
+        let filter = {};
+        if (status) filter.status = status;
+        if (restaurant_id) filter.restaurant_id = restaurant_id;
+
+        const [orders, restaurants, drivers] = await Promise.all([
+            store.findMany('orders', filter, 'created_at'),
+            store.findMany('restaurants', {}),
+            store.findMany('drivers', {})
+        ]);
+
+        const restMap = {};
+        for (const r of restaurants) restMap[r.id] = r.name;
+        const driverMap = {};
+        for (const d of drivers) driverMap[d.id] = d.name;
+
+        const enriched = orders
+            .map(o => ({
+                ...o,
+                restaurant_name: restMap[o.restaurant_id] || 'Unknown',
+                driver_name: o.driver_id ? (driverMap[o.driver_id] || 'Unknown') : null
+            }))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const stats = {
+            total: enriched.length,
+            pending: enriched.filter(o => o.status === 'pending').length,
+            preparing: enriched.filter(o => ['confirmed', 'preparing', 'kitchen_confirmed', 'ready'].includes(o.status)).length,
+            out_for_delivery: enriched.filter(o => o.status === 'out_for_delivery').length,
+            completed: enriched.filter(o => o.status === 'delivered').length,
+            cancelled: enriched.filter(o => o.status === 'cancelled').length
+        };
+
+        res.json({ success: true, orders: enriched, stats });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch orders' });
+    }
+});
+
+app.patch('/api/super-admin/orders/:id/status', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const { status } = req.body;
+        if (!status) return res.status(400).json({ success: false, error: 'status is required' });
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        await store.updateById('orders', req.params.id, { status });
+        logAudit(req, 'update_order_status', 'order', req.params.id, req.params.id, `Status → ${status}`);
+        res.json({ success: true, message: 'Order status updated' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update order status' });
+    }
+});
+
 app.get('/api/super-admin/drivers/stats', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {

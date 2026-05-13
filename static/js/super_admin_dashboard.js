@@ -499,16 +499,24 @@ function setupTabNavigation() {
                 case 'driver-approval':
                     loadDriverApprovals();
                     break;
+                case 'live-orders':
+                    startLiveOrdersPolling();
+                    break;
                 case 'analytics':
+                    stopLiveOrdersPolling();
                     loadAnalytics();
                     break;
                 case 'activity-log':
+                    stopLiveOrdersPolling();
                     loadAuditLogs();
                     break;
                 case 'overview':
+                    stopLiveOrdersPolling();
                     loadDashboardStats();
                     loadRealTimeStats();
                     break;
+                default:
+                    stopLiveOrdersPolling();
             }
         });
     });
@@ -1816,6 +1824,271 @@ function clearAuditLogs() {
 }
 
 // Utility function to show alerts
+// ============================================================
+// LIVE ORDERS
+// ============================================================
+let liveOrdersInterval = null;
+let allLiveOrders = [];
+let liveOrdersRestaurantsLoaded = false;
+
+function startLiveOrdersPolling() {
+    if (liveOrdersInterval) clearInterval(liveOrdersInterval);
+    loadLiveOrders();
+    loadLiveOrdersRestaurantFilter();
+    liveOrdersInterval = setInterval(loadLiveOrders, 10000);
+}
+
+function stopLiveOrdersPolling() {
+    if (liveOrdersInterval) {
+        clearInterval(liveOrdersInterval);
+        liveOrdersInterval = null;
+    }
+}
+
+function loadLiveOrdersRestaurantFilter() {
+    if (liveOrdersRestaurantsLoaded) return;
+    fetch('/api/super-admin/restaurants')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById('orderRestaurantFilter');
+            if (!sel || !data.success) return;
+            const existing = Array.from(sel.options).map(o => o.value);
+            (data.restaurants || []).forEach(r => {
+                if (!existing.includes(r.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.name;
+                    sel.appendChild(opt);
+                }
+            });
+            liveOrdersRestaurantsLoaded = true;
+        })
+        .catch(() => {});
+}
+
+function loadLiveOrders() {
+    const status = document.getElementById('orderStatusFilter')?.value || '';
+    const restaurant = document.getElementById('orderRestaurantFilter')?.value || '';
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (restaurant) params.append('restaurant_id', restaurant);
+
+    fetch(`/api/super-admin/orders?${params}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const s = data.stats || {};
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? '0'; };
+            setVal('liveOrderTotal', s.total);
+            setVal('liveOrderPending', s.pending);
+            setVal('liveOrderPreparing', s.preparing);
+            setVal('liveOrderDelivery', s.out_for_delivery);
+            setVal('liveOrderCompleted', s.completed);
+            setVal('liveOrderCancelled', s.cancelled);
+
+            allLiveOrders = data.orders || [];
+
+            const activeCount = (s.pending || 0) + (s.preparing || 0) + (s.out_for_delivery || 0);
+            const badge = document.getElementById('liveOrdersBadge');
+            if (badge) {
+                badge.textContent = activeCount;
+                badge.style.display = activeCount > 0 ? '' : 'none';
+            }
+
+            filterLiveOrdersLocal();
+
+            const label = document.getElementById('liveOrdersLastRefresh');
+            if (label) label.textContent = 'Last refreshed: ' + new Date().toLocaleTimeString();
+        })
+        .catch(e => console.error('Error loading live orders:', e));
+}
+
+function filterLiveOrdersLocal() {
+    const search = (document.getElementById('orderSearchInput')?.value || '').toLowerCase();
+    let orders = allLiveOrders;
+    if (search) {
+        orders = orders.filter(o =>
+            (o.customer_name || '').toLowerCase().includes(search) ||
+            (o.order_number || '').toLowerCase().includes(search) ||
+            (o.restaurant_name || '').toLowerCase().includes(search) ||
+            (o.customer_phone || '').toLowerCase().includes(search)
+        );
+    }
+    renderLiveOrders(orders);
+    const label = document.getElementById('liveOrdersCountLabel');
+    if (label) label.textContent = `Showing ${orders.length} of ${allLiveOrders.length} orders`;
+}
+
+function renderLiveOrders(orders) {
+    const tbody = document.getElementById('liveOrdersTable');
+    if (!tbody) return;
+
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>No orders found</td></tr>`;
+        return;
+    }
+
+    const statusConfig = {
+        pending:           { color: 'warning',   label: 'Pending',        live: true  },
+        confirmed:         { color: 'info',       label: 'Confirmed',      live: true  },
+        kitchen_confirmed: { color: 'info',       label: 'In Kitchen',     live: true  },
+        preparing:         { color: 'primary',    label: 'Preparing',      live: true  },
+        ready:             { color: 'success',    label: 'Ready',          live: true  },
+        out_for_delivery:  { color: 'secondary',  label: 'On the Way',     live: true  },
+        delivered:         { color: 'success',    label: 'Delivered',      live: false },
+        cancelled:         { color: 'danger',     label: 'Cancelled',      live: false }
+    };
+
+    tbody.innerHTML = orders.map(order => {
+        const cfg = statusConfig[order.status] || { color: 'secondary', label: order.status, live: false };
+        const items = Array.isArray(order.items) ? order.items : [];
+        const itemSummary = items.length > 0
+            ? items.slice(0, 2).map(i => i.name || i.item_name || '').filter(Boolean).join(', ') +
+              (items.length > 2 ? ` <span class="text-muted">+${items.length - 2}</span>` : '')
+            : '<span class="text-muted">—</span>';
+        const timeAgo = liveOrderTimeAgo(order.created_at);
+        const rowClass = cfg.live ? '' : 'text-muted';
+        const orderId = order.id;
+
+        return `<tr class="${rowClass}" style="cursor:pointer;" onclick="viewLiveOrderDetail('${orderId}')">
+            <td>
+                <div class="fw-semibold" style="font-size:13px;">${order.order_number || order.id.slice(0,8).toUpperCase()}</div>
+                ${cfg.live ? '<span style="font-size:10px;color:#198754;"><i class="fas fa-circle" style="font-size:7px;"></i> Live</span>' : ''}
+            </td>
+            <td>
+                <div class="fw-semibold">${order.customer_name || 'Unknown'}</div>
+                <small class="text-muted">${order.customer_phone || ''}</small>
+            </td>
+            <td><span class="badge bg-light text-dark border" style="font-size:11px;">${order.restaurant_name || '—'}</span></td>
+            <td style="max-width:160px;"><small>${itemSummary}</small></td>
+            <td class="fw-semibold" style="white-space:nowrap;">ETB ${parseFloat(order.total_amount || 0).toLocaleString()}</td>
+            <td><span class="badge bg-${cfg.color}">${cfg.label}</span></td>
+            <td>
+                ${order.driver_name
+                    ? `<div style="font-size:12px;"><i class="fas fa-motorcycle text-primary me-1"></i>${order.driver_name}</div>`
+                    : `<span class="text-muted" style="font-size:12px;">Unassigned</span>`
+                }
+            </td>
+            <td><small class="text-muted">${timeAgo}</small></td>
+            <td onclick="event.stopPropagation()">
+                <button class="btn btn-outline-primary btn-sm px-2 py-1" onclick="viewLiveOrderDetail('${orderId}')" title="View details">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function liveOrderTimeAgo(dateStr) {
+    if (!dateStr) return '—';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ${mins % 60}m ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function viewLiveOrderDetail(orderId) {
+    const order = allLiveOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const statusOptions = ['pending','confirmed','kitchen_confirmed','preparing','ready','out_for_delivery','delivered','cancelled']
+        .map(s => `<option value="${s}"${order.status === s ? ' selected' : ''}>${s.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</option>`)
+        .join('');
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemRows = items.length > 0
+        ? items.map(item => `<tr>
+            <td>${item.name || item.item_name || 'Item'}</td>
+            <td class="text-center">${item.quantity || 1}</td>
+            <td class="text-end fw-semibold">ETB ${parseFloat(item.price || 0).toLocaleString()}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="3" class="text-center text-muted py-2">No item details</td></tr>';
+
+    const payBadgeColor = order.payment_status === 'paid' ? 'success' : 'warning';
+
+    document.getElementById('orderDetailContent').innerHTML = `
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="text-primary mb-3"><i class="fas fa-user me-1"></i>Customer</h6>
+                    <div class="fw-bold">${order.customer_name || '—'}</div>
+                    <div class="text-muted small">${order.customer_phone || 'No phone'}</div>
+                    <div class="mt-2 text-muted small"><i class="fas fa-map-marker-alt me-1"></i>${order.customer_address || 'No address'}</div>
+                    ${order.special_instructions ? `<div class="mt-2 p-2 bg-light rounded small"><i class="fas fa-sticky-note me-1 text-warning"></i>${order.special_instructions}</div>` : ''}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="text-primary mb-3"><i class="fas fa-store me-1"></i>Restaurant & Driver</h6>
+                    <div class="fw-bold">${order.restaurant_name || '—'}</div>
+                    <div class="mt-2">
+                        ${order.driver_name
+                            ? `<span class="badge bg-info text-dark"><i class="fas fa-motorcycle me-1"></i>${order.driver_name}</span>`
+                            : `<span class="badge bg-light text-muted border">No driver assigned</span>`
+                        }
+                    </div>
+                    <div class="mt-2">
+                        <span class="badge bg-${payBadgeColor}">${(order.payment_method||'cash').toUpperCase()} · ${(order.payment_status||'pending').toUpperCase()}</span>
+                    </div>
+                    <div class="mt-2 text-muted small"><i class="fas fa-clock me-1"></i>${order.created_at ? new Date(order.created_at).toLocaleString() : '—'}</div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="border rounded p-3">
+                    <h6 class="text-primary mb-2"><i class="fas fa-utensils me-1"></i>Order Items</h6>
+                    <table class="table table-sm mb-2">
+                        <thead class="table-light"><tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Price</th></tr></thead>
+                        <tbody>${itemRows}</tbody>
+                    </table>
+                    <div class="d-flex justify-content-between fw-bold border-top pt-2">
+                        <span>Subtotal</span><span>ETB ${parseFloat(order.total_amount || 0).toLocaleString()}</span>
+                    </div>
+                    ${parseFloat(order.delivery_fee||0) > 0 ? `<div class="d-flex justify-content-between text-muted small"><span>Delivery Fee</span><span>ETB ${parseFloat(order.delivery_fee).toLocaleString()}</span></div>` : ''}
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="border rounded p-3">
+                    <h6 class="text-primary mb-2"><i class="fas fa-exchange-alt me-1"></i>Update Status</h6>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <select class="form-select form-select-sm" style="width:auto;" id="newLiveOrderStatus">${statusOptions}</select>
+                        <button class="btn btn-primary btn-sm" onclick="updateLiveOrderStatus('${order.id}')">
+                            <i class="fas fa-save me-1"></i>Save Status
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    document.getElementById('orderDetailTitle').innerHTML = `<i class="fas fa-receipt me-2 text-primary"></i>Order #${order.order_number || order.id.slice(0,8).toUpperCase()}`;
+    const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+    modal.show();
+}
+
+function updateLiveOrderStatus(orderId) {
+    const newStatus = document.getElementById('newLiveOrderStatus')?.value;
+    if (!newStatus) return;
+    fetch(`/api/super-admin/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('orderDetailModal'))?.hide();
+            showAlert('success', 'Order status updated successfully');
+            loadLiveOrders();
+        } else {
+            showAlert('error', data.error || 'Failed to update status');
+        }
+    })
+    .catch(() => showAlert('error', 'Failed to update status'));
+}
+
 function showAlert(type, message) {
     const alertHtml = `
         <div class="alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed" 

@@ -308,6 +308,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="#live-orders" data-tab="live-orders">
+                                <i class="fas fa-stream"></i> Live Orders
+                                <span class="badge bg-danger ms-1" id="liveOrdersBadge" style="display:none;font-size:10px;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#analytics" data-tab="analytics">
                                 <i class="fas fa-chart-line"></i> Analytics
                             </a>
@@ -764,6 +770,108 @@
                         </div>
                     </div>
 
+                    <!-- Live Orders Tab -->
+                    <div id="live-orders" class="tab-content">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h4 class="mb-0">
+                                <i class="fas fa-stream me-2 text-primary"></i>Live Orders
+                                <span class="ms-2" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#28a745;animation:livePulse 1.5s infinite;" title="Live"></span>
+                            </h4>
+                            <div class="d-flex gap-2 flex-wrap align-items-center">
+                                <select id="orderStatusFilter" class="form-select form-select-sm" style="width:auto;" onchange="loadLiveOrders(true)">
+                                    <option value="">All Statuses</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="kitchen_confirmed">In Kitchen</option>
+                                    <option value="preparing">Preparing</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="out_for_delivery">Out for Delivery</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                                <select id="orderRestaurantFilter" class="form-select form-select-sm" style="width:auto;" onchange="loadLiveOrders(true)">
+                                    <option value="">All Restaurants</option>
+                                </select>
+                                <input type="text" id="orderSearchInput" class="form-control form-control-sm" style="width:160px;" placeholder="Search customer..." oninput="filterLiveOrdersLocal()">
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadLiveOrders()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stat Cards -->
+                        <div class="row g-3 mb-4" id="liveOrderStats">
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3">
+                                    <div class="fs-3 fw-bold text-dark" id="liveOrderTotal">—</div>
+                                    <div class="small text-muted">Total</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3" style="border-left:4px solid #ffc107;">
+                                    <div class="fs-3 fw-bold text-warning" id="liveOrderPending">—</div>
+                                    <div class="small text-muted">Pending</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3" style="border-left:4px solid #0d6efd;">
+                                    <div class="fs-3 fw-bold text-primary" id="liveOrderPreparing">—</div>
+                                    <div class="small text-muted">Preparing</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3" style="border-left:4px solid #6c757d;">
+                                    <div class="fs-3 fw-bold text-secondary" id="liveOrderDelivery">—</div>
+                                    <div class="small text-muted">On the Way</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3" style="border-left:4px solid #198754;">
+                                    <div class="fs-3 fw-bold text-success" id="liveOrderCompleted">—</div>
+                                    <div class="small text-muted">Delivered</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="stat-card text-center py-3" style="border-left:4px solid #dc3545;">
+                                    <div class="fs-3 fw-bold text-danger" id="liveOrderCancelled">—</div>
+                                    <div class="small text-muted">Cancelled</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Orders Table -->
+                        <div class="stat-card p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" style="font-size:14px;">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Customer</th>
+                                            <th>Restaurant</th>
+                                            <th>Items</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                            <th>Driver</th>
+                                            <th>Time</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="liveOrdersTable">
+                                        <tr>
+                                            <td colspan="9" class="text-center py-5 text-muted">
+                                                <i class="fas fa-spinner fa-spin me-2"></i>Loading orders...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-2 border-top d-flex align-items-center justify-content-between">
+                                <small class="text-muted" id="liveOrdersCountLabel"></small>
+                                <small class="text-muted" id="liveOrdersLastRefresh"></small>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Activity Log Tab -->
                     <div id="activity-log" class="tab-content">
                         <div class="d-flex align-items-center justify-content-between mb-3">
@@ -1142,6 +1250,30 @@
             </div>
         </div>
     </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderDetailTitle"><i class="fas fa-receipt me-2"></i>Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="orderDetailContent">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
