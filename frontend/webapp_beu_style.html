@@ -157,10 +157,26 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 14px;
+            cursor: pointer;
+            user-select: none;
         }
 
         .all-restaurants-header .section-title {
             margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .all-restaurants-toggle-arrow {
+            font-size: 14px;
+            color: var(--primary-color);
+            transition: transform 0.25s ease;
+            display: inline-block;
+        }
+
+        .all-restaurants-toggle-arrow.open {
+            transform: rotate(180deg);
         }
 
         .all-restaurants-count {
@@ -176,10 +192,19 @@
             display: flex;
             flex-direction: row;
             gap: 14px;
+            overflow: hidden;
             overflow-x: auto;
             padding-bottom: 6px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.38s ease, opacity 0.28s ease;
+        }
+
+        .all-restaurants-list.expanded {
+            max-height: 400px;
+            opacity: 1;
         }
 
         .all-restaurants-list::-webkit-scrollbar { display: none; }
@@ -1911,8 +1936,11 @@
 
         <!-- All Restaurants -->
         <div class="all-restaurants-section">
-            <div class="all-restaurants-header">
-                <h2 class="section-title" style="margin-bottom:0">All Restaurants ❤️</h2>
+            <div class="all-restaurants-header" onclick="toggleAllRestaurants()">
+                <h2 class="section-title" style="margin-bottom:0">
+                    All Restaurants ❤️
+                    <span class="all-restaurants-toggle-arrow" id="allRestaurantsArrow">▾</span>
+                </h2>
                 <span class="all-restaurants-count" id="allRestaurantsCount">0</span>
             </div>
             <div class="all-restaurants-list" id="allRestaurantsList"></div>
@@ -2675,6 +2703,15 @@
 
         let isShowingAll = true;
         let allMenuData = [];
+        let _allRestOpen = false;
+
+        function toggleAllRestaurants() {
+            const list  = document.getElementById('allRestaurantsList');
+            const arrow = document.getElementById('allRestaurantsArrow');
+            _allRestOpen = !_allRestOpen;
+            if (list)  list.classList.toggle('expanded', _allRestOpen);
+            if (arrow) arrow.classList.toggle('open', _allRestOpen);
+        }
 
         // Load and display ALL restaurants' menus grouped by restaurant name
         async function loadAllMenus() {
