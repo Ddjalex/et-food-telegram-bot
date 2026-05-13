@@ -1672,11 +1672,28 @@
             });
         }
 
-        // Get Telegram user ID once
+        // Get Telegram user ID — persist to localStorage so it survives page reloads
         const tgUser = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe)
             ? window.Telegram.WebApp.initDataUnsafe.user
             : null;
-        const tgUserId = tgUser ? String(tgUser.id) : null;
+        let tgUserId = tgUser ? String(tgUser.id) : null;
+        if (tgUserId) {
+            try { localStorage.setItem('et_food_tg_user_id', tgUserId); } catch(e) {}
+        } else {
+            try { tgUserId = localStorage.getItem('et_food_tg_user_id') || null; } catch(e) {}
+        }
+
+        // Helpers for local order ID cache (fallback when no tgUserId)
+        function saveOrderIdLocally(orderId) {
+            try {
+                const stored = JSON.parse(localStorage.getItem('et_food_order_ids') || '[]');
+                if (!stored.includes(orderId)) { stored.unshift(orderId); stored.splice(30); }
+                localStorage.setItem('et_food_order_ids', JSON.stringify(stored));
+            } catch(e) {}
+        }
+        function getLocalOrderIds() {
+            try { return JSON.parse(localStorage.getItem('et_food_order_ids') || '[]'); } catch(e) { return []; }
+        }
 
         // Load content on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1836,19 +1853,47 @@
             const body = document.getElementById('ordersSheetBody');
             if (!silent) body.innerHTML = '<div class="orders-loading">⏳ Loading your orders...</div>';
 
-            if (!tgUserId) {
-                body.innerHTML = `<div class="orders-empty">
-                    <div style="font-size:48px;margin-bottom:12px">📱</div>
-                    <strong>Open via Telegram Bot</strong><br><br>
-                    To see your orders, open this app through the ET-FOOD Telegram bot.
-                </div>`;
-                return;
-            }
             try {
-                const resp = await fetch('/api/customer/orders/' + tgUserId);
-                const data = await resp.json();
-                if (!data.success) throw new Error('API error');
-                allMyOrders = data.orders || [];
+                let orders = [];
+                if (tgUserId) {
+                    // Fetch by Telegram user ID (most complete)
+                    const resp = await fetch('/api/customer/orders/' + tgUserId);
+                    const data = await resp.json();
+                    if (!data.success) throw new Error('API error');
+                    orders = data.orders || [];
+                    // Also merge locally-stored order IDs that may not be linked to this tgUserId yet
+                    const localIds = getLocalOrderIds();
+                    if (localIds.length) {
+                        const knownIds = new Set(orders.map(o => o.id));
+                        const extra = localIds.filter(id => !knownIds.has(id));
+                        if (extra.length) {
+                            try {
+                                const r2 = await fetch('/api/customer/orders/by-ids?ids=' + extra.join(','));
+                                const d2 = await r2.json();
+                                if (d2.success) orders = orders.concat(d2.orders || []);
+                            } catch(e2) {}
+                        }
+                    }
+                } else {
+                    // No Telegram ID — use locally-stored order IDs
+                    const localIds = getLocalOrderIds();
+                    if (!localIds.length) {
+                        body.innerHTML = `<div class="orders-empty">
+                            <div style="font-size:48px;margin-bottom:12px">🛒</div>
+                            <strong>No orders yet</strong><br><br>
+                            Place your first order and it will appear here!
+                        </div>`;
+                        return;
+                    }
+                    const resp = await fetch('/api/customer/orders/by-ids?ids=' + localIds.join(','));
+                    const data = await resp.json();
+                    if (!data.success) throw new Error('API error');
+                    orders = data.orders || [];
+                }
+
+                // Sort newest first
+                orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                allMyOrders = orders.slice(0, 20);
                 renderOrdersList(allMyOrders);
                 updateActiveOrdersBadge(allMyOrders);
                 const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
@@ -1913,31 +1958,10 @@
         }
 
         function startActiveOrdersPoller() {
-            if (!tgUserId) return;
-            // Initial badge check
-            fetch('/api/customer/orders/' + tgUserId)
-                .then(r => r.json())
-                .then(data => { if (data.success) updateActiveOrdersBadge(data.orders || []); })
-                .catch(() => {});
+            // Initial badge check (works with tgUserId or localStorage order IDs)
+            loadMyOrders(true);
             // Poll every 15 seconds
-            ordersPollerInterval = setInterval(async () => {
-                if (!tgUserId) return;
-                try {
-                    const resp = await fetch('/api/customer/orders/' + tgUserId);
-                    const data = await resp.json();
-                    if (data.success) {
-                        allMyOrders = data.orders || [];
-                        updateActiveOrdersBadge(allMyOrders);
-                        // If panel is open, silently refresh
-                        if (document.getElementById('myOrdersOverlay').classList.contains('active')) {
-                            renderOrdersList(allMyOrders);
-                            const now = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-                            const hint = document.getElementById('ordersRefreshHint');
-                            if (hint) hint.textContent = `Updated ${now} · Auto-refreshes every 15s`;
-                        }
-                    }
-                } catch(_) {}
-            }, 15000);
+            ordersPollerInterval = setInterval(() => loadMyOrders(true), 15000);
         }
 
         function openOrderFromList(orderId) {
@@ -2429,7 +2453,8 @@
                 total_amount: total,
                 location_lat: customerLat,
                 location_lng: customerLng,
-                restaurant_id: currentRestaurantId
+                restaurant_id: currentRestaurantId,
+                telegram_user_id: tgUserId || null
             };
             
             try {
@@ -2444,6 +2469,9 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // Save order ID locally so My Orders works without Telegram ID
+                    if (result.order_id) saveOrderIdLocally(result.order_id);
+
                     // Hide checkout screen
                     closeCheckout();
 

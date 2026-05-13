@@ -1172,6 +1172,19 @@ app.get('/api/customer-location/:telegramId', async (req, res) => {
     }
 });
 
+// Fetch orders by a list of IDs (for browser / non-Telegram fallback)
+app.get('/api/customer/orders/by-ids', async (req, res) => {
+    try {
+        const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 30);
+        if (!ids.length) return res.json({ success: true, orders: [] });
+        const orders = await Promise.all(ids.map(id => store.findById('orders', id).catch(() => null)));
+        res.json({ success: true, orders: orders.filter(Boolean) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch orders' });
+    }
+});
+
 app.get('/api/customer/orders/:telegramId', async (req, res) => {
     try {
         const orders = await store.findMany('orders', { telegram_user_id: String(req.params.telegramId) }, 'created_at');
