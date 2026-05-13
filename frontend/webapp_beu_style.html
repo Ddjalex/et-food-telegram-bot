@@ -221,6 +221,54 @@
         .dropup-item:last-child { border-bottom: none; }
         .dropup-item:hover, .dropup-item.active { background: #fff4f0; color: var(--primary-color); font-weight: 700; }
 
+        /* Restaurant group headers in product grid */
+        .restaurant-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 4px 8px;
+            margin-top: 8px;
+            border-bottom: 2px solid #ffe0d0;
+        }
+
+        .restaurant-group-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .restaurant-group-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .restaurant-group-rating {
+            font-size: 12px;
+            font-weight: 600;
+            color: #f5a623;
+            background: #fff8ee;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        .restaurant-group-view-btn {
+            background: none;
+            border: 1.5px solid var(--primary-color);
+            border-radius: 14px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary-color);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .restaurant-group-view-btn:hover {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
         .all-restaurants-grid {
             display: flex;
             flex-direction: row;
@@ -1708,15 +1756,10 @@
         <div class="all-restaurants-section">
             <div class="all-restaurants-header">
                 <div class="dropup-wrap" id="allRestaurantsDropupWrap">
-                    <h2 class="section-title all-restaurants-title" onclick="toggleDropup()">
+                    <h2 class="section-title all-restaurants-title" onclick="toggleDropup(event)">
                         All Restaurants <span class="title-arrow" id="titleArrow">▾</span>
                     </h2>
                     <div class="dropup-menu hidden" id="dropupMenu"></div>
-                </div>
-            </div>
-            <div class="all-restaurants-grid" id="allRestaurantsContainer">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
                 </div>
             </div>
         </div>
@@ -2025,7 +2068,6 @@
         // Load content on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadRestaurants();
-            loadMenuItems();
             setupAnimations();
             initLocation();
             startActiveOrdersPoller();
@@ -2324,9 +2366,9 @@
                 displayAllRestaurants();
                 displayRestaurants();
                 
-                // Select first restaurant by default
+                // Default: show all restaurants' menus
                 if (restaurants.length > 0) {
-                    selectRestaurant(restaurants[0].id);
+                    loadAllMenus();
                 }
             } catch (error) {
                 console.error('Error loading restaurants:', error);
@@ -2478,8 +2520,11 @@
 
         // --- Custom dropup logic ---
         let _dropupOpen = false;
+        let isShowingAll = true;
+        let allMenuData = [];
 
-        function toggleDropup() {
+        function toggleDropup(e) {
+            if (e) e.stopPropagation();
             _dropupOpen = !_dropupOpen;
             const menu  = document.getElementById('dropupMenu');
             const arrow = document.getElementById('titleArrow');
@@ -2497,9 +2542,12 @@
 
         function selectFromDropup(restaurantId, restaurantName) {
             closeDropup();
-            selectRestaurant(restaurantId);
-            const card = document.querySelector(`.all-restaurant-card[data-restaurant-id="${restaurantId}"]`);
-            if (card) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 100);
+            if (restaurantId === 'all') {
+                loadAllMenus();
+            } else {
+                isShowingAll = false;
+                selectRestaurant(restaurantId);
+            }
         }
 
         // Close dropup when clicking outside
@@ -2507,80 +2555,85 @@
             if (!e.target.closest('#allRestaurantsDropupWrap') && _dropupOpen) closeDropup();
         });
 
-        // Display all restaurants as a horizontal scroll
+        // Load and display ALL restaurants' menus grouped by restaurant name
+        async function loadAllMenus() {
+            isShowingAll = true;
+            currentRestaurantId = null;
+            document.querySelectorAll('.all-restaurant-card, .restaurant-card').forEach(c => c.classList.remove('selected'));
+            const grid = document.getElementById('productGrid');
+            if (grid) grid.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+            const title = document.getElementById('allRestaurantsDropupWrap');
+            if (title) {
+                const h2 = title.querySelector('.all-restaurants-title');
+                if (h2) { const arrow = h2.querySelector('.title-arrow'); h2.firstChild.textContent = 'All Restaurants '; if(arrow) arrow.id = 'titleArrow'; }
+            }
+            try {
+                allMenuData = await Promise.all(restaurants.map(async r => {
+                    const res = await fetch(`/api/menu?restaurant_id=${r.id}`);
+                    const data = await res.json();
+                    return { restaurant: r, items: data.menu_items || [] };
+                }));
+                displayProducts();
+            } catch(e) {
+                console.error(e);
+                showEmptyState();
+            }
+        }
+
+        // Build a single product card element
+        function buildProductCard(item, index) {
+            const priceETB = Math.round(item.price);
+            const quantity = selectedItems[item.id] || 0;
+            const card = document.createElement('div');
+            card.className = 'product-card slide-up';
+            card.style.animationDelay = `${index * 0.06}s`;
+            card.innerHTML = `
+                <img src="${item.image_url}" alt="${item.name}" class="product-image"
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"280\\" height=\\"140\\" viewBox=\\"0 0 280 140\\"><rect width=\\"280\\" height=\\"140\\" fill=\\"%23f8f9fa\\"/><text x=\\"140\\" y=\\"70\\" text-anchor=\\"middle\\" dy=\\".3em\\" fill=\\"%236c757d\\" font-family=\\"sans-serif\\" font-size=\\"16\\">🍽️</text></svg>'">
+                <div class="product-info">
+                    <div class="product-name">${item.name}</div>
+                    <div class="product-description">${item.description || 'Delicious food item'}</div>
+                    <div class="product-footer">
+                        <div class="product-price">${priceETB} ETB</div>
+                        <div class="product-buttons">
+                            ${quantity > 0 ? `<button class="btn-remove" onclick="updateQuantity('${item.id}', -1)">−</button>` : ''}
+                            <button class="btn-add" onclick="updateQuantity('${item.id}', 1)">
+                                ${quantity > 0 ? quantity : 'ADD'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ${quantity > 0 ? `<div class="quantity-badge">${quantity}</div>` : ''}
+            `;
+            return card;
+        }
+
+        // Populate the dropup menu with restaurant list
         function displayAllRestaurants() {
-            const container = document.getElementById('allRestaurantsContainer');
-            if (!container) return;
-
-            if (restaurants.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants available</div></div>';
-                return;
-            }
-
-            container.innerHTML = '';
-
-            // Populate custom dropup menu
             const dropupMenu = document.getElementById('dropupMenu');
-            if (dropupMenu) {
-                dropupMenu.innerHTML = '';
-                restaurants.forEach(r => {
-                    const item = document.createElement('div');
-                    item.className = 'dropup-item';
-                    item.textContent = r.name;
-                    item.onclick = () => selectFromDropup(r.id, r.name);
-                    dropupMenu.appendChild(item);
-                });
-            }
+            if (!dropupMenu) return;
+            dropupMenu.innerHTML = '';
 
-            restaurants.forEach((restaurant, index) => {
-                const card = document.createElement('div');
-                card.className = 'all-restaurant-card fade-in';
-                card.style.animationDelay = `${index * 0.08}s`;
-                card.dataset.restaurantId = restaurant.id;
-                card.onclick = () => selectRestaurant(restaurant.id);
+            // First item: All Restaurants
+            const allItem = document.createElement('div');
+            allItem.className = 'dropup-item active';
+            allItem.textContent = '🍽️ All Restaurants';
+            allItem.onclick = () => selectFromDropup('all', 'All Restaurants');
+            dropupMenu.appendChild(allItem);
 
-                const feeText = restaurant.delivery_fee > 0
-                    ? `Delivery: ${parseFloat(restaurant.delivery_fee).toFixed(0)} ETB`
-                    : 'Free delivery';
-
-                const distanceText = (restaurant.distance_km !== null && restaurant.distance_km !== undefined)
-                    ? ` · ${restaurant.distance_km < 1 ? (restaurant.distance_km * 1000).toFixed(0) + 'm' : restaurant.distance_km.toFixed(1) + 'km'}`
-                    : '';
-
-                const ratingVal = parseFloat(restaurant.rating) || 0;
-                const starsHtml = buildStarsHtml(ratingVal);
-
-                card.innerHTML = `
-                    <div class="all-restaurant-card-avatar">
-                        ${restaurant.logo_url
-                            ? `<img src="${restaurant.logo_url}" alt="${restaurant.name}">`
-                            : '🍽️'
-                        }
-                    </div>
-                    <div class="all-restaurant-card-info">
-                        <div class="all-restaurant-card-name">${restaurant.name}</div>
-                        <div class="all-restaurant-card-desc">${restaurant.description || 'Delicious food'}</div>
-                        <div class="star-rating-display">
-                            ${starsHtml}
-                            <span class="rating-num">${ratingVal > 0 ? ratingVal.toFixed(1) : 'New'}</span>
-                        </div>
-                        <div class="all-restaurant-card-meta">
-                            <span class="all-restaurant-card-badge ${restaurant.is_active ? 'badge-open' : 'badge-closed'}">
-                                ${restaurant.is_active ? 'Open' : 'Closed'}
-                            </span>
-                            <span class="all-restaurant-card-fee">${feeText}${distanceText}</span>
-                        </div>
-                        <button class="rate-btn" onclick="event.stopPropagation(); openRatingModal('${restaurant.id}', '${restaurant.name.replace(/'/g, "\\'")}')">⭐ Rate</button>
-                    </div>
-                    <div class="all-restaurant-card-arrow">›</div>
-                `;
-
-                container.appendChild(card);
+            restaurants.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'dropup-item';
+                item.textContent = r.name;
+                item.onclick = () => selectFromDropup(r.id, r.name);
+                dropupMenu.appendChild(item);
             });
+
         }
 
         // Select restaurant and load its menu
         async function selectRestaurant(restaurantId) {
+            isShowingAll = false;
             currentRestaurantId = restaurantId;
             
             // Update selected state on both card lists
@@ -2645,15 +2698,40 @@
             `;
         }
 
-        // Display products
+        // Display products (supports both single-restaurant and all-restaurants grouped view)
         function displayProducts() {
             const grid = document.getElementById('productGrid');
-            const filteredItems = currentCategory === 'all' ? 
-                menuItems : 
-                menuItems.filter(item => getCategoryForItem(item) === currentCategory);
-
             grid.innerHTML = '';
-            
+
+            if (isShowingAll) {
+                let anyItems = false;
+                allMenuData.forEach(({ restaurant, items }) => {
+                    const filtered = currentCategory === 'all'
+                        ? items
+                        : items.filter(item => getCategoryForItem(item) === currentCategory);
+                    if (filtered.length === 0) return;
+                    anyItems = true;
+                    const header = document.createElement('div');
+                    header.className = 'restaurant-group-header';
+                    const ratingVal = parseFloat(restaurant.rating) || 0;
+                    header.innerHTML = `
+                        <div class="restaurant-group-info">
+                            <span class="restaurant-group-name">${restaurant.name}</span>
+                            ${ratingVal > 0 ? `<span class="restaurant-group-rating">⭐ ${ratingVal.toFixed(1)}</span>` : ''}
+                        </div>
+                        <button class="restaurant-group-view-btn" onclick="selectFromDropup('${restaurant.id}', '${restaurant.name.replace(/'/g, "\\'")}')">View all ›</button>
+                    `;
+                    grid.appendChild(header);
+                    filtered.forEach((item, i) => grid.appendChild(buildProductCard(item, i)));
+                });
+                if (!anyItems) showEmptyState();
+                return;
+            }
+
+            const filteredItems = currentCategory === 'all'
+                ? menuItems
+                : menuItems.filter(item => getCategoryForItem(item) === currentCategory);
+
             if (filteredItems.length === 0) {
                 showEmptyState();
                 return;
