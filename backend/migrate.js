@@ -140,6 +140,24 @@ async function createTables() {
     `);
 
     await query(`ALTER TABLE drivers ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
+    await query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT false`);
+    await query(`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)`);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            admin_id VARCHAR(100),
+            admin_username VARCHAR(100) NOT NULL,
+            action VARCHAR(100) NOT NULL,
+            target_type VARCHAR(50),
+            target_id VARCHAR(100),
+            target_name VARCHAR(255),
+            details TEXT,
+            ip_address VARCHAR(100),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
 
     console.log('All tables created successfully');
 }

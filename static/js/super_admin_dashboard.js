@@ -502,6 +502,9 @@ function setupTabNavigation() {
                 case 'analytics':
                     loadAnalytics();
                     break;
+                case 'activity-log':
+                    loadAuditLogs();
+                    break;
                 case 'overview':
                     loadDashboardStats();
                     loadRealTimeStats();
@@ -1682,8 +1685,134 @@ function formatDate(dateString) {
 
 // Load analytics (placeholder - implement based on existing functionality)
 function loadAnalytics() {
-    // Implementation will be similar to existing analytics loading
     console.log('Loading analytics...');
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+let auditCurrentOffset = 0;
+const AUDIT_PAGE_SIZE = 50;
+let auditTotal = 0;
+
+function loadAuditLogs(resetPage) {
+    if (resetPage) auditCurrentOffset = 0;
+
+    const action = (document.getElementById('auditActionFilter') || {}).value || '';
+    const targetType = (document.getElementById('auditTypeFilter') || {}).value || '';
+    const params = new URLSearchParams({ limit: AUDIT_PAGE_SIZE, offset: auditCurrentOffset });
+    if (action) params.set('action', action);
+    if (targetType) params.set('target_type', targetType);
+
+    const tbody = document.getElementById('auditLogsTable');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+
+    fetch(`/api/super-admin/audit-logs?${params}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) { showAlert('error', data.error || 'Failed to load audit logs'); return; }
+            auditTotal = data.total;
+            renderAuditLogs(data.logs);
+            updateAuditPagination();
+        })
+        .catch(() => {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load logs</td></tr>';
+        });
+}
+
+function renderAuditLogs(logs) {
+    const tbody = document.getElementById('auditLogsTable');
+    if (!tbody) return;
+
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>No activity recorded yet</td></tr>';
+        return;
+    }
+
+    const actionMeta = {
+        create_admin:        { label: 'Created Admin',       cls: 'bg-success' },
+        edit_admin:          { label: 'Edited Admin',         cls: 'bg-primary' },
+        delete_admin:        { label: 'Deleted Admin',        cls: 'bg-danger' },
+        block_admin:         { label: 'Blocked Admin',        cls: 'bg-warning text-dark' },
+        unblock_admin:       { label: 'Unblocked Admin',      cls: 'bg-info text-dark' },
+        create_restaurant:   { label: 'Created Restaurant',   cls: 'bg-success' },
+        edit_restaurant:     { label: 'Edited Restaurant',    cls: 'bg-primary' },
+        delete_restaurant:   { label: 'Deleted Restaurant',   cls: 'bg-danger' },
+        approve_driver:      { label: 'Approved Driver',      cls: 'bg-success' },
+        reject_driver:       { label: 'Rejected Driver',      cls: 'bg-danger' },
+        delete_driver:       { label: 'Deleted Driver',       cls: 'bg-danger' }
+    };
+
+    const typeIcon = { admin: 'fa-user-shield', restaurant: 'fa-store', driver: 'fa-car' };
+
+    tbody.innerHTML = logs.map(log => {
+        const meta = actionMeta[log.action] || { label: log.action, cls: 'bg-secondary' };
+        const icon = typeIcon[log.target_type] || 'fa-circle';
+        const time = new Date(log.created_at);
+        const timeStr = time.toLocaleString();
+        const timeAgo = getLastUpdateText(log.created_at);
+        return `
+            <tr>
+                <td>
+                    <div class="fw-bold small">${timeAgo}</div>
+                    <small class="text-muted">${timeStr}</small>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-dark text-white me-2" style="width:28px;height:28px;font-size:12px;">
+                            ${(log.admin_username || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <span class="fw-bold small">${log.admin_username || '—'}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${meta.cls}">${meta.label}</span>
+                </td>
+                <td>
+                    ${log.target_type ? `<i class="fas ${icon} me-1 text-muted"></i>` : ''}
+                    <span class="small">${log.target_name || log.target_id || '—'}</span>
+                </td>
+                <td>
+                    <small class="text-muted">${log.details || '—'}</small>
+                </td>
+                <td>
+                    <small class="text-muted">${log.ip_address || '—'}</small>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateAuditPagination() {
+    const pagination = document.getElementById('auditLogsPagination');
+    const countEl = document.getElementById('auditLogsCount');
+    const prevBtn = document.getElementById('auditPrevBtn');
+    const nextBtn = document.getElementById('auditNextBtn');
+
+    if (!pagination) return;
+    pagination.style.display = auditTotal > 0 ? 'flex' : 'none';
+    if (countEl) countEl.textContent = `Showing ${auditCurrentOffset + 1}–${Math.min(auditCurrentOffset + AUDIT_PAGE_SIZE, auditTotal)} of ${auditTotal} entries`;
+    if (prevBtn) prevBtn.disabled = auditCurrentOffset === 0;
+    if (nextBtn) nextBtn.disabled = auditCurrentOffset + AUDIT_PAGE_SIZE >= auditTotal;
+}
+
+function auditLogPage(direction) {
+    auditCurrentOffset = Math.max(0, auditCurrentOffset + direction * AUDIT_PAGE_SIZE);
+    loadAuditLogs();
+}
+
+function clearAuditLogs() {
+    if (!confirm('Are you sure you want to permanently clear all activity logs?\n\nThis cannot be undone.')) return;
+    fetch('/api/super-admin/audit-logs', { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Activity log cleared successfully');
+                loadAuditLogs();
+            } else {
+                showAlert('error', data.error || 'Failed to clear logs');
+            }
+        })
+        .catch(() => showAlert('error', 'Failed to clear audit logs'));
 }
 
 // Utility function to show alerts

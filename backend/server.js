@@ -8,6 +8,23 @@ const store = require('./store');
 const { runMigration } = require('./migrate');
 const { notifyDriverApproved, notifyDriverRejected, notifyCustomerOrderStatus } = require('./notifier');
 
+async function logAudit(req, action, targetType, targetId, targetName, details) {
+    try {
+        await store.insertOne('audit_logs', {
+            admin_id: req.session.admin_id || null,
+            admin_username: req.session.admin_username || 'system',
+            action,
+            target_type: targetType || null,
+            target_id: targetId ? String(targetId) : null,
+            target_name: targetName || null,
+            details: details || null,
+            ip_address: req.ip || req.connection.remoteAddress || null
+        });
+    } catch (e) {
+        console.error('Audit log error:', e.message);
+    }
+}
+
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -342,6 +359,7 @@ app.post('/api/restaurants/super-admin', async (req, res) => {
             is_featured: data.is_featured || false,
             logo_url: data.logo_url || null, cover_image_url: data.cover_image_url || null
         });
+        logAudit(req, 'create_restaurant', 'restaurant', id, data.name);
         res.json({ success: true, message: `Restaurant ${data.name} created successfully`, restaurant_id: id });
     } catch (e) {
         console.error(e);
@@ -355,6 +373,7 @@ app.put('/api/restaurants/super-admin/:id', async (req, res) => {
         const r = await store.findById('restaurants', req.params.id);
         if (!r) return res.status(404).json({ success: false, error: 'Restaurant not found' });
         await store.updateById('restaurants', req.params.id, req.body);
+        logAudit(req, 'edit_restaurant', 'restaurant', r.id, r.name, `Updated fields: ${Object.keys(req.body).join(', ')}`);
         res.json({ success: true, message: 'Restaurant updated successfully' });
     } catch (e) {
         console.error(e);
@@ -365,7 +384,9 @@ app.put('/api/restaurants/super-admin/:id', async (req, res) => {
 app.delete('/api/restaurants/super-admin/:id', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
+        const rDel = await store.findById('restaurants', req.params.id);
         await store.deleteOne('restaurants', { id: req.params.id });
+        logAudit(req, 'delete_restaurant', 'restaurant', req.params.id, rDel ? rDel.name : req.params.id);
         res.json({ success: true, message: 'Restaurant deleted successfully' });
     } catch (e) {
         console.error(e);
@@ -414,6 +435,7 @@ app.post('/api/super-admin/admins', async (req, res) => {
             full_name: data.full_name, email: data.email || '',
             role: data.role || 'admin', restaurant_id: data.restaurant_id || null, is_active: true
         });
+        logAudit(req, 'create_admin', 'admin', id, data.username, `Role: ${data.role || 'admin'}`);
         res.json({ success: true, message: `Admin ${data.username} created successfully`, admin_id: id });
     } catch (e) {
         console.error(e);
@@ -436,6 +458,7 @@ app.put('/api/super-admin/admins/:id', async (req, res) => {
         if (restaurant_id !== undefined) updates.restaurant_id = restaurant_id || null;
         if (password) updates.password = password;
         await store.updateById('admin_users', req.params.id, updates);
+        logAudit(req, 'edit_admin', 'admin', a.id, a.username, `Updated fields: ${Object.keys(updates).join(', ')}`);
         res.json({ success: true, message: 'Admin updated successfully' });
     } catch (e) {
         console.error(e);
@@ -450,6 +473,7 @@ app.delete('/api/super-admin/admins/:id', async (req, res) => {
         if (!a) return res.status(404).json({ success: false, error: 'Admin not found' });
         if (a.role === 'superadmin') return res.status(403).json({ success: false, message: 'Cannot delete superadmin account' });
         await store.deleteOne('admin_users', { id: req.params.id });
+        logAudit(req, 'delete_admin', 'admin', a.id, a.username, `Role was: ${a.role}`);
         res.json({ success: true, message: `Admin "${a.username}" deleted successfully` });
     } catch (e) {
         console.error(e);
@@ -465,6 +489,7 @@ app.post('/api/super-admin/admins/:id/block', async (req, res) => {
         if (a.role === 'superadmin') return res.status(403).json({ success: false, message: 'Cannot block superadmin account' });
         const blocked = req.body.blocked === true;
         await store.updateById('admin_users', req.params.id, { is_active: !blocked, is_blocked: blocked });
+        logAudit(req, blocked ? 'block_admin' : 'unblock_admin', 'admin', a.id, a.username);
         res.json({ success: true, message: `Admin ${blocked ? 'blocked' : 'unblocked'} successfully` });
     } catch (e) {
         console.error(e);
@@ -527,6 +552,45 @@ app.get('/api/super-admin/drivers/approved', async (req, res) => {
     }
 });
 
+app.get('/api/super-admin/audit-logs', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+        const offset = parseInt(req.query.offset) || 0;
+        const action = req.query.action || null;
+        const target_type = req.query.target_type || null;
+
+        let sql = `SELECT * FROM audit_logs`;
+        const conditions = [];
+        const values = [];
+        if (action) { values.push(action); conditions.push(`action = $${values.length}`); }
+        if (target_type) { values.push(target_type); conditions.push(`target_type = $${values.length}`); }
+        if (conditions.length) sql += ` WHERE ${conditions.join(' AND ')}`;
+        sql += ` ORDER BY created_at DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+        values.push(limit, offset);
+
+        const { query } = require('./db');
+        const result = await query(sql, values);
+        const countResult = await query('SELECT COUNT(*) FROM audit_logs');
+        res.json({ success: true, logs: result.rows, total: parseInt(countResult.rows[0].count) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch audit logs' });
+    }
+});
+
+app.delete('/api/super-admin/audit-logs', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const { query } = require('./db');
+        await query('DELETE FROM audit_logs');
+        res.json({ success: true, message: 'Audit logs cleared successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to clear audit logs' });
+    }
+});
+
 app.get('/api/super-admin/drivers/stats', async (req, res) => {
     if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
     try {
@@ -550,6 +614,7 @@ app.post('/api/super-admin/drivers/:id/approve', async (req, res) => {
         if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
         await store.updateById('drivers', req.params.id, { is_approved: true, is_active: true });
         try { notifyDriverApproved(driver); } catch (_) {}
+        logAudit(req, 'approve_driver', 'driver', driver.id, driver.name);
         res.json({ success: true, message: 'Driver approved successfully' });
     } catch (e) {
         console.error(e);
@@ -565,6 +630,7 @@ app.post('/api/super-admin/drivers/:id/reject', async (req, res) => {
         const reason = req.body.reason || 'Does not meet current requirements';
         await store.updateById('drivers', req.params.id, { is_approved: false, is_active: false, rejection_reason: reason });
         try { notifyDriverRejected(driver, reason); } catch (_) {}
+        logAudit(req, 'reject_driver', 'driver', driver.id, driver.name, `Reason: ${reason}`);
         res.json({ success: true, message: 'Driver rejected successfully' });
     } catch (e) {
         console.error(e);
@@ -578,6 +644,7 @@ app.delete('/api/super-admin/drivers/:id', async (req, res) => {
         const driver = await store.findById('drivers', req.params.id);
         if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
         await store.deleteOne('drivers', { id: req.params.id });
+        logAudit(req, 'delete_driver', 'driver', driver.id, driver.name);
         res.json({ success: true, message: 'Driver deleted successfully' });
     } catch (e) {
         console.error(e);

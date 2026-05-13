@@ -313,6 +313,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="#activity-log" data-tab="activity-log">
+                                <i class="fas fa-history"></i> Activity Log
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#system" data-tab="system">
                                 <i class="fas fa-cogs"></i> System Settings
                             </a>
@@ -754,6 +759,75 @@
                                 <div class="chart-container">
                                     <h5 class="mb-3">Restaurant Performance Comparison</h5>
                                     <canvas id="restaurantPerformanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Log Tab -->
+                    <div id="activity-log" class="tab-content">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h4 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Activity Log</h4>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <select id="auditActionFilter" class="form-select form-select-sm" style="width:auto;" onchange="loadAuditLogs(true)">
+                                    <option value="">All Actions</option>
+                                    <option value="create_admin">Create Admin</option>
+                                    <option value="edit_admin">Edit Admin</option>
+                                    <option value="delete_admin">Delete Admin</option>
+                                    <option value="block_admin">Block Admin</option>
+                                    <option value="unblock_admin">Unblock Admin</option>
+                                    <option value="create_restaurant">Create Restaurant</option>
+                                    <option value="edit_restaurant">Edit Restaurant</option>
+                                    <option value="delete_restaurant">Delete Restaurant</option>
+                                    <option value="approve_driver">Approve Driver</option>
+                                    <option value="reject_driver">Reject Driver</option>
+                                    <option value="delete_driver">Delete Driver</option>
+                                </select>
+                                <select id="auditTypeFilter" class="form-select form-select-sm" style="width:auto;" onchange="loadAuditLogs(true)">
+                                    <option value="">All Types</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="restaurant">Restaurant</option>
+                                    <option value="driver">Driver</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadAuditLogs()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="clearAuditLogs()">
+                                    <i class="fas fa-trash me-1"></i>Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stat-card p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Admin</th>
+                                            <th>Action</th>
+                                            <th>Target</th>
+                                            <th>Details</th>
+                                            <th>IP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditLogsTable">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4 text-muted">
+                                                <i class="fas fa-spinner fa-spin me-2"></i>Loading activity log...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-3 border-top d-flex align-items-center justify-content-between" id="auditLogsPagination" style="display:none!important;">
+                                <small class="text-muted" id="auditLogsCount"></small>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" id="auditPrevBtn" onclick="auditLogPage(-1)" disabled>
+                                        <i class="fas fa-chevron-left"></i> Prev
+                                    </button>
+                                    <button class="btn btn-outline-secondary" id="auditNextBtn" onclick="auditLogPage(1)">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
