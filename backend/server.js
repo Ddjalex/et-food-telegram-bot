@@ -657,6 +657,208 @@ app.post('/api/driver/register', async (req, res) => {
 });
 
 // ============================================================
+// DRIVERS API (used by admin.html)
+// ============================================================
+
+app.get('/api/drivers', async (req, res) => {
+    try {
+        const drivers = await store.findMany('drivers');
+        const formatted = drivers.map(d => ({
+            ...d,
+            approval_status: d.is_approved ? 'approved' : (d.rejection_reason ? 'rejected' : 'pending')
+        }));
+        res.json(formatted);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch drivers' });
+    }
+});
+
+app.post('/api/drivers', async (req, res) => {
+    try {
+        const data = req.body;
+        if (!data.name || !data.phone_number) return res.status(400).json({ success: false, error: 'name and phone_number required' });
+        const id = await store.insertOne('drivers', {
+            name: data.name, phone_number: data.phone_number,
+            telegram_user_id: data.telegram_user_id || null,
+            vehicle_type: data.vehicle_type || 'motorcycle',
+            is_active: true, is_available: false, is_approved: false,
+            rating: 5.0, total_deliveries: 0
+        });
+        res.json({ success: true, driver_id: id, message: 'Driver added' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to add driver' });
+    }
+});
+
+app.post('/api/drivers/:id/approve', async (req, res) => {
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        await store.updateById('drivers', req.params.id, { is_approved: true, is_active: true });
+        res.json({ success: true, message: 'Driver approved successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to approve driver' });
+    }
+});
+
+app.post('/api/drivers/:id/reject', async (req, res) => {
+    try {
+        const driver = await store.findById('drivers', req.params.id);
+        if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
+        await store.updateById('drivers', req.params.id, { is_approved: false, is_active: false, rejection_reason: req.body.reason || 'Rejected' });
+        res.json({ success: true, message: 'Driver rejected' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to reject driver' });
+    }
+});
+
+app.put('/api/drivers/:id/availability', async (req, res) => {
+    try {
+        await store.updateById('drivers', req.params.id, { is_available: req.body.is_available });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update availability' });
+    }
+});
+
+// ============================================================
+// ORDERS API — additional endpoints for admin.html
+// ============================================================
+
+app.get('/api/orders/:id', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        res.json(order);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch order' });
+    }
+});
+
+app.put('/api/orders/:id/status', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        await store.updateById('orders', req.params.id, { status: req.body.status });
+        res.json({ success: true, order: await store.findById('orders', req.params.id) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update order status' });
+    }
+});
+
+// ============================================================
+// MENU API — direct /api/menu/:id and /api/menu POST/PUT/DELETE for admin.html
+// ============================================================
+
+app.get('/api/menu/:id', async (req, res) => {
+    try {
+        const item = await store.findById('menu_items', req.params.id);
+        if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
+        res.json(item);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch menu item' });
+    }
+});
+
+app.post('/api/menu', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const data = req.body;
+        if (!data.name || !data.price) return res.status(400).json({ success: false, error: 'name and price are required' });
+        let restaurant_id = data.restaurant_id;
+        if (!restaurant_id) {
+            const rests = await store.findMany('restaurants', { is_active: true });
+            if (rests.length) restaurant_id = rests[0].id;
+        }
+        const id = await store.insertOne('menu_items', {
+            name: data.name, price: parseFloat(data.price), restaurant_id,
+            description: data.description || '', image_url: data.image_url || null,
+            category: data.category || 'main', available: data.available !== false,
+            preparation_time: parseInt(data.preparation_time) || 15
+        });
+        res.json({ success: true, message: 'Menu item created', item_id: id });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to create menu item' });
+    }
+});
+
+app.put('/api/menu/:id', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const item = await store.findById('menu_items', req.params.id);
+        if (!item) return res.status(404).json({ success: false, error: 'Menu item not found' });
+        await store.updateById('menu_items', req.params.id, req.body);
+        res.json({ success: true, message: 'Menu item updated' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update menu item' });
+    }
+});
+
+app.delete('/api/menu/:id', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        await store.deleteOne('menu_items', { id: req.params.id });
+        res.json({ success: true, message: 'Menu item deleted' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to delete menu item' });
+    }
+});
+
+// ============================================================
+// CATEGORIES API — CRUD for admin.html
+// ============================================================
+
+app.post('/api/categories', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const { name, description, icon } = req.body;
+        if (!name) return res.status(400).json({ success: false, error: 'name is required' });
+        const maxOrder = await store.count('categories');
+        const id = await store.insertOne('categories', {
+            name, description: description || '', icon: icon || '🍽️',
+            sort_order: maxOrder + 1, is_active: true
+        });
+        res.json({ success: true, message: 'Category created', category_id: id });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to create category' });
+    }
+});
+
+app.put('/api/categories/:id', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        await store.updateById('categories', req.params.id, req.body);
+        res.json({ success: true, message: 'Category updated' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update category' });
+    }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        await store.deleteOne('categories', { id: req.params.id });
+        res.json({ success: true, message: 'Category deleted' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to delete category' });
+    }
+});
+
+// ============================================================
 // FILE UPLOAD
 // ============================================================
 
@@ -667,6 +869,34 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
     const destPath = path.join(__dirname, '../static/uploads', filename);
     fs.renameSync(req.file.path, destPath);
     res.json({ success: true, url: `/static/uploads/${filename}`, filename });
+});
+
+// Alias used by admin.html
+app.post('/api/upload-image', upload.single('file'), (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+    const filename = `${Date.now()}_${req.file.originalname}`;
+    const destPath = path.join(__dirname, '../static/uploads', filename);
+    fs.renameSync(req.file.path, destPath);
+    res.json({ success: true, url: `/static/uploads/${filename}`, filename });
+});
+
+// ============================================================
+// DRIVER SEARCH RADIUS SETTINGS
+// ============================================================
+
+let driverSearchRadius = 10; // default 10km, kept in-memory
+
+app.get('/api/admin/driver-search-radius', (req, res) => {
+    res.json({ success: true, radius: driverSearchRadius });
+});
+
+app.put('/api/admin/driver-search-radius', (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const radius = parseFloat(req.body.radius);
+    if (!radius || radius <= 0 || radius > 100) return res.status(400).json({ success: false, error: 'Invalid radius value' });
+    driverSearchRadius = radius;
+    res.json({ success: true, radius: driverSearchRadius, message: `Search radius updated to ${radius}km` });
 });
 
 // ============================================================
