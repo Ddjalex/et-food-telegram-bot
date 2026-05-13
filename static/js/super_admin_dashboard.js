@@ -814,7 +814,7 @@ function viewRestaurantDetails(restaurantId) {
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" class="btn btn-warning" data-bs-dismiss="modal" onclick="editRestaurant(${r.id})">
+                                <button type="button" class="btn btn-warning" data-bs-dismiss="modal" onclick="editRestaurant('${r.id}')">
                                     <i class="fas fa-edit me-1"></i>Edit
                                 </button>
                             </div>
@@ -910,7 +910,7 @@ function editRestaurant(restaurantId) {
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-warning" onclick="submitEditRestaurant(${restaurantId})">
+                                <button type="button" class="btn btn-warning" onclick="submitEditRestaurant('${restaurantId}')">
                                     <i class="fas fa-save me-1"></i>Save Changes
                                 </button>
                             </div>
