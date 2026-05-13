@@ -1150,14 +1150,68 @@
             padding: 16px;
             margin-bottom: 16px;
             box-shadow: var(--shadow-light);
-            display: none;
         }
-        .tracking-map-card.visible { display: block; }
-        .tracking-map-card h4 { margin-bottom: 12px; color: var(--text-dark); font-size: 0.95em; }
-        #trackingMap { width: 100%; height: 240px; border-radius: 12px; }
-        .map-legend {
-            display: flex; gap: 16px; margin-top: 10px;
-            font-size: 0.78em; color: var(--text-light); flex-wrap: wrap;
+        .map-card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .map-card-header h4 { color: var(--text-dark); font-size: 0.95em; margin: 0; }
+        .map-live-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #fff0eb; color: var(--primary-color);
+            border-radius: 20px; padding: 3px 9px;
+            font-size: 0.7em; font-weight: 700;
+        }
+        .map-live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--primary-color);
+            animation: livePulse 1.4s ease-in-out infinite;
+        }
+        #trackingMap { width: 100%; height: 280px; border-radius: 12px; }
+        .map-info-bar {
+            display: flex; gap: 10px; margin-top: 11px; flex-wrap: wrap;
+        }
+        .map-info-chip {
+            display: flex; align-items: center; gap: 5px;
+            background: #f8f9fa; border-radius: 20px;
+            padding: 5px 11px; font-size: 0.78em;
+            color: var(--text-dark); font-weight: 600;
+        }
+        .map-info-chip.eta { background: #fff3cd; color: #856404; }
+        .map-info-chip.dist { background: #d1ecf1; color: #0c5460; }
+        .map-info-chip.last-seen { background: #f0f0f0; color: #666; font-weight: 400; }
+        .map-waiting-overlay {
+            background: #f8f9fa; border-radius: 12px; height: 220px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 10px; color: var(--text-light);
+        }
+        .map-waiting-spinner {
+            width: 40px; height: 40px; border: 3px solid #eee;
+            border-top-color: var(--primary-color);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Custom driver marker pulse ring */
+        .driver-pulse-ring {
+            position: absolute; width: 44px; height: 44px;
+            border-radius: 50%; border: 3px solid var(--primary-color);
+            top: -7px; left: -7px;
+            animation: driverPulse 1.8s ease-out infinite;
+            pointer-events: none;
+        }
+        @keyframes driverPulse {
+            0% { transform: scale(0.7); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+        .driver-marker-inner {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--primary-color); border: 3px solid white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; box-shadow: 0 2px 10px rgba(255,107,53,0.5);
+        }
+        .driver-marker-wrap {
+            position: relative; width: 30px; height: 30px;
         }
 
         .tracking-actions {
@@ -1532,13 +1586,30 @@
                 <button class="driver-call-btn" id="driverCallBtn" onclick="callDriver()">📞</button>
             </div>
 
-            <!-- Live Map Card (shown when driver has GPS) -->
+            <!-- Live Map Card (always shown once order placed) -->
             <div class="tracking-map-card" id="trackingMapCard">
-                <h4>🗺️ Live Driver Location</h4>
-                <div id="trackingMap"></div>
-                <div class="map-legend">
+                <div class="map-card-header">
+                    <h4 id="mapCardTitle">🗺️ Delivery Map</h4>
+                    <span class="map-live-badge" id="mapLiveBadge" style="display:none">
+                        <span class="map-live-dot"></span> LIVE
+                    </span>
+                </div>
+                <div id="trackingMapContainer">
+                    <!-- shows spinner until map ready -->
+                    <div class="map-waiting-overlay" id="mapWaitingOverlay">
+                        <div class="map-waiting-spinner"></div>
+                        <div style="font-size:0.85em">Finding a driver for you…</div>
+                    </div>
+                    <div id="trackingMap" style="display:none"></div>
+                </div>
+                <div class="map-info-bar" id="mapInfoBar" style="display:none">
+                    <div class="map-info-chip dist" id="mapDistChip">📍 Calculating…</div>
+                    <div class="map-info-chip eta"  id="mapEtaChip">⏱ ETA…</div>
+                    <div class="map-info-chip last-seen" id="mapLastSeen"></div>
+                </div>
+                <div class="map-info-bar" style="margin-top:8px;gap:12px;font-size:0.75em;color:#999">
                     <span>🟢 Restaurant</span>
-                    <span>🔵 Your location</span>
+                    <span>🔵 You</span>
                     <span>🔴 Driver</span>
                 </div>
             </div>
@@ -2384,7 +2455,15 @@
             document.getElementById('trackingScreen').classList.remove('active');
             document.body.style.overflow = '';
             if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
-            if (trackingMap) { trackingMap.remove(); trackingMap = null; driverMarker = null; customerMarker = null; restaurantMarker = null; }
+            if (trackingMap) { trackingMap.remove(); trackingMap = null; driverMarker = null; customerMarker = null; restaurantMarker = null; routeLine = null; }
+            // Reset map card to waiting state
+            const wo = document.getElementById('mapWaitingOverlay');
+            const md = document.getElementById('trackingMap');
+            if (wo) { wo.style.display = 'flex'; wo.innerHTML = '<div class="map-waiting-spinner"></div><div style="font-size:0.85em">Finding a driver for you…</div>'; }
+            if (md) md.style.display = 'none';
+            const mib = document.getElementById('mapInfoBar'); if (mib) mib.style.display = 'none';
+            const mlb = document.getElementById('mapLiveBadge'); if (mlb) mlb.style.display = 'none';
+            const mt = document.getElementById('mapCardTitle'); if (mt) mt.textContent = '🗺️ Delivery Map';
             currentOrderId = null;
             // Clear form
             document.getElementById('checkoutForm').reset();
@@ -2468,57 +2547,147 @@
                 driverCard.classList.remove('visible');
             }
 
-            // Map — show when driver has GPS or we have any location to display
-            const hasDriverGPS = driver && driver.current_lat && driver.current_lng;
-            const hasCustomerGPS = order.customer_lat && order.customer_lng;
-            const mapCard = document.getElementById('trackingMapCard');
-
-            if (hasDriverGPS || hasCustomerGPS) {
-                mapCard.classList.add('visible');
-                initOrUpdateTrackingMap(order, driver, restaurant);
-            }
+            // Map — always show card; show spinner until driver/location is known
+            updateTrackingMap(order, driver, restaurant);
         }
 
-        function initOrUpdateTrackingMap(order, driver, restaurant) {
+        // Haversine distance in km
+        function mapHaversineKm(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function timeAgo(dateStr) {
+            if (!dateStr) return null;
+            const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+            if (diff < 60) return `${diff}s ago`;
+            if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+            return `${Math.floor(diff/3600)}h ago`;
+        }
+
+        let routeLine = null;
+
+        function updateTrackingMap(order, driver, restaurant) {
             const restLat = restaurant ? restaurant.lat : 9.0248;
             const restLng = restaurant ? restaurant.lng : 38.7468;
-            const custLat = order.customer_lat || customerLat || restLat;
-            const custLng = order.customer_lng || customerLng || restLng;
-            const centerLat = driver && driver.current_lat ? driver.current_lat : custLat;
-            const centerLng = driver && driver.current_lng ? driver.current_lng : custLng;
+            const custLat = order.customer_lat || customerLat;
+            const custLng = order.customer_lng || customerLng;
+            const hasDriverGPS = driver && driver.current_lat && driver.current_lng;
+            const hasAnyGPS = hasDriverGPS || custLat;
+
+            const waitOverlay  = document.getElementById('mapWaitingOverlay');
+            const mapDiv       = document.getElementById('trackingMap');
+            const mapInfoBar   = document.getElementById('mapInfoBar');
+            const mapLiveBadge = document.getElementById('mapLiveBadge');
+            const mapTitle     = document.getElementById('mapCardTitle');
+
+            if (!hasAnyGPS && !hasDriverGPS) {
+                // No location yet — show spinner
+                waitOverlay.style.display = 'flex';
+                mapDiv.style.display = 'none';
+                mapInfoBar.style.display = 'none';
+                mapLiveBadge.style.display = 'none';
+                mapTitle.textContent = '🗺️ Delivery Map';
+                return;
+            }
+
+            // Reveal the real map
+            waitOverlay.style.display = 'none';
+            mapDiv.style.display = 'block';
+
+            const centerLat = hasDriverGPS ? driver.current_lat : (custLat || restLat);
+            const centerLng = hasDriverGPS ? driver.current_lng : (custLng || restLng);
 
             if (!trackingMap) {
-                // Initialize map centered on driver/customer
-                trackingMap = L.map('trackingMap', { zoomControl: true }).setView([centerLat, centerLng], 14);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap'
-                }).addTo(trackingMap);
+                trackingMap = L.map('trackingMap', { zoomControl: false, attributionControl: false })
+                    .setView([centerLat, centerLng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackingMap);
+                L.control.zoom({ position: 'bottomright' }).addTo(trackingMap);
 
-                // Restaurant marker (green)
-                const restIcon = L.divIcon({ html: '<div style="font-size:22px">🟢</div>', iconSize:[28,28], iconAnchor:[14,14], className:'' });
-                L.marker([restLat, restLng], { icon: restIcon })
-                 .addTo(trackingMap)
-                 .bindPopup(restaurant ? restaurant.name : 'Restaurant');
+                // Restaurant marker — green pin
+                const restIcon = L.divIcon({
+                    html: `<div style="font-size:22px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">🟢</div>`,
+                    iconSize:[28,28], iconAnchor:[14,14], className:''
+                });
+                restaurantMarker = L.marker([restLat, restLng], { icon: restIcon })
+                    .addTo(trackingMap)
+                    .bindPopup(`<b>${restaurant ? restaurant.name : 'Restaurant'}</b><br>Pickup point`);
 
-                // Customer marker (blue)
+                // Customer marker — blue home
                 if (custLat && custLng) {
-                    const custIcon = L.divIcon({ html: '<div style="font-size:22px">🔵</div>', iconSize:[28,28], iconAnchor:[14,14], className:'' });
+                    const custIcon = L.divIcon({
+                        html: `<div style="background:#0d6efd;width:26px;height:26px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(13,110,253,.5)">🏠</div>`,
+                        iconSize:[26,26], iconAnchor:[13,13], className:''
+                    });
                     customerMarker = L.marker([custLat, custLng], { icon: custIcon })
-                        .addTo(trackingMap).bindPopup('Your location');
+                        .addTo(trackingMap).bindPopup('<b>Your location</b>');
+                }
+
+                // Fit bounds to show both restaurant and customer
+                const points = [[restLat, restLng]];
+                if (custLat && custLng) points.push([custLat, custLng]);
+                if (hasDriverGPS) points.push([driver.current_lat, driver.current_lng]);
+                if (points.length > 1) {
+                    trackingMap.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
                 }
             }
 
-            // Driver marker (red) — update position or create
-            if (driver && driver.current_lat && driver.current_lng) {
-                const driverIcon = L.divIcon({ html: '<div style="font-size:24px">🚗</div>', iconSize:[30,30], iconAnchor:[15,15], className:'' });
+            // Animated driver marker — pulsing orange circle with 🚗
+            if (hasDriverGPS) {
+                const driverIcon = L.divIcon({
+                    html: `<div class="driver-marker-wrap">
+                                <div class="driver-pulse-ring"></div>
+                                <div class="driver-marker-inner">🚗</div>
+                           </div>`,
+                    iconSize:[30,30], iconAnchor:[15,15], className:''
+                });
+
                 if (!driverMarker) {
                     driverMarker = L.marker([driver.current_lat, driver.current_lng], { icon: driverIcon })
-                        .addTo(trackingMap).bindPopup(driver.name || 'Driver');
+                        .addTo(trackingMap)
+                        .bindPopup(`<b>${driver.name || 'Your driver'}</b><br>${driver.vehicle_type || 'motorcycle'}`);
                 } else {
                     driverMarker.setLatLng([driver.current_lat, driver.current_lng]);
                 }
-                // Pan map to keep driver visible
-                trackingMap.panTo([driver.current_lat, driver.current_lng]);
+
+                // Route line: driver → customer (dashed orange)
+                const endLat = custLat || restLat;
+                const endLng = custLng || restLng;
+                const routePoints = [[driver.current_lat, driver.current_lng], [endLat, endLng]];
+                if (routeLine) {
+                    routeLine.setLatLngs(routePoints);
+                } else {
+                    routeLine = L.polyline(routePoints, {
+                        color: '#ff6b35', weight: 3,
+                        dashArray: '8, 8', opacity: 0.7
+                    }).addTo(trackingMap);
+                }
+
+                // Smooth pan to keep driver centred
+                trackingMap.panTo([driver.current_lat, driver.current_lng], { animate: true, duration: 1 });
+
+                // Distance + ETA chips
+                if (custLat && custLng) {
+                    const km = mapHaversineKm(driver.current_lat, driver.current_lng, custLat, custLng);
+                    const etaMin = Math.round(km / 30 * 60); // assume 30 km/h avg
+                    document.getElementById('mapDistChip').textContent  = `📍 ${km < 1 ? (km*1000).toFixed(0)+'m' : km.toFixed(1)+'km'} away`;
+                    document.getElementById('mapEtaChip').textContent   = `⏱ ~${etaMin < 1 ? '<1' : etaMin} min ETA`;
+                    const seen = timeAgo(driver.last_location_update);
+                    document.getElementById('mapLastSeen').textContent  = seen ? `🕐 Updated ${seen}` : '';
+                    mapInfoBar.style.display = 'flex';
+                    mapLiveBadge.style.display = 'inline-flex';
+                    mapTitle.textContent = '🚗 Driver Live Location';
+                }
+            } else {
+                // No driver yet — remove stale route
+                if (routeLine) { routeLine.remove(); routeLine = null; }
+                if (driverMarker) { driverMarker.remove(); driverMarker = null; }
+                mapInfoBar.style.display = 'none';
+                mapLiveBadge.style.display = 'none';
+                mapTitle.textContent = '🗺️ Delivery Map';
             }
         }
 
