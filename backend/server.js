@@ -1284,9 +1284,15 @@ app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
         // Send customer notification based on new status
         const newStatus = req.body.status;
         if (updated.telegram_user_id && newStatus && newStatus !== prevStatus) {
-            if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed' || newStatus === 'preparing') {
+            if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed') {
+                // Notify customer that kitchen confirmed — do NOT dispatch drivers yet
                 notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
-                // Auto-dispatch to nearest available drivers
+            } else if (newStatus === 'preparing') {
+                // Just notify customer food is being cooked — no driver dispatch yet
+                notifyCustomerOrderStatus(updated.telegram_user_id, updated, '👨‍🍳 Your food is being prepared! We\'ll notify you when it\'s ready.').catch(e => console.error('notify error:', e.message));
+            } else if (newStatus === 'ready') {
+                // Food is ready — NOW dispatch to nearest drivers
+                notifyCustomerOrderStatus(updated.telegram_user_id, updated, '📦 Your food is ready! Finding a driver near you...').catch(e => console.error('notify error:', e.message));
                 dispatchOrderToDrivers(updated).catch(e => console.error('[DriverAssignment] dispatch error:', e.message));
             } else if (newStatus === 'cancelled') {
                 const reason = req.body.rejection_reason || req.body.cancel_reason || null;

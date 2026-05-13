@@ -1707,6 +1707,7 @@
                             Unavailable
                         </button>
                     `;
+                case 'kitchen_confirmed':
                 case 'confirmed':
                     return `
                         <button class="action-btn btn-warning" onclick="updateOrderStatus('${order.id}', 'preparing')">
@@ -1718,14 +1719,14 @@
                     return `
                         <button class="action-btn btn-success" onclick="updateOrderStatus('${order.id}', 'ready')">
                             <i class="fas fa-bell me-1"></i>
-                            Mark Ready
+                            Mark Ready to Pickup
                         </button>
                     `;
                 case 'ready':
                     return `
-                        <button class="action-btn btn-primary" onclick="viewOrderDetails('${order.id}')">
-                            <i class="fas fa-eye me-1"></i>
-                            View Details
+                        <button class="action-btn btn-primary" disabled style="opacity:0.6;cursor:default">
+                            <i class="fas fa-clock me-1"></i>
+                            Waiting for Driver
                         </button>
                     `;
                 default:

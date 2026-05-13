@@ -209,6 +209,52 @@
   .btn-nav i { font-size: 20px; }
   .btn-nav span { font-size: 11px; }
 
+  /* ── IN-APP NAVIGATION OVERLAY ── */
+  .nav-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+  }
+  .nav-overlay.show { display: flex; }
+  .nav-header {
+    background: linear-gradient(135deg, #12122a, #1a1a3e);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+    flex-shrink: 0;
+  }
+  .nav-header-info { flex: 1; }
+  .nav-header-title { font-size: 15px; font-weight: 800; }
+  .nav-header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .nav-close-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: var(--text); font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #navMap { flex: 1; min-height: 0; }
+  .nav-bottom {
+    background: var(--card);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 14px 16px;
+    flex-shrink: 0;
+  }
+  .nav-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-bottom: 12px;
+  }
+  .nav-stat { text-align: center; }
+  .nav-stat-val { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .nav-stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .btn-start-nav {
+    width: 100%; padding: 16px; border-radius: var(--radius-sm); border: none;
+    cursor: pointer; font-size: 15px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    color: white; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-start-nav:active { opacity: 0.85; }
+  .nav-route-line { stroke: #00d4ff; stroke-width: 5; stroke-opacity: 0.85; }
+
   /* ── ACTION BUTTONS ── */
   .action-buttons {
     display: grid;
@@ -487,6 +533,40 @@
   </div>
 
 </div><!-- /mainApp -->
+
+<!-- IN-APP NAVIGATION OVERLAY -->
+<div class="nav-overlay" id="navOverlay">
+  <div class="nav-header">
+    <button class="nav-close-btn" onclick="closeNavOverlay()">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div class="nav-header-info">
+      <div class="nav-header-title" id="navTitle">Navigate to Restaurant</div>
+      <div class="nav-header-sub" id="navSubtitle">Calculating route...</div>
+    </div>
+    <div style="font-size:20px" id="navDestIcon">🍔</div>
+  </div>
+  <div id="navMap"></div>
+  <div class="nav-bottom">
+    <div class="nav-stats">
+      <div class="nav-stat">
+        <div class="nav-stat-val" id="navDist">--</div>
+        <div class="nav-stat-lbl">Distance</div>
+      </div>
+      <div class="nav-stat">
+        <div class="nav-stat-val" id="navEta">--</div>
+        <div class="nav-stat-lbl">ETA</div>
+      </div>
+      <div class="nav-stat">
+        <div class="nav-stat-val" id="navSpeed">--</div>
+        <div class="nav-stat-lbl">km/h</div>
+      </div>
+    </div>
+    <button class="btn-start-nav" onclick="openWazeExternal()">
+      <i class="fas fa-external-link-alt"></i> Open in Waze
+    </button>
+  </div>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -940,22 +1020,136 @@ function clearOrder() {
   }
 }
 
-// ── WAZE NAVIGATION ──
+// ── IN-APP NAVIGATION ──
+let navMap = null, navRouteLayer = null, navDriverMarker = null, navDestMarker = null;
+let navDestLat = null, navDestLng = null, navWazeUrl = '';
+let navSpeedInterval = null, navPrevLat = null, navPrevLng = null, navLastTime = null;
+
 function navigateToRestaurant() {
-  openWaze(restLat, restLng);
+  if (!driverLat) { showToast('Waiting for GPS fix...', 'error'); return; }
+  openNavOverlay(restLat, restLng, 'Navigate to Restaurant', '🍔');
 }
 
 function navigateToCustomer() {
   if (!custLat) { showToast('Customer location unavailable', 'error'); return; }
-  openWaze(custLat, custLng);
+  if (!driverLat) { showToast('Waiting for GPS fix...', 'error'); return; }
+  openNavOverlay(custLat, custLng, 'Navigate to Customer', '🏠');
 }
 
-function openWaze(lat, lng) {
-  const url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes&utm_source=misaka_delivery`;
-  if (window.Telegram?.WebApp?.openLink) {
-    window.Telegram.WebApp.openLink(url);
+function openNavOverlay(destLat, destLng, title, icon) {
+  navDestLat = destLat;
+  navDestLng = destLng;
+  navWazeUrl = `https://waze.com/ul?ll=${destLat},${destLng}&navigate=yes&utm_source=misaka_delivery`;
+  document.getElementById('navTitle').textContent = title;
+  document.getElementById('navDestIcon').textContent = icon;
+  document.getElementById('navSubtitle').textContent = 'Calculating route...';
+  document.getElementById('navOverlay').classList.add('show');
+
+  // Init nav map on first open
+  if (!navMap) {
+    navMap = L.map('navMap', { zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(navMap);
+    // Zoom control top-right
+    L.control.zoom({ position: 'topright' }).addTo(navMap);
   } else {
-    window.open(url, '_blank');
+    if (navRouteLayer) { navMap.removeLayer(navRouteLayer); navRouteLayer = null; }
+    if (navDriverMarker) { navMap.removeLayer(navDriverMarker); navDriverMarker = null; }
+    if (navDestMarker) { navMap.removeLayer(navDestMarker); navDestMarker = null; }
+  }
+
+  // Place markers
+  const driverIcon = L.divIcon({
+    html: '<div style="width:16px;height:16px;border-radius:50%;background:#00d4ff;border:3px solid white;box-shadow:0 0 10px #00d4ff88"></div>',
+    iconSize: [16,16], iconAnchor: [8,8], className: ''
+  });
+  const destIcon = L.divIcon({
+    html: `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 12px rgba(255,107,107,.5)">${icon}</div>`,
+    iconSize: [32,32], iconAnchor: [16,16], className: ''
+  });
+
+  navDriverMarker = L.marker([driverLat, driverLng], { icon: driverIcon }).addTo(navMap);
+  navDestMarker   = L.marker([destLat, destLng],     { icon: destIcon   }).addTo(navMap);
+
+  // Fit bounds initially
+  navMap.fitBounds([[driverLat, driverLng], [destLat, destLng]], { padding: [50, 50] });
+
+  // Fetch OSRM route
+  fetchRoute(driverLat, driverLng, destLat, destLng);
+
+  // Start speed tracking
+  navPrevLat = driverLat; navPrevLng = driverLng; navLastTime = Date.now();
+  navSpeedInterval = setInterval(updateNavDriver, 3000);
+
+  // Force map resize
+  setTimeout(() => navMap && navMap.invalidateSize(), 200);
+}
+
+async function fetchRoute(fromLat, fromLng, toLat, toLng) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== 'Ok') throw new Error('Route not found');
+    const route = data.routes[0];
+    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+    const distKm  = (route.distance / 1000).toFixed(1);
+    const etaMins = Math.max(1, Math.round(route.duration / 60));
+
+    if (navRouteLayer) navMap.removeLayer(navRouteLayer);
+    navRouteLayer = L.polyline(coords, {
+      color: '#00d4ff', weight: 5, opacity: 0.85,
+      dashArray: null
+    }).addTo(navMap);
+    navMap.fitBounds(navRouteLayer.getBounds(), { padding: [50, 50] });
+
+    document.getElementById('navDist').textContent = distKm + ' km';
+    document.getElementById('navEta').textContent  = etaMins + ' min';
+    document.getElementById('navSubtitle').textContent = `${distKm} km · ~${etaMins} min`;
+  } catch (e) {
+    // Fallback: straight line
+    if (navRouteLayer) navMap.removeLayer(navRouteLayer);
+    navRouteLayer = L.polyline([[driverLat, driverLng], [navDestLat, navDestLng]], {
+      color: '#00d4ff', weight: 4, opacity: 0.6, dashArray: '8 8'
+    }).addTo(navMap);
+    const d = haversine(driverLat, driverLng, navDestLat, navDestLng).toFixed(1);
+    document.getElementById('navDist').textContent = d + ' km';
+    document.getElementById('navEta').textContent  = Math.round(d / 0.4) + ' min';
+    document.getElementById('navSubtitle').textContent = 'Straight-line route · ~' + Math.round(d / 0.4) + ' min';
+  }
+}
+
+function updateNavDriver() {
+  if (!navMap || !navDriverMarker || !driverLat) return;
+  navDriverMarker.setLatLng([driverLat, driverLng]);
+
+  // Calculate speed
+  if (navPrevLat !== null) {
+    const dt = (Date.now() - navLastTime) / 3600000; // hours
+    const d  = haversine(navPrevLat, navPrevLng, driverLat, driverLng);
+    const spd = dt > 0 ? Math.round(d / dt) : 0;
+    document.getElementById('navSpeed').textContent = Math.min(spd, 120);
+  }
+  navPrevLat = driverLat; navPrevLng = driverLng; navLastTime = Date.now();
+
+  // Update remaining distance
+  const rem = haversine(driverLat, driverLng, navDestLat, navDestLng).toFixed(1);
+  document.getElementById('navDist').textContent = rem + ' km';
+  document.getElementById('navEta').textContent  = Math.max(1, Math.round(rem / 0.4)) + ' min';
+
+  // Re-center on driver
+  navMap.panTo([driverLat, driverLng], { animate: true, duration: 0.5 });
+}
+
+function closeNavOverlay() {
+  document.getElementById('navOverlay').classList.remove('show');
+  if (navSpeedInterval) { clearInterval(navSpeedInterval); navSpeedInterval = null; }
+}
+
+function openWazeExternal() {
+  if (window.Telegram?.WebApp?.openLink) {
+    window.Telegram.WebApp.openLink(navWazeUrl);
+  } else {
+    window.open(navWazeUrl, '_blank');
   }
 }
 
