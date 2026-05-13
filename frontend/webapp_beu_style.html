@@ -162,40 +162,95 @@
             margin-bottom: 0;
         }
 
-        .restaurant-dropdown-wrap {
+        /* Custom dropup */
+        .dropup-wrap {
             position: relative;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .restaurant-dropdown-wrap::after {
-            content: '▾';
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 12px;
-            color: var(--primary-color);
-            pointer-events: none;
-        }
-
-        .restaurant-select {
-            appearance: none;
-            -webkit-appearance: none;
+        .dropup-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
             background: #fff;
             border: 1.5px solid #ffe0d0;
             border-radius: 20px;
-            padding: 6px 28px 6px 12px;
+            padding: 6px 12px;
             font-size: 12px;
             font-weight: 600;
             color: var(--text-dark);
             cursor: pointer;
             outline: none;
-            max-width: 140px;
             box-shadow: 0 1px 6px rgba(255,107,53,0.08);
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: border-color 0.15s;
         }
 
-        .restaurant-select:focus {
-            border-color: var(--primary-color);
+        .dropup-btn.open { border-color: var(--primary-color); }
+
+        .dropup-arrow {
+            font-size: 10px;
+            flex-shrink: 0;
+            transition: transform 0.2s;
         }
+
+        .dropup-btn.open .dropup-arrow { transform: rotate(180deg); }
+
+        .dropup-menu {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            right: 0;
+            background: #fff;
+            border: 1.5px solid #ffe0d0;
+            border-radius: 14px;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
+            min-width: 180px;
+            z-index: 500;
+            overflow: hidden;
+            animation: dropupIn 0.18s ease;
+        }
+
+        @keyframes dropupIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropup-menu.hidden { display: none; }
+
+        .dropup-item {
+            padding: 11px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dark);
+            cursor: pointer;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.12s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dropup-item:last-child { border-bottom: none; }
+        .dropup-item:hover, .dropup-item.active { background: #fff4f0; color: var(--primary-color); font-weight: 700; }
+
+        /* Collapse toggle */
+        .collapse-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-light);
+            padding: 2px 4px;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+
+        .collapse-btn.collapsed { transform: rotate(-90deg); }
 
         .all-restaurants-grid {
             display: flex;
@@ -1684,10 +1739,13 @@
         <div class="all-restaurants-section">
             <div class="all-restaurants-header">
                 <h2 class="section-title">All Restaurants</h2>
-                <div class="restaurant-dropdown-wrap">
-                    <select class="restaurant-select" id="restaurantDropdown" onchange="selectRestaurantFromDropdown(this.value)">
-                        <option value="">Select…</option>
-                    </select>
+                <div class="dropup-wrap">
+                    <button class="collapse-btn" id="cardsCollapseBtn" onclick="toggleRestaurantCards()" title="Show/hide cards">▾</button>
+                    <button class="dropup-btn" id="dropupBtn" onclick="toggleDropup()">
+                        <span id="dropupLabel">Select…</span>
+                        <span class="dropup-arrow">▲</span>
+                    </button>
+                    <div class="dropup-menu hidden" id="dropupMenu"></div>
                 </div>
             </div>
             <div class="all-restaurants-grid" id="allRestaurantsContainer">
@@ -2452,19 +2510,54 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // Select restaurant from dropdown
-        function selectRestaurantFromDropdown(restaurantId) {
-            if (!restaurantId) return;
-            selectRestaurant(restaurantId);
-            // Scroll the matching card into view
-            const card = document.querySelector(`.all-restaurant-card[data-restaurant-id="${restaurantId}"]`);
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        // --- Custom dropup logic ---
+        let _dropupOpen = false;
+        let _cardsVisible = true;
+
+        function toggleDropup() {
+            _dropupOpen = !_dropupOpen;
+            const menu = document.getElementById('dropupMenu');
+            const btn  = document.getElementById('dropupBtn');
+            if (menu) menu.classList.toggle('hidden', !_dropupOpen);
+            if (btn)  btn.classList.toggle('open', _dropupOpen);
         }
+
+        function closeDropup() {
+            _dropupOpen = false;
+            const menu = document.getElementById('dropupMenu');
+            const btn  = document.getElementById('dropupBtn');
+            if (menu) menu.classList.add('hidden');
+            if (btn)  btn.classList.remove('open');
+        }
+
+        function toggleRestaurantCards() {
+            _cardsVisible = !_cardsVisible;
+            const grid = document.getElementById('allRestaurantsContainer');
+            const btn  = document.getElementById('cardsCollapseBtn');
+            if (grid) grid.style.display = _cardsVisible ? '' : 'none';
+            if (btn)  btn.classList.toggle('collapsed', !_cardsVisible);
+        }
+
+        function selectFromDropup(restaurantId, restaurantName) {
+            closeDropup();
+            const label = document.getElementById('dropupLabel');
+            if (label) label.textContent = restaurantName;
+            selectRestaurant(restaurantId);
+            // Show cards if they were hidden, and scroll the card into view
+            if (!_cardsVisible) toggleRestaurantCards();
+            const card = document.querySelector(`.all-restaurant-card[data-restaurant-id="${restaurantId}"]`);
+            if (card) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 100);
+        }
+
+        // Close dropup when clicking outside
+        document.addEventListener('click', (e) => {
+            const wrap = e.target.closest('.dropup-wrap');
+            if (!wrap && _dropupOpen) closeDropup();
+        });
 
         // Display all restaurants as a horizontal scroll
         function displayAllRestaurants() {
             const container = document.getElementById('allRestaurantsContainer');
-            const dropdown = document.getElementById('restaurantDropdown');
             if (!container) return;
 
             if (restaurants.length === 0) {
@@ -2474,14 +2567,16 @@
 
             container.innerHTML = '';
 
-            // Populate dropdown
-            if (dropdown) {
-                dropdown.innerHTML = '<option value="">Select…</option>';
+            // Populate custom dropup menu
+            const dropupMenu = document.getElementById('dropupMenu');
+            if (dropupMenu) {
+                dropupMenu.innerHTML = '';
                 restaurants.forEach(r => {
-                    const opt = document.createElement('option');
-                    opt.value = r.id;
-                    opt.textContent = r.name;
-                    dropdown.appendChild(opt);
+                    const item = document.createElement('div');
+                    item.className = 'dropup-item';
+                    item.textContent = r.name;
+                    item.onclick = () => selectFromDropup(r.id, r.name);
+                    dropupMenu.appendChild(item);
                 });
             }
 

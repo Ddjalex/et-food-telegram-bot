@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const store = require('./store');
+const { query } = require('./db');
 const { runMigration } = require('./migrate');
 const {
     notifyDriverApproved, notifyDriverRejected, notifyDriverNewOrder,
