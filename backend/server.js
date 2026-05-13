@@ -234,6 +234,7 @@ app.post('/admin/login', async (req, res) => {
             req.session.admin_user_id = admin.id;
             req.session.admin_username = admin.username;
             req.session.admin_role = admin.role;
+            req.session.admin_restaurant_id = admin.restaurant_id || null;
             await store.updateById('admin_users', admin.id, { last_login: new Date() });
             return res.redirect('/admin');
         }
@@ -791,6 +792,37 @@ app.get('/api/super-admin/stats', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
+    }
+});
+
+// ============================================================
+// ADMIN SESSION INFO
+// ============================================================
+
+app.get('/api/admin/me', async (req, res) => {
+    if (!checkAdminSession(req)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const admin = await store.findById('admin_users', req.session.admin_user_id);
+        res.json({
+            success: true,
+            admin: {
+                id: req.session.admin_user_id,
+                username: req.session.admin_username,
+                role: req.session.admin_role,
+                restaurant_id: admin ? admin.restaurant_id : req.session.admin_restaurant_id,
+                full_name: admin ? admin.full_name : null
+            }
+        });
+    } catch (e) {
+        res.json({
+            success: true,
+            admin: {
+                id: req.session.admin_user_id,
+                username: req.session.admin_username,
+                role: req.session.admin_role,
+                restaurant_id: req.session.admin_restaurant_id || null
+            }
+        });
     }
 });
 

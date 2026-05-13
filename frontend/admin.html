@@ -599,23 +599,32 @@
 
         // Load menu items
         function loadMenuItems() {
-            fetch('/api/menu')
+            const url = adminInfo.restaurant_id
+                ? `/api/menu?restaurant_id=${adminInfo.restaurant_id}`
+                : '/api/menu';
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const items = Array.isArray(data) ? data : (data.menu_items || []);
                     const grid = document.getElementById('menuItemsGrid');
                     grid.innerHTML = '';
 
+                    if (items.length === 0) {
+                        grid.innerHTML = '<div class="col-12 text-center py-4 text-muted">No menu items found for this restaurant.</div>';
+                        return;
+                    }
+
                     items.forEach(item => {
                         const card = document.createElement('div');
                         card.className = 'col-md-4 mb-3';
+                        const price = parseFloat(item.price) || 0;
                         card.innerHTML = `
                             <div class="card">
-                                <img src="${item.image_url}" class="card-img-top" alt="${item.name}" style="height: 200px; object-fit: cover;">
+                                <img src="${item.image_url || '/static/uploads/default.jpg'}" class="card-img-top" alt="${item.name}" style="height: 200px; object-fit: cover;" onerror="this.src='/static/uploads/default.jpg'">
                                 <div class="card-body">
                                     <h5 class="card-title">${item.name}</h5>
-                                    <p class="card-text">${item.description}</p>
-                                    <p class="card-text"><strong>$${item.price.toFixed(2)}</strong></p>
+                                    <p class="card-text">${item.description || ''}</p>
+                                    <p class="card-text"><strong>ETB ${price.toFixed(2)}</strong></p>
                                     <div class="d-flex justify-content-between">
                                         <span class="badge ${item.available ? 'bg-success' : 'bg-danger'}">
                                             ${item.available ? 'Available' : 'Unavailable'}
@@ -637,6 +646,7 @@
                 })
                 .catch(error => {
                     console.error('Error loading menu items:', error);
+                    document.getElementById('menuItemsGrid').innerHTML = '<div class="col-12 text-center py-4 text-danger">Error loading menu items</div>';
                 });
         }
 
@@ -667,36 +677,38 @@
         function loadOrders(page = 1, filter = 'all') {
             currentPage = page;
             currentFilter = filter;
-            
-            fetch(`/api/orders?page=${page}&filter=${filter}&limit=50`)
+
+            let url = `/api/orders?limit=50`;
+            if (adminInfo.restaurant_id) url += `&restaurant_id=${adminInfo.restaurant_id}`;
+            if (filter && filter !== 'all') url += `&status=${filter}`;
+
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];
                     const totalPages = data.total_pages || 1;
                     const tbody = document.getElementById('ordersTable');
-                    
-                    if (!tbody) {
-                        console.error('Orders table body not found');
-                        return;
-                    }
-                    
+
+                    if (!tbody) return;
                     tbody.innerHTML = '';
-                    
+
                     if (orders.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No orders found</td></tr>';
                         return;
                     }
-                    
+
                     orders.forEach(order => {
+                        const amount = parseFloat(order.total_amount) || 0;
+                        const createdAt = order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A';
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>#${order.id}</td>
-                            <td>${order.customer_name}</td>
-                            <td>${order.customer_phone}</td>
-                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>#${(order.order_number || order.id || '').toString().slice(0,8)}</td>
+                            <td>${order.customer_name || 'N/A'}</td>
+                            <td>${order.customer_phone || 'N/A'}</td>
+                            <td>ETB ${amount.toFixed(2)}</td>
                             <td>${getStatusBadge(order.status)}</td>
                             <td>${order.payment_method || 'N/A'}</td>
-                            <td>${order.minutes_ago} min ago</td>
+                            <td>${createdAt}</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <button class="btn btn-sm btn-outline-primary" onclick="showOrderDetails('${order.id}')" title="View Details">
@@ -705,7 +717,7 @@
                                     <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order.id}', 'confirmed')" title="Confirm">
                                         <i class="fas fa-check"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick="showMap('${order.id}', '${order.customer_name}', '${order.customer_phone}', '${order.customer_address}', ${order.customer_lat || 0}, ${order.customer_lng || 0})" title="Show Map">
+                                    <button class="btn btn-sm btn-outline-info" onclick="showMap('${order.id}', '${order.customer_name || ''}', '${order.customer_phone || ''}', '${(order.customer_address || '').replace(/'/g,"\\'")}', ${order.location_lat || 0}, ${order.location_lng || 0})" title="Show Map">
                                         <i class="fas fa-map"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-warning" onclick="assignDriver('${order.id}')" title="Assign Driver">
@@ -716,8 +728,7 @@
                         `;
                         tbody.appendChild(row);
                     });
-                    
-                    // Update pagination
+
                     displayPagination(totalPages, page);
                 })
                 .catch(error => {
@@ -732,12 +743,15 @@
         // Load dashboard statistics
         function loadDashboardStats() {
             // Load order statistics
-            fetch('/api/orders?limit=1000')
+            const statsUrl = adminInfo.restaurant_id
+                ? `/api/orders?limit=1000&restaurant_id=${adminInfo.restaurant_id}`
+                : '/api/orders?limit=1000';
+            fetch(statsUrl)
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];
                     const totalOrders = orders.length;
-                    const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+                    const totalRevenue = orders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
                     const pendingOrders = orders.filter(order => order.status === 'pending').length;
                     
                     document.getElementById('totalOrders').textContent = totalOrders;
@@ -767,11 +781,15 @@
 
         // Load recent orders for dashboard
         function loadRecentOrders() {
-            fetch('/api/orders?limit=10')
+            const recentUrl = adminInfo.restaurant_id
+                ? `/api/orders?limit=10&restaurant_id=${adminInfo.restaurant_id}`
+                : '/api/orders?limit=10';
+            fetch(recentUrl)
                 .then(response => response.json())
                 .then(data => {
                     const orders = data.orders || [];
                     const tbody = document.getElementById('recentOrdersTable');
+                    if (!tbody) return;
                     tbody.innerHTML = '';
                     
                     if (orders.length === 0) {
@@ -780,13 +798,15 @@
                     }
                     
                     orders.slice(0, 5).forEach(order => {
+                        const amount = parseFloat(order.total_amount) || 0;
+                        const createdAt = order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A';
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>#${order.id}</td>
-                            <td>${order.customer_name}</td>
-                            <td>ETB ${order.total_amount.toFixed(2)}</td>
+                            <td>#${(order.order_number || order.id || '').toString().slice(0,8)}</td>
+                            <td>${order.customer_name || 'N/A'}</td>
+                            <td>ETB ${amount.toFixed(2)}</td>
                             <td>${getStatusBadge(order.status)}</td>
-                            <td>${order.minutes_ago} min ago</td>
+                            <td>${createdAt}</td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary" onclick="showOrderDetails('${order.id}')">
                                     <i class="fas fa-eye"></i>
@@ -799,7 +819,7 @@
                 .catch(error => {
                     console.error('Error loading recent orders:', error);
                     const tbody = document.getElementById('recentOrdersTable');
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading orders</td></tr>';
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Error loading orders</td></tr>';
                 });
         }
 
@@ -904,6 +924,7 @@
         // Global variables for pagination and filtering
         let currentPage = 1;
         let currentFilter = 'all';
+        let adminInfo = { restaurant_id: null, role: null };
 
         // Update analytics
         function updateAnalytics(orders) {
@@ -1061,7 +1082,8 @@
                 price: parseFloat(price),
                 description: description,
                 image_url: imageUrl,
-                available: available
+                available: available,
+                restaurant_id: adminInfo.restaurant_id
             };
 
             const url = itemId ? `/api/menu/${itemId}` : '/api/menu';
@@ -1674,35 +1696,44 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize dashboard
-            initializeDashboard();
-            
-            // Initialize settings
-            initializeSettings();
-            
+            // Fetch admin info first, then initialize everything
+            fetch('/api/admin/me')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.admin) {
+                        adminInfo = data.admin;
+                    }
+                })
+                .catch(() => {})
+                .finally(() => {
+                    // Initialize dashboard
+                    initializeDashboard();
 
-            
-            // Setup event listeners
-            setupEventListeners();
-            
-            // Initialize tab switching
-            setupTabSwitching();
-            
-            // Load initial data for each tab
-            loadMenuItems();
-            loadCategories();
-            loadDrivers();
-            
-            // Add event listeners for category and driver buttons
-            const addCategoryBtn = document.getElementById('addCategoryBtn');
-            if (addCategoryBtn) {
-                addCategoryBtn.addEventListener('click', addCategory);
-            }
-            
-            const addDriverBtn = document.getElementById('addDriverBtn');
-            if (addDriverBtn) {
-                addDriverBtn.addEventListener('click', addDriver);
-            }
+                    // Initialize settings
+                    initializeSettings();
+
+                    // Setup event listeners
+                    setupEventListeners();
+
+                    // Initialize tab switching
+                    setupTabSwitching();
+
+                    // Load initial data for each tab
+                    loadMenuItems();
+                    loadCategories();
+                    loadDrivers();
+
+                    // Add event listeners for category and driver buttons
+                    const addCategoryBtn = document.getElementById('addCategoryBtn');
+                    if (addCategoryBtn) {
+                        addCategoryBtn.addEventListener('click', addCategory);
+                    }
+
+                    const addDriverBtn = document.getElementById('addDriverBtn');
+                    if (addDriverBtn) {
+                        addDriverBtn.addEventListener('click', addDriver);
+                    }
+                });
         });
         
         function setupTabSwitching() {
