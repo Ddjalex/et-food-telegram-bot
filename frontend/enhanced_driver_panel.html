@@ -1,1959 +1,1006 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Kitchen - Driver Panel</title>
-    <link rel="icon" type="image/png" href="/static/cloud-kitchen-favicon.png">
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            padding: 0;
-            margin: 0;
-            overflow-x: hidden;
-        }
-        
-        .driver-container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 15px;
-        }
-        
-        .driver-header {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-align: center;
-        }
-        
-        .driver-header h1 {
-            font-size: 22px;
-            margin: 0 0 10px 0;
-            color: #ffffff;
-        }
-        
-        .driver-subtitle {
-            color: #e0e0e0;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-        
-        .status-toggle {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .status-display {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        
-        .status-online {
-            color: #4caf50;
-        }
-        
-        .status-offline {
-            color: #f44336;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-            margin: 0 10px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .slider {
-            background-color: #4caf50;
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        
-        .location-status {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .location-active {
-            border-color: #4caf50;
-            background: rgba(76, 175, 80, 0.1);
-        }
-        
-        .location-inactive {
-            border-color: #f44336;
-            background: rgba(244, 67, 54, 0.1);
-        }
-        
-        .order-notification {
-            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 2px solid #ff6b35;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 107, 53, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
-        }
-        
-        .order-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .order-id {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        .countdown-timer {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #ffffff;
-            min-width: 80px;
-            text-align: center;
-        }
-        
-        .countdown-critical {
-            background: rgba(244, 67, 54, 0.8);
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.5; }
-        }
-        
-        .restaurant-info {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .restaurant-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .restaurant-icon {
-            width: 40px;
-            height: 40px;
-            background: #ff6b35;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            color: white;
-            font-size: 18px;
-        }
-        
-        .restaurant-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        .restaurant-address {
-            font-size: 12px;
-            color: #e0e0e0;
-        }
-        
-        .distance-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .distance-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ffffff;
-            margin-bottom: 5px;
-        }
-        
-        .distance-label {
-            font-size: 12px;
-            color: #e0e0e0;
-        }
-        
-        .customer-info {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .info-label {
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-        
-        .info-value {
-            color: #ffffff;
-            font-weight: 500;
-            text-align: right;
-            flex: 1;
-            margin-left: 10px;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .btn-accept {
-            flex: 1;
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            border: none;
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-        }
-        
-        .btn-reject {
-            flex: 1;
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-            border: none;
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
-        }
-        
-        .btn-accept:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-        }
-        
-        .btn-reject:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
-        }
-        
-        .call-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .btn-call {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .btn-call:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .no-orders {
-            text-align: center;
-            padding: 50px 20px;
-            color: #e0e0e0;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .no-orders i {
-            font-size: 64px;
-            margin-bottom: 20px;
-            color: #999;
-        }
-        
-        .earnings-summary {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .earnings-header {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        
-        .earnings-amount {
-            font-size: 28px;
-            font-weight: bold;
-            color: #4caf50;
-            margin-bottom: 5px;
-        }
-        
-        .earnings-label {
-            color: #e0e0e0;
-            font-size: 14px;
-        }
-        
-        .earnings-stats {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 15px;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #e0e0e0;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 50px;
-        }
-        
-        .loading i {
-            font-size: 48px;
-            color: #4fc3f7;
-            animation: spin 2s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .success-message {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid #4caf50;
-            color: #4caf50;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .error-message {
-            background: rgba(244, 67, 54, 0.2);
-            border: 1px solid #f44336;
-            color: #f44336;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .share-location-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            border: none;
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-            margin-bottom: 15px;
-        }
-        
-        .share-location-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
-        }
-        
-        .live-navigation {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .nav-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .nav-icon {
-            width: 40px;
-            height: 40px;
-            background: #ff6b35;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            color: white;
-            font-size: 18px;
-        }
-        
-        .nav-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        .nav-subtitle {
-            font-size: 12px;
-            color: #e0e0e0;
-        }
-        
-        .direction-info {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 4px solid #4caf50;
-        }
-        
-        .direction-distance {
-            font-size: 18px;
-            font-weight: bold;
-            color: #4caf50;
-            margin-bottom: 5px;
-        }
-        
-        .direction-instruction {
-            color: #ffffff;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .direction-eta {
-            color: #e0e0e0;
-            font-size: 12px;
-        }
-        
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .btn-navigate {
-            flex: 1;
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            border: none;
-            color: white;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .btn-call {
-            flex: 1;
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            border: none;
-            color: white;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .live-tracking {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid #4caf50;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .tracking-status {
-            color: #4caf50;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .tracking-details {
-            color: #ffffff;
-            font-size: 12px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ET-FOOD Driver</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --card: #161629;
+    --card2: #1e1e3a;
+    --accent: #00d4ff;
+    --success: #00e676;
+    --warning: #ffb300;
+    --danger: #ff4757;
+    --text: #f0f0ff;
+    --muted: #8888aa;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        /* ── Live Map ── */
-        .live-map-card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 18px;
-            padding: 0;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.2);
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
-        .live-map-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 16px 10px 16px;
-        }
-        .live-map-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #fff;
-        }
-        .map-pulse-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #4caf50;
-            box-shadow: 0 0 0 0 rgba(76,175,80,0.7);
-            animation: mapPulse 1.5s infinite;
-            display: inline-block;
-        }
-        @keyframes mapPulse {
-            0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.7); }
-            70%  { box-shadow: 0 0 0 8px rgba(76,175,80,0); }
-            100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
-        }
-        .map-last-update {
-            font-size: 11px;
-            color: #b0c4de;
-        }
-        #liveMap {
-            width: 100%;
-            height: 300px;
-            z-index: 1;
-        }
-        .map-legend {
-            display: flex;
-            gap: 14px;
-            padding: 10px 16px 14px 16px;
-            flex-wrap: wrap;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: #e0e0e0;
-        }
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.5);
-        }
-        
-        .order-details {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .order-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .order-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        
-        .order-status {
-            font-size: 14px;
-            color: #4caf50;
-            font-weight: bold;
-        }
-        
-        .customer-info {
-            margin-bottom: 15px;
-        }
-        
-        .info-section {
-            margin-bottom: 15px;
-        }
-        
-        .info-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-        
-        .info-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-            color: #e0e0e0;
-        }
-        
-        .info-item i {
-            width: 20px;
-            margin-right: 10px;
-            color: #4fc3f7;
-        }
-        
-        .order-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-    </style>
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #12122a 0%, #1a1a3e 100%);
+    padding: 14px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+  }
+  .header-brand { display: flex; align-items: center; gap: 10px; }
+  .header-logo { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #a855f7);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .header-title { font-weight: 700; font-size: 16px; }
+  .header-subtitle { font-size: 11px; color: var(--muted); }
+
+  /* ── TOGGLE SWITCH ── */
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+  .toggle-label { font-size: 12px; font-weight: 600; }
+  .toggle { position: relative; width: 52px; height: 28px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: #333355; border-radius: 28px;
+    cursor: pointer; transition: .3s;
+  }
+  .toggle-slider:before {
+    content: ''; position: absolute; height: 20px; width: 20px;
+    left: 4px; top: 4px; background: white; border-radius: 50%; transition: .3s;
+  }
+  input:checked + .toggle-slider { background: var(--success); }
+  input:checked + .toggle-slider:before { transform: translateX(24px); }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    margin: 12px 16px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 20px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── GPS STATUS ── */
+  .gps-bar {
+    margin: 0 16px 12px;
+    background: var(--card2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    border: 1px solid rgba(0,212,255,0.08);
+  }
+  .gps-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .gps-dot.active { background: var(--success); animation: pulse 2s infinite; }
+  .gps-dot.error { background: var(--danger); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  /* ── MAP ── */
+  .map-container {
+    margin: 0 16px 12px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    height: 180px;
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+  #driverMap { height: 100%; width: 100%; }
+
+  /* ── NO ORDER SCREEN ── */
+  .no-order {
+    margin: 16px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .no-order-icon { font-size: 56px; margin-bottom: 16px; }
+  .no-order-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .no-order-sub { font-size: 13px; color: var(--muted); }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--muted);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ORDER CARD ── */
+  .order-card {
+    margin: 0 16px 12px;
+    background: var(--card);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid rgba(0,212,255,0.15);
+    display: none;
+  }
+  .order-card-header {
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(168,85,247,0.1));
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .order-number { font-size: 14px; font-weight: 700; color: var(--accent); }
+  .order-badge {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    background: rgba(0,212,255,0.15); color: var(--accent); border: 1px solid rgba(0,212,255,0.3);
+  }
+  .order-badge.stage-restaurant { background: rgba(255,179,0,0.15); color: var(--warning); border-color: rgba(255,179,0,0.3); }
+  .order-badge.stage-customer { background: rgba(0,230,118,0.15); color: var(--success); border-color: rgba(0,230,118,0.3); }
+
+  .order-body { padding: 14px 16px; }
+  .info-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .info-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .info-icon.blue { background: rgba(0,212,255,0.12); color: var(--accent); }
+  .info-icon.green { background: rgba(0,230,118,0.12); color: var(--success); }
+  .info-icon.orange { background: rgba(255,179,0,0.12); color: var(--warning); }
+  .info-text { flex: 1; }
+  .info-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .info-value.big { font-size: 20px; color: var(--success); }
+
+  /* ── COUNTDOWN ── */
+  .countdown-bar {
+    margin: 0 16px 10px;
+    background: var(--card2);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    display: none;
+  }
+  .countdown-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .countdown-text { font-size: 13px; color: var(--muted); }
+  .countdown-num { font-size: 22px; font-weight: 800; color: var(--warning); font-variant-numeric: tabular-nums; }
+  .countdown-progress-bg { height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; }
+  .countdown-progress-fill { height: 100%; background: var(--warning); border-radius: 4px; transition: width 1s linear; }
+
+  /* ── NAVIGATION BUTTONS ── */
+  .nav-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0 16px 10px;
+  }
+  .btn-nav {
+    padding: 14px 10px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s, transform 0.1s;
+    text-decoration: none;
+  }
+  .btn-nav:active { opacity: 0.8; transform: scale(0.97); }
+  .btn-nav-restaurant {
+    background: linear-gradient(135deg, #1565c0, #1e88e5);
+    color: white;
+  }
+  .btn-nav-customer {
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    color: white;
+  }
+  .btn-nav i { font-size: 20px; }
+  .btn-nav span { font-size: 11px; }
+
+  /* ── ACTION BUTTONS ── */
+  .action-buttons {
+    display: grid;
+    gap: 10px;
+    margin: 0 16px 16px;
+  }
+  .action-buttons.two-col { grid-template-columns: 1fr 1fr; }
+  .btn-action {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+    width: 100%;
+  }
+  .btn-action:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-accept { background: linear-gradient(135deg, #00c853, #00e676); color: #003300; }
+  .btn-reject { background: linear-gradient(135deg, #c62828, #ef5350); color: white; }
+  .btn-pickup { background: linear-gradient(135deg, #e65100, #ff6d00); color: white; }
+  .btn-deliver { background: linear-gradient(135deg, #6a1b9a, #ab47bc); color: white; }
+  .btn-close-order { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid rgba(255,255,255,0.1); }
+
+  /* ── STAGE INDICATOR ── */
+  .stage-steps {
+    display: flex;
+    margin: 0 16px 14px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .stage-step {
+    flex: 1;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+    border-right: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+  }
+  .stage-step:last-child { border-right: none; }
+  .stage-step i { display: block; font-size: 14px; margin-bottom: 4px; }
+  .stage-step.active { color: var(--accent); background: rgba(0,212,255,0.06); }
+  .stage-step.done { color: var(--success); }
+  .stage-step.done i::after { content: '✓'; position: absolute; top: 6px; right: 6px; font-size: 8px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--card2); border-radius: 24px; padding: 12px 20px; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; z-index: 999;
+    border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+    transition: transform 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(0,230,118,0.3); color: var(--success); }
+  .toast.error { border-color: rgba(255,71,87,0.3); color: var(--danger); }
+
+  /* ── AUTH SCREEN ── */
+  #authScreen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 32px 24px; text-align: center;
+  }
+  #authScreen .logo { font-size: 64px; margin-bottom: 20px; }
+  #authScreen h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  #authScreen p { color: var(--muted); font-size: 14px; line-height: 1.5; }
+  #authScreen .spinner-big { width: 40px; height: 40px; border-width: 3px; margin: 24px auto 0; display: block; }
+
+  /* ── OFFLINE SCREEN ── */
+  #offlineScreen {
+    margin: 16px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: none;
+  }
+  #offlineScreen .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  #offlineScreen h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  #offlineScreen p { font-size: 13px; color: var(--muted); }
+
+  #mainApp { display: none; }
+</style>
 </head>
 <body>
-    <div class="driver-container">
-        <div class="driver-header">
-            <h1><i class="fas fa-truck"></i> Driver Panel</h1>
-            <div class="driver-subtitle">Cloud Kitchen - Driver Panel</div>
-        </div>
-        
-        <!-- Status Toggle -->
-        <div class="status-toggle">
-            <div class="status-display">
-                <span id="statusText" class="status-offline">OFFLINE</span>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: center;">
-                <span style="margin-right: 10px;">Offline</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="statusToggle">
-                    <span class="slider"></span>
-                </label>
-                <span style="margin-left: 10px;">Online</span>
-            </div>
-        </div>
-        
-        <!-- Location Status -->
-        <div id="locationStatus" class="location-status location-inactive">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span id="locationText">Location: INACTIVE</span>
-                </div>
-                <button class="share-location-btn" onclick="requestLocation()">
-                    <i class="fas fa-location-arrow"></i> Share Location
-                </button>
-            </div>
-        </div>
 
-        <!-- Live Map -->
-        <div class="live-map-card">
-            <div class="live-map-header">
-                <div class="live-map-title">
-                    <span class="map-pulse-dot"></span>
-                    Live Delivery Map
-                </div>
-                <span class="map-last-update" id="mapLastUpdate">Waiting for GPS…</span>
-            </div>
-            <div id="liveMap"></div>
-            <div class="map-legend">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#2196f3;"></div>
-                    You (Driver)
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#ff6b35;"></div>
-                    Restaurant
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#4caf50;"></div>
-                    Customer
-                </div>
-            </div>
-        </div>
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="logo">🚗</div>
+  <h2>ET-FOOD Driver</h2>
+  <p>Loading your dashboard...</p>
+  <div class="spinner spinner-big" style="width:40px;height:40px;border-width:3px;border-radius:50%;border-color:rgba(255,255,255,0.2);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:24px auto 0;display:block;"></div>
+</div>
 
-        <!-- Order Information -->
-        <div id="orderDetails" class="order-details" style="display: none;">
-            <div class="order-header">
-                <div class="order-title">📋 Order #<span id="orderNumber">--</span></div>
-                <div class="order-status">Status: <span id="orderStatus">Assigned</span></div>
-            </div>
-            
-            <div class="customer-info">
-                <div class="info-section">
-                    <div class="info-title">👤 Customer Information</div>
-                    <div class="info-item">
-                        <i class="fas fa-user"></i>
-                        <span id="customerName">--</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-phone"></i>
-                        <span id="customerPhone">--</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span id="customerAddress">--</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-credit-card"></i>
-                        <span id="paymentMethod">--</span>
-                    </div>
-                </div>
-                
-                <div class="order-actions">
-                    <button class="btn-call" onclick="callCustomer()">
-                        <i class="fas fa-phone"></i> Call Customer
-                    </button>
-                    <button class="btn-navigate" onclick="navigateToCustomer()">
-                        <i class="fas fa-directions"></i> Navigate
-                    </button>
-                </div>
-            </div>
-        </div>
+<!-- MAIN APP -->
+<div id="mainApp">
 
-        <!-- Live Navigation -->
-        <div id="liveNavigation" class="live-navigation" style="display: none;">
-            <div class="nav-header">
-                <div class="nav-icon">
-                    <i class="fas fa-route"></i>
-                </div>
-                <div>
-                    <div class="nav-title">Live Navigation</div>
-                    <div class="nav-subtitle">Real-time GPS directions</div>
-                </div>
-            </div>
-            
-            <div class="direction-info">
-                <div class="direction-distance" id="nextDistance">0.5 km</div>
-                <div class="direction-instruction" id="nextInstruction">Head north on the main road</div>
-                <div class="direction-eta" id="estimatedTime">ETA: 5 minutes</div>
-            </div>
-            
-            <div class="live-tracking">
-                <div class="tracking-status">📍 Live Tracking Active</div>
-                <div class="tracking-details">Your location is being shared with customer and admin</div>
-            </div>
-            
-            <div class="nav-buttons">
-                <button class="btn-navigate" onclick="openGoogleMaps()">
-                    <i class="fas fa-map"></i> Google Maps
-                </button>
-                <button class="btn-navigate" onclick="openWaze()">
-                    <i class="fas fa-navigation"></i> Waze
-                </button>
-            </div>
-        </div>
-        
-        <!-- Earnings Summary -->
-        <div class="earnings-summary">
-            <div class="earnings-header">
-                <div class="earnings-amount">0.00 ETB</div>
-                <div class="earnings-label">Today's Earnings</div>
-            </div>
-            <div class="earnings-stats">
-                <div class="stat-item">
-                    <div class="stat-value">0</div>
-                    <div class="stat-label">Orders</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">0</div>
-                    <div class="stat-label">Completed</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">0%</div>
-                    <div class="stat-label">Rate</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Loading -->
-        <div id="loading" class="loading">
-            <i class="fas fa-spinner"></i>
-            <p>Loading orders...</p>
-        </div>
-        
-        <!-- Order Notification -->
-        <div id="orderNotification" class="order-notification" style="display: none;">
-            <div class="order-header">
-                <div class="order-id">Order #<span id="orderId">0</span></div>
-                <div class="countdown-timer" id="countdownTimer">1:00</div>
-            </div>
-            
-            <div class="restaurant-info">
-                <div class="restaurant-header">
-                    <div class="restaurant-icon">
-                        <i class="fas fa-store"></i>
-                    </div>
-                    <div>
-                        <div class="restaurant-name">Cloud Kitchen</div>
-                        <div class="restaurant-address">Addis Ababa, Ethiopia</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="distance-card">
-                <div class="distance-value" id="orderDistance">0.0 km</div>
-                <div class="distance-label">Distance to Customer</div>
-            </div>
-            
-            <div class="customer-info">
-                <div class="info-row">
-                    <span class="info-label">👤 Customer:</span>
-                    <span class="info-value" id="customerName">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">📞 Phone:</span>
-                    <span class="info-value" id="customerPhone">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">💰 Amount:</span>
-                    <span class="info-value" id="orderAmount">0.00 ETB</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">💳 Payment:</span>
-                    <span class="info-value" id="paymentMethod">-</span>
-                </div>
-            </div>
-            
-            <div class="action-buttons" id="orderActionButtons">
-                <button class="btn-accept" onclick="acceptOrder()">
-                    <i class="fas fa-check"></i> ACCEPT
-                </button>
-                <button class="btn-reject" onclick="rejectOrder()">
-                    <i class="fas fa-times"></i> REJECT
-                </button>
-            </div>
-            <div class="action-buttons" id="deliveryActionButtons" style="display:none;">
-                <button class="btn-accept" onclick="markDelivered()" style="flex:2;">
-                    <i class="fas fa-flag-checkered"></i> Mark as Delivered
-                </button>
-                <button class="btn-reject" onclick="closeOrder()" style="flex:1;">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-            
-            <div class="call-buttons">
-                <button class="btn-call" onclick="callRestaurant()">
-                    <i class="fas fa-phone"></i> Call Restaurant
-                </button>
-                <button class="btn-call" onclick="callCustomer()">
-                    <i class="fas fa-phone"></i> Call Customer
-                </button>
-            </div>
-        </div>
-        
-        <!-- No Orders -->
-        <div id="noOrders" class="no-orders" style="display: none;">
-            <i class="fas fa-clock"></i>
-            <h3>Waiting for Orders</h3>
-            <p>You're online and ready to receive deliveries!</p>
-            <p>Make sure your location is shared for nearby orders.</p>
-        </div>
-        
-        <!-- Document Upload Section -->
-        <div id="documentsSection" class="status-toggle" style="margin-top: 20px;">
-            <div class="info-title" style="text-align:center; margin-bottom: 15px;">
-                <i class="fas fa-folder-open"></i> Driver Documents
-            </div>
-            <p style="color:#e0e0e0; font-size:13px; text-align:center; margin-bottom:15px;">
-                Upload your ID, driver's license, and vehicle registration. All documents are reviewed by admin.
-            </p>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <div>
-                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">📄 National ID / Passport</label>
-                    <input type="file" id="docNationalId" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
-                </div>
-                <div>
-                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">🪪 Driver's License</label>
-                    <input type="file" id="docLicense" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
-                </div>
-                <div>
-                    <label style="font-size:13px; color:#b0c4de; margin-bottom:4px; display:block;">🚗 Vehicle Registration</label>
-                    <input type="file" id="docVehicle" accept="image/*,.pdf" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:8px; padding:8px; color:#fff; font-size:13px;">
-                </div>
-            </div>
-            <button onclick="uploadDocuments()" style="width:100%; margin-top:15px; padding:12px; background:linear-gradient(135deg,#4caf50,#388e3c); border:none; border-radius:12px; color:#fff; font-size:15px; font-weight:bold; cursor:pointer;">
-                <i class="fas fa-cloud-upload-alt"></i> Upload Documents
-            </button>
-            <div id="uploadProgress" style="display:none; margin-top:10px; text-align:center; color:#e0e0e0; font-size:13px;">
-                <i class="fas fa-spinner fa-spin"></i> Uploading...
-            </div>
-            <div id="uploadedDocs" style="margin-top:15px;"></div>
-        </div>
-
-        <!-- Messages -->
-        <div id="successMessage" class="success-message" style="display: none;"></div>
-        <div id="errorMessage" class="error-message" style="display: none;"></div>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-brand">
+      <div class="header-logo">🍔</div>
+      <div>
+        <div class="header-title" id="headerName">Driver</div>
+        <div class="header-subtitle" id="headerRating">⭐ 5.0 · 0 deliveries</div>
+      </div>
     </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label" id="onlineLabel" style="color:var(--muted)">OFFLINE</span>
+      <label class="toggle">
+        <input type="checkbox" id="onlineToggle" onchange="toggleOnline()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
 
-    <script>
-        // Initialize Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        
-        // Global variables
-        let currentOrderId = null;
-        let countdownInterval = null;
-        let driverId = null;
-        let isOnline = false;
-        let locationActive = false;
+  <!-- STATS -->
+  <div class="status-bar">
+    <div class="stat-item">
+      <div class="stat-value" id="statDeliveries">0</div>
+      <div class="stat-label">Deliveries</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statRating">5.0</div>
+      <div class="stat-label">Rating</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statDistance">0</div>
+      <div class="stat-label">km Today</div>
+    </div>
+  </div>
 
-        // ── Leaflet map state ──
-        let liveMap = null;
-        let driverMarker = null;
-        let restaurantMarker = null;
-        let customerMarker = null;
-        let routeLine = null;
-        let driverLatLng = null;
-        let restaurantLatLng = null;
-        let customerLatLng = null;
+  <!-- GPS STATUS -->
+  <div class="gps-bar">
+    <div class="gps-dot" id="gpsDot"></div>
+    <span id="gpsText" style="color:var(--muted);flex:1">GPS not started</span>
+    <span id="gpsCoords" style="color:var(--muted);font-size:11px"></span>
+  </div>
 
-        // Addis Ababa default center
-        const DEFAULT_CENTER = [9.0320, 38.7469];
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="driverMap"></div>
+  </div>
 
-        function makeIcon(color, emoji) {
-            return L.divIcon({
-                className: '',
-                html: `<div style="
-                    background:${color};
-                    border:3px solid #fff;
-                    border-radius:50% 50% 50% 0;
-                    transform:rotate(-45deg);
-                    width:30px;height:30px;
-                    box-shadow:0 2px 8px rgba(0,0,0,0.4);
-                    display:flex;align-items:center;justify-content:center;">
-                    <span style="transform:rotate(45deg);font-size:14px;">${emoji}</span>
-                </div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 30],
-                popupAnchor: [0, -32]
-            });
-        }
+  <!-- OFFLINE SCREEN -->
+  <div id="offlineScreen">
+    <div class="icon">🔴</div>
+    <h3>You're Offline</h3>
+    <p>Toggle the switch above to go online and start receiving orders.</p>
+  </div>
 
-        function initMap() {
-            liveMap = L.map('liveMap', { zoomControl: true, attributionControl: false })
-                .setView(DEFAULT_CENTER, 13);
+  <!-- NO ORDER -->
+  <div class="no-order" id="noOrderScreen">
+    <div class="no-order-icon">🛵</div>
+    <div class="no-order-title">Ready for Orders</div>
+    <div class="no-order-sub">
+      <span class="spinner"></span> Waiting for new orders...
+    </div>
+  </div>
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(liveMap);
+  <!-- STAGE STEPS (shown when order active) -->
+  <div class="stage-steps" id="stageSteps" style="display:none">
+    <div class="stage-step" id="step0" data-stage="0">
+      <i class="fas fa-bell"></i>Incoming
+    </div>
+    <div class="stage-step" id="step1" data-stage="1">
+      <i class="fas fa-store"></i>To Rest.
+    </div>
+    <div class="stage-step" id="step2" data-stage="2">
+      <i class="fas fa-box"></i>Picked Up
+    </div>
+    <div class="stage-step" id="step3" data-stage="3">
+      <i class="fas fa-flag-checkered"></i>Delivered
+    </div>
+  </div>
 
-            // placeholder driver marker
-            driverMarker = L.marker(DEFAULT_CENTER, { icon: makeIcon('#2196f3', '🚗') })
-                .addTo(liveMap)
-                .bindPopup('<b>You (Driver)</b>');
-        }
+  <!-- ORDER CARD -->
+  <div class="order-card" id="orderCard">
+    <div class="order-card-header">
+      <div>
+        <div class="order-number" id="ocOrderNum">Order #--</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="ocTime"></div>
+      </div>
+      <div class="order-badge" id="ocBadge">New Order</div>
+    </div>
+    <div class="order-body">
+      <div class="info-row">
+        <div class="info-icon blue"><i class="fas fa-user"></i></div>
+        <div class="info-text">
+          <div class="info-label">Customer</div>
+          <div class="info-value" id="ocCustomer">-</div>
+        </div>
+        <div class="info-icon orange" style="margin-left:auto">
+          <i class="fas fa-route"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Distance</div>
+          <div class="info-value" id="ocDistance">-</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon green"><i class="fas fa-money-bill"></i></div>
+        <div class="info-text">
+          <div class="info-label">Order Total</div>
+          <div class="info-value big" id="ocAmount">-</div>
+        </div>
+        <div class="info-icon blue" style="margin-left:auto">
+          <i class="fas fa-credit-card"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Payment</div>
+          <div class="info-value" id="ocPayment">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        function updateMapDriverPin(lat, lng) {
-            driverLatLng = [lat, lng];
-            if (driverMarker) {
-                driverMarker.setLatLng(driverLatLng);
-            } else {
-                driverMarker = L.marker(driverLatLng, { icon: makeIcon('#2196f3', '🚗') })
-                    .addTo(liveMap)
-                    .bindPopup('<b>You (Driver)</b>');
-            }
-            document.getElementById('mapLastUpdate').textContent =
-                'Updated ' + new Date().toLocaleTimeString();
-            fitMapBounds();
-        }
+  <!-- COUNTDOWN -->
+  <div class="countdown-bar" id="countdownBar">
+    <div class="countdown-row">
+      <span class="countdown-text">⚡ Respond before time runs out</span>
+      <span class="countdown-num" id="countdownNum">60</span>
+    </div>
+    <div class="countdown-progress-bg">
+      <div class="countdown-progress-fill" id="countdownFill" style="width:100%"></div>
+    </div>
+  </div>
 
-        function updateMapRestaurantPin(lat, lng, name) {
-            restaurantLatLng = [lat, lng];
-            if (restaurantMarker) {
-                restaurantMarker.setLatLng(restaurantLatLng);
-            } else {
-                restaurantMarker = L.marker(restaurantLatLng, { icon: makeIcon('#ff6b35', '🍽️') })
-                    .addTo(liveMap)
-                    .bindPopup(`<b>Restaurant</b><br>${name || 'Cloud Kitchen'}`);
-            }
-            fitMapBounds();
-        }
+  <!-- NAVIGATION BUTTONS (stage 1 & 2) -->
+  <div class="nav-buttons" id="navButtons" style="display:none">
+    <button class="btn-nav btn-nav-restaurant" id="btnNavRestaurant" onclick="navigateToRestaurant()">
+      <i class="fas fa-store"></i>
+      <span>Navigate to<br>Restaurant</span>
+    </button>
+    <button class="btn-nav btn-nav-customer" id="btnNavCustomer" onclick="navigateToCustomer()">
+      <i class="fas fa-map-marker-alt"></i>
+      <span>Navigate to<br>Customer</span>
+    </button>
+  </div>
 
-        function updateMapCustomerPin(lat, lng, name) {
-            customerLatLng = [lat, lng];
-            if (customerMarker) {
-                customerMarker.setLatLng(customerLatLng);
-            } else {
-                customerMarker = L.marker(customerLatLng, { icon: makeIcon('#4caf50', '📦') })
-                    .addTo(liveMap)
-                    .bindPopup(`<b>Customer</b><br>${name || 'Delivery Location'}`);
-            }
-            fitMapBounds();
-        }
+  <!-- ACTION BUTTONS — Stage 0: Accept/Reject -->
+  <div class="action-buttons two-col" id="actAccept" style="display:none">
+    <button class="btn-action btn-accept" onclick="acceptOrder()">
+      <i class="fas fa-check"></i> Accept
+    </button>
+    <button class="btn-action btn-reject" onclick="rejectOrder()">
+      <i class="fas fa-times"></i> Reject
+    </button>
+  </div>
 
-        function fitMapBounds() {
-            const pts = [driverLatLng, restaurantLatLng, customerLatLng].filter(Boolean);
-            if (pts.length === 1) {
-                liveMap.setView(pts[0], 15);
-            } else if (pts.length > 1) {
-                liveMap.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 16 });
-            }
-            drawRoute();
-        }
+  <!-- ACTION BUTTONS — Stage 1: Picked Up from Restaurant -->
+  <div class="action-buttons" id="actPickup" style="display:none">
+    <button class="btn-action btn-pickup" onclick="markPickedUp()">
+      <i class="fas fa-box-open"></i> Picked Up from Restaurant
+    </button>
+  </div>
 
-        function drawRoute() {
-            if (routeLine) { liveMap.removeLayer(routeLine); routeLine = null; }
-            const pts = [driverLatLng, restaurantLatLng, customerLatLng].filter(Boolean);
-            if (pts.length >= 2) {
-                routeLine = L.polyline(pts, {
-                    color: '#fff',
-                    weight: 3,
-                    opacity: 0.7,
-                    dashArray: '8 6'
-                }).addTo(liveMap);
-            }
-        }
+  <!-- ACTION BUTTONS — Stage 2: Complete Delivery -->
+  <div class="action-buttons two-col" id="actDeliver" style="display:none">
+    <button class="btn-action btn-deliver" onclick="markDelivered()" style="grid-column:1/-1">
+      <i class="fas fa-flag-checkered"></i> Complete Delivery
+    </button>
+    <button class="btn-action btn-close-order" onclick="closeOrderView()" style="grid-column:1/-1;padding:10px">
+      <i class="fas fa-eye-slash"></i> Close View
+    </button>
+  </div>
 
-        // Poll server for latest driver GPS every 10 s (keeps map live even when tab is in bg)
-        async function pollDriverLocation() {
-            if (!driverId) return;
-            try {
-                const res = await fetch(`/api/drivers/telegram/${driverId}/status`);
-                if (res.ok) {
-                    const d = await res.json();
-                    if (d.current_lat && d.current_lng) {
-                        updateMapDriverPin(parseFloat(d.current_lat), parseFloat(d.current_lng));
-                    }
-                }
-            } catch (_) {}
-        }
-        
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const orderIdParam = urlParams.get('order_id');
-        const sectionParam = urlParams.get('section');
-        driverId = urlParams.get('driver_id') || tg.initDataUnsafe?.user?.id;
-        
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            initMap();
-            initializeDriverPanel();
-            checkDriverStatus();
-            
-            // Status toggle event
-            document.getElementById('statusToggle').addEventListener('change', function() {
-                toggleDriverStatus();
-            });
-            
-            // Auto-scroll to section if specified
-            if (sectionParam === 'documents') {
-                setTimeout(() => {
-                    document.getElementById('documentsSection').scrollIntoView({ behavior: 'smooth' });
-                }, 500);
-            }
+</div><!-- /mainApp -->
 
-            // Poll for new orders every 5 s, map driver pin every 10 s
-            setInterval(checkForNewOrders, 5000);
-            setInterval(pollDriverLocation, 10000);
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-            // Load uploaded documents list
-            if (driverId) loadUploadedDocs();
-        });
-        
-        async function initializeDriverPanel() {
-            try {
-                // Load driver info
-                if (driverId) {
-                    const response = await fetch(`/api/drivers/telegram/${driverId}`);
-                    if (response.ok) {
-                        const driver = await response.json();
-                        updateDriverInfo(driver);
-                    }
-                }
-                
-                // Load specific order if provided
-                if (orderIdParam) {
-                    loadOrderDetails(orderIdParam);
-                    showOrderDetails();
-                    startLiveNavigation();
-                }
-                
-                // Start location tracking
-                startLocationTracking();
-                
-            } catch (error) {
-                console.error('Error initializing driver panel:', error);
-                showError('Failed to initialize driver panel');
-            }
-        }
-        
-        async function loadOrderDetails(orderId) {
-            try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                if (response.ok) {
-                    const order = await response.json();
-                    displayOrderInfo(order);
-                    currentOrderId = orderId;
-                } else {
-                    showError('Failed to load order details');
-                }
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                showError('Failed to load order details');
-            }
-        }
-        
-        function displayOrderInfo(order) {
-            document.getElementById('orderNumber').textContent = order.order_number || order.id;
-            document.getElementById('customerName').textContent = order.customer_name;
-            document.getElementById('customerPhone').textContent = order.customer_phone;
-            document.getElementById('customerAddress').textContent = order.customer_address || 'Not provided';
-            document.getElementById('paymentMethod').textContent = order.payment_method;
-            document.getElementById('orderStatus').textContent = order.status;
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
 
-            window.customerLat = order.location_lat;
-            window.customerLng = order.location_lng;
-            window.customerPhone = order.customer_phone;
+// ── STATE ──
+let driverTelegramId = null;
+let driverData = null;
+let currentOrder = null;
+let currentOrderId = null;
+let orderStage = 0; // 0=incoming,1=to-restaurant,2=to-customer,3=done
+let driverLat = null, driverLng = null;
+let gpsWatchId = null;
+let countdownInterval = null;
+let pollInterval = null;
+let socket = null;
 
-            // Place customer pin on map
-            if (order.location_lat && order.location_lng) {
-                updateMapCustomerPin(
-                    parseFloat(order.location_lat),
-                    parseFloat(order.location_lng),
-                    order.customer_name
-                );
-            }
+// Restaurant coords (from order)
+let restLat = 9.0248, restLng = 38.7468;
+let custLat = null, custLng = null;
 
-            // Fetch restaurant and place its pin
-            if (order.restaurant_id) {
-                fetch(`/api/restaurants`)
-                    .then(r => r.json())
-                    .then(data => {
-                        const rest = (data.restaurants || []).find(r => r.id === order.restaurant_id);
-                        if (rest) {
-                            // Restaurants in Addis Ababa — use stored coords or a sensible default
-                            const rLat = parseFloat(rest.lat) || 9.0056;
-                            const rLng = parseFloat(rest.lng) || 38.7638;
-                            updateMapRestaurantPin(rLat, rLng, rest.name);
-                        }
-                    })
-                    .catch(() => {
-                        // Fallback: place restaurant near Addis Ababa center
-                        updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
-                    });
-            } else {
-                updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
-            }
-        }
-        
-        function showOrderDetails() {
-            document.getElementById('orderDetails').style.display = 'block';
-            document.getElementById('noOrders').style.display = 'none';
-            document.getElementById('loading').style.display = 'none';
-        }
-        
-        function startLiveNavigation() {
-            document.getElementById('liveNavigation').style.display = 'block';
-            
-            // Start GPS tracking simulation
-            updateNavigationInfo();
-            setInterval(updateNavigationInfo, 10000); // Update every 10 seconds
-        }
-        
-        function updateNavigationInfo() {
-            // Simulate dynamic navigation updates
-            const distances = ['0.3 km', '0.8 km', '1.2 km', '2.1 km'];
-            const instructions = [
-                'Continue straight on Main Street',
-                'Turn left at the traffic light',
-                'Head north towards destination',
-                'Arrive at destination on the right'
-            ];
-            const etas = ['3 minutes', '7 minutes', '12 minutes', '15 minutes'];
-            
-            const randomIndex = Math.floor(Math.random() * distances.length);
-            
-            document.getElementById('nextDistance').textContent = distances[randomIndex];
-            document.getElementById('nextInstruction').textContent = instructions[randomIndex];
-            document.getElementById('estimatedTime').textContent = 'ETA: ' + etas[randomIndex];
-        }
-        
-        function startLocationTracking() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        updateLocationStatus(true);
-                        // Send location to server
-                        sendLocationUpdate(position.coords.latitude, position.coords.longitude);
-                        
-                        // Start live location tracking
-                        navigator.geolocation.watchPosition(
-                            (position) => {
-                                sendLocationUpdate(position.coords.latitude, position.coords.longitude);
-                            },
-                            (error) => {
-                                console.error('Location tracking error:', error);
-                            },
-                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }
-                        );
-                    },
-                    (error) => {
-                        console.error('Location access error:', error);
-                        updateLocationStatus(false);
-                    }
-                );
-            }
-        }
-        
-        function updateLocationStatus(active) {
-            locationActive = active;
-            const statusElement = document.getElementById('locationStatus');
-            const textElement = document.getElementById('locationText');
-            
-            if (active) {
-                statusElement.className = 'location-status location-active';
-                textElement.textContent = 'Location: ACTIVE';
-            } else {
-                statusElement.className = 'location-status location-inactive';
-                textElement.textContent = 'Location: INACTIVE';
-            }
-        }
-        
-        async function sendLocationUpdate(lat, lng) {
-            // Update map immediately on every GPS fix
-            updateMapDriverPin(lat, lng);
-            try {
-                if (!driverId) return;
-                const response = await fetch(`/api/drivers/telegram/${driverId}/location`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lat, lng })
-                });
-                if (response.ok) {
-                    console.log('Location updated successfully');
-                }
-            } catch (error) {
-                console.error('Error sending location update:', error);
-            }
-        }
-        
-        function callCustomer() {
-            if (window.customerPhone) {
-                window.open(`tel:${window.customerPhone}`, '_self');
-            } else {
-                showError('Customer phone number not available');
-            }
-        }
-        
-        function navigateToCustomer() {
-            if (window.customerLat && window.customerLng) {
-                openGoogleMaps();
-            } else {
-                showError('Customer location not available');
-            }
-        }
-        
-        function openGoogleMaps() {
-            if (window.customerLat && window.customerLng) {
-                const url = `https://www.google.com/maps/dir/?api=1&destination=${window.customerLat},${window.customerLng}&travelmode=driving`;
-                window.open(url, '_blank');
-            } else {
-                const url = 'https://maps.google.com';
-                window.open(url, '_blank');
-            }
-        }
-        
-        function openWaze() {
-            if (window.customerLat && window.customerLng) {
-                const url = `https://waze.com/ul?ll=${window.customerLat},${window.customerLng}&navigate=yes`;
-                window.open(url, '_blank');
-            } else {
-                const url = 'https://waze.com';
-                window.open(url, '_blank');
-            }
-        }
-        
-        
-        
-        async function checkDriverStatus() {
-            try {
-                if (!driverId) return;
-                
-                const response = await fetch(`/api/drivers/telegram/${driverId}/status`);
-                if (response.ok) {
-                    const status = await response.json();
-                    updateDriverStatus(status);
-                }
-            } catch (error) {
-                console.error('Error checking driver status:', error);
-            }
-        }
-        
-        function updateDriverInfo(driver) {
-            // Update status toggle
-            isOnline = driver.is_available;
-            document.getElementById('statusToggle').checked = isOnline;
-            updateStatusDisplay();
-            
-            // Update location status
-            const now = new Date();
-            const lastUpdate = new Date(driver.last_location_update);
-            const timeDiff = (now - lastUpdate) / 1000; // seconds
-            
-            locationActive = timeDiff < 600; // Less than 10 minutes
-            updateLocationStatus();
-        }
-        
-        function updateStatusDisplay() {
-            const statusText = document.getElementById('statusText');
-            if (isOnline) {
-                statusText.textContent = 'ONLINE';
-                statusText.className = 'status-online';
-            } else {
-                statusText.textContent = 'OFFLINE';
-                statusText.className = 'status-offline';
-            }
-        }
-        
-        function updateLocationStatus() {
-            const locationStatus = document.getElementById('locationStatus');
-            const locationText = document.getElementById('locationText');
-            
-            if (locationActive) {
-                locationStatus.className = 'location-status location-active';
-                locationText.textContent = 'Location: ACTIVE';
-            } else {
-                locationStatus.className = 'location-status location-inactive';
-                locationText.textContent = 'Location: INACTIVE';
-            }
-        }
-        
-        async function toggleDriverStatus() {
-            const newStatus = document.getElementById('statusToggle').checked;
-            if (!driverId) {
-                showError('Driver ID not found. Please open this panel from the Telegram bot.');
-                document.getElementById('statusToggle').checked = isOnline;
-                return;
-            }
-            try {
-                const response = await fetch(`/api/drivers/telegram/${driverId}/toggle`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_available: newStatus })
-                });
+// ── MAP ──
+let map, driverMarker, restMarker, custMarker;
 
-                if (response.ok) {
-                    isOnline = newStatus;
-                    updateStatusDisplay();
-                    showSuccess(newStatus ? '🟢 You are now ONLINE' : '🔴 You are now OFFLINE');
-                } else {
-                    const data = await response.json().catch(() => ({}));
-                    const msg = response.status === 403
-                        ? '⏳ Your account is not approved yet. Please wait for admin to approve you.'
-                        : (data.error || 'Failed to update status');
-                    showError(msg);
-                    document.getElementById('statusToggle').checked = isOnline;
-                    updateStatusDisplay();
-                }
-            } catch (error) {
-                console.error('Error toggling status:', error);
-                showError('Network error. Please try again.');
-                document.getElementById('statusToggle').checked = isOnline;
-                updateStatusDisplay();
-            }
-        }
-        
-        async function requestLocation() {
-            if (!driverId) {
-                showError('Driver ID not found. Please open this panel from the Telegram bot.');
-                return;
-            }
-            try {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        async (position) => {
-                            const { latitude, longitude } = position.coords;
-                            
-                            const response = await fetch(`/api/drivers/telegram/${driverId}/location`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ lat: latitude, lng: longitude })
-                            });
-                            
-                            if (response.ok) {
-                                locationActive = true;
-                                updateLocationStatus();
-                                showSuccess('📍 Location shared successfully!');
-                            } else {
-                                showError('Failed to save location to server.');
-                            }
-                        },
-                        (error) => {
-                            console.error('Geolocation error:', error);
-                            showError('Unable to get location. Please enable location access in your browser settings.');
-                        }
-                    );
-                } else {
-                    showError('Geolocation not supported by this browser');
-                }
-            } catch (error) {
-                console.error('Error requesting location:', error);
-                showError('Failed to share location');
-            }
-        }
-        
-        async function checkForNewOrders() {
-            try {
-                if (!driverId || !isOnline) return;
-                
-                const response = await fetch(`/api/drivers/telegram/${driverId}/orders`);
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.orders && data.orders.length > 0) {
-                        // Look for orders confirmed by kitchen and awaiting driver pickup
-                        const newOrder = data.orders.find(order =>
-                            (order.status === 'kitchen_confirmed' || order.status === 'ready') &&
-                            (!order.driver_id || order.driver_id === data.driver_id)
-                        );
-                        // Also look for the driver's active delivery
-                        const activeOrder = data.orders.find(order =>
-                            order.driver_id === data.driver_id &&
-                            order.status === 'out_for_delivery'
-                        );
-                        if (activeOrder) {
-                            showOrderNotification(activeOrder);
-                        } else if (newOrder) {
-                            showOrderNotification(newOrder);
-                        } else {
-                            showNoOrders();
-                        }
-                    } else {
-                        showNoOrders();
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking for orders:', error);
-            }
-        }
-        
-        function showOrderNotification(order) {
-            currentOrderId = order.id;
+function initMap() {
+  map = L.map('driverMap', { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.setView([9.0248, 38.7468], 13);
+}
 
-            document.getElementById('orderId').textContent = order.order_number || order.id;
-            document.getElementById('customerName').textContent = order.customer_name;
-            document.getElementById('customerPhone').textContent = order.customer_phone;
-            document.getElementById('orderAmount').textContent = parseFloat(order.total_amount || 0).toFixed(2) + ' ETB';
-            document.getElementById('paymentMethod').textContent = order.payment_method;
+const driverIcon = L.divIcon({
+  html: '<div style="background:#00d4ff;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px #00d4ff88"></div>',
+  iconSize: [18, 18], iconAnchor: [9, 9], className: ''
+});
+const restIcon = L.divIcon({
+  html: '<div style="background:#ff6b6b;width:22px;height:22px;border-radius:6px;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">🍔</div>',
+  iconSize: [22, 22], iconAnchor: [11, 11], className: ''
+});
+const custIcon = L.divIcon({
+  html: '<div style="background:#00e676;width:22px;height:22px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.4)">👤</div>',
+  iconSize: [22, 22], iconAnchor: [11, 11], className: ''
+});
 
-            const cLat = parseFloat(order.location_lat) || 9.0056;
-            const cLng = parseFloat(order.location_lng) || 38.7638;
-            const refLat = driverLatLng ? driverLatLng[0] : 9.0320;
-            const refLng = driverLatLng ? driverLatLng[1] : 38.7469;
-            const distance = calculateDistance(refLat, refLng, cLat, cLng);
-            document.getElementById('orderDistance').textContent = distance.toFixed(1) + ' km';
+function updateMapDriver(lat, lng) {
+  if (!map) return;
+  if (!driverMarker) {
+    driverMarker = L.marker([lat, lng], { icon: driverIcon }).addTo(map);
+    map.setView([lat, lng], 15);
+  } else {
+    driverMarker.setLatLng([lat, lng]);
+  }
+}
 
-            // Pin customer on live map
-            updateMapCustomerPin(cLat, cLng, order.customer_name);
-            updateMapRestaurantPin(9.0056, 38.7638, 'Cloud Kitchen');
+function updateMapRestaurant(lat, lng) {
+  if (!map) return;
+  if (restMarker) map.removeLayer(restMarker);
+  restMarker = L.marker([lat, lng], { icon: restIcon }).addTo(map).bindPopup('🍔 Restaurant');
+}
 
-            // Toggle buttons: out_for_delivery shows Delivered+Close, otherwise Accept+Reject
-            const isActiveDelivery = order.status === 'out_for_delivery';
-            document.getElementById('orderActionButtons').style.display   = isActiveDelivery ? 'none' : 'flex';
-            document.getElementById('deliveryActionButtons').style.display = isActiveDelivery ? 'flex' : 'none';
-            document.getElementById('countdownTimer').style.display        = isActiveDelivery ? 'none' : '';
+function updateMapCustomer(lat, lng) {
+  if (!map) return;
+  if (custMarker) map.removeLayer(custMarker);
+  custMarker = L.marker([lat, lng], { icon: custIcon }).addTo(map).bindPopup('👤 Customer');
+}
 
-            document.getElementById('orderNotification').style.display = 'block';
-            document.getElementById('noOrders').style.display = 'none';
-            if (!isActiveDelivery) startCountdown(60);
-        }
-        
-        function showNoOrders() {
-            document.getElementById('orderNotification').style.display = 'none';
-            document.getElementById('noOrders').style.display = 'block';
-        }
-        
-        function startCountdown(seconds) {
-            let timeLeft = seconds;
-            const timerElement = document.getElementById('countdownTimer');
-            
-            countdownInterval = setInterval(() => {
-                const minutes = Math.floor(timeLeft / 60);
-                const secs = timeLeft % 60;
-                timerElement.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
-                
-                if (timeLeft <= 15) {
-                    timerElement.classList.add('countdown-critical');
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    hideOrderNotification();
-                    showError('Order timed out - reassigned to another driver');
-                }
-                
-                timeLeft--;
-            }, 1000);
-        }
-        
-        function hideOrderNotification() {
-            document.getElementById('orderNotification').style.display = 'none';
-            document.getElementById('noOrders').style.display = 'block';
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
-                countdownInterval = null;
-            }
-            currentOrderId = null;
-        }
-        
-        async function acceptOrder() {
-            if (!currentOrderId) return;
-            
-            try {
-                const response = await fetch(`/api/orders/${currentOrderId}/accept`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        driver_telegram_id: driverId
-                    })
-                });
-                
-                if (response.ok) {
-                    const orderData = await response.json();
-                    
-                    showSuccess('Order accepted successfully!');
-                    hideOrderNotification();
-                    
-                    // Start live navigation if location data is available
-                    if (orderData.location_lat && orderData.location_lng) {
-                        await startLiveNavigation(
-                            orderData.location_lat, 
-                            orderData.location_lng, 
-                            orderData.customer_name
-                        );
-                    }
-                    
-                    // Notify via Telegram
-                    if (tg.showAlert) {
-                        tg.showAlert('Order accepted! Live navigation started. You will receive pickup instructions.');
-                    }
-                } else {
-                    throw new Error('Failed to accept order');
-                }
-            } catch (error) {
-                console.error('Error accepting order:', error);
-                showError('Failed to accept order');
-            }
-        }
-        
-        async function markDelivered() {
-            if (!currentOrderId) return;
-            if (!confirm('Mark this order as delivered? The customer will receive a price summary to confirm.')) return;
+// ── SOCKET.IO ──
+function initSocket() {
+  socket = io();
+  socket.on('connect', () => console.log('Socket connected'));
+}
 
-            try {
-                const response = await fetch(`/api/orders/${currentOrderId}/delivered`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+function emitGPS(lat, lng) {
+  if (!socket || !driverTelegramId) return;
+  socket.emit('driver_gps', {
+    driverId: driverTelegramId,
+    orderId: currentOrderId,
+    lat, lng
+  });
+}
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const fee = data.driver_fee ? ` — Driver fee: ${data.driver_fee} ETB` : '';
-                    showSuccess(`✅ Order delivered!${fee} Customer notified.`);
-                    hideOrderNotification();
-                    document.getElementById('liveNavigation').style.display = 'none';
-                } else {
-                    const err = await response.json().catch(() => ({}));
-                    showError(err.error || 'Failed to mark as delivered');
-                }
-            } catch (error) {
-                console.error('Error marking delivered:', error);
-                showError('Network error. Please try again.');
-            }
-        }
+// ── GPS ──
+function startGPS() {
+  if (!navigator.geolocation) {
+    setGPSStatus('error', 'GPS not supported');
+    return;
+  }
+  gpsWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      driverLat = pos.coords.latitude;
+      driverLng = pos.coords.longitude;
+      updateMapDriver(driverLat, driverLng);
+      setGPSStatus('active', 'GPS Active');
+      document.getElementById('gpsCoords').textContent =
+        driverLat.toFixed(4) + ',' + driverLng.toFixed(4);
+    },
+    (err) => {
+      setGPSStatus('error', 'GPS Error: ' + err.message.slice(0, 30));
+    },
+    { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+  );
 
-        function closeOrder() {
-            hideOrderNotification();
-            document.getElementById('liveNavigation').style.display = 'none';
-            showSuccess('Order closed from view.');
-        }
+  // Emit GPS every 5 seconds
+  setInterval(() => {
+    if (driverLat && driverLng) emitGPS(driverLat, driverLng);
+  }, 5000);
+}
 
-        async function rejectOrder() {
-            if (!currentOrderId) return;
-            
-            try {
-                const response = await fetch(`/api/orders/${currentOrderId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        driver_telegram_id: driverId
-                    })
-                });
-                
-                if (response.ok) {
-                    showSuccess('Order rejected - looking for another driver');
-                    hideOrderNotification();
-                } else {
-                    throw new Error('Failed to reject order');
-                }
-            } catch (error) {
-                console.error('Error rejecting order:', error);
-                showError('Failed to reject order');
-            }
-        }
-        
-        function callRestaurant() {
-            if (tg.showAlert) {
-                tg.showAlert('Restaurant: Cloud Kitchen\nPhone: +251-911-123-456');
-            }
-        }
-        
-        function callCustomer() {
-            const customerPhone = document.getElementById('customerPhone').textContent;
-            const customerName = document.getElementById('customerName').textContent;
-            
-            if (tg.showAlert) {
-                tg.showAlert(`Customer: ${customerName}\nPhone: ${customerPhone}`);
-            }
-        }
-        
-        function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371; // Earth's radius in km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-        
-        function showSuccess(message) {
-            const successEl = document.getElementById('successMessage');
-            successEl.textContent = message;
-            successEl.style.display = 'block';
-            setTimeout(() => { successEl.style.display = 'none'; }, 6000);
-        }
-        
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => { errorEl.style.display = 'none'; }, 6000);
-        }
-        
-        // GPS Navigation Functions
-        let currentPosition = null;
-        let destinationPosition = null;
-        let navigationActive = false;
-        
-        async function startLiveNavigation(orderLat, orderLng, customerName) {
-            try {
-                destinationPosition = { lat: orderLat, lng: orderLng };
-                
-                // Get current location
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            currentPosition = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude
-                            };
-                            
-                            // Show navigation panel
-                            document.getElementById('liveNavigation').style.display = 'block';
-                            navigationActive = true;
-                            
-                            // Update navigation info
-                            updateNavigationInfo();
-                            
-                            // Start live location tracking
-                            startLocationTracking();
-                            
-                            showSuccess('Live navigation started');
-                        },
-                        (error) => {
-                            console.error('Error getting location:', error);
-                            showError('Unable to start navigation - location required');
-                        }
-                    );
-                } else {
-                    showError('GPS not supported on this device');
-                }
-            } catch (error) {
-                console.error('Error starting navigation:', error);
-                showError('Failed to start navigation');
-            }
-        }
-        
-        function updateNavigationInfo() {
-            if (!currentPosition || !destinationPosition) return;
-            
-            const distance = calculateDistance(
-                currentPosition.lat, currentPosition.lng,
-                destinationPosition.lat, destinationPosition.lng
-            );
-            
-            const estimatedTime = Math.round(distance * 3); // ~3 minutes per km
-            
-            document.getElementById('nextDistance').textContent = `${distance.toFixed(1)} km`;
-            document.getElementById('nextInstruction').textContent = getDirectionInstruction(distance);
-            document.getElementById('estimatedTime').textContent = `ETA: ${estimatedTime} min`;
-        }
-        
-        function getDirectionInstruction(distance) {
-            if (distance < 0.1) {
-                return 'You have arrived at your destination';
-            } else if (distance < 0.5) {
-                return 'Approaching destination - prepare for delivery';
-            } else if (distance < 1) {
-                return 'Continue to destination - less than 1 km remaining';
-            } else {
-                return 'Continue towards customer location';
-            }
-        }
-        
-        function startLocationTracking() {
-            if (!navigationActive) return;
-            
-            // Update location every 30 seconds
-            setInterval(() => {
-                if (navigator.geolocation && navigationActive) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            currentPosition = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude
-                            };
-                            
-                            // Update navigation info
-                            updateNavigationInfo();
-                            
-                            // Send location update to server
-                            sendLocationUpdate();
-                        },
-                        (error) => {
-                            console.error('Location tracking error:', error);
-                        }
-                    );
-                }
-            }, 30000); // 30 seconds
-        }
-        
-        async function sendLocationUpdate() {
-            if (!currentPosition || !driverId) return;
-            
-            try {
-                await fetch(`/api/drivers/telegram/${driverId}/location`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        lat: currentPosition.lat,
-                        lng: currentPosition.lng,
-                        timestamp: new Date().toISOString()
-                    })
-                });
-            } catch (error) {
-                console.error('Error sending location update:', error);
-            }
-        }
-        
-        function openGoogleMaps() {
-            if (!destinationPosition) {
-                showError('No destination set');
-                return;
-            }
-            
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationPosition.lat},${destinationPosition.lng}`;
-            
-            if (tg.openLink) {
-                tg.openLink(url);
-            } else {
-                window.open(url, '_blank');
-            }
-        }
-        
-        function openWaze() {
-            if (!destinationPosition) {
-                showError('No destination set');
-                return;
-            }
-            
-            const url = `https://waze.com/ul?ll=${destinationPosition.lat},${destinationPosition.lng}&navigate=yes`;
-            
-            if (tg.openLink) {
-                tg.openLink(url);
-            } else {
-                window.open(url, '_blank');
-            }
-        }
-        
-        function stopNavigation() {
-            navigationActive = false;
-            document.getElementById('liveNavigation').style.display = 'none';
-            currentPosition = null;
-            destinationPosition = null;
-            showSuccess('Navigation stopped');
-        }
+function setGPSStatus(state, text) {
+  const dot = document.getElementById('gpsDot');
+  const label = document.getElementById('gpsText');
+  dot.className = 'gps-dot' + (state === 'active' ? ' active' : state === 'error' ? ' error' : '');
+  label.style.color = state === 'active' ? 'var(--success)' : state === 'error' ? 'var(--danger)' : 'var(--muted)';
+  label.textContent = text;
+}
 
-        async function uploadDocuments() {
-            if (!driverId) { showError('Driver ID not found. Open panel from the bot.'); return; }
-            const files = [
-                { input: document.getElementById('docNationalId'), type: 'national_id', label: 'National ID' },
-                { input: document.getElementById('docLicense'), type: 'drivers_license', label: "Driver's License" },
-                { input: document.getElementById('docVehicle'), type: 'vehicle_registration', label: 'Vehicle Registration' }
-            ].filter(f => f.input.files.length > 0);
+// ── AUTH ──
+async function init() {
+  const user = tg?.initDataUnsafe?.user;
+  if (user?.id) {
+    driverTelegramId = String(user.id);
+  } else {
+    const params = new URLSearchParams(location.search);
+    driverTelegramId = params.get('tid') || params.get('telegram_user_id');
+  }
+  if (!driverTelegramId) {
+    document.getElementById('authScreen').innerHTML = `
+      <div style="padding:32px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">❌</div>
+        <h3>Open via Telegram</h3>
+        <p style="color:var(--muted);margin-top:8px">This app must be opened through the ET-FOOD Driver Bot on Telegram.</p>
+      </div>`;
+    return;
+  }
 
-            if (!files.length) { showError('Please select at least one document to upload.'); return; }
+  try {
+    const res = await fetch('/api/drivers/telegram/' + driverTelegramId + '/status');
+    if (!res.ok) throw new Error('Not registered');
+    driverData = await res.json();
 
-            document.getElementById('uploadProgress').style.display = 'block';
-            let uploaded = 0, failed = 0;
+    if (!driverData.is_approved) {
+      document.getElementById('authScreen').innerHTML = `
+        <div style="padding:32px;text-align:center">
+          <div style="font-size:48px;margin-bottom:16px">⏳</div>
+          <h3>Pending Approval</h3>
+          <p style="color:var(--muted);margin-top:8px">Your account is being reviewed by the admin. You'll receive a notification when approved.</p>
+        </div>`;
+      return;
+    }
 
-            for (const { input, type, label } of files) {
-                const formData = new FormData();
-                formData.append('document', input.files[0]);
-                formData.append('telegram_user_id', String(driverId));
-                formData.append('doc_type', type);
+    // Show main app
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
 
-                try {
-                    const res = await fetch('/api/driver/upload-document', { method: 'POST', body: formData });
-                    if (res.ok) { uploaded++; input.value = ''; }
-                    else { failed++; console.error(`Failed to upload ${label}`); }
-                } catch (e) {
-                    failed++;
-                    console.error('Upload error:', e);
-                }
-            }
+    document.getElementById('headerName').textContent = driverData.name || 'Driver';
+    document.getElementById('headerRating').textContent =
+      '⭐ ' + (driverData.rating || 5.0).toFixed(1) + ' · ' + (driverData.total_deliveries || 0) + ' deliveries';
+    document.getElementById('statDeliveries').textContent = driverData.total_deliveries || 0;
+    document.getElementById('statRating').textContent = (driverData.rating || 5.0).toFixed(1);
 
-            document.getElementById('uploadProgress').style.display = 'none';
-            if (uploaded > 0) { showSuccess(`${uploaded} document(s) uploaded successfully!`); loadUploadedDocs(); }
-            if (failed > 0) showError(`${failed} document(s) failed to upload.`);
-        }
+    initMap();
+    initSocket();
 
-        async function loadUploadedDocs() {
-            if (!driverId) return;
-            try {
-                const res = await fetch(`/api/drivers/telegram/${driverId}/documents`);
-                if (!res.ok) return;
-                const data = await res.json();
-                const container = document.getElementById('uploadedDocs');
-                if (!data.documents || !data.documents.length) {
-                    container.innerHTML = '<p style="color:#aaa;font-size:12px;text-align:center;">No documents uploaded yet.</p>';
-                    return;
-                }
-                const docIcons = { national_id: '📄', drivers_license: '🪪', vehicle_registration: '🚗', document: '📎' };
-                const docLabels = { national_id: 'National ID', drivers_license: "Driver's License", vehicle_registration: 'Vehicle Reg.', document: 'Document' };
-                container.innerHTML = '<div style="font-size:12px;color:#b0c4de;margin-bottom:8px;">Uploaded Documents:</div>' +
-                    data.documents.map(d => {
-                        const icon = docIcons[d.doc_type] || '📎';
-                        const label = docLabels[d.doc_type] || d.doc_type;
-                        const date = new Date(d.uploaded_at).toLocaleDateString();
-                        return `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
-                            <span>${icon} ${label}</span>
-                            <span style="color:#aaa;font-size:11px;">${date} ✅</span>
-                        </div>`;
-                    }).join('');
-            } catch (e) {
-                console.error('Failed to load documents:', e);
-            }
-        }
-    </script>
+    // Restore online state
+    const wasOnline = localStorage.getItem('driver_online') === '1';
+    if (wasOnline && driverData.is_available) {
+      document.getElementById('onlineToggle').checked = true;
+      setOnlineUI(true);
+      startGPS();
+      startPoll();
+    } else {
+      setOnlineUI(false);
+    }
+
+    // Check if there's an existing active order
+    await checkExistingActiveOrder();
+
+  } catch (e) {
+    document.getElementById('authScreen').innerHTML = `
+      <div style="padding:32px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">🚫</div>
+        <h3>Not Registered</h3>
+        <p style="color:var(--muted);margin-top:8px">You're not registered as a driver. Please register through the ET-FOOD Driver Bot.</p>
+      </div>`;
+  }
+}
+
+async function checkExistingActiveOrder() {
+  try {
+    const res = await fetch('/api/drivers/telegram/' + driverTelegramId + '/orders');
+    const data = await res.json();
+    const myOrders = (data.orders || []).filter(o =>
+      (o.status === 'out_for_delivery' && o.driver_id === data.driver_id) ||
+      (o.status === 'kitchen_confirmed' && !o.driver_id)
+    );
+    if (myOrders.length > 0) {
+      const active = myOrders.find(o => o.status === 'out_for_delivery' && o.driver_id === data.driver_id)
+        || myOrders[0];
+      showOrder(active, data.driver_id);
+    }
+  } catch (e) {}
+}
+
+// ── ONLINE TOGGLE ──
+async function toggleOnline() {
+  const isOnline = document.getElementById('onlineToggle').checked;
+  try {
+    await fetch('/api/drivers/telegram/' + driverTelegramId + '/toggle', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ is_available: isOnline })
+    });
+    setOnlineUI(isOnline);
+    localStorage.setItem('driver_online', isOnline ? '1' : '0');
+    if (isOnline) {
+      startGPS();
+      startPoll();
+      showToast('✅ You are now Online', 'success');
+    } else {
+      stopPoll();
+      showToast('🔴 You are now Offline', '');
+    }
+  } catch (e) {
+    showToast('Failed to update status', 'error');
+    document.getElementById('onlineToggle').checked = !isOnline;
+  }
+}
+
+function setOnlineUI(online) {
+  const label = document.getElementById('onlineLabel');
+  label.textContent = online ? 'ONLINE' : 'OFFLINE';
+  label.style.color = online ? 'var(--success)' : 'var(--muted)';
+  document.getElementById('offlineScreen').style.display = online ? 'none' : 'block';
+  document.getElementById('noOrderScreen').style.display = (online && !currentOrder) ? 'block' : 'none';
+}
+
+// ── POLL FOR ORDERS ──
+function startPoll() {
+  if (pollInterval) return;
+  pollInterval = setInterval(pollOrders, 6000);
+  pollOrders();
+}
+function stopPoll() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+async function pollOrders() {
+  if (!driverTelegramId || currentOrder) return;
+  try {
+    const res = await fetch('/api/drivers/telegram/' + driverTelegramId + '/orders');
+    const data = await res.json();
+    const newOrders = (data.orders || []).filter(o =>
+      o.status === 'kitchen_confirmed' && !o.driver_id
+    );
+    if (newOrders.length > 0 && !currentOrder) {
+      showOrder(newOrders[0], data.driver_id);
+    }
+  } catch (e) {}
+}
+
+// ── SHOW ORDER ──
+function showOrder(order, driverId) {
+  currentOrder = order;
+  currentOrderId = order.id;
+
+  // Load restaurant/customer coords
+  if (order.restaurant_lat) restLat = parseFloat(order.restaurant_lat);
+  if (order.restaurant_lng) restLng = parseFloat(order.restaurant_lng);
+  if (order.location_lat) custLat = parseFloat(order.location_lat);
+  if (order.location_lng) custLng = parseFloat(order.location_lng);
+
+  // Determine stage
+  const storedStage = localStorage.getItem('order_stage_' + order.id);
+  if (order.status === 'out_for_delivery' && order.driver_id === driverId) {
+    orderStage = storedStage ? parseInt(storedStage) : 1;
+    if (orderStage < 1) orderStage = 1;
+  } else {
+    orderStage = 0;
+  }
+
+  // Fetch restaurant coords if not on order
+  fetch('/api/orders/' + order.id + '/tracking').then(r => r.json()).then(t => {
+    if (t.restaurant) {
+      restLat = t.restaurant.lat;
+      restLng = t.restaurant.lng;
+      updateMapRestaurant(restLat, restLng);
+    }
+    if (t.order?.customer_lat) {
+      custLat = t.order.customer_lat;
+      custLng = t.order.customer_lng;
+      updateMapCustomer(custLat, custLng);
+    }
+    // Fit map bounds
+    const points = [[restLat, restLng]];
+    if (custLat) points.push([custLat, custLng]);
+    if (driverLat) points.push([driverLat, driverLng]);
+    if (map && points.length > 1) map.fitBounds(points, { padding: [30, 30] });
+  }).catch(() => {
+    updateMapRestaurant(restLat, restLng);
+  });
+
+  document.getElementById('ocOrderNum').textContent = 'Order #' + (order.order_number || order.id.slice(-6));
+  document.getElementById('ocTime').textContent = new Date(order.created_at).toLocaleTimeString();
+  document.getElementById('ocCustomer').textContent = order.customer_name || 'Customer';
+  document.getElementById('ocAmount').textContent = parseFloat(order.total_amount || 0).toFixed(2) + ' ETB';
+  document.getElementById('ocPayment').textContent = order.payment_method || '-';
+
+  // Distance
+  if (driverLat && custLat) {
+    const d = haversine(driverLat, driverLng, custLat, custLng);
+    document.getElementById('ocDistance').textContent = d.toFixed(1) + ' km';
+  } else {
+    document.getElementById('ocDistance').textContent = '--';
+  }
+
+  document.getElementById('noOrderScreen').style.display = 'none';
+  document.getElementById('offlineScreen').style.display = 'none';
+  document.getElementById('orderCard').style.display = 'block';
+  document.getElementById('stageSteps').style.display = 'flex';
+
+  renderStage();
+}
+
+function renderStage() {
+  // Reset stage steps
+  for (let i = 0; i <= 3; i++) {
+    const el = document.getElementById('step' + i);
+    if (!el) continue;
+    el.className = 'stage-step' + (i === orderStage ? ' active' : i < orderStage ? ' done' : '');
+  }
+
+  // Hide all button groups
+  document.getElementById('actAccept').style.display = 'none';
+  document.getElementById('actPickup').style.display = 'none';
+  document.getElementById('actDeliver').style.display = 'none';
+  document.getElementById('navButtons').style.display = 'none';
+  document.getElementById('countdownBar').style.display = 'none';
+
+  const badge = document.getElementById('ocBadge');
+
+  if (orderStage === 0) {
+    badge.textContent = 'New Order'; badge.className = 'order-badge';
+    document.getElementById('actAccept').style.display = 'grid';
+    document.getElementById('countdownBar').style.display = 'block';
+    startCountdown(60);
+  } else if (orderStage === 1) {
+    badge.textContent = '→ Restaurant'; badge.className = 'order-badge stage-restaurant';
+    document.getElementById('navButtons').style.display = 'grid';
+    document.getElementById('btnNavCustomer').style.opacity = '0.4';
+    document.getElementById('btnNavCustomer').style.pointerEvents = 'none';
+    document.getElementById('actPickup').style.display = 'grid';
+  } else if (orderStage === 2) {
+    badge.textContent = '→ Customer'; badge.className = 'order-badge stage-customer';
+    document.getElementById('navButtons').style.display = 'grid';
+    document.getElementById('btnNavRestaurant').style.opacity = '0.4';
+    document.getElementById('btnNavRestaurant').style.pointerEvents = 'none';
+    document.getElementById('actDeliver').style.display = 'grid';
+  }
+}
+
+// ── ORDER ACTIONS ──
+async function acceptOrder() {
+  if (!currentOrderId) return;
+  try {
+    const res = await fetch('/api/orders/' + currentOrderId + '/accept', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ driver_telegram_id: driverTelegramId })
+    });
+    if (res.ok) {
+      stopCountdown();
+      orderStage = 1;
+      localStorage.setItem('order_stage_' + currentOrderId, '1');
+      currentOrder.status = 'out_for_delivery';
+      renderStage();
+      showToast('✅ Order Accepted! Head to restaurant.', 'success');
+    } else {
+      showToast('Failed to accept order', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+async function rejectOrder() {
+  if (!currentOrderId) return;
+  try {
+    await fetch('/api/orders/' + currentOrderId + '/reject', { method: 'POST' });
+  } catch (e) {}
+  stopCountdown();
+  clearOrder();
+  showToast('Order rejected', '');
+}
+
+async function markPickedUp() {
+  if (!currentOrderId) return;
+  try {
+    await fetch('/api/orders/' + currentOrderId + '/pickup', { method: 'POST' });
+  } catch (e) {}
+  orderStage = 2;
+  localStorage.setItem('order_stage_' + currentOrderId, '2');
+  document.getElementById('btnNavRestaurant').style.opacity = '1';
+  document.getElementById('btnNavCustomer').style.opacity = '1';
+  document.getElementById('btnNavRestaurant').style.pointerEvents = '';
+  document.getElementById('btnNavCustomer').style.pointerEvents = '';
+  renderStage();
+  showToast('📦 Picked up! Navigate to customer.', 'success');
+}
+
+async function markDelivered() {
+  if (!currentOrderId) return;
+  if (!confirm('Mark this order as delivered?')) return;
+  try {
+    const res = await fetch('/api/orders/' + currentOrderId + '/delivered', {
+      method: 'POST', headers: {'Content-Type':'application/json'}
+    });
+    if (res.ok) {
+      const data = await res.json();
+      orderStage = 3;
+      localStorage.removeItem('order_stage_' + currentOrderId);
+      renderStage();
+      showToast('🎉 Delivered! Great job!', 'success');
+      setTimeout(() => {
+        clearOrder();
+        const d = document.getElementById('statDeliveries');
+        d.textContent = parseInt(d.textContent || 0) + 1;
+      }, 2500);
+    } else {
+      showToast('Failed to complete delivery', 'error');
+    }
+  } catch (e) { showToast('Network error', 'error'); }
+}
+
+function closeOrderView() {
+  clearOrder();
+}
+
+function clearOrder() {
+  currentOrder = null;
+  currentOrderId = null;
+  orderStage = 0;
+  stopCountdown();
+  document.getElementById('orderCard').style.display = 'none';
+  document.getElementById('stageSteps').style.display = 'none';
+  document.getElementById('actAccept').style.display = 'none';
+  document.getElementById('actPickup').style.display = 'none';
+  document.getElementById('actDeliver').style.display = 'none';
+  document.getElementById('navButtons').style.display = 'none';
+  document.getElementById('countdownBar').style.display = 'none';
+  const isOnline = document.getElementById('onlineToggle').checked;
+  if (isOnline) {
+    document.getElementById('noOrderScreen').style.display = 'block';
+  }
+}
+
+// ── WAZE NAVIGATION ──
+function navigateToRestaurant() {
+  openWaze(restLat, restLng);
+}
+
+function navigateToCustomer() {
+  if (!custLat) { showToast('Customer location unavailable', 'error'); return; }
+  openWaze(custLat, custLng);
+}
+
+function openWaze(lat, lng) {
+  const url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes&utm_source=misaka_delivery`;
+  if (window.Telegram?.WebApp?.openLink) {
+    window.Telegram.WebApp.openLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+// ── COUNTDOWN ──
+let countdownSec = 60;
+function startCountdown(sec) {
+  countdownSec = sec;
+  stopCountdown();
+  document.getElementById('countdownNum').textContent = countdownSec;
+  document.getElementById('countdownFill').style.width = '100%';
+  countdownInterval = setInterval(() => {
+    countdownSec--;
+    document.getElementById('countdownNum').textContent = countdownSec;
+    document.getElementById('countdownFill').style.width = (countdownSec / sec * 100) + '%';
+    if (countdownSec <= 0) {
+      stopCountdown();
+      rejectOrder();
+    }
+  }, 1000);
+}
+function stopCountdown() {
+  if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+}
+
+// ── HAVERSINE ──
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── TOAST ──
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// ── BOOT ──
+window.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>

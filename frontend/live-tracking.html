@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Track Your Order – ET-FOOD</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --card: rgba(22,22,45,0.95);
+    --accent: #00d4ff;
+    --success: #00e676;
+    --warning: #ffb300;
+    --danger: #ff4757;
+    --text: #f0f0ff;
+    --muted: #8888aa;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, 'Segoe UI', sans-serif; }
+
+  /* ── FULL-SCREEN MAP ── */
+  #map { position: fixed; inset: 0; z-index: 0; }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: linear-gradient(180deg, rgba(13,13,26,0.95) 70%, transparent);
+    padding: 12px 16px 20px;
+    pointer-events: none;
+  }
+  .top-bar-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    pointer-events: auto;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .brand-icon { width: 34px; height: 34px; background: linear-gradient(135deg, var(--accent), #a855f7);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .brand-text { font-size: 15px; font-weight: 800; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,230,118,0.12); border: 1px solid rgba(0,230,118,0.3);
+    color: var(--success); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 700;
+  }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+    animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ── ORDER NUMBER PILL ── */
+  .order-pill {
+    margin: 0 16px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+  .order-pill-num { font-weight: 800; color: var(--accent); font-size: 15px; }
+  .order-pill-status { font-size: 11px; color: var(--muted); }
+
+  /* ── BOTTOM SHEET ── */
+  .bottom-sheet {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    background: var(--card);
+    border-radius: var(--radius) var(--radius) 0 0;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+  .sheet-handle {
+    width: 36px; height: 4px; background: rgba(255,255,255,0.2);
+    border-radius: 4px; margin: 10px auto 0;
+  }
+  .sheet-body { padding: 16px 16px 8px; }
+
+  /* ── PROGRESS TIMELINE ── */
+  .timeline { display: flex; align-items: flex-start; gap: 0; margin-bottom: 20px; }
+  .tl-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+  .tl-step + .tl-step::before {
+    content: ''; position: absolute; top: 14px; right: 50%; left: -50%;
+    height: 2px; background: rgba(255,255,255,0.1); z-index: 0;
+  }
+  .tl-step.done + .tl-step::before,
+  .tl-step.active + .tl-step::before { background: var(--accent); }
+  .tl-circle {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; position: relative; z-index: 1;
+    border: 2px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+    color: var(--muted); transition: all 0.4s;
+  }
+  .tl-step.done .tl-circle { background: var(--accent); border-color: var(--accent); color: #000; }
+  .tl-step.active .tl-circle {
+    background: transparent; border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,212,255,0.4);
+    animation: pulse-ring 2s infinite;
+  }
+  @keyframes pulse-ring {
+    0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0.5)}
+    50%{box-shadow:0 0 0 6px rgba(0,212,255,0)}
+  }
+  .tl-label { font-size: 9px; text-align: center; margin-top: 5px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.3px; max-width: 52px; }
+  .tl-step.done .tl-label, .tl-step.active .tl-label { color: var(--text); font-weight: 600; }
+
+  /* ── DRIVER CARD ── */
+  .driver-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+  .driver-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    flex-shrink: 0;
+  }
+  .driver-info { flex: 1; min-width: 0; }
+  .driver-name { font-size: 15px; font-weight: 700; }
+  .driver-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .driver-phone-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(0,230,118,0.12); border: 1px solid rgba(0,230,118,0.3);
+    color: var(--success); font-size: 16px; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── INFO ROW ── */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .info-chip {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; padding: 12px;
+  }
+  .info-chip-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .info-chip-value { font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .info-chip-value.accent { color: var(--accent); }
+  .info-chip-value.success { color: var(--success); }
+  .info-chip-value.warning { color: var(--warning); }
+
+  /* ── STATUS MESSAGE ── */
+  .status-msg {
+    background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(168,85,247,0.08));
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* ── LAST UPDATE ── */
+  .last-update {
+    text-align: center; font-size: 11px; color: var(--muted); padding: 8px 0;
+  }
+
+  /* ── LOADING ── */
+  #loadingScreen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px;
+  }
+  .spinner {
+    width: 44px; height: 44px; border: 3px solid rgba(0,212,255,0.2);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  #errorScreen {
+    position: fixed; inset: 0; z-index: 200; background: var(--bg);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+  }
+  #errorScreen .err-icon { font-size: 56px; margin-bottom: 16px; }
+  #errorScreen h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+  #errorScreen p { color: var(--muted); font-size: 14px; }
+
+  /* ── MAP CONTROLS ── */
+  .map-fab {
+    position: fixed; right: 14px; z-index: 40;
+    width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text); font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #btnCenter { bottom: calc(70vh + 24px); }
+  #btnCenter:active { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div style="font-size:48px">🛵</div>
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--muted)">Loading your tracking...</div>
+</div>
+
+<!-- ERROR -->
+<div id="errorScreen">
+  <div class="err-icon">📦</div>
+  <h2>Order Not Found</h2>
+  <p>This tracking link may have expired or the order doesn't exist.</p>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- CENTER FAB -->
+<button class="map-fab" id="btnCenter" onclick="centerMapOnDriver()" title="Center on driver">
+  <i class="fas fa-crosshairs"></i>
+</button>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="brand">
+      <div class="brand-icon">🍔</div>
+      <span class="brand-text">ET-FOOD</span>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </div>
+  <div class="order-pill" id="orderPill" style="display:none">
+    <div>
+      <div class="order-pill-num" id="pillOrderNum">Order #--</div>
+      <div class="order-pill-status" id="pillStatus">Loading...</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted)" id="pillEta"></div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div class="bottom-sheet" id="bottomSheet" style="display:none">
+  <div class="sheet-handle"></div>
+  <div class="sheet-body">
+
+    <!-- PROGRESS TIMELINE -->
+    <div class="timeline" id="timeline">
+      <div class="tl-step" id="tl0">
+        <div class="tl-circle"><i class="fas fa-receipt"></i></div>
+        <div class="tl-label">Received</div>
+      </div>
+      <div class="tl-step" id="tl1">
+        <div class="tl-circle"><i class="fas fa-fire"></i></div>
+        <div class="tl-label">Preparing</div>
+      </div>
+      <div class="tl-step" id="tl2">
+        <div class="tl-circle"><i class="fas fa-box-open"></i></div>
+        <div class="tl-label">Picked Up</div>
+      </div>
+      <div class="tl-step" id="tl3">
+        <div class="tl-circle"><i class="fas fa-motorcycle"></i></div>
+        <div class="tl-label">On The Way</div>
+      </div>
+      <div class="tl-step" id="tl4">
+        <div class="tl-circle"><i class="fas fa-check"></i></div>
+        <div class="tl-label">Delivered</div>
+      </div>
+    </div>
+
+    <!-- STATUS MESSAGE -->
+    <div class="status-msg" id="statusMsg">
+      <i class="fas fa-clock"></i> <span id="statusText">Waiting for update...</span>
+    </div>
+
+    <!-- DRIVER CARD -->
+    <div class="driver-card" id="driverCard" style="display:none">
+      <div class="driver-avatar">🧑</div>
+      <div class="driver-info">
+        <div class="driver-name" id="driverName">Driver</div>
+        <div class="driver-meta" id="driverMeta">On the way to you</div>
+      </div>
+      <button class="driver-phone-btn" id="driverPhoneBtn" onclick="callDriver()">
+        <i class="fas fa-phone"></i>
+      </button>
+    </div>
+
+    <!-- INFO CHIPS -->
+    <div class="info-grid">
+      <div class="info-chip">
+        <div class="info-chip-label">Order Total</div>
+        <div class="info-chip-value success" id="chipAmount">-</div>
+      </div>
+      <div class="info-chip">
+        <div class="info-chip-label">Payment</div>
+        <div class="info-chip-value" id="chipPayment">-</div>
+      </div>
+      <div class="info-chip">
+        <div class="info-chip-label">Restaurant</div>
+        <div class="info-chip-value accent" id="chipRestaurant" style="font-size:12px">-</div>
+      </div>
+      <div class="info-chip">
+        <div class="info-chip-label">ETA</div>
+        <div class="info-chip-value warning" id="chipEta">--</div>
+      </div>
+    </div>
+
+    <div class="last-update">
+      Updated <span id="lastUpdateTime">just now</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── ORDER ID FROM URL ──
+const orderId = location.pathname.split('/').pop();
+
+// ── STATE ──
+let trackData = null;
+let driverPhone = null;
+let driverMarker = null, restMarker = null, custMarker = null;
+let map = null;
+let socket = null;
+let lastDriverLat = null, lastDriverLng = null;
+let etaInterval = null;
+let localPickedUp = false;
+
+// ── STATUS → STAGE ──
+const statusToStage = {
+  'pending': 0, 'confirmed': 1, 'kitchen_confirmed': 1, 'preparing': 1,
+  'ready': 2, 'out_for_delivery': 3, 'delivered': 4, 'cancelled': -1
+};
+
+// ── MAP SETUP ──
+function initMap() {
+  map = L.map('map', { zoomControl: false, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(map);
+  map.setView([9.0248, 38.7468], 13);
+}
+
+const iconDriver = (heading) => L.divIcon({
+  html: `<div style="
+    width:36px;height:36px;border-radius:50%;
+    background:linear-gradient(135deg,#00d4ff,#a855f7);
+    border:3px solid white;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+    box-shadow:0 4px 16px rgba(0,212,255,0.5);
+    animation:glow 2s infinite;
+  ">🛵</div>
+  <style>@keyframes glow{0%,100%{box-shadow:0 4px 16px rgba(0,212,255,0.5)}50%{box-shadow:0 4px 24px rgba(0,212,255,0.9)}}</style>`,
+  iconSize: [36, 36], iconAnchor: [18, 18], className: ''
+});
+
+const iconRest = L.divIcon({
+  html: `<div style="
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,#ff6b6b,#ee5a24);
+    border:3px solid white;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;box-shadow:0 3px 12px rgba(255,107,107,0.5)
+  ">🍔</div>`,
+  iconSize: [38, 38], iconAnchor: [19, 19], className: ''
+});
+
+const iconCust = L.divIcon({
+  html: `<div style="
+    width:38px;height:38px;border-radius:50%;
+    background:linear-gradient(135deg,#00e676,#00c853);
+    border:3px solid white;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;box-shadow:0 3px 12px rgba(0,230,118,0.5)
+  ">🏠</div>`,
+  iconSize: [38, 38], iconAnchor: [19, 38], className: ''
+});
+
+function setDriverMarker(lat, lng) {
+  if (!map) return;
+  if (!driverMarker) {
+    driverMarker = L.marker([lat, lng], { icon: iconDriver(), zIndexOffset: 100 })
+      .addTo(map)
+      .bindPopup('<b>🛵 Your Driver</b>');
+  } else {
+    // Smooth animate
+    smoothMoveMarker(driverMarker, lat, lng);
+  }
+  lastDriverLat = lat;
+  lastDriverLng = lng;
+  updateLastUpdate();
+}
+
+function smoothMoveMarker(marker, toLat, toLng) {
+  const from = marker.getLatLng();
+  const steps = 20, delay = 50;
+  let step = 0;
+  const lat_step = (toLat - from.lat) / steps;
+  const lng_step = (toLng - from.lng) / steps;
+  const interval = setInterval(() => {
+    step++;
+    marker.setLatLng([from.lat + lat_step * step, from.lng + lng_step * step]);
+    if (step >= steps) clearInterval(interval);
+  }, delay);
+}
+
+function setRestMarker(lat, lng, name) {
+  if (!map || restMarker) return;
+  restMarker = L.marker([lat, lng], { icon: iconRest })
+    .addTo(map).bindPopup('<b>🍔 ' + (name || 'Restaurant') + '</b>');
+}
+
+function setCustMarker(lat, lng) {
+  if (!map || custMarker) return;
+  custMarker = L.marker([lat, lng], { icon: iconCust })
+    .addTo(map).bindPopup('<b>🏠 Your Location</b>');
+}
+
+function centerMapOnDriver() {
+  if (map && lastDriverLat) {
+    map.setView([lastDriverLat, lastDriverLng], 16, { animate: true });
+  }
+}
+
+function fitAllMarkers() {
+  if (!map) return;
+  const pts = [];
+  if (driverMarker) pts.push(driverMarker.getLatLng());
+  if (restMarker) pts.push(restMarker.getLatLng());
+  if (custMarker) pts.push(custMarker.getLatLng());
+  if (pts.length > 1) map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [60, 60] });
+  else if (pts.length === 1) map.setView(pts[0], 15);
+}
+
+// ── SOCKET.IO ──
+function initSocket() {
+  socket = io();
+  socket.emit('join_order_tracking', { orderId });
+
+  socket.on('driver_location', ({ lat, lng }) => {
+    setDriverMarker(lat, lng);
+    updateETA(lat, lng);
+    document.getElementById('btnCenter').style.display = 'flex';
+  });
+
+  socket.on('order_status', ({ status }) => {
+    if (status === 'picked_up') {
+      localPickedUp = true;
+      updateTimeline('out_for_delivery', true);
+      setStatusMsg('📦 Your food has been picked up! Driver is on the way.', 'out_for_delivery');
+    }
+  });
+}
+
+// ── LOAD TRACKING DATA ──
+async function loadTracking() {
+  try {
+    const res = await fetch('/api/orders/' + orderId + '/tracking');
+    if (!res.ok) throw new Error('Not found');
+    const data = await res.json();
+    if (!data.success) throw new Error('No data');
+    trackData = data;
+
+    // Show UI
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('orderPill').style.display = 'flex';
+    document.getElementById('bottomSheet').style.display = 'block';
+
+    const order = data.order;
+    const driver = data.driver;
+    const rest = data.restaurant;
+
+    document.getElementById('pillOrderNum').textContent = 'Order #' + (order.order_number || order.id.slice(-6));
+    document.getElementById('chipAmount').textContent = parseFloat(order.total_amount || 0).toFixed(2) + ' ETB';
+    document.getElementById('chipPayment').textContent = order.payment_method || '-';
+    document.getElementById('chipRestaurant').textContent = rest?.name || 'ET-FOOD';
+
+    // Map markers
+    if (rest) setRestMarker(rest.lat, rest.lng, rest.name);
+    if (order.customer_lat) setCustMarker(order.customer_lat, order.customer_lng);
+    if (driver?.current_lat) setDriverMarker(driver.current_lat, driver.current_lng);
+
+    fitAllMarkers();
+
+    // Driver card
+    if (driver) {
+      document.getElementById('driverCard').style.display = 'flex';
+      document.getElementById('driverName').textContent = driver.name || 'Driver';
+      document.getElementById('driverMeta').textContent = (driver.vehicle_type || 'Motorcycle') + ' · On the way';
+      driverPhone = driver.phone;
+    }
+
+    // Timeline + status
+    updateTimeline(order.status, localPickedUp);
+    setStatusMsg(getStatusMessage(order.status), order.status);
+    updatePillStatus(order.status);
+
+    // ETA
+    if (driver?.current_lat && order.customer_lat) {
+      updateETA(driver.current_lat, driver.current_lng);
+    }
+
+  } catch (e) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('errorScreen').style.display = 'flex';
+  }
+}
+
+// ── TIMELINE ──
+function updateTimeline(status, pickedUp) {
+  let stage = statusToStage[status] ?? 0;
+  if (pickedUp && stage === 3) stage = 3; // still "on the way" but "picked up" step done too
+
+  const stages = ['tl0','tl1','tl2','tl3','tl4'];
+  stages.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'tl-step' +
+      (i < stage ? ' done' : i === stage ? ' active' : '');
+  });
+
+  // If picked_up via socket but status not yet updated
+  if (pickedUp) {
+    document.getElementById('tl2').className = 'tl-step done';
+    if (stage < 3) document.getElementById('tl3').className = 'tl-step active';
+  }
+}
+
+function setStatusMsg(msg, status) {
+  const icons = {
+    pending: 'fas fa-clock',
+    confirmed: 'fas fa-check-circle',
+    kitchen_confirmed: 'fas fa-fire',
+    preparing: 'fas fa-utensils',
+    ready: 'fas fa-box-open',
+    out_for_delivery: 'fas fa-motorcycle',
+    delivered: 'fas fa-check-double'
+  };
+  const icon = icons[status] || 'fas fa-info-circle';
+  document.getElementById('statusMsg').innerHTML =
+    `<i class="${icon}"></i> <span>${msg}</span>`;
+}
+
+function getStatusMessage(status) {
+  const msgs = {
+    pending: '⏳ Order received, waiting for confirmation',
+    confirmed: '✅ Order confirmed by restaurant',
+    kitchen_confirmed: '👨‍🍳 Kitchen is preparing your food',
+    preparing: '🍳 Your food is being cooked',
+    ready: '📦 Food is ready — finding a driver',
+    out_for_delivery: '🛵 Driver is on the way to you!',
+    delivered: '🎉 Order delivered! Enjoy your meal!'
+  };
+  return msgs[status] || 'Updating...';
+}
+
+function updatePillStatus(status) {
+  const labels = {
+    pending: 'Order Received', confirmed: 'Confirmed',
+    kitchen_confirmed: 'Preparing', preparing: 'Preparing',
+    ready: 'Ready', out_for_delivery: 'On The Way',
+    delivered: 'Delivered'
+  };
+  document.getElementById('pillStatus').textContent = labels[status] || status;
+}
+
+// ── ETA ──
+function updateETA(dLat, dLng) {
+  if (!trackData?.order?.customer_lat) return;
+  const custLat = trackData.order.customer_lat;
+  const custLng = trackData.order.customer_lng;
+  const km = haversine(dLat, dLng, custLat, custLng);
+  const mins = Math.max(1, Math.round(km / 0.4)); // ~24 km/h avg
+  const etaText = mins <= 1 ? 'Arriving now!' : `~${mins} min`;
+  document.getElementById('chipEta').textContent = etaText;
+  document.getElementById('pillEta').textContent = etaText;
+}
+
+// ── LAST UPDATE ──
+function updateLastUpdate() {
+  const el = document.getElementById('lastUpdateTime');
+  if (el) el.textContent = new Date().toLocaleTimeString();
+}
+
+// ── CALL DRIVER ──
+function callDriver() {
+  if (driverPhone) {
+    window.location.href = 'tel:' + driverPhone;
+  }
+}
+
+// ── HAVERSINE ──
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── POLL FALLBACK (every 12s) ──
+setInterval(async () => {
+  if (!orderId || !trackData) return;
+  try {
+    const r = await fetch('/api/orders/' + orderId + '/tracking');
+    const d = await r.json();
+    if (!d.success) return;
+    const order = d.order;
+    const driver = d.driver;
+    updateTimeline(order.status, localPickedUp);
+    setStatusMsg(getStatusMessage(order.status), order.status);
+    updatePillStatus(order.status);
+    if (driver?.current_lat) {
+      setDriverMarker(driver.current_lat, driver.current_lng);
+      updateETA(driver.current_lat, driver.current_lng);
+    }
+    if (order.status === 'delivered') {
+      document.getElementById('btnCenter').style.display = 'none';
+    }
+  } catch (e) {}
+}, 12000);
+
+// ── BOOT ──
+window.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  initSocket();
+  loadTracking();
+});
+</script>
+</body>
+</html>

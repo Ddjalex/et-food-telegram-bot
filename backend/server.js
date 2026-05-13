@@ -1,5 +1,7 @@
 
+const http = require('http');
 const express = require('express');
+const { Server: SocketIOServer } = require('socket.io');
 const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
@@ -35,6 +37,41 @@ async function logAudit(req, action, targetType, targetId, targetName, details) 
 }
 
 const app = express();
+const httpServer = http.createServer(app);
+const io = new SocketIOServer(httpServer, {
+    cors: { origin: '*', methods: ['GET', 'POST'] }
+});
+
+// In-memory live GPS store: driverId → { lat, lng, orderId, ts }
+const liveDriverGPS = new Map();
+
+io.on('connection', (socket) => {
+    socket.on('join_order_tracking', ({ orderId }) => {
+        if (orderId) socket.join(`order:${orderId}`);
+    });
+
+    socket.on('driver_gps', ({ driverId, orderId, lat, lng }) => {
+        if (!lat || !lng) return;
+        liveDriverGPS.set(String(driverId), { lat, lng, orderId, ts: Date.now() });
+        if (orderId) {
+            io.to(`order:${orderId}`).emit('driver_location', { lat, lng, driverId, ts: Date.now() });
+        }
+        // Persist to DB every ~30s (avoid every-5s writes)
+        const key = `loc_saved_${driverId}`;
+        const last = global[key] || 0;
+        if (Date.now() - last > 30000) {
+            global[key] = Date.now();
+            store.findOne('drivers', { telegram_user_id: String(driverId) })
+                .then(d => d && store.updateById('drivers', d.id, {
+                    current_lat: parseFloat(lat), current_lng: parseFloat(lng),
+                    last_location_update: new Date()
+                })).catch(() => {});
+        }
+    });
+});
+
+// Expose io for use in notifier etc.
+app.set('socketio', io);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -1499,6 +1536,38 @@ app.get('/api/orders/:id', async (req, res) => {
     }
 });
 
+// Customer live tracking page
+app.get('/tracking/:orderId', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/live-tracking.html'));
+});
+
+// Live driver GPS from memory (for tracking page polling fallback)
+app.get('/api/orders/:id/driver-location', (req, res) => {
+    try {
+        const cached = [...liveDriverGPS.values()].find(v => v.orderId === req.params.id);
+        if (cached && Date.now() - cached.ts < 15000) {
+            return res.json({ success: true, lat: cached.lat, lng: cached.lng, fresh: true });
+        }
+        res.json({ success: false, fresh: false });
+    } catch (e) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// Mark order as picked up from restaurant
+app.post('/api/orders/:id/pickup', async (req, res) => {
+    try {
+        const order = await store.findById('orders', req.params.id);
+        if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+        // No status change needed — driver just signals they have the food
+        // Broadcast to tracking room
+        io.to(`order:${order.id}`).emit('order_status', { status: 'picked_up', orderId: order.id });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'Failed to mark pickup' });
+    }
+});
+
 app.get('/api/orders/:id/tracking', async (req, res) => {
     try {
         const order = await store.findById('orders', req.params.id);
@@ -1942,7 +2011,7 @@ const PORT = process.env.PORT || 5000;
 async function startServer() {
     try {
         await runMigration();
-        app.listen(PORT, '0.0.0.0', () => {
+        httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`Cloud Kitchen server running on port ${PORT}`);
             console.log(`Database: Neon PostgreSQL`);
         });
@@ -1954,4 +2023,4 @@ async function startServer() {
 
 startServer();
 
-module.exports = app;
+module.exports = { app, io };
