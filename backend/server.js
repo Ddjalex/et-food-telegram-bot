@@ -384,9 +384,14 @@ app.get('/api/super-admin/admins', async (req, res) => {
                 if (r) restaurant_name = r.name;
             }
             return {
-                id: a.id, username: a.username, role: a.role || 'admin',
+                id: a.id, username: a.username, full_name: a.full_name || '',
+                email: a.email || '', phone: a.phone || '',
+                role: a.role || 'admin',
                 restaurant_id: a.restaurant_id, restaurant_name,
-                is_active: a.is_active !== false, last_login: a.last_login || 'Never', created_at: a.created_at
+                is_active: a.is_active !== false,
+                is_blocked: a.is_blocked === true,
+                last_login: a.last_login || null,
+                created_at: a.created_at
             };
         }));
         res.json({ success: true, admins: formatted });
@@ -413,6 +418,57 @@ app.post('/api/super-admin/admins', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, message: 'Failed to create admin' });
+    }
+});
+
+app.put('/api/super-admin/admins/:id', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const a = await store.findById('admin_users', req.params.id);
+        if (!a) return res.status(404).json({ success: false, error: 'Admin not found' });
+        const { username, full_name, email, phone, role, restaurant_id, password } = req.body;
+        const updates = {};
+        if (username) updates.username = username;
+        if (full_name) updates.full_name = full_name;
+        if (email !== undefined) updates.email = email;
+        if (phone !== undefined) updates.phone = phone;
+        if (role) updates.role = role;
+        if (restaurant_id !== undefined) updates.restaurant_id = restaurant_id || null;
+        if (password) updates.password = password;
+        await store.updateById('admin_users', req.params.id, updates);
+        res.json({ success: true, message: 'Admin updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to update admin' });
+    }
+});
+
+app.delete('/api/super-admin/admins/:id', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const a = await store.findById('admin_users', req.params.id);
+        if (!a) return res.status(404).json({ success: false, error: 'Admin not found' });
+        if (a.role === 'superadmin') return res.status(403).json({ success: false, message: 'Cannot delete superadmin account' });
+        await store.deleteOne('admin_users', { id: req.params.id });
+        res.json({ success: true, message: `Admin "${a.username}" deleted successfully` });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to delete admin' });
+    }
+});
+
+app.post('/api/super-admin/admins/:id/block', async (req, res) => {
+    if (!checkAdminSession(req) || req.session.admin_role !== 'superadmin') return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const a = await store.findById('admin_users', req.params.id);
+        if (!a) return res.status(404).json({ success: false, error: 'Admin not found' });
+        if (a.role === 'superadmin') return res.status(403).json({ success: false, message: 'Cannot block superadmin account' });
+        const blocked = req.body.blocked === true;
+        await store.updateById('admin_users', req.params.id, { is_active: !blocked, is_blocked: blocked });
+        res.json({ success: true, message: `Admin ${blocked ? 'blocked' : 'unblocked'} successfully` });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: 'Failed to update admin status' });
     }
 });
 

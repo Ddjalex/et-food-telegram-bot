@@ -622,45 +622,23 @@ function updateRestaurantsTable(restaurants) {
 }
 
 function deleteRestaurant(restaurantId, restaurantName) {
-    if (confirm(`Are you sure you want to delete "${restaurantName}"?\n\nThis action will:\n• Remove all menu items and categories\n• Unassign admin users and drivers\n• Cannot be undone\n\nClick OK to proceed with deletion.`)) {
-        // Show loading message
-        showAlert('info', 'Cleaning up restaurant dependencies...');
-        
-        // First clean up dependencies
-        fetch(`/api/admin/restaurants/${restaurantId}/cleanup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAlert('info', 'Dependencies cleaned up. Deleting restaurant...');
-                
-                // Now delete the restaurant
-                return fetch(`/api/admin/restaurants/${restaurantId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-            } else {
-                throw new Error(data.error || 'Failed to cleanup dependencies');
-            }
+    if (confirm(`Are you sure you want to delete "${restaurantName}"?\n\nThis action cannot be undone.\n\nClick OK to proceed with deletion.`)) {
+        fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 showAlert('success', `Restaurant "${restaurantName}" deleted successfully!`);
-                loadRestaurants(); // Reload the table
+                loadRestaurants();
             } else {
-                showAlert('error', data.error || 'Failed to delete restaurant');
+                showAlert('error', data.error || data.message || 'Failed to delete restaurant');
             }
         })
         .catch(error => {
             console.error('Error deleting restaurant:', error);
-            showAlert('error', error.message || 'Failed to delete restaurant');
+            showAlert('error', 'Failed to delete restaurant');
         });
     }
 }
@@ -784,13 +762,154 @@ function submitImageUpload(restaurantId) {
 }
 
 function viewRestaurantDetails(restaurantId) {
-    // Implementation for viewing restaurant details
-    console.log('Viewing restaurant details for ID:', restaurantId);
+    fetch('/api/restaurants/super-admin')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const r = data.restaurants.find(x => x.id == restaurantId);
+            if (!r) return showAlert('error', 'Restaurant not found');
+            const modalHTML = `
+                <div class="modal fade" id="viewRestaurantModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-store me-2"></i>${r.name}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Address:</strong> ${r.address || '—'}</p>
+                                        <p><strong>Phone:</strong> ${r.phone || '—'}</p>
+                                        <p><strong>Delivery Time:</strong> ${r.estimated_delivery_time || '—'}</p>
+                                        <p><strong>Delivery Fee:</strong> ${r.delivery_fee || 0} ETB</p>
+                                        <p><strong>Min Order:</strong> ${r.minimum_order || 0} ETB</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Menu Items:</strong> ${r.menu_items_count || 0}</p>
+                                        <p><strong>Orders Today:</strong> ${r.orders_today || 0}</p>
+                                        <p><strong>Status:</strong> ${r.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}</p>
+                                        ${r.description ? `<p><strong>Description:</strong> ${r.description}</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-warning" data-bs-dismiss="modal" onclick="editRestaurant(${r.id})">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            const existing = document.getElementById('viewRestaurantModal');
+            if (existing) existing.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            new bootstrap.Modal(document.getElementById('viewRestaurantModal')).show();
+        })
+        .catch(() => showAlert('error', 'Failed to load restaurant details'));
 }
 
 function editRestaurant(restaurantId) {
-    // Implementation for editing restaurant
-    console.log('Editing restaurant with ID:', restaurantId);
+    fetch('/api/restaurants/super-admin')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return showAlert('error', 'Failed to load restaurant data');
+            const r = data.restaurants.find(x => x.id == restaurantId);
+            if (!r) return showAlert('error', 'Restaurant not found');
+            const modalHTML = `
+                <div class="modal fade" id="editRestaurantModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-store me-2"></i>Edit Restaurant</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editRestaurantForm">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="name" value="${r.name}" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Phone <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="phone" value="${r.phone || ''}">
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Address <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="address" value="${r.address || ''}">
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" name="description" rows="2">${r.description || ''}</textarea>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Delivery Time</label>
+                                            <input type="text" class="form-control" name="estimated_delivery_time" value="${r.estimated_delivery_time || '30-45 minutes'}">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Delivery Fee (ETB)</label>
+                                            <input type="number" class="form-control" name="delivery_fee" value="${r.delivery_fee || 0}" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Min Order (ETB)</label>
+                                            <input type="number" class="form-control" name="minimum_order" value="${r.minimum_order || 0}" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Status</label>
+                                            <select class="form-select" name="is_active">
+                                                <option value="true" ${r.is_active ? 'selected' : ''}>Active</option>
+                                                <option value="false" ${!r.is_active ? 'selected' : ''}>Inactive</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-warning" onclick="submitEditRestaurant(${restaurantId})">
+                                    <i class="fas fa-save me-1"></i>Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            const existing = document.getElementById('editRestaurantModal');
+            if (existing) existing.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            new bootstrap.Modal(document.getElementById('editRestaurantModal')).show();
+        })
+        .catch(() => showAlert('error', 'Failed to load restaurant'));
+}
+
+function submitEditRestaurant(restaurantId) {
+    const form = document.getElementById('editRestaurantForm');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((v, k) => { data[k] = v; });
+    data.is_active = data.is_active === 'true';
+
+    if (!data.name || !data.phone || !data.address) {
+        return showAlert('error', 'Name, phone and address are required');
+    }
+
+    fetch(`/api/restaurants/super-admin/${restaurantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            showAlert('success', res.message || 'Restaurant updated successfully');
+            bootstrap.Modal.getInstance(document.getElementById('editRestaurantModal')).hide();
+            loadRestaurants();
+        } else {
+            showAlert('error', res.message || res.error || 'Failed to update restaurant');
+        }
+    })
+    .catch(() => showAlert('error', 'Failed to update restaurant'));
 }
 
 function showRestaurantError(message) {
@@ -819,19 +938,22 @@ function updateAdminsTable(admins) {
     }
     
     tableBody.innerHTML = admins.map(admin => {
-        const statusBadge = admin.is_active ? 
-            (admin.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>') : 
-            '<span class="badge bg-secondary">Inactive</span>';
-        
-        const performanceScore = Math.round((admin.recent_activities * 10 + admin.sessions_this_week * 5) / 15);
-        const performanceBadge = performanceScore > 7 ? 'bg-success' : (performanceScore > 4 ? 'bg-warning' : 'bg-danger');
-        
+        const statusBadge = admin.is_blocked
+            ? '<span class="badge bg-danger">Blocked</span>'
+            : (admin.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>');
+
+        const lastLoginText = (admin.last_login && admin.last_login !== 'Never')
+            ? new Date(admin.last_login).toLocaleDateString()
+            : 'Never';
+
+        const roleBadgeClass = admin.role === 'superadmin' ? 'bg-danger' : (admin.role === 'admin' ? 'bg-primary' : 'bg-info');
+
         return `
             <tr>
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="admin-avatar me-2">
-                            ${admin.full_name ? admin.full_name.charAt(0) : admin.username.charAt(0)}
+                            ${(admin.full_name || admin.username).charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <div class="fw-bold">${admin.full_name || admin.username}</div>
@@ -840,7 +962,7 @@ function updateAdminsTable(admins) {
                     </div>
                 </td>
                 <td>
-                    <span class="badge ${admin.role === 'admin' ? 'bg-primary' : 'bg-info'}">${admin.role}</span>
+                    <span class="badge ${roleBadgeClass}">${admin.role}</span>
                 </td>
                 <td>
                     <div class="text-muted small">
@@ -848,14 +970,13 @@ function updateAdminsTable(admins) {
                     </div>
                 </td>
                 <td>
-                    <div class="d-flex align-items-center">
-                        <span class="badge ${performanceBadge} me-2">${performanceScore}/10</span>
-                        <small class="text-muted">${admin.recent_activities} activities</small>
+                    <div class="text-muted small">
+                        ${admin.email || '—'}
                     </div>
                 </td>
                 <td>
                     <div class="text-muted small">
-                        ${admin.last_login ? new Date(admin.last_login).toLocaleDateString() : 'Never'}
+                        ${lastLoginText}
                     </div>
                 </td>
                 <td>
@@ -863,17 +984,14 @@ function updateAdminsTable(admins) {
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="viewAdminPerformance(${admin.id})">
-                            <i class="fas fa-chart-line"></i>
-                        </button>
-                        <button class="btn btn-outline-warning" onclick="editAdmin(${admin.id})">
+                        <button class="btn btn-outline-warning" title="Edit" onclick="editAdmin(${admin.id}, '${admin.username}', '${admin.full_name || ''}', '${admin.email || ''}', '${admin.phone || ''}', '${admin.role}', '${admin.restaurant_id || ''}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-outline-${admin.is_blocked ? 'success' : 'danger'}" 
+                        <button class="btn btn-outline-${admin.is_blocked ? 'success' : 'secondary'}" title="${admin.is_blocked ? 'Unblock' : 'Block'}"
                                 onclick="toggleAdminBlock(${admin.id}, ${admin.is_blocked})">
                             <i class="fas fa-${admin.is_blocked ? 'unlock' : 'lock'}"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="deleteAdmin(${admin.id}, '${admin.username}')">
+                        <button class="btn btn-outline-danger" title="Delete" onclick="deleteAdmin(${admin.id}, '${admin.username}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -894,14 +1012,84 @@ function showAdminError(message) {
     `;
 }
 
-function viewAdminPerformance(adminId) {
-    // Implementation for viewing admin performance
-    console.log('Viewing admin performance for ID:', adminId);
+function editAdmin(adminId, username, fullName, email, phone, role, restaurantId) {
+    const modalHTML = `
+        <div class="modal fade" id="editAdminModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit Admin</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editAdminForm">
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" name="username" value="${username}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" class="form-control" name="full_name" value="${fullName}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" value="${email}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" name="phone" value="${phone}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Role</label>
+                                <select class="form-select" name="role">
+                                    <option value="admin" ${role === 'admin' ? 'selected' : ''}>Admin</option>
+                                    <option value="kitchen" ${role === 'kitchen' ? 'selected' : ''}>Kitchen</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
+                                <input type="password" class="form-control" name="password" placeholder="Enter new password">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" onclick="submitEditAdmin(${adminId})">
+                            <i class="fas fa-save me-1"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    const existing = document.getElementById('editAdminModal');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('editAdminModal')).show();
 }
 
-function editAdmin(adminId) {
-    // Implementation for editing admin
-    console.log('Editing admin with ID:', adminId);
+function submitEditAdmin(adminId) {
+    const form = document.getElementById('editAdminForm');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((v, k) => { if (v.trim() !== '') data[k] = v.trim(); });
+
+    fetch(`/api/super-admin/admins/${adminId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            showAlert('success', res.message);
+            bootstrap.Modal.getInstance(document.getElementById('editAdminModal')).hide();
+            loadAdmins();
+        } else {
+            showAlert('error', res.message || res.error || 'Failed to update admin');
+        }
+    })
+    .catch(() => showAlert('error', 'Failed to update admin'));
 }
 
 function toggleAdminBlock(adminId, isBlocked) {
