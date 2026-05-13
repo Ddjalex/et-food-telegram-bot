@@ -509,6 +509,21 @@
             padding: 16px 20px 8px;
         }
 
+        .nearby-detecting {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 4px;
+            color: var(--text-light);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .nearby-detecting-icon {
+            font-size: 18px;
+            animation: pulse 1.5s infinite;
+        }
+
         .restaurants-scroll {
             display: flex;
             gap: 14px;
@@ -1752,6 +1767,17 @@
             </div>
         </div>
 
+        <!-- Nearby Restaurants -->
+        <div class="restaurants-section" id="nearbySection">
+            <h2 class="section-title">Nearby Restaurants</h2>
+            <div class="restaurants-scroll" id="restaurantsContainer">
+                <div class="nearby-detecting">
+                    <span class="nearby-detecting-icon">📡</span>
+                    <span>Detecting your location…</span>
+                </div>
+            </div>
+        </div>
+
         <!-- All Restaurants -->
         <div class="all-restaurants-section">
             <div class="all-restaurants-header">
@@ -1760,16 +1786,6 @@
                         All Restaurants <span class="title-arrow" id="titleArrow">▾</span>
                     </h2>
                     <div class="dropup-menu hidden" id="dropupMenu"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Nearby Restaurants -->
-        <div class="restaurants-section">
-            <h2 class="section-title">Nearby Restaurants</h2>
-            <div class="restaurants-scroll" id="restaurantsContainer">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
                 </div>
             </div>
         </div>
@@ -2357,17 +2373,22 @@
         async function loadRestaurants() {
             try {
                 let url = '/api/restaurants';
-                if (customerLat && customerLng) {
+                const hasLocation = customerLat && customerLng;
+                if (hasLocation) {
                     url += `?lat=${customerLat}&lng=${customerLng}`;
                 }
                 const response = await fetch(url);
                 const data = await response.json();
                 restaurants = data.restaurants || [];
                 displayAllRestaurants();
-                displayRestaurants();
-                
+
+                // Only show Nearby section once we have a real location
+                if (hasLocation) {
+                    displayRestaurants();
+                }
+
                 // Default: show all restaurants' menus
-                if (restaurants.length > 0) {
+                if (restaurants.length > 0 && isShowingAll) {
                     loadAllMenus();
                 }
             } catch (error) {
@@ -2376,12 +2397,12 @@
             }
         }
 
-        // Display restaurants
+        // Display nearby restaurants (only called after location is detected)
         function displayRestaurants() {
             const container = document.getElementById('restaurantsContainer');
-            
+
             if (restaurants.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants available</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">No restaurants nearby</div></div>';
                 return;
             }
 
