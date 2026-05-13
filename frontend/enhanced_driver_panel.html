@@ -1114,65 +1114,7 @@
             }
         }
         
-        function showError(message) {
-            const errorElement = document.getElementById('errorMessage');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 3000);
-        }
         
-        function showSuccess(message) {
-            const successElement = document.getElementById('successMessage');
-            successElement.textContent = message;
-            successElement.style.display = 'block';
-            setTimeout(() => {
-                successElement.style.display = 'none';
-            }, 3000);
-        }
-        
-        function requestLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        updateLocationStatus(true);
-                        sendLocationUpdate(position.coords.latitude, position.coords.longitude);
-                        showSuccess('Location shared successfully');
-                    },
-                    (error) => {
-                        console.error('Location error:', error);
-                        showError('Failed to access location. Please enable location services.');
-                    }
-                );
-            } else {
-                showError('Geolocation is not supported by this browser');
-            }
-        }
-        
-        // Legacy functions for compatibility
-        async function checkDriverStatus() {
-            // Implementation for status checking
-        }
-        
-        async function toggleDriverStatus() {
-            // Implementation for status toggle
-        }
-        
-        async function checkForNewOrders() {
-            // Implementation for checking new orders
-                    loadOrderDetails(orderIdParam);
-                } else {
-                    checkForNewOrders();
-                }
-                
-            } catch (error) {
-                console.error('Error initializing driver panel:', error);
-                showError('Failed to initialize driver panel');
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
         
         async function checkDriverStatus() {
             try {
@@ -1228,62 +1170,68 @@
         }
         
         async function toggleDriverStatus() {
+            const newStatus = document.getElementById('statusToggle').checked;
+            if (!driverId) {
+                showError('Driver ID not found. Please open this panel from the Telegram bot.');
+                document.getElementById('statusToggle').checked = isOnline;
+                return;
+            }
             try {
-                const newStatus = document.getElementById('statusToggle').checked;
-                
                 const response = await fetch(`/api/drivers/telegram/${driverId}/toggle`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_available: newStatus })
                 });
-                
+
                 if (response.ok) {
                     isOnline = newStatus;
                     updateStatusDisplay();
-                    showSuccess(newStatus ? 'You are now ONLINE' : 'You are now OFFLINE');
+                    showSuccess(newStatus ? '🟢 You are now ONLINE' : '🔴 You are now OFFLINE');
                 } else {
-                    throw new Error('Failed to update status');
+                    const data = await response.json().catch(() => ({}));
+                    const msg = response.status === 403
+                        ? '⏳ Your account is not approved yet. Please wait for admin to approve you.'
+                        : (data.error || 'Failed to update status');
+                    showError(msg);
+                    document.getElementById('statusToggle').checked = isOnline;
+                    updateStatusDisplay();
                 }
             } catch (error) {
                 console.error('Error toggling status:', error);
-                showError('Failed to update status');
-                // Revert toggle
+                showError('Network error. Please try again.');
                 document.getElementById('statusToggle').checked = isOnline;
+                updateStatusDisplay();
             }
         }
         
         async function requestLocation() {
+            if (!driverId) {
+                showError('Driver ID not found. Please open this panel from the Telegram bot.');
+                return;
+            }
             try {
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         async (position) => {
                             const { latitude, longitude } = position.coords;
                             
-                            // Send location to server
                             const response = await fetch(`/api/drivers/telegram/${driverId}/location`, {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    lat: latitude,
-                                    lng: longitude
-                                })
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lat: latitude, lng: longitude })
                             });
                             
                             if (response.ok) {
                                 locationActive = true;
                                 updateLocationStatus();
-                                showSuccess('Location shared successfully');
+                                showSuccess('📍 Location shared successfully!');
                             } else {
-                                throw new Error('Failed to share location');
+                                showError('Failed to save location to server.');
                             }
                         },
                         (error) => {
                             console.error('Geolocation error:', error);
-                            showError('Unable to get location. Please enable location access.');
+                            showError('Unable to get location. Please enable location access in your browser settings.');
                         }
                     );
                 } else {
@@ -1477,18 +1425,14 @@
             const successEl = document.getElementById('successMessage');
             successEl.textContent = message;
             successEl.style.display = 'block';
-            setTimeout(() => {
-                successEl.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { successEl.style.display = 'none'; }, 6000);
         }
         
         function showError(message) {
             const errorEl = document.getElementById('errorMessage');
             errorEl.textContent = message;
             errorEl.style.display = 'block';
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-            }, 3000);
+            setTimeout(() => { errorEl.style.display = 'none'; }, 6000);
         }
         
         // GPS Navigation Functions

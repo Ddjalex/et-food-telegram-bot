@@ -7,7 +7,8 @@ const TABLES = {
     orders: 'orders',
     drivers: 'drivers',
     admin_users: 'admin_users',
-    payment_transactions: 'payment_transactions'
+    payment_transactions: 'payment_transactions',
+    driver_documents: 'driver_documents'
 };
 
 function buildWhere(filter) {

@@ -494,7 +494,7 @@ app.post('/api/super-admin/drivers/:id/approve', async (req, res) => {
         const driver = await store.findById('drivers', req.params.id);
         if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
         await store.updateById('drivers', req.params.id, { is_approved: true, is_active: true });
-        notifyDriverApproved(driver);
+        try { notifyDriverApproved(driver); } catch (_) {}
         res.json({ success: true, message: 'Driver approved successfully' });
     } catch (e) {
         console.error(e);
@@ -509,7 +509,7 @@ app.post('/api/super-admin/drivers/:id/reject', async (req, res) => {
         if (!driver) return res.status(404).json({ success: false, message: 'Driver not found' });
         const reason = req.body.reason || 'Does not meet current requirements';
         await store.updateById('drivers', req.params.id, { is_approved: false, is_active: false, rejection_reason: reason });
-        notifyDriverRejected(driver, reason);
+        try { notifyDriverRejected(driver, reason); } catch (_) {}
         res.json({ success: true, message: 'Driver rejected successfully' });
     } catch (e) {
         console.error(e);
