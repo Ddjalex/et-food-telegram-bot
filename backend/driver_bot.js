@@ -113,9 +113,20 @@ bot.onText(/\/start/, async (msg) => {
     const session = getSession(telegramUserId);
 
     try {
-        const existing = await getDriver(telegramUserId);
+        let existing = await getDriver(telegramUserId);
         if (existing) {
-            await bot.sendMessage(chatId, `👋 Welcome back, *${existing.name}*!`, { parse_mode: 'Markdown' });
+            // If marked online but no location is stored, reset to offline —
+            // driver must share live location to go online
+            if (existing.is_available && !existing.current_lat) {
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: false });
+                existing = await getDriver(telegramUserId);
+                await bot.sendMessage(chatId,
+                    `👋 Welcome back, *${existing.name}*!\n\n⚠️ Your status was reset to *Offline* because no location was found.\nTap *Go Online* and share your live location to start receiving orders.`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else {
+                await bot.sendMessage(chatId, `👋 Welcome back, *${existing.name}*!`, { parse_mode: 'Markdown' });
+            }
             return sendMainMenu(chatId, existing, telegramUserId);
         }
 
