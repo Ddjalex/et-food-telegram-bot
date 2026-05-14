@@ -115,13 +115,25 @@ bot.onText(/\/start/, async (msg) => {
     try {
         let existing = await getDriver(telegramUserId);
         if (existing) {
-            // If marked online but no location is stored, reset to offline —
-            // driver must share live location to go online
-            if (existing.is_available && !existing.current_lat) {
-                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: false });
+            // Reset to offline if:
+            //  - no location stored at all, OR
+            //  - location is stale (older than 2 hours) — driver is not actively sharing
+            const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+            const locationStale = !existing.current_lat ||
+                !existing.last_location_update ||
+                new Date(existing.last_location_update) < twoHoursAgo;
+
+            if (existing.is_available && locationStale) {
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, {
+                    is_available: false,
+                    current_lat: null,
+                    current_lng: null
+                });
                 existing = await getDriver(telegramUserId);
                 await bot.sendMessage(chatId,
-                    `👋 Welcome back, *${existing.name}*!\n\n⚠️ Your status was reset to *Offline* because no location was found.\nTap *Go Online* and share your live location to start receiving orders.`,
+                    `👋 Welcome back, *${existing.name}*!\n\n` +
+                    `⚠️ Your status was reset to *Offline* — your live location is no longer active.\n\n` +
+                    `Tap *🟢 Go Online* and share your live location to start receiving orders.`,
                     { parse_mode: 'Markdown' }
                 );
             } else {
