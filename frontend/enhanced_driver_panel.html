@@ -732,15 +732,15 @@ async function init() {
     initMap();
     initSocket();
 
-    // Restore online state
-    const wasOnline = localStorage.getItem('driver_online') === '1';
-    if (wasOnline && driverData.is_available) {
-      document.getElementById('onlineToggle').checked = true;
-      setOnlineUI(true);
+    // Sync online state from server — always use is_available as source of truth
+    // (driver may have gone online/offline via the bot, not the WebApp)
+    const isOnline = !!driverData.is_available;
+    document.getElementById('onlineToggle').checked = isOnline;
+    localStorage.setItem('driver_online', isOnline ? '1' : '0');
+    setOnlineUI(isOnline);
+    if (isOnline) {
       startGPS();
       startPoll();
-    } else {
-      setOnlineUI(false);
     }
 
     // Check if there's an existing active order
