@@ -1212,7 +1212,7 @@
                 }
                 tbody.innerHTML = orders.slice(0,10).map(order => `
                     <tr>
-                        <td><strong>#${order.id}</strong></td>
+                        <td><strong>#${(order.order_number || order.id).slice(-6).toUpperCase()}</strong></td>
                         <td>${order.customer_name}</td>
                         <td>${order.items ? order.items.length : 0} items</td>
                         <td><span class="status-badge status-${order.status}">${order.status}</span></td>
@@ -1241,7 +1241,7 @@
                 }
                 tbody.innerHTML = orders.map(order => `
                     <tr>
-                        <td><strong>#${order.id}</strong></td>
+                        <td><strong>#${(order.order_number || order.id).slice(-6).toUpperCase()}</strong></td>
                         <td>${order.customer_name}</td>
                         <td>${order.items ? order.items.length : 0} items</td>
                         <td><span class="status-badge status-${order.status}">${order.status}</span></td>

@@ -1107,7 +1107,7 @@
             const isUrgent = timeClass(order.created_at) === 'time-urgent';
 
             return `<tr class="${isUrgent ? 'urgent-row' : ''}">
-                <td><span class="order-id-cell">#${(order.order_number||order.id).toString().slice(-8).toUpperCase()}</span></td>
+                <td><span class="order-id-cell">#${(order.order_number||order.id).toString().slice(-6).toUpperCase()}</span></td>
                 <td>
                     <div class="customer-cell">${order.customer_name || '—'}</div>
                     <div class="customer-phone">${order.customer_phone || ''}</div>

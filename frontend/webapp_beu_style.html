@@ -2543,7 +2543,7 @@
                     <div class="order-list-item" onclick="openOrderFromList('${o.id}')">
                         <div class="order-list-icon">${emoji}</div>
                         <div class="order-list-info">
-                            <div class="order-list-num">#${(o.order_number || o.id).slice(-8).toUpperCase()}${liveDot}</div>
+                            <div class="order-list-num">#${(o.order_number || o.id).slice(-6).toUpperCase()}${liveDot}</div>
                             <div class="order-list-sub">${Math.round(o.total_amount || 0)} ETB · ${date}</div>
                         </div>
                         <div class="order-list-status ${o.status}">${statusLabel}</div>
@@ -3524,6 +3524,10 @@
         function updateTrackingUI(data) {
             const { order, driver, restaurant } = data;
             const status = order.status || 'pending';
+
+            // Always update order number from real data so it matches kitchen display
+            const displayNum = (order.order_number || order.id || '').slice(-6).toUpperCase();
+            document.getElementById('trackingOrderNum').textContent = '#' + displayNum;
 
             // Status badge
             const badge = document.getElementById('trackingStatusBadge');
