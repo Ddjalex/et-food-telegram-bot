@@ -2256,7 +2256,23 @@
         }
 
         // Pre-fetch and cache customer profile as soon as tgUserId is known
+        // Also keep a localStorage cache so it works across sessions
         let cachedCustomerProfile = null;
+
+        // Load from localStorage immediately (instant, no network wait)
+        try {
+            const stored = localStorage.getItem('et_food_customer_profile');
+            if (stored) cachedCustomerProfile = JSON.parse(stored);
+        } catch(e) {}
+
+        // Also try to use Telegram's own user data as name fallback
+        if (tgUser && tgUser.first_name) {
+            const tgName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+            if (!cachedCustomerProfile) cachedCustomerProfile = {};
+            if (!cachedCustomerProfile.name) cachedCustomerProfile.name = tgName;
+        }
+
+        // Fetch from DB and update cache
         (async function prefetchCustomerProfile() {
             if (!tgUserId) return;
             try {
@@ -2264,6 +2280,7 @@
                 const data = await resp.json();
                 if (data.success && data.customer) {
                     cachedCustomerProfile = data.customer;
+                    try { localStorage.setItem('et_food_customer_profile', JSON.stringify(data.customer)); } catch(e) {}
                 }
             } catch (e) {
                 console.error('Failed to prefetch customer profile:', e);
