@@ -69,23 +69,29 @@ async function sendMainMenu(chatId, driver, telegramUserId) {
     const approvedText = driver.is_approved ? '✅ Approved' : '⏳ Pending Approval';
     const webAppUrl = getWebAppUrl(telegramUserId || driver.telegram_user_id);
 
+    const menuRows = [];
+    // Only show Open Driver Panel when driver is online
+    if (driver.is_available) {
+        menuRows.push([{ text: '🗂️ Open Driver Panel', web_app: { url: webAppUrl } }]);
+    }
+    menuRows.push([
+        { text: driver.is_available ? '🔴 Go Offline' : '🟢 Go Online', callback_data: driver.is_available ? 'go_offline' : 'go_online' },
+        { text: '📊 My Stats', callback_data: 'my_stats' }
+    ]);
+    menuRows.push([
+        { text: '📦 My Orders', callback_data: 'my_orders' },
+        { text: '📁 Upload Docs', callback_data: 'upload_docs' }
+    ]);
+
+    const offlineHint = driver.is_available
+        ? ''
+        : '\n\nTap *🟢 Go Online* then share your live location to start receiving orders.';
+
     await bot.sendMessage(chatId,
-        `🚗 *Driver Panel*\n\n👤 Name: ${driver.name}\n📊 Status: ${statusText}\n🏷️ Account: ${approvedText}\n\nUse the *Driver WebApp* to manage orders, track GPS, and upload documents.`,
+        `🚗 *Driver Panel*\n\n👤 Name: ${driver.name}\n📊 Status: ${statusText}\n🏷️ Account: ${approvedText}${offlineHint}`,
         {
             parse_mode: 'Markdown',
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '🗂️ Open Driver Panel', web_app: { url: webAppUrl } }],
-                    [
-                        { text: driver.is_available ? '🔴 Go Offline' : '🟢 Go Online', callback_data: driver.is_available ? 'go_offline' : 'go_online' },
-                        { text: '📊 My Stats', callback_data: 'my_stats' }
-                    ],
-                    [
-                        { text: '📦 My Orders', callback_data: 'my_orders' },
-                        { text: '📁 Upload Docs', callback_data: 'upload_docs' }
-                    ]
-                ]
-            }
+            reply_markup: { inline_keyboard: menuRows }
         }
     );
 
@@ -521,13 +527,40 @@ bot.on('message', async (msg) => {
                 return sendMainMenu(chatId, updated, telegramUserId);
             }
 
+            // Live location while offline — automatically go online
+            if (isLive && !driver.is_available) {
+                updates.is_available = true;
+                session.pendingOnline = false;
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, updates);
+                const updated = await getDriver(telegramUserId);
+                const webAppUrl = getWebAppUrl(telegramUserId);
+                await bot.sendMessage(chatId,
+                    `✅ *You are now Online!*\n\n📍 Live location active — your position updates automatically.\nYou will now receive nearby order assignments.`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: { remove_keyboard: true }
+                    }
+                );
+                return bot.sendMessage(chatId, '🗂️ Open your Driver Panel to manage orders:', {
+                    reply_markup: {
+                        inline_keyboard: [[{ text: '🗂️ Open Driver Panel', web_app: { url: webAppUrl } }]]
+                    }
+                });
+            }
+
             // Normal location update (driver already online)
             await store.updateOne('drivers', { telegram_user_id: telegramUserId }, updates);
 
             if (isLive) {
+                const webAppUrl = getWebAppUrl(telegramUserId);
                 bot.sendMessage(chatId,
                     `📍 *Live Location Active!*\n\nYour position will update automatically as you move.\nYou will now receive nearby order assignments.`,
-                    { parse_mode: 'Markdown' }
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[{ text: '🗂️ Open Driver Panel', web_app: { url: webAppUrl } }]]
+                        }
+                    }
                 );
             } else {
                 bot.sendMessage(chatId,
