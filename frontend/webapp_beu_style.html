@@ -2255,6 +2255,21 @@
             try { tgUserId = localStorage.getItem('et_food_tg_user_id') || null; } catch(e) {}
         }
 
+        // Pre-fetch and cache customer profile as soon as tgUserId is known
+        let cachedCustomerProfile = null;
+        (async function prefetchCustomerProfile() {
+            if (!tgUserId) return;
+            try {
+                const resp = await fetch('/api/customers/' + tgUserId);
+                const data = await resp.json();
+                if (data.success && data.customer) {
+                    cachedCustomerProfile = data.customer;
+                }
+            } catch (e) {
+                console.error('Failed to prefetch customer profile:', e);
+            }
+        })();
+
         // Helpers for local order ID cache (fallback when no tgUserId)
         function saveOrderIdLocally(orderId) {
             try {
@@ -3174,32 +3189,38 @@
         }
 
         // Proceed to checkout
-        async function proceedToCheckout() {
+        function proceedToCheckout() {
             if (Object.keys(selectedItems).length === 0) return;
             
             // Update checkout summary
             updateCheckoutSummary();
 
-            // Autofill from customer profile (fetched by Telegram user ID)
             const nameField = document.getElementById('customerName');
             const phoneField = document.getElementById('customerPhone');
             const addrField = document.getElementById('customerAddress');
 
-            if (tgUserId) {
-                try {
-                    const resp = await fetch(`/api/customers/${tgUserId}`);
-                    const data = await resp.json();
-                    if (data.success && data.customer) {
-                        if (nameField && !nameField.value && data.customer.name) {
-                            nameField.value = data.customer.name;
-                        }
-                        if (phoneField && !phoneField.value && data.customer.phone_number) {
-                            phoneField.value = data.customer.phone_number;
-                        }
-                    }
-                } catch (e) {
-                    console.error('Failed to fetch customer profile:', e);
+            // Autofill from cached customer profile (fetched at page load)
+            if (cachedCustomerProfile) {
+                if (nameField && !nameField.value && cachedCustomerProfile.name) {
+                    nameField.value = cachedCustomerProfile.name;
                 }
+                if (phoneField && !phoneField.value && cachedCustomerProfile.phone_number) {
+                    phoneField.value = cachedCustomerProfile.phone_number;
+                }
+            } else if (tgUserId) {
+                // Profile not cached yet — fetch now and fill when ready
+                fetch('/api/customers/' + tgUserId)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.customer) {
+                            cachedCustomerProfile = data.customer;
+                            if (nameField && !nameField.value && data.customer.name)
+                                nameField.value = data.customer.name;
+                            if (phoneField && !phoneField.value && data.customer.phone_number)
+                                phoneField.value = data.customer.phone_number;
+                        }
+                    })
+                    .catch(e => console.error('Profile fetch error:', e));
             }
 
             // Autofill delivery address with detected GPS location (always editable)
