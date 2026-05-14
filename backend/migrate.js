@@ -205,6 +205,17 @@ async function createTables() {
     await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_fee DECIMAL(10,2) DEFAULT 0`);
     await query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_distance_km DECIMAL(8,2) DEFAULT 0`);
 
+    // Customer profiles table
+    await query(`
+        CREATE TABLE IF NOT EXISTS customers (
+            telegram_user_id VARCHAR(100) PRIMARY KEY,
+            name VARCHAR(255),
+            phone_number VARCHAR(50),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
     console.log('All tables created successfully');
 }
 

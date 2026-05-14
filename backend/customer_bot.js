@@ -28,6 +28,36 @@ bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
 });
 
 // ============================================================
+// CUSTOMER PROFILE HELPERS
+// ============================================================
+
+const customerSessions = {};
+
+function getCustSession(userId) {
+    if (!customerSessions[userId]) customerSessions[userId] = { step: null };
+    return customerSessions[userId];
+}
+
+async function getCustomerProfile(telegramUserId) {
+    try {
+        const result = await dbQuery('SELECT * FROM customers WHERE telegram_user_id = $1', [String(telegramUserId)]);
+        return result.rows[0] || null;
+    } catch (e) {
+        console.error('getCustomerProfile error:', e.message);
+        return null;
+    }
+}
+
+async function saveCustomerProfile(telegramUserId, name, phoneNumber) {
+    await dbQuery(
+        `INSERT INTO customers (telegram_user_id, name, phone_number, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (telegram_user_id) DO UPDATE SET name=$2, phone_number=$3, updated_at=NOW()`,
+        [String(telegramUserId), name, phoneNumber]
+    );
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 
@@ -253,32 +283,50 @@ bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     const telegramUserId = String(msg.from.id);
     const firstName = msg.from.first_name || 'there';
+    const session = getCustSession(telegramUserId);
 
     try {
+        // Check if customer profile already exists
+        const profile = await getCustomerProfile(telegramUserId);
+
+        if (!profile) {
+            // New customer — collect phone number first
+            session.step = 'await_phone';
+            session.firstName = firstName;
+            return bot.sendMessage(chatId,
+                `👋 Welcome to *ET-FOOD*, ${firstName}!\n\n` +
+                `🚀 Fresh Ethiopian food delivered to your door.\n\n` +
+                `📱 *Step 1:* Please share your phone number so we can contact you about your orders:`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [[{ text: '📱 Share My Phone Number', request_contact: true }]],
+                        resize_keyboard: true,
+                        one_time_keyboard: true
+                    }
+                }
+            );
+        }
+
+        // Existing customer — clear any stale session and go straight to location/menu
+        session.step = null;
         const loc = await getValidLocation(telegramUserId);
+        const displayName = profile.name || firstName;
 
         if (loc) {
             const isLive = loc.live_period > 0;
             const locStatus = isLive ? '🔴 Live location active' : '📍 Location saved';
             await bot.sendMessage(chatId,
-                `👋 Welcome back, *${firstName}*!\n\n${locStatus} — we know where to deliver.\n\nTap below to browse our menu and order:`,
-                {
-                    parse_mode: 'Markdown',
-                    reply_markup: mainKeyboard()
-                }
+                `👋 Welcome back, *${displayName}*!\n\n${locStatus} — we know where to deliver.\n\nTap below to browse our menu and order:`,
+                { parse_mode: 'Markdown', reply_markup: mainKeyboard() }
             );
             await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
         } else {
             await bot.sendMessage(chatId,
-                `👋 Welcome to *ET-FOOD*, ${firstName}!\n\n` +
-                `🚀 Fresh Ethiopian food delivered to your door.\n\n` +
-                `📍 *First, share your location* so we can deliver accurately.\n\n` +
-                `💡 *Tip: Choose "Share Live Location"* — your location updates in real-time as you move, ` +
-                `so your driver always knows where to find you!`,
-                {
-                    parse_mode: 'Markdown',
-                    reply_markup: locationRequestKeyboard()
-                }
+                `👋 Welcome back, *${displayName}*!\n\n` +
+                `📍 *Share your location* so we can deliver accurately.\n\n` +
+                `💡 *Tip: Choose "Share Live Location"* for real-time tracking!`,
+                { parse_mode: 'Markdown', reply_markup: locationRequestKeyboard() }
             );
         }
     } catch (e) {
@@ -400,10 +448,51 @@ bot.onText(/\/help/, async (msg) => {
 // ============================================================
 
 bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = String(msg.from.id);
+    const session = getCustSession(telegramUserId);
+
+    // ── Handle phone number sharing (contact) ──────────────────
+    if (msg.contact) {
+        if (session.step === 'await_phone') {
+            const phone = msg.contact.phone_number;
+            session.phone = phone;
+            session.step = 'await_name';
+            return bot.sendMessage(chatId,
+                `✅ Phone number saved!\n\n👤 *Step 2:* Please enter your *full name*:`,
+                { parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }
+            );
+        }
+        return;
+    }
+
+    // ── Handle name collection ─────────────────────────────────
+    if (session.step === 'await_name') {
+        const text = msg.text || '';
+        if (text.length < 2) {
+            return bot.sendMessage(chatId, '⚠️ Please enter your full name (at least 2 characters).');
+        }
+        const name = text.trim();
+        try {
+            await saveCustomerProfile(telegramUserId, name, session.phone || null);
+            session.step = null;
+            const profile = { name, phone_number: session.phone };
+            session.phone = null;
+
+            await bot.sendMessage(chatId,
+                `🎉 *Profile saved!*\n\nName: *${name}*\nPhone: ${profile.phone_number || 'N/A'}\n\n` +
+                `📍 Now, share your location so we can deliver to you:`,
+                { parse_mode: 'Markdown', reply_markup: locationRequestKeyboard() }
+            );
+        } catch (e) {
+            console.error('Profile save error:', e.message);
+            bot.sendMessage(chatId, '❌ Failed to save profile. Please try /start again.');
+        }
+        return;
+    }
+
     // Handle location messages (both static and initial live location)
     if (msg.location) {
-        const chatId = msg.chat.id;
-        const telegramUserId = String(msg.from.id);
         const { latitude, longitude, live_period } = msg.location;
 
         await saveCustomerLocation(telegramUserId, latitude, longitude, live_period);
@@ -435,8 +524,6 @@ bot.on('message', async (msg) => {
         return;
     }
 
-    const chatId = msg.chat.id;
-    const telegramUserId = String(msg.from.id);
     const text = msg.text || '';
 
     if (text.startsWith('/')) return;

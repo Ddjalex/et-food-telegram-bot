@@ -3174,14 +3174,35 @@
         }
 
         // Proceed to checkout
-        function proceedToCheckout() {
+        async function proceedToCheckout() {
             if (Object.keys(selectedItems).length === 0) return;
             
             // Update checkout summary
             updateCheckoutSummary();
 
-            // Autofill delivery address with detected GPS location
+            // Autofill from customer profile (fetched by Telegram user ID)
+            const nameField = document.getElementById('customerName');
+            const phoneField = document.getElementById('customerPhone');
             const addrField = document.getElementById('customerAddress');
+
+            if (tgUserId) {
+                try {
+                    const resp = await fetch(`/api/customers/${tgUserId}`);
+                    const data = await resp.json();
+                    if (data.success && data.customer) {
+                        if (nameField && !nameField.value && data.customer.name) {
+                            nameField.value = data.customer.name;
+                        }
+                        if (phoneField && !phoneField.value && data.customer.phone_number) {
+                            phoneField.value = data.customer.phone_number;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch customer profile:', e);
+                }
+            }
+
+            // Autofill delivery address with detected GPS location (always editable)
             if (addrField && !addrField.value && customerAddressText) {
                 addrField.value = customerAddressText;
             }

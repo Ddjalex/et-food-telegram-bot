@@ -129,6 +129,39 @@ app.get('/webapp', (req, res) => {
 // ============================================================
 
 // ============================================================
+// CUSTOMER PROFILE — fetch by telegram user ID
+// ============================================================
+
+app.get('/api/customers/:telegram_user_id', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM customers WHERE telegram_user_id = $1', [req.params.telegram_user_id]);
+        const customer = result.rows[0];
+        if (!customer) return res.json({ success: false, error: 'Customer not found' });
+        res.json({ success: true, customer });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch customer' });
+    }
+});
+
+app.post('/api/customers', async (req, res) => {
+    try {
+        const { telegram_user_id, name, phone_number } = req.body;
+        if (!telegram_user_id) return res.status(400).json({ success: false, error: 'telegram_user_id required' });
+        await query(
+            `INSERT INTO customers (telegram_user_id, name, phone_number, updated_at)
+             VALUES ($1, $2, $3, NOW())
+             ON CONFLICT (telegram_user_id) DO UPDATE SET name=$2, phone_number=$3, updated_at=NOW()`,
+            [telegram_user_id, name || null, phone_number || null]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to save customer' });
+    }
+});
+
+// ============================================================
 // SYSTEM SETTINGS — public + super admin
 // ============================================================
 
