@@ -60,7 +60,8 @@ async function getDriver(telegramUserId) {
 function getWebAppUrl(telegramUserId) {
     const base = process.env.WEBAPP_URL ||
         (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
-    return `${base}/driver-panel?driver_id=${telegramUserId}`;
+    // Include a timestamp so Telegram never serves a cached version of the panel
+    return `${base}/driver-panel?driver_id=${telegramUserId}&v=${Date.now()}`;
 }
 
 async function sendMainMenu(chatId, driver, telegramUserId) {
