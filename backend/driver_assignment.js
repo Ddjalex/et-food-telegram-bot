@@ -2,6 +2,11 @@ const { query } = require('./db');
 const store = require('./store');
 const { notifyDriverNewOrder } = require('./notifier');
 
+// Always show the last 6 digits of the order number for consistency across all dashboards
+function shortNum(order) {
+    return (order.order_number || order.id || '').toString().slice(-6).toUpperCase();
+}
+
 // Haversine formula — returns distance in km between two lat/lng points
 function haversineKm(lat1, lng1, lat2, lng2) {
     const R = 6371;
@@ -56,11 +61,11 @@ async function dispatchOrderToDrivers(order) {
     const drivers = await findNearestDrivers(refLat, refLng, 3);
 
     if (drivers.length === 0) {
-        console.log(`[DriverAssignment] No available drivers found for order ${order.order_number}`);
+        console.log(`[DriverAssignment] No available drivers found for order ${shortNum(order)}`);
         return;
     }
 
-    console.log(`[DriverAssignment] Dispatching order #${order.order_number} to ${drivers.length} driver(s)`);
+    console.log(`[DriverAssignment] Dispatching order #${shortNum(order)} to ${drivers.length} driver(s)`);
 
     // Import bot lazily to avoid circular dependency
     const TelegramBot = require('node-telegram-bot-api');
@@ -87,7 +92,7 @@ async function dispatchOrderToDrivers(order) {
 
             const text =
                 `🔔 *New Delivery Order!*${distText}\n\n` +
-                `📦 Order: *#${order.order_number}*\n` +
+                `📦 Order: *#${shortNum(order)}*\n` +
                 `👤 Customer: ${order.customer_name || 'N/A'}\n` +
                 `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
                 `📍 Address: ${order.customer_address || 'See order details'}\n` +

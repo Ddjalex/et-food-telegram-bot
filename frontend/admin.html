@@ -928,7 +928,7 @@
                     const createdAt = order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A';
                     return `
                     <tr>
-                        <td><strong>#${(order.order_number || order.id || '').toString().slice(0,8)}</strong></td>
+                        <td><strong>#${(order.order_number || order.id || '').toString().slice(-6).toUpperCase()}</strong></td>
                         <td>${order.customer_name || 'N/A'}</td>
                         <td><strong>ETB ${amount.toFixed(2)}</strong></td>
                         <td>${getStatusBadge(order.status)}</td>
@@ -974,7 +974,7 @@
                     const items     = order.items ? order.items.length : 0;
                     return `
                     <tr>
-                        <td><strong>#${(order.order_number || order.id || '').toString().slice(0,8)}</strong></td>
+                        <td><strong>#${(order.order_number || order.id || '').toString().slice(-6).toUpperCase()}</strong></td>
                         <td>${order.customer_name || 'N/A'}</td>
                         <td>${order.customer_phone || 'N/A'}</td>
                         <td>${items} item${items !== 1 ? 's' : ''}</td>

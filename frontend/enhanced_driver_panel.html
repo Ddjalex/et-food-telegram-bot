@@ -874,7 +874,7 @@ function showOrder(order, driverId) {
     updateMapRestaurant(restLat, restLng);
   });
 
-  document.getElementById('ocOrderNum').textContent = 'Order #' + (order.order_number || order.id.slice(-6));
+  document.getElementById('ocOrderNum').textContent = 'Order #' + (order.order_number || order.id || '').toString().slice(-6).toUpperCase();
   document.getElementById('ocTime').textContent = new Date(order.created_at).toLocaleTimeString();
   document.getElementById('ocCustomer').textContent = order.customer_name || 'Customer';
   document.getElementById('ocAmount').textContent = parseFloat(order.total_amount || 0).toFixed(2) + ' ETB';

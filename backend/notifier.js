@@ -3,6 +3,11 @@ const TelegramBot = require('node-telegram-bot-api');
 let driverBot = null;
 let customerBot = null;
 
+// Always show the last 6 digits of the order number for consistency across all dashboards
+function shortNum(order) {
+    return (order.order_number || order.id || '').toString().slice(-6).toUpperCase();
+}
+
 function getDriverBot() {
     if (!driverBot && process.env.DRIVER_BOT_TOKEN) {
         driverBot = new TelegramBot(process.env.DRIVER_BOT_TOKEN);
@@ -81,7 +86,7 @@ async function notifyDriverNewOrder(driver, order) {
 
     await safeSend(bot, driver.telegram_user_id,
         `🔔 *New Delivery Order!*\n\n` +
-        `📦 Order: *#${order.order_number}*\n` +
+        `📦 Order: *#${shortNum(order)}*\n` +
         `👤 Customer: ${order.customer_name}\n` +
         `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
         `📍 Address: ${order.customer_address || 'See map'}\n` +
@@ -107,7 +112,7 @@ async function notifyCustomerOrderStatus(telegramUserId, order, statusMessage) {
     }[order.status] || '📦';
 
     await safeSend(bot, telegramUserId,
-        `${statusEmoji} *Order Update — #${order.order_number}*\n\n` +
+        `${statusEmoji} *Order Update — #${shortNum(order)}*\n\n` +
         `${statusMessage}\n\n` +
         `💰 Total: *${order.total_amount} ETB*`
     );
@@ -118,7 +123,7 @@ async function notifyCustomerOrderReceived(telegramUserId, order) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `✅ *Order Received! #${order.order_number}*\n\n` +
+        `✅ *Order Received! #${shortNum(order)}*\n\n` +
         `🍽️ Your order has been sent to the kitchen.\n` +
         `⏳ Waiting for kitchen confirmation...\n\n` +
         `💰 Total: *${order.total_amount} ETB*\n\n` +
@@ -138,7 +143,7 @@ async function notifyCustomerKitchenAccepted(telegramUserId, order) {
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
         `👨‍🍳 *Kitchen Accepted Your Order!*\n\n` +
-        `Order *#${order.order_number}* is now being prepared.\n\n` +
+        `Order *#${shortNum(order)}* is now being prepared.\n\n` +
         `🍳 The chef is cooking your food right now!\n` +
         `🚗 A driver will be assigned soon.\n\n` +
         `💰 Total: *${order.total_amount} ETB*\n\n` +
@@ -157,7 +162,7 @@ async function notifyCustomerKitchenRejected(telegramUserId, order, reason) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `❌ *Order Cancelled — #${order.order_number}*\n\n` +
+        `❌ *Order Cancelled — #${shortNum(order)}*\n\n` +
         `Unfortunately the kitchen could not accept your order.\n\n` +
         `📋 *Reason:* ${reason || 'Items currently unavailable'}\n\n` +
         `💳 If you paid, a refund will be processed shortly.\n\n` +
@@ -176,7 +181,7 @@ async function notifyCustomerPaymentVerified(telegramUserId, order) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `✅ *Payment Verified! #${order.order_number}*\n\n` +
+        `✅ *Payment Verified! #${shortNum(order)}*\n\n` +
         `Your payment of *${order.total_amount} ETB* has been confirmed.\n\n` +
         `👨‍🍳 The kitchen will now prepare your order.\n` +
         `🚗 A driver will be assigned after preparation.\n\n` +
@@ -189,7 +194,7 @@ async function notifyCustomerDriverAssigned(telegramUserId, order, driver) {
     if (!bot || !telegramUserId) return;
     const vehicleEmoji = { motorcycle: '🏍️', car: '🚗', bicycle: '🚲', scooter: '🛵' }[driver.vehicle_type] || '🚗';
     await safeSend(bot, telegramUserId,
-        `🚗 *Driver Assigned! #${order.order_number}*\n\n` +
+        `🚗 *Driver Assigned! #${shortNum(order)}*\n\n` +
         `${vehicleEmoji} *Driver:* ${driver.name}\n` +
         `📞 *Phone:* ${driver.phone_number}\n` +
         `⭐ *Rating:* ${driver.rating || 5.0}\n\n` +
@@ -202,7 +207,7 @@ async function notifyCustomerOrderPickedUp(telegramUserId, order, driver) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `🚗 *Order Picked Up! #${order.order_number}*\n\n` +
+        `🚗 *Order Picked Up! #${shortNum(order)}*\n\n` +
         `${driver ? driver.name : 'Your driver'} has picked up your order and is heading to you!\n\n` +
         `📍 Make sure your location is shared so the driver can find you.\n\n` +
         `🍔 Your food is on the way! Estimated: 15–30 min`,
@@ -220,7 +225,7 @@ async function notifyCustomerOrderDelivered(telegramUserId, order) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `🎉 *Order Delivered! #${order.order_number}*\n\n` +
+        `🎉 *Order Delivered! #${shortNum(order)}*\n\n` +
         `Your food has been delivered. Enjoy your meal! 🍽️\n\n` +
         `💰 Total paid: *${order.total_amount} ETB*\n\n` +
         `Thank you for choosing ET-FOOD! Come back soon. 🙏`,
@@ -256,7 +261,7 @@ async function notifyCustomerDeliveryPriceConfirmation(telegramUserId, order) {
     const distanceKm  = parseFloat(order.driver_distance_km || 0);
     const total       = parseFloat(order.total_amount || 0);
 
-    let text = `🛵 *Your order has arrived! #${order.order_number}*\n\n`;
+    let text = `🛵 *Your order has arrived! #${shortNum(order)}*\n\n`;
     text += `🍽️ *Order Summary*\n`;
     if (itemsText) text += `${itemsText}\n\n`;
     text += `─────────────────────\n`;
@@ -283,7 +288,7 @@ async function notifyCustomerOrderCancelled(telegramUserId, order, reason) {
     const bot = getCustomerBot();
     if (!bot || !telegramUserId) return;
     await safeSend(bot, telegramUserId,
-        `❌ *Order Cancelled — #${order.order_number}*\n\n` +
+        `❌ *Order Cancelled — #${shortNum(order)}*\n\n` +
         `Your order has been cancelled.\n\n` +
         (reason ? `📋 *Reason:* ${reason}\n\n` : '') +
         `💳 If you paid online, a refund will be processed.\n\n` +
@@ -308,7 +313,7 @@ async function notifyKitchenNewOrder(kitchenStaff, order) {
     } catch (_) {}
 
     const msg =
-        `🔔 *New Order! #${order.order_number}*\n\n` +
+        `🔔 *New Order! #${shortNum(order)}*\n\n` +
         `👤 Customer: *${order.customer_name}*\n` +
         `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
         `📍 Address: ${order.customer_address || 'Not provided'}\n` +

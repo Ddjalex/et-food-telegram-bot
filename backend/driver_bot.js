@@ -4,6 +4,11 @@ const store = require('./store');
 const DRIVER_BOT_TOKEN = process.env.DRIVER_BOT_TOKEN;
 if (!DRIVER_BOT_TOKEN) { console.error('DRIVER_BOT_TOKEN secret is not set'); process.exit(1); }
 
+// Always show the last 6 digits of the order number for consistency across all dashboards
+function shortNum(order) {
+    return (order.order_number || order.id || '').toString().slice(-6).toUpperCase();
+}
+
 const bot = new TelegramBot(DRIVER_BOT_TOKEN, { polling: false });
 
 async function startDriverBot(retries = 5) {
@@ -184,7 +189,7 @@ bot.on('callback_query', async (query) => {
             for (const o of myOrders) {
                 const webAppUrl = getWebAppUrl(telegramUserId) + `&order_id=${o.id}`;
                 bot.sendMessage(chatId,
-                    `🚗 *Active Delivery*\n\nOrder: #${o.order_number}\nCustomer: ${o.customer_name}\nPhone: ${o.customer_phone}\nAddress: ${o.customer_address || 'Not provided'}\nTotal: ${o.total_amount} ETB`,
+                    `🚗 *Active Delivery*\n\nOrder: #${shortNum(o)}\nCustomer: ${o.customer_name}\nPhone: ${o.customer_phone}\nAddress: ${o.customer_address || 'Not provided'}\nTotal: ${o.total_amount} ETB`,
                     {
                         parse_mode: 'Markdown',
                         reply_markup: {
@@ -238,7 +243,7 @@ bot.on('callback_query', async (query) => {
             // Notify the driver with order details + navigation buttons
             await bot.sendMessage(chatId,
                 `✅ *Order Accepted!*\n\n` +
-                `📦 Order: *#${order.order_number}*\n` +
+                `📦 Order: *#${shortNum(order)}*\n` +
                 `👤 Customer: ${order.customer_name || 'N/A'}\n` +
                 `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
                 `📍 Deliver to: ${order.customer_address || 'See address'}\n\n` +
@@ -377,7 +382,7 @@ bot.on('callback_query', async (query) => {
                         .catch(e => console.error('[DriverBot] picked up notify error:', e.message));
                 }
                 await bot.sendMessage(chatId,
-                    `🚗 *Order Picked Up!*\n\nYou have picked up order *#${order.order_number}*.\nNow navigate to the customer and deliver it!`,
+                    `🚗 *Order Picked Up!*\n\nYou have picked up order *#${shortNum(order)}*.\nNow navigate to the customer and deliver it!`,
                     {
                         parse_mode: 'Markdown',
                         reply_markup: {
