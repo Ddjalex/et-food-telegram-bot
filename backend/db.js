@@ -1,8 +1,10 @@
 const { Pool } = require('pg');
 
+const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')
+    connectionString,
+    ssl: connectionString && connectionString.includes('sslmode=require')
         ? { rejectUnauthorized: false }
         : false
 });
