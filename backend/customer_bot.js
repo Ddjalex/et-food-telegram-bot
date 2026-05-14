@@ -610,25 +610,125 @@ bot.on('callback_query', async (query) => {
         if (data.startsWith('confirm_delivery:')) {
             const orderId = data.replace('confirm_delivery:', '');
             try {
-                // Mark order as customer-confirmed
                 const result = await dbQuery(`SELECT * FROM orders WHERE id=$1`, [orderId]);
                 const order = result.rows[0];
-                if (!order) {
-                    return bot.sendMessage(chatId, '❌ Order not found.');
-                }
-                // Remove the confirmation buttons from the original message
+                if (!order) return bot.sendMessage(chatId, '❌ Order not found.');
+
+                // Remove the confirmation buttons
                 try {
                     await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
-                        chat_id: chatId,
-                        message_id: query.message.message_id
+                        chat_id: chatId, message_id: query.message.message_id
                     });
                 } catch (_) {}
 
+                // Mark order as customer-confirmed in DB
+                await dbQuery(`UPDATE orders SET payment_status='confirmed' WHERE id=$1`, [orderId]).catch(() => {});
+
+                // Show thank-you + ask driver rating
                 await bot.sendMessage(chatId,
                     `🎉 *Delivery Confirmed! #${order.order_number}*\n\n` +
-                    `Thank you for confirming your order.\n` +
-                    `We hope you enjoy your meal! 🍽️\n\n` +
-                    `Come back soon to ET-FOOD! 🙏`,
+                    `Thank you! We hope you enjoy your meal. 🍽️\n\n` +
+                    `Please rate your driver:`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '⭐', callback_data: `rate_driver:${orderId}:1` },
+                                { text: '⭐⭐', callback_data: `rate_driver:${orderId}:2` },
+                                { text: '⭐⭐⭐', callback_data: `rate_driver:${orderId}:3` },
+                                { text: '⭐⭐⭐⭐', callback_data: `rate_driver:${orderId}:4` },
+                                { text: '⭐⭐⭐⭐⭐', callback_data: `rate_driver:${orderId}:5` }
+                            ]]
+                        }
+                    }
+                );
+            } catch (e) {
+                console.error('confirm_delivery error:', e.message);
+                bot.sendMessage(chatId, '❌ Failed to confirm delivery. Please try again.');
+            }
+            return;
+        }
+
+        if (data.startsWith('rate_driver:')) {
+            const parts = data.split(':');
+            const orderId = parts[1];
+            const stars = parseInt(parts[2]);
+            try {
+                // Remove rating buttons
+                try {
+                    await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+                        chat_id: chatId, message_id: query.message.message_id
+                    });
+                } catch (_) {}
+
+                // Save driver rating
+                const result = await dbQuery(`SELECT * FROM orders WHERE id=$1`, [orderId]);
+                const order = result.rows[0];
+                if (order && order.driver_id) {
+                    // Weighted average: new_rating = (old_rating * deliveries + stars) / (deliveries + 1)
+                    await dbQuery(
+                        `UPDATE drivers
+                         SET rating = ROUND((rating * total_deliveries + $1) / (total_deliveries + 1), 1),
+                             total_deliveries = total_deliveries + 1
+                         WHERE id = $2`,
+                        [stars, order.driver_id]
+                    ).catch(e => console.error('driver rating save error:', e.message));
+                }
+
+                const starDisplay = '⭐'.repeat(stars);
+                await bot.sendMessage(chatId,
+                    `${starDisplay} *Driver rated ${stars}/5 — Thank you!*\n\nNow please rate the restaurant:`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [[
+                                { text: '⭐', callback_data: `rate_restaurant:${orderId}:1` },
+                                { text: '⭐⭐', callback_data: `rate_restaurant:${orderId}:2` },
+                                { text: '⭐⭐⭐', callback_data: `rate_restaurant:${orderId}:3` },
+                                { text: '⭐⭐⭐⭐', callback_data: `rate_restaurant:${orderId}:4` },
+                                { text: '⭐⭐⭐⭐⭐', callback_data: `rate_restaurant:${orderId}:5` }
+                            ]]
+                        }
+                    }
+                );
+            } catch (e) {
+                console.error('rate_driver error:', e.message);
+            }
+            return;
+        }
+
+        if (data.startsWith('rate_restaurant:')) {
+            const parts = data.split(':');
+            const orderId = parts[1];
+            const stars = parseInt(parts[2]);
+            try {
+                // Remove rating buttons
+                try {
+                    await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+                        chat_id: chatId, message_id: query.message.message_id
+                    });
+                } catch (_) {}
+
+                // Save restaurant rating
+                const result = await dbQuery(`SELECT * FROM orders WHERE id=$1`, [orderId]);
+                const order = result.rows[0];
+                if (order && order.restaurant_id) {
+                    await dbQuery(
+                        `UPDATE restaurants
+                         SET rating = ROUND(
+                             (COALESCE(rating, 5.0) * COALESCE(rating_count, 0) + $1) /
+                             (COALESCE(rating_count, 0) + 1), 1),
+                             rating_count = COALESCE(rating_count, 0) + 1
+                         WHERE id = $2`,
+                        [stars, order.restaurant_id]
+                    ).catch(e => console.error('restaurant rating save error:', e.message));
+                }
+
+                const starDisplay = '⭐'.repeat(stars);
+                await bot.sendMessage(chatId,
+                    `${starDisplay} *Restaurant rated ${stars}/5 — Thank you!*\n\n` +
+                    `Your feedback helps us serve you better. 🙏\n\n` +
+                    `Come back soon to ET-FOOD!`,
                     {
                         parse_mode: 'Markdown',
                         reply_markup: {
@@ -639,8 +739,7 @@ bot.on('callback_query', async (query) => {
                     }
                 );
             } catch (e) {
-                console.error('confirm_delivery error:', e.message);
-                bot.sendMessage(chatId, '❌ Failed to confirm delivery. Please try again.');
+                console.error('rate_restaurant error:', e.message);
             }
             return;
         }

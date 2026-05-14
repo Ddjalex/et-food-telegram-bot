@@ -1326,30 +1326,27 @@ app.get('/api/kitchen/orders', requireKitchen, async (req, res) => {
     }
 });
 
-app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
+// Shared kitchen order status update logic
+async function kitchenOrderStatusHandler(req, res, orderId, body, session) {
     try {
-        const order = await store.findById('orders', req.params.id);
+        const order = await store.findById('orders', orderId);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
         const prevStatus = order.status;
-        await store.updateById('orders', req.params.id, req.body);
-        const updated = await store.findById('orders', req.params.id);
+        await store.updateById('orders', orderId, body);
+        const updated = await store.findById('orders', orderId);
         res.json({ success: true, order: updated });
 
-        // Send customer notification based on new status
-        const newStatus = req.body.status;
+        const newStatus = body.status;
         if (updated.telegram_user_id && newStatus && newStatus !== prevStatus) {
             if (newStatus === 'kitchen_confirmed' || newStatus === 'confirmed') {
-                // Notify customer that kitchen confirmed — do NOT dispatch drivers yet
                 notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify error:', e.message));
             } else if (newStatus === 'preparing') {
-                // Just notify customer food is being cooked — no driver dispatch yet
                 notifyCustomerOrderStatus(updated.telegram_user_id, updated, '👨‍🍳 Your food is being prepared! We\'ll notify you when it\'s ready.').catch(e => console.error('notify error:', e.message));
             } else if (newStatus === 'ready') {
-                // Food is ready — NOW dispatch to nearest drivers
-                notifyCustomerOrderStatus(updated.telegram_user_id, updated, '📦 Your food is ready! Finding a driver near you...').catch(e => console.error('notify error:', e.message));
+                notifyCustomerOrderStatus(updated.telegram_user_id, updated, '📦 Your food is ready! A driver is on the way to pick it up...').catch(e => console.error('notify error:', e.message));
                 dispatchOrderToDrivers(updated).catch(e => console.error('[DriverAssignment] dispatch error:', e.message));
-            } else if (newStatus === 'cancelled') {
-                const reason = req.body.rejection_reason || req.body.cancel_reason || null;
+            } else if (newStatus === 'unavailable' || newStatus === 'cancelled') {
+                const reason = body.rejection_reason || body.cancel_reason || body.reason || 'Item unavailable';
                 notifyCustomerKitchenRejected(updated.telegram_user_id, updated, reason).catch(e => console.error('notify error:', e.message));
             }
         }
@@ -1357,6 +1354,16 @@ app.patch('/api/kitchen/orders/:id', requireKitchen, async (req, res) => {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to update order' });
     }
+}
+
+// PATCH — used by older code paths
+app.patch('/api/kitchen/orders/:id', requireKitchen, (req, res) => {
+    kitchenOrderStatusHandler(req, res, req.params.id, req.body, req.session);
+});
+
+// POST /api/kitchen/orders/:id/status — used by kitchen dashboard JS
+app.post('/api/kitchen/orders/:id/status', requireKitchen, (req, res) => {
+    kitchenOrderStatusHandler(req, res, req.params.id, req.body, req.session);
 });
 
 app.get('/api/kitchen/menu-items', requireKitchen, async (req, res) => {
@@ -1387,8 +1394,7 @@ app.post('/api/kitchen/confirm-availability/:id', requireKitchen, async (req, re
             if (updated.telegram_user_id) {
                 notifyCustomerKitchenAccepted(updated.telegram_user_id, updated).catch(e => console.error('notify customer error:', e.message));
             }
-            // Dispatch to nearby drivers
-            dispatchOrderToDrivers(updated).catch(e => console.error('[DriverAssignment] dispatch error:', e.message));
+            // NOTE: Do NOT dispatch drivers here — dispatch happens when kitchen marks 'ready'
         } else {
             const cancelReason = reason || 'Item unavailable';
             await store.updateById('orders', req.params.id, { status: 'cancelled', rejection_reason: cancelReason });
@@ -1614,15 +1620,23 @@ app.get('/api/orders/:id/driver-location', (req, res) => {
     }
 });
 
-// Mark order as picked up from restaurant
+// Mark order as picked up from restaurant — driver has the food, heading to customer
 app.post('/api/orders/:id/pickup', async (req, res) => {
     try {
         const order = await store.findById('orders', req.params.id);
         if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
-        // No status change needed — driver just signals they have the food
+
         // Broadcast to tracking room
         io.to(`order:${order.id}`).emit('order_status', { status: 'picked_up', orderId: order.id });
         res.json({ success: true });
+
+        // Notify customer that driver has the food and is on the way
+        if (order.telegram_user_id) {
+            let driver = null;
+            if (order.driver_id) driver = await store.findById('drivers', order.driver_id).catch(() => null);
+            notifyCustomerOrderPickedUp(order.telegram_user_id, order, driver)
+                .catch(e => console.error('pickup notify error:', e.message));
+        }
     } catch (e) {
         res.status(500).json({ success: false, error: 'Failed to mark pickup' });
     }
