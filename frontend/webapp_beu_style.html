@@ -3379,9 +3379,22 @@
                 }
             }
 
+            if (orderItems.length === 0) {
+                alert('Your cart is empty. Please add items before placing an order.');
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                return;
+            }
+
             // Estimate driver fee to save with the order
-            const { fee: estFee, dist: estDist } = await estimateDriverFee();
-            
+            let estFee = 0, estDist = 0;
+            try {
+                const est = await estimateDriverFee();
+                estFee = est.fee || 0;
+                estDist = est.dist || 0;
+            } catch(e) { /* use defaults */ }
+
             const orderData = {
                 customer_name: customerName,
                 customer_phone: customerPhone,
@@ -3390,51 +3403,62 @@
                 special_instructions: document.getElementById('specialInstructions').value,
                 items: orderItems,
                 total_amount: total,
-                estimated_driver_fee: estFee || 0,
-                driver_distance_km: estDist || 0,
+                estimated_driver_fee: estFee,
+                driver_distance_km: estDist,
                 location_lat: customerLat,
                 location_lng: customerLng,
                 restaurant_id: currentRestaurantId,
                 telegram_user_id: tgUserId || null
             };
-            
+
+            let result = null;
             try {
                 const response = await fetch('/api/orders', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderData)
                 });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Save order ID locally so My Orders works without Telegram ID
-                    if (result.order_id) saveOrderIdLocally(result.order_id);
-
-                    // Hide checkout screen
-                    closeCheckout();
-
-                    // Clear cart
-                    selectedItems = {};
-                    updateCartInfo();
-                    updateMainButton();
-                    displayProducts();
-
-                    // Open live tracking screen
-                    showOrderTracking(result.order_id);
-                } else {
-                    alert('Error placing order: ' + (result.error || 'Unknown error'));
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error('Order failed, status:', response.status, errText);
+                    alert('Order failed (server error ' + response.status + '). Please try again.');
+                    btn.disabled = false;
+                    btnText.style.display = 'inline';
+                    btnLoader.style.display = 'none';
+                    return;
                 }
-            } catch (error) {
-                console.error('Error placing order:', error);
-                alert('Network error. Please try again.');
-            } finally {
-                // Reset button state
+                result = await response.json();
+            } catch (networkErr) {
+                console.error('Network error placing order:', networkErr);
+                alert('Could not reach the server. Please check your connection and try again.');
                 btn.disabled = false;
                 btnText.style.display = 'inline';
                 btnLoader.style.display = 'none';
+                return;
+            }
+
+            // Reset button now that the request is done
+            btn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoader.style.display = 'none';
+
+            if (result && result.success) {
+                // Save order ID locally so My Orders works without Telegram ID
+                if (result.order_id) saveOrderIdLocally(result.order_id);
+
+                // Hide checkout screen and clear cart
+                try { closeCheckout(); } catch(e) {}
+                selectedItems = {};
+                try { updateCartInfo(); } catch(e) {}
+                try { updateMainButton(); } catch(e) {}
+                try { displayProducts(); } catch(e) {}
+
+                // Open live tracking screen
+                try { showOrderTracking(result.order_id); } catch(e) {
+                    console.error('Tracking screen error:', e);
+                }
+            } else {
+                alert('Error placing order: ' + (result && result.error ? result.error : 'Unknown error'));
             }
         }
 
