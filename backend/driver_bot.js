@@ -88,21 +88,23 @@ async function sendMainMenu(chatId, driver, telegramUserId) {
         }
     );
 
-    // Show location sharing keyboard — prompt for live location
-    await bot.sendMessage(chatId,
-        `📍 *Share your live location* so orders can be matched to you in real-time.\n\n` +
-        `Choose *"Share My Live Location for..."* (not just current location) so the system always knows where you are.`,
-        {
-            parse_mode: 'Markdown',
-            reply_markup: {
-                keyboard: [
-                    [{ text: '📍 Share My Live Location', request_location: true }],
-                    [{ text: '🆘 Help' }]
-                ],
-                resize_keyboard: true
+    // If driver is online but has no recent location, prompt them to share
+    if (driver.is_available && !driver.current_lat) {
+        await bot.sendMessage(chatId,
+            `📍 *Share your live location* so orders can be matched to you in real-time.\n\n` +
+            `Choose *"Share My Live Location for..."* (not just current location) so the system always knows where you are.`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    keyboard: [
+                        [{ text: '📍 Share My Live Location', request_location: true }],
+                        [{ text: '🆘 Help' }]
+                    ],
+                    resize_keyboard: true
+                }
             }
-        }
-    );
+        );
+    }
 }
 
 bot.onText(/\/start/, async (msg) => {
@@ -164,10 +166,35 @@ bot.on('callback_query', async (query) => {
                 bot.answerCallbackQuery(query.id, { text: '⏳ Your account is still pending approval.', show_alert: true });
                 return;
             }
-            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: goOnline });
-            bot.answerCallbackQuery(query.id, { text: goOnline ? '🟢 You are now Online!' : '🔴 You are now Offline.' });
-            const updated = await getDriver(telegramUserId);
-            return sendMainMenu(chatId, updated, telegramUserId);
+
+            if (!goOnline) {
+                // Going offline — immediate, no location needed
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { is_available: false });
+                bot.answerCallbackQuery(query.id, { text: '🔴 You are now Offline.' });
+                const updated = await getDriver(telegramUserId);
+                return sendMainMenu(chatId, updated, telegramUserId);
+            }
+
+            // Going online — require live location first
+            bot.answerCallbackQuery(query.id, { text: '📍 Please share your live location to go online.' });
+            const session = getSession(telegramUserId);
+            session.pendingOnline = true;
+            return bot.sendMessage(chatId,
+                `📍 *Share your live location to go online*\n\n` +
+                `Tap the button below and choose *"Share My Live Location for..."*\n` +
+                `(not just current location — live location lets us match you to nearby orders in real-time)`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        keyboard: [
+                            [{ text: '📍 Share Live Location to Go Online', request_location: true }],
+                            [{ text: '❌ Cancel' }]
+                        ],
+                        resize_keyboard: true,
+                        one_time_keyboard: true
+                    }
+                }
+            );
         }
 
         if (data === 'my_stats') {
@@ -451,16 +478,31 @@ bot.on('message', async (msg) => {
             if (!driver) return bot.sendMessage(chatId, '❌ You are not registered. Use /start to register.');
 
             const isLive = msg.location.live_period && msg.location.live_period > 0;
-
-            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, {
+            const updates = {
                 current_lat: msg.location.latitude,
                 current_lng: msg.location.longitude,
                 last_location_update: new Date()
-            });
+            };
+
+            // If driver was waiting for location to go online, activate now
+            if (session.pendingOnline) {
+                updates.is_available = true;
+                session.pendingOnline = false;
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, updates);
+                const updated = await getDriver(telegramUserId);
+                bot.sendMessage(chatId,
+                    `✅ *You are now Online!*\n\n📍 Location saved. You will receive nearby order assignments.\n\n${isLive ? '🔴 Live location is active — your position updates automatically.' : '💡 Tip: For best results, use *Live Location* so we can track you in real-time.'}`,
+                    { parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }
+                );
+                return sendMainMenu(chatId, updated, telegramUserId);
+            }
+
+            // Normal location update (driver already online)
+            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, updates);
 
             if (isLive) {
                 bot.sendMessage(chatId,
-                    `🔴 *Live Location Active!*\n\nYour position will update automatically as you move.\nYou will now receive nearby order assignments.\n\nStay online to receive orders! 📦`,
+                    `📍 *Live Location Active!*\n\nYour position will update automatically as you move.\nYou will now receive nearby order assignments.`,
                     { parse_mode: 'Markdown' }
                 );
             } else {
@@ -476,6 +518,15 @@ bot.on('message', async (msg) => {
     }
 
     if (text.startsWith('/')) return;
+
+    // Cancel pending go-online
+    if (text === '❌ Cancel' && session.pendingOnline) {
+        session.pendingOnline = false;
+        const driver = await getDriver(telegramUserId);
+        bot.sendMessage(chatId, '↩️ Cancelled. You are still Offline.', { reply_markup: { remove_keyboard: true } });
+        if (driver) return sendMainMenu(chatId, driver, telegramUserId);
+        return;
+    }
 
     // Always check DB first — if driver is already registered, never run them through registration again
     if (session.step && session.step.startsWith('register_')) {
