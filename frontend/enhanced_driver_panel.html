@@ -562,9 +562,14 @@
         <div class="nav-stat-lbl">km/h</div>
       </div>
     </div>
-    <button class="btn-start-nav" onclick="openWazeExternal()">
-      <i class="fas fa-external-link-alt"></i> Open in Waze
-    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn-start-nav" style="background:linear-gradient(135deg,#00b4db,#0083b0)" onclick="openWazeExternal()">
+        <i class="fas fa-road"></i> Waze
+      </button>
+      <button class="btn-start-nav" style="background:linear-gradient(135deg,#4285f4,#34a853)" onclick="openGoogleMapsExternal()">
+        <i class="fas fa-map"></i> Google Maps
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1022,66 +1027,129 @@ function clearOrder() {
 
 // ── IN-APP NAVIGATION ──
 let navMap = null, navRouteLayer = null, navDriverMarker = null, navDestMarker = null;
-let navDestLat = null, navDestLng = null, navWazeUrl = '';
+let navDestLat = null, navDestLng = null, navWazeUrl = '', navGmapsUrl = '';
 let navSpeedInterval = null, navPrevLat = null, navPrevLng = null, navLastTime = null;
+let navDestAddress = '';
 
 function navigateToRestaurant() {
-  if (!driverLat) { showToast('Waiting for GPS fix...', 'error'); return; }
-  openNavOverlay(restLat, restLng, 'Navigate to Restaurant', '🍔');
+  if (!restLat || !restLng) { showToast('Restaurant location not available', 'error'); return; }
+  const addr = (currentOrder && currentOrder.restaurant_address) ? currentOrder.restaurant_address : '';
+  openNavOverlay(restLat, restLng, 'Navigate to Restaurant', '🍔', addr);
 }
 
 function navigateToCustomer() {
-  if (!custLat) { showToast('Customer location unavailable', 'error'); return; }
-  if (!driverLat) { showToast('Waiting for GPS fix...', 'error'); return; }
-  openNavOverlay(custLat, custLng, 'Navigate to Customer', '🏠');
+  if (!custLat && !custLng && currentOrder) {
+    // No GPS coords — open Waze/Google Maps with text address if available
+    const addr = currentOrder.customer_address || '';
+    if (addr) {
+      const encoded = encodeURIComponent(addr);
+      navWazeUrl  = `https://waze.com/ul?q=${encoded}&navigate=yes`;
+      navGmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`;
+      openNavOverlayAddressOnly(addr, 'Navigate to Customer', '🏠');
+    } else {
+      showToast('Customer location unavailable', 'error');
+    }
+    return;
+  }
+  openNavOverlay(custLat, custLng, 'Navigate to Customer', '🏠',
+    currentOrder ? (currentOrder.customer_address || '') : '');
 }
 
-function openNavOverlay(destLat, destLng, title, icon) {
-  navDestLat = destLat;
-  navDestLng = destLng;
-  navWazeUrl = `https://waze.com/ul?ll=${destLat},${destLng}&navigate=yes&utm_source=misaka_delivery`;
+function openNavOverlayAddressOnly(address, title, icon) {
   document.getElementById('navTitle').textContent = title;
   document.getElementById('navDestIcon').textContent = icon;
-  document.getElementById('navSubtitle').textContent = 'Calculating route...';
+  document.getElementById('navSubtitle').textContent = address;
+  document.getElementById('navDist').textContent = '--';
+  document.getElementById('navEta').textContent  = '--';
+  document.getElementById('navSpeed').textContent = '--';
   document.getElementById('navOverlay').classList.add('show');
+  // If map was previously used, clear it
+  if (navMap) {
+    if (navRouteLayer) { navMap.removeLayer(navRouteLayer); navRouteLayer = null; }
+    if (navDriverMarker) { navMap.removeLayer(navDriverMarker); navDriverMarker = null; }
+    if (navDestMarker) { navMap.removeLayer(navDestMarker); navDestMarker = null; }
+  }
+  // Show a simple message on the map area
+  const mapEl = document.getElementById('navMap');
+  mapEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#8888aa;padding:24px;text-align:center;gap:12px">
+    <div style="font-size:48px">📍</div>
+    <div style="font-size:14px;font-weight:700;color:#f0f0ff">${address}</div>
+    <div style="font-size:12px;color:#8888aa">No GPS coordinates from customer.<br>Use the navigation buttons below to open the address in your maps app.</div>
+  </div>`;
+  navMap = null; // reset so next open re-initialises
+  setTimeout(() => document.getElementById('navOverlay').classList.contains('show') && null, 300);
+}
+
+function openNavOverlay(destLat, destLng, title, icon, address) {
+  navDestLat  = destLat;
+  navDestLng  = destLng;
+  navDestAddress = address || '';
+  navWazeUrl  = `https://waze.com/ul?ll=${destLat},${destLng}&navigate=yes`;
+  navGmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+
+  document.getElementById('navTitle').textContent    = title;
+  document.getElementById('navDestIcon').textContent = icon;
+  document.getElementById('navSubtitle').textContent = 'Calculating route...';
+  document.getElementById('navDist').textContent     = '--';
+  document.getElementById('navEta').textContent      = '--';
+  document.getElementById('navSpeed').textContent    = '--';
+  document.getElementById('navOverlay').classList.add('show');
+
+  // Ensure fresh map div (clear any address-only placeholder)
+  const mapEl = document.getElementById('navMap');
+  if (!navMap && mapEl.innerHTML.includes('No GPS coordinates')) {
+    mapEl.innerHTML = '';
+  }
 
   // Init nav map on first open
   if (!navMap) {
     navMap = L.map('navMap', { zoomControl: false, attributionControl: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(navMap);
-    // Zoom control top-right
     L.control.zoom({ position: 'topright' }).addTo(navMap);
   } else {
-    if (navRouteLayer) { navMap.removeLayer(navRouteLayer); navRouteLayer = null; }
-    if (navDriverMarker) { navMap.removeLayer(navDriverMarker); navDriverMarker = null; }
-    if (navDestMarker) { navMap.removeLayer(navDestMarker); navDestMarker = null; }
+    if (navRouteLayer)  { navMap.removeLayer(navRouteLayer);  navRouteLayer  = null; }
+    if (navDriverMarker){ navMap.removeLayer(navDriverMarker); navDriverMarker = null; }
+    if (navDestMarker)  { navMap.removeLayer(navDestMarker);  navDestMarker  = null; }
   }
 
-  // Place markers
-  const driverIcon = L.divIcon({
+  // Build icons
+  const driverIconObj = L.divIcon({
     html: '<div style="width:16px;height:16px;border-radius:50%;background:#00d4ff;border:3px solid white;box-shadow:0 0 10px #00d4ff88"></div>',
     iconSize: [16,16], iconAnchor: [8,8], className: ''
   });
-  const destIcon = L.divIcon({
+  const destIconObj = L.divIcon({
     html: `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 12px rgba(255,107,107,.5)">${icon}</div>`,
     iconSize: [32,32], iconAnchor: [16,16], className: ''
   });
 
-  navDriverMarker = L.marker([driverLat, driverLng], { icon: driverIcon }).addTo(navMap);
-  navDestMarker   = L.marker([destLat, destLng],     { icon: destIcon   }).addTo(navMap);
+  // Always place destination marker
+  navDestMarker = L.marker([destLat, destLng], { icon: destIconObj }).addTo(navMap);
 
-  // Fit bounds initially
-  navMap.fitBounds([[driverLat, driverLng], [destLat, destLng]], { padding: [50, 50] });
+  if (driverLat && driverLng) {
+    // Driver GPS is available — show both markers and route
+    navDriverMarker = L.marker([driverLat, driverLng], { icon: driverIconObj }).addTo(navMap);
+    navPrevLat = driverLat; navPrevLng = driverLng; navLastTime = Date.now();
+    navSpeedInterval = setInterval(updateNavDriver, 3000);
+  } else {
+    // No GPS yet — centre on destination, show warning
+    document.getElementById('navSubtitle').textContent = '⚠️ GPS not active — showing destination only';
+    document.getElementById('navSpeed').textContent = 'N/A';
+  }
 
-  // Fetch OSRM route
-  fetchRoute(driverLat, driverLng, destLat, destLng);
-
-  // Start speed tracking
-  navPrevLat = driverLat; navPrevLng = driverLng; navLastTime = Date.now();
-  navSpeedInterval = setInterval(updateNavDriver, 3000);
-
-  // Force map resize
-  setTimeout(() => navMap && navMap.invalidateSize(), 200);
+  // Force Leaflet resize AFTER overlay is visible, then fit bounds
+  setTimeout(() => {
+    if (!navMap) return;
+    navMap.invalidateSize();
+    if (driverLat && driverLng) {
+      navMap.fitBounds([[driverLat, driverLng], [destLat, destLng]], { padding: [50, 50] });
+      fetchRoute(driverLat, driverLng, destLat, destLng);
+    } else {
+      navMap.setView([destLat, destLng], 15);
+      const d = '--';
+      document.getElementById('navDist').textContent = d;
+      document.getElementById('navEta').textContent  = '--';
+    }
+  }, 300);
 }
 
 async function fetchRoute(fromLat, fromLng, toLat, toLng) {
@@ -1119,12 +1187,25 @@ async function fetchRoute(fromLat, fromLng, toLat, toLng) {
 }
 
 function updateNavDriver() {
-  if (!navMap || !navDriverMarker || !driverLat) return;
-  navDriverMarker.setLatLng([driverLat, driverLng]);
+  if (!navMap || !driverLat || !navDestLat) return;
+
+  // Add driver marker if it was missing (GPS arrived after overlay opened)
+  if (!navDriverMarker) {
+    const driverIconObj = L.divIcon({
+      html: '<div style="width:16px;height:16px;border-radius:50%;background:#00d4ff;border:3px solid white;box-shadow:0 0 10px #00d4ff88"></div>',
+      iconSize: [16,16], iconAnchor: [8,8], className: ''
+    });
+    navDriverMarker = L.marker([driverLat, driverLng], { icon: driverIconObj }).addTo(navMap);
+    // Now we have both markers — fetch the route
+    fetchRoute(driverLat, driverLng, navDestLat, navDestLng);
+    document.getElementById('navSubtitle').textContent = 'Calculating route...';
+  } else {
+    navDriverMarker.setLatLng([driverLat, driverLng]);
+  }
 
   // Calculate speed
   if (navPrevLat !== null) {
-    const dt = (Date.now() - navLastTime) / 3600000; // hours
+    const dt = (Date.now() - navLastTime) / 3600000;
     const d  = haversine(navPrevLat, navPrevLng, driverLat, driverLng);
     const spd = dt > 0 ? Math.round(d / dt) : 0;
     document.getElementById('navSpeed').textContent = Math.min(spd, 120);
@@ -1145,12 +1226,21 @@ function closeNavOverlay() {
   if (navSpeedInterval) { clearInterval(navSpeedInterval); navSpeedInterval = null; }
 }
 
-function openWazeExternal() {
+function openExternalLink(url) {
+  if (!url) return;
   if (window.Telegram?.WebApp?.openLink) {
-    window.Telegram.WebApp.openLink(navWazeUrl);
+    window.Telegram.WebApp.openLink(url);
   } else {
-    window.open(navWazeUrl, '_blank');
+    window.open(url, '_blank');
   }
+}
+
+function openWazeExternal() {
+  openExternalLink(navWazeUrl);
+}
+
+function openGoogleMapsExternal() {
+  openExternalLink(navGmapsUrl);
 }
 
 // ── COUNTDOWN ──
