@@ -1,8 +1,8 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-    connectionString: process.env.NEON_DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    connectionString: process.env.DATABASE_URL || process.env.NEON_DATABASE_URL,
+    ssl: process.env.DATABASE_URL ? false : { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {
