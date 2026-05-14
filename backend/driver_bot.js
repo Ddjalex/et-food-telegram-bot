@@ -300,8 +300,7 @@ bot.on('callback_query', async (query) => {
                             reply_markup: {
                                 inline_keyboard: [
                                     [
-                                        { text: '🗺️ Open in Waze', url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes` },
-                                        { text: '📍 Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
+                                        { text: '📍 Open in Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
                                     ],
                                     [{ text: '🏠 Navigate to Customer', callback_data: `nav_customer:${orderId}` }]
                                 ]
@@ -340,8 +339,7 @@ bot.on('callback_query', async (query) => {
                             reply_markup: {
                                 inline_keyboard: [
                                     [
-                                        { text: '🗺️ Open in Waze', url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes` },
-                                        { text: '📍 Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
+                                        { text: '📍 Open in Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
                                     ],
                                     [{ text: '✅ Mark as Delivered', callback_data: `mark_delivered:${orderId}` }]
                                 ]

@@ -562,14 +562,9 @@
         <div class="nav-stat-lbl">km/h</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <button class="btn-start-nav" style="background:linear-gradient(135deg,#00b4db,#0083b0)" onclick="openWazeExternal()">
-        <i class="fas fa-road"></i> Waze
-      </button>
-      <button class="btn-start-nav" style="background:linear-gradient(135deg,#4285f4,#34a853)" onclick="openGoogleMapsExternal()">
-        <i class="fas fa-map"></i> Google Maps
-      </button>
-    </div>
+    <button class="btn-start-nav" style="background:linear-gradient(135deg,#4285f4,#34a853)" onclick="openGoogleMapsExternal()">
+      <i class="fas fa-map"></i> Open in Google Maps
+    </button>
   </div>
 </div>
 
@@ -1027,7 +1022,7 @@ function clearOrder() {
 
 // ── IN-APP NAVIGATION ──
 let navMap = null, navRouteLayer = null, navDriverMarker = null, navDestMarker = null;
-let navDestLat = null, navDestLng = null, navWazeUrl = '', navGmapsUrl = '';
+let navDestLat = null, navDestLng = null, navGmapsUrl = '';
 let navSpeedInterval = null, navPrevLat = null, navPrevLng = null, navLastTime = null;
 let navDestAddress = '';
 
@@ -1043,7 +1038,6 @@ function navigateToCustomer() {
     const addr = currentOrder.customer_address || '';
     if (addr) {
       const encoded = encodeURIComponent(addr);
-      navWazeUrl  = `https://waze.com/ul?q=${encoded}&navigate=yes`;
       navGmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`;
       openNavOverlayAddressOnly(addr, 'Navigate to Customer', '🏠');
     } else {
@@ -1084,7 +1078,6 @@ function openNavOverlay(destLat, destLng, title, icon, address) {
   navDestLat  = destLat;
   navDestLng  = destLng;
   navDestAddress = address || '';
-  navWazeUrl  = `https://waze.com/ul?ll=${destLat},${destLng}&navigate=yes`;
   navGmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
 
   document.getElementById('navTitle').textContent    = title;
@@ -1233,10 +1226,6 @@ function openExternalLink(url) {
   } else {
     window.open(url, '_blank');
   }
-}
-
-function openWazeExternal() {
-  openExternalLink(navWazeUrl);
 }
 
 function openGoogleMapsExternal() {
