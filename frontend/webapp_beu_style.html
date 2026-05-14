@@ -2244,11 +2244,14 @@
             });
         }
 
-        // Get Telegram user ID — persist to localStorage so it survives page reloads
+        // Get Telegram user ID — priority: URL param (most reliable) → initDataUnsafe → localStorage
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _urlUid = _urlParams.get('uid');
+
         const tgUser = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe)
             ? window.Telegram.WebApp.initDataUnsafe.user
             : null;
-        let tgUserId = tgUser ? String(tgUser.id) : null;
+        let tgUserId = _urlUid || (tgUser ? String(tgUser.id) : null);
         if (tgUserId) {
             try { localStorage.setItem('et_food_tg_user_id', tgUserId); } catch(e) {}
         } else {

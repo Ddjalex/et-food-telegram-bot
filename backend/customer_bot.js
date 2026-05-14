@@ -116,11 +116,12 @@ function mainKeyboard() {
     };
 }
 
-// Inline keyboard with the web app button
-function menuKeyboard() {
+// Inline keyboard with the web app button (embed user ID in URL for reliable autofill)
+function menuKeyboard(telegramUserId) {
+    const url = telegramUserId ? `${WEBAPP_URL}?uid=${telegramUserId}` : WEBAPP_URL;
     return {
         inline_keyboard: [[
-            { text: '🍔 Open Menu & Order', web_app: { url: WEBAPP_URL } }
+            { text: '🍔 Open Menu & Order', web_app: { url } }
         ]]
     };
 }
@@ -215,7 +216,7 @@ async function sendOrdersPanel(chatId, telegramUserId, tab = 'active') {
         callback_data: `order:${o.id}`
     }]));
 
-    const bottomRow = [[{ text: '🍔 New Order', web_app: { url: WEBAPP_URL } }]];
+    const bottomRow = [[{ text: '🍔 New Order', web_app: { url: `${WEBAPP_URL}?uid=${telegramUserId}` } }]];
 
     return bot.sendMessage(chatId, text, {
         parse_mode: 'Markdown',
@@ -320,7 +321,7 @@ bot.onText(/\/start/, async (msg) => {
                 `👋 Welcome back, *${displayName}*!\n\n${locStatus} — we know where to deliver.\n\nTap below to browse our menu and order:`,
                 { parse_mode: 'Markdown', reply_markup: mainKeyboard() }
             );
-            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard(telegramUserId) });
         } else {
             await bot.sendMessage(chatId,
                 `👋 Welcome back, *${displayName}*!\n\n` +
@@ -333,7 +334,7 @@ bot.onText(/\/start/, async (msg) => {
         console.error('Error in /start:', e);
         await bot.sendMessage(chatId,
             `👋 Welcome to *ET-FOOD*, ${firstName}!\n\nTap below to order:`,
-            { parse_mode: 'Markdown', reply_markup: menuKeyboard() }
+            { parse_mode: 'Markdown', reply_markup: menuKeyboard(telegramUserId) }
         );
     }
 });
@@ -344,8 +345,9 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.onText(/\/menu/, async (msg) => {
     const chatId = msg.chat.id;
+    const uid = String(msg.from.id);
     await bot.sendMessage(chatId, '🍽️ Tap below to browse our full menu:', {
-        reply_markup: menuKeyboard()
+        reply_markup: menuKeyboard(uid)
     });
 });
 
@@ -508,7 +510,7 @@ bot.on('message', async (msg) => {
                     reply_markup: mainKeyboard()
                 }
             );
-            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard(telegramUserId) });
         } else {
             await bot.sendMessage(chatId,
                 `✅ *Location Saved!*\n\n` +
@@ -519,7 +521,7 @@ bot.on('message', async (msg) => {
                     reply_markup: mainKeyboard()
                 }
             );
-            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard() });
+            await bot.sendMessage(chatId, '🍔 Ready to order?', { reply_markup: menuKeyboard(telegramUserId) });
         }
         return;
     }
@@ -530,7 +532,7 @@ bot.on('message', async (msg) => {
 
     if (text === '🍔 Order Food') {
         return bot.sendMessage(chatId, '🍔 Tap below to browse our full menu and order:', {
-            reply_markup: menuKeyboard()
+            reply_markup: menuKeyboard(telegramUserId)
         });
     }
 
@@ -631,7 +633,7 @@ bot.on('callback_query', async (query) => {
                         parse_mode: 'Markdown',
                         reply_markup: {
                             inline_keyboard: [[
-                                { text: '🍔 Order Again', web_app: { url: WEBAPP_URL } }
+                                { text: '🍔 Order Again', web_app: { url: `${WEBAPP_URL}?uid=${telegramUserId}` } }
                             ]]
                         }
                     }
