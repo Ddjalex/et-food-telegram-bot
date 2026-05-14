@@ -9,23 +9,40 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 const WEBAPP_URL = process.env.WEBAPP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}`;
 
-bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
-    bot.startPolling({
-        restart: false,
-        params: {
-            allowed_updates: ['message', 'edited_message', 'callback_query']
+async function startCustomerBot(retries = 5) {
+    try {
+        await bot.deleteWebHook({ drop_pending_updates: true });
+        // Wait for Telegram to release the old session
+        await new Promise(r => setTimeout(r, 3000));
+        bot.startPolling({
+            restart: false,
+            params: { allowed_updates: ['message', 'edited_message', 'callback_query'] }
+        });
+        console.log('Customer bot started. WebApp URL:', WEBAPP_URL);
+    } catch (err) {
+        console.error('Customer bot start error:', err.message);
+        if (retries > 0) {
+            console.log(`Retrying in 5s... (${retries} attempts left)`);
+            await new Promise(r => setTimeout(r, 5000));
+            return startCustomerBot(retries - 1);
         }
-    });
-    console.log('Customer bot started. WebApp URL:', WEBAPP_URL);
-}).catch(err => {
-    console.error('Customer bot webhook delete error:', err.message);
-    bot.startPolling({
-        restart: false,
-        params: {
-            allowed_updates: ['message', 'edited_message', 'callback_query']
-        }
-    });
+    }
+}
+
+bot.on('polling_error', async (err) => {
+    if (err.code === 'ETELEGRAM' && err.message.includes('409')) {
+        console.log('Customer bot: 409 conflict detected, restarting polling...');
+        try { bot.stopPolling(); } catch(e) {}
+        await new Promise(r => setTimeout(r, 5000));
+        try {
+            await bot.deleteWebHook({ drop_pending_updates: true });
+            await new Promise(r => setTimeout(r, 2000));
+            bot.startPolling({ restart: false, params: { allowed_updates: ['message', 'edited_message', 'callback_query'] } });
+        } catch(e) { console.error('Customer bot recovery error:', e.message); }
+    }
 });
+
+startCustomerBot();
 
 // ============================================================
 // CUSTOMER PROFILE HELPERS

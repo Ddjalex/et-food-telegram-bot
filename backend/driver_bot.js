@@ -6,23 +6,40 @@ if (!DRIVER_BOT_TOKEN) { console.error('DRIVER_BOT_TOKEN secret is not set'); pr
 
 const bot = new TelegramBot(DRIVER_BOT_TOKEN, { polling: false });
 
-bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
-    bot.startPolling({
-        restart: false,
-        params: {
-            allowed_updates: ['message', 'edited_message', 'callback_query']
+async function startDriverBot(retries = 5) {
+    try {
+        await bot.deleteWebHook({ drop_pending_updates: true });
+        // Wait for Telegram to release the old session
+        await new Promise(r => setTimeout(r, 3000));
+        bot.startPolling({
+            restart: false,
+            params: { allowed_updates: ['message', 'edited_message', 'callback_query'] }
+        });
+        console.log('Driver bot started.');
+    } catch (err) {
+        console.error('Driver bot start error:', err.message);
+        if (retries > 0) {
+            console.log(`Retrying in 5s... (${retries} attempts left)`);
+            await new Promise(r => setTimeout(r, 5000));
+            return startDriverBot(retries - 1);
         }
-    });
-    console.log('Driver bot started.');
-}).catch(err => {
-    console.error('Driver bot webhook delete error:', err.message);
-    bot.startPolling({
-        restart: false,
-        params: {
-            allowed_updates: ['message', 'edited_message', 'callback_query']
-        }
-    });
+    }
+}
+
+bot.on('polling_error', async (err) => {
+    if (err.code === 'ETELEGRAM' && err.message.includes('409')) {
+        console.log('Driver bot: 409 conflict detected, restarting polling...');
+        try { bot.stopPolling(); } catch(e) {}
+        await new Promise(r => setTimeout(r, 5000));
+        try {
+            await bot.deleteWebHook({ drop_pending_updates: true });
+            await new Promise(r => setTimeout(r, 2000));
+            bot.startPolling({ restart: false, params: { allowed_updates: ['message', 'edited_message', 'callback_query'] } });
+        } catch(e) { console.error('Driver bot recovery error:', e.message); }
+    }
 });
+
+startDriverBot();
 
 const driverSessions = {};
 
