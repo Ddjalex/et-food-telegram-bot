@@ -393,9 +393,19 @@ app.post('/api/orders', async (req, res) => {
         }
         let restaurant_id = data.restaurant_id;
         if (!restaurant_id) {
-            const rests = await store.findMany('restaurants', { is_active: true });
-            if (rests.length) restaurant_id = rests[0].id;
-            else return res.status(404).json({ success: false, error: 'No restaurants available' });
+            // Try to resolve restaurant from the first ordered item's menu entry
+            const firstItem = Array.isArray(data.items) && data.items[0];
+            const itemId = firstItem && (firstItem.item_id || firstItem.id);
+            if (itemId) {
+                const menuItem = await store.findById('menu_items', itemId);
+                if (menuItem && menuItem.restaurant_id) restaurant_id = menuItem.restaurant_id;
+            }
+            // Final fallback: first active restaurant sorted by name
+            if (!restaurant_id) {
+                const rests = await store.findMany('restaurants', { is_active: true }, 'name');
+                if (rests.length) restaurant_id = rests[0].id;
+                else return res.status(404).json({ success: false, error: 'No restaurants available' });
+            }
         }
         const order_id = await store.insertOne('orders', {
             customer_name: data.customer_name,

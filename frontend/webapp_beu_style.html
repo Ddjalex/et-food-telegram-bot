@@ -3395,6 +3395,13 @@
                 estDist = est.dist || 0;
             } catch(e) { /* use defaults */ }
 
+            // Derive restaurant_id from first cart item when browsing all-restaurants view
+            let resolvedRestaurantId = currentRestaurantId;
+            if (!resolvedRestaurantId && orderItems.length > 0) {
+                const firstItem = findItemById(orderItems[0].item_id);
+                if (firstItem && firstItem.restaurant_id) resolvedRestaurantId = firstItem.restaurant_id;
+            }
+
             const orderData = {
                 customer_name: customerName,
                 customer_phone: customerPhone,
@@ -3407,7 +3414,7 @@
                 driver_distance_km: estDist,
                 location_lat: customerLat,
                 location_lng: customerLng,
-                restaurant_id: currentRestaurantId,
+                restaurant_id: resolvedRestaurantId,
                 telegram_user_id: tgUserId || null
             };
 
