@@ -15,7 +15,8 @@ const {
     notifyCustomerKitchenAccepted, notifyCustomerKitchenRejected,
     notifyCustomerPaymentVerified, notifyCustomerDriverAssigned,
     notifyCustomerOrderPickedUp, notifyCustomerOrderDelivered,
-    notifyCustomerOrderCancelled, notifyCustomerDeliveryPriceConfirmation
+    notifyCustomerOrderCancelled, notifyCustomerDeliveryPriceConfirmation,
+    notifyKitchenNewOrder
 } = require('./notifier');
 const { dispatchOrderToDrivers } = require('./driver_assignment');
 
@@ -420,6 +421,25 @@ app.post('/api/orders', async (req, res) => {
         if (order.telegram_user_id) {
             notifyCustomerOrderReceived(order.telegram_user_id, order).catch(e => console.error('notify error:', e.message));
         }
+
+        // Notify kitchen staff via Telegram
+        (async () => {
+            try {
+                const staffFilter = { role: 'kitchen', is_active: true };
+                if (restaurant_id) staffFilter.restaurant_id = restaurant_id;
+                const kitchenStaff = await store.findMany('admin_users', staffFilter);
+                if (kitchenStaff.length > 0) {
+                    await notifyKitchenNewOrder(kitchenStaff, order);
+                } else {
+                    // Fall back to all admins if no kitchen staff found
+                    const admins = await store.findMany('admin_users', { is_active: true });
+                    const eligible = admins.filter(u => ['kitchen','admin','superadmin'].includes(u.role) && u.telegram_user_id);
+                    if (eligible.length) await notifyKitchenNewOrder(eligible, order);
+                }
+            } catch (e) {
+                console.error('Kitchen notify error:', e.message);
+            }
+        })();
     } catch (e) {
         console.error('Error creating order:', e);
         res.status(500).json({ success: false, error: 'Failed to create order' });

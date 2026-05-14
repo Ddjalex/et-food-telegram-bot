@@ -291,6 +291,40 @@ async function notifyCustomerOrderCancelled(telegramUserId, order, reason) {
     );
 }
 
+// ============================================================
+// KITCHEN NOTIFICATIONS
+// ============================================================
+
+async function notifyKitchenNewOrder(kitchenStaff, order) {
+    const bot = getCustomerBot();
+    if (!bot) return;
+
+    let itemsSummary = '';
+    try {
+        const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        if (Array.isArray(items)) {
+            itemsSummary = items.map(i => `  • ${i.name} ×${i.quantity}`).join('\n');
+        }
+    } catch (_) {}
+
+    const msg =
+        `🔔 *New Order! #${order.order_number}*\n\n` +
+        `👤 Customer: *${order.customer_name}*\n` +
+        `📞 Phone: ${order.customer_phone || 'N/A'}\n` +
+        `📍 Address: ${order.customer_address || 'Not provided'}\n` +
+        (itemsSummary ? `\n🛒 *Items:*\n${itemsSummary}\n` : '') +
+        `\n💰 Total: *${order.total_amount} ETB*\n` +
+        `💳 Payment: ${order.payment_method || 'cash'}\n\n` +
+        `👉 Open your kitchen dashboard to confirm this order.`;
+
+    for (const staff of kitchenStaff) {
+        if (staff.telegram_user_id) {
+            await safeSend(bot, staff.telegram_user_id, msg);
+            console.log(`Kitchen notification sent to ${staff.username} (${staff.telegram_user_id})`);
+        }
+    }
+}
+
 module.exports = {
     notifyDriverApproved,
     notifyDriverRejected,
@@ -304,5 +338,6 @@ module.exports = {
     notifyCustomerOrderPickedUp,
     notifyCustomerOrderDelivered,
     notifyCustomerOrderCancelled,
-    notifyCustomerDeliveryPriceConfirmation
+    notifyCustomerDeliveryPriceConfirmation,
+    notifyKitchenNewOrder
 };

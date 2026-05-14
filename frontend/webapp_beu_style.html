@@ -2073,17 +2073,17 @@
         <div class="checkout-content">
             <form id="checkoutForm" class="checkout-form">
                 <div class="form-group">
-                    <label>Full Name *</label>
-                    <input type="text" id="customerName" required placeholder="Enter your full name">
+                    <label>Full Name</label>
+                    <input type="text" id="customerName" required placeholder="Enter your full name" readonly style="background:#f5f5f5;color:#555;cursor:default;">
                 </div>
                 
                 <div class="form-group">
-                    <label>Phone Number *</label>
-                    <input type="tel" id="customerPhone" required placeholder="+251 9XX XXX XXX">
+                    <label>Phone Number</label>
+                    <input type="tel" id="customerPhone" required placeholder="+251 9XX XXX XXX" readonly style="background:#f5f5f5;color:#555;cursor:default;">
                 </div>
                 
                 <div class="form-group">
-                    <label>Delivery Address</label>
+                    <label>Delivery Address <span style="font-size:0.8em;font-weight:400;color:#888;">(tap to edit)</span></label>
                     <textarea id="customerAddress" placeholder="Street, area, landmarks..." rows="3"></textarea>
                 </div>
                 
