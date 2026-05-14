@@ -296,6 +296,21 @@ bot.on('message', async (msg) => {
 
     if (text.startsWith('/')) return;
 
+    // Always check DB first — if driver is already registered, never run them through registration again
+    if (session.step && session.step.startsWith('register_')) {
+        try {
+            const alreadyRegistered = await getDriver(telegramUserId);
+            if (alreadyRegistered) {
+                session.step = null;
+                session.data = {};
+                await bot.sendMessage(chatId, `✅ You are already registered, *${alreadyRegistered.name}*!`, { parse_mode: 'Markdown' });
+                return sendMainMenu(chatId, alreadyRegistered, telegramUserId);
+            }
+        } catch (e) {
+            console.error('Registration check error:', e);
+        }
+    }
+
     if (session.step === 'register_name') {
         if (text.length < 2) return bot.sendMessage(chatId, '⚠️ Please enter a valid full name (at least 2 characters).');
         session.data.name = text.trim();
