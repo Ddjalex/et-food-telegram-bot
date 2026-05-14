@@ -235,7 +235,7 @@ bot.on('callback_query', async (query) => {
 
             const { order, driver: assignedDriver } = result;
 
-            // Notify the driver
+            // Notify the driver with order details + navigation buttons
             await bot.sendMessage(chatId,
                 `✅ *Order Accepted!*\n\n` +
                 `📦 Order: *#${order.order_number}*\n` +
@@ -244,9 +244,17 @@ bot.on('callback_query', async (query) => {
                 `📍 Deliver to: ${order.customer_address || 'See address'}\n\n` +
                 `💰 Total: *${order.total_amount} ETB*\n` +
                 `💳 Payment: ${order.payment_method || 'cash'}\n\n` +
-                `🚗 Head to the restaurant to pick up the order.\n` +
-                `📍 Share your *live location* so the customer can track you!`,
-                { parse_mode: 'Markdown' }
+                `👇 Use the buttons below to navigate:`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '🏪 Navigate to Restaurant', callback_data: `nav_restaurant:${order.id}` }],
+                            [{ text: '🏠 Navigate to Customer', callback_data: `nav_customer:${order.id}` }],
+                            [{ text: '✅ Mark as Picked Up', callback_data: `picked_up:${order.id}` }]
+                        ]
+                    }
+                }
             );
 
             // Notify the customer
@@ -262,6 +270,159 @@ bot.on('callback_query', async (query) => {
         if (data.startsWith('decline_order:')) {
             bot.answerCallbackQuery(query.id, { text: '❌ Order declined.' });
             bot.sendMessage(chatId, `✅ You declined that order. Stay ready for the next one!`);
+            return;
+        }
+
+        // ── NAVIGATE TO RESTAURANT ──────────────────────────────
+        if (data.startsWith('nav_restaurant:')) {
+            const orderId = data.split(':')[1];
+            bot.answerCallbackQuery(query.id, { text: '📍 Loading restaurant location...' });
+            try {
+                const order = await store.findById('orders', orderId);
+                if (!order) return bot.sendMessage(chatId, '❌ Order not found.');
+                const restaurant = order.restaurant_id
+                    ? await store.findOne('restaurants', { id: order.restaurant_id }).catch(() => null)
+                    : null;
+                const lat = restaurant ? parseFloat(restaurant.lat) : null;
+                const lng = restaurant ? parseFloat(restaurant.lng) : null;
+                const name = restaurant ? restaurant.name : 'Restaurant';
+
+                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                    await bot.sendMessage(chatId,
+                        `🏪 *Navigate to ${name}*\n\nTap the location below to open in Telegram Maps, or use the navigation app buttons:`,
+                        {
+                            parse_mode: 'Markdown',
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [
+                                        { text: '🗺️ Open in Waze', url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes` },
+                                        { text: '📍 Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
+                                    ],
+                                    [{ text: '🏠 Navigate to Customer', callback_data: `nav_customer:${orderId}` }]
+                                ]
+                            }
+                        }
+                    );
+                    await bot.sendLocation(chatId, lat, lng);
+                } else {
+                    await bot.sendMessage(chatId,
+                        `🏪 *${name}*\n\nNo GPS coordinates saved for this restaurant. Please use the address to navigate manually.`,
+                        { parse_mode: 'Markdown' }
+                    );
+                }
+            } catch (e) {
+                console.error('nav_restaurant error:', e);
+                bot.sendMessage(chatId, '❌ Could not load restaurant location.');
+            }
+            return;
+        }
+
+        // ── NAVIGATE TO CUSTOMER ──────────────────────────────
+        if (data.startsWith('nav_customer:')) {
+            const orderId = data.split(':')[1];
+            bot.answerCallbackQuery(query.id, { text: '📍 Loading customer location...' });
+            try {
+                const order = await store.findById('orders', orderId);
+                if (!order) return bot.sendMessage(chatId, '❌ Order not found.');
+                const lat = order.location_lat ? parseFloat(order.location_lat) : null;
+                const lng = order.location_lng ? parseFloat(order.location_lng) : null;
+
+                if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                    await bot.sendMessage(chatId,
+                        `🏠 *Navigate to ${order.customer_name || 'Customer'}*\n📍 ${order.customer_address || 'See location below'}\n\nTap the location below to open in Telegram Maps, or use the navigation app buttons:`,
+                        {
+                            parse_mode: 'Markdown',
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [
+                                        { text: '🗺️ Open in Waze', url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes` },
+                                        { text: '📍 Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving` }
+                                    ],
+                                    [{ text: '✅ Mark as Delivered', callback_data: `mark_delivered:${orderId}` }]
+                                ]
+                            }
+                        }
+                    );
+                    await bot.sendLocation(chatId, lat, lng);
+                } else {
+                    await bot.sendMessage(chatId,
+                        `🏠 *Customer: ${order.customer_name || 'N/A'}*\n📍 Address: ${order.customer_address || 'Not provided'}\n📞 Phone: ${order.customer_phone || 'N/A'}\n\n⚠️ No GPS coordinates from customer. Use the address or call them.`,
+                        {
+                            parse_mode: 'Markdown',
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [{ text: '✅ Mark as Delivered', callback_data: `mark_delivered:${orderId}` }]
+                                ]
+                            }
+                        }
+                    );
+                }
+            } catch (e) {
+                console.error('nav_customer error:', e);
+                bot.sendMessage(chatId, '❌ Could not load customer location.');
+            }
+            return;
+        }
+
+        // ── MARK AS PICKED UP ──────────────────────────────
+        if (data.startsWith('picked_up:')) {
+            const orderId = data.split(':')[1];
+            bot.answerCallbackQuery(query.id, { text: '✅ Marked as picked up!' });
+            try {
+                const order = await store.findById('orders', orderId);
+                if (!order) return bot.sendMessage(chatId, '❌ Order not found.');
+                const { notifyCustomerOrderPickedUp } = require('./notifier');
+                if (order.telegram_user_id) {
+                    notifyCustomerOrderPickedUp(order.telegram_user_id, order, driver)
+                        .catch(e => console.error('[DriverBot] picked up notify error:', e.message));
+                }
+                await bot.sendMessage(chatId,
+                    `🚗 *Order Picked Up!*\n\nYou have picked up order *#${order.order_number}*.\nNow navigate to the customer and deliver it!`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '🏠 Navigate to Customer', callback_data: `nav_customer:${orderId}` }],
+                                [{ text: '✅ Mark as Delivered', callback_data: `mark_delivered:${orderId}` }]
+                            ]
+                        }
+                    }
+                );
+            } catch (e) {
+                console.error('picked_up error:', e);
+                bot.sendMessage(chatId, '❌ Could not update order status.');
+            }
+            return;
+        }
+
+        // ── MARK AS DELIVERED ──────────────────────────────
+        if (data.startsWith('mark_delivered:')) {
+            const orderId = data.split(':')[1];
+            bot.answerCallbackQuery(query.id, { text: '✅ Marking as delivered...' });
+            try {
+                const base = process.env.REPLIT_DEV_DOMAIN
+                    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+                    : 'http://localhost:5000';
+                const resp = await fetch(`${base}/api/orders/${orderId}/delivered`, { method: 'POST' });
+                const json = await resp.json();
+                if (json.success) {
+                    const fee = json.driver_fee || 0;
+                    const dist = json.distance_km || 0;
+                    await bot.sendMessage(chatId,
+                        `🎉 *Delivery Complete!*\n\n` +
+                        `Order has been marked as delivered.\n\n` +
+                        `📍 Distance: *${dist > 0 ? dist.toFixed(1) + ' km' : 'N/A'}*\n` +
+                        `💰 Your delivery fee: *${fee} ETB*\n\n` +
+                        `Thank you! You are now available for new orders. 🚗`,
+                        { parse_mode: 'Markdown' }
+                    );
+                } else {
+                    bot.sendMessage(chatId, `❌ Could not mark as delivered: ${json.error || 'Unknown error'}`);
+                }
+            } catch (e) {
+                console.error('mark_delivered error:', e);
+                bot.sendMessage(chatId, '❌ Failed to mark order as delivered. Please try again.');
+            }
             return;
         }
 

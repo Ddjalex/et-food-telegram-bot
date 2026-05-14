@@ -18,7 +18,7 @@ const {
     notifyCustomerOrderCancelled, notifyCustomerDeliveryPriceConfirmation,
     notifyKitchenNewOrder
 } = require('./notifier');
-const { dispatchOrderToDrivers } = require('./driver_assignment');
+const { dispatchOrderToDrivers, haversineKm } = require('./driver_assignment');
 
 async function logAudit(req, action, targetType, targetId, targetName, details) {
     try {
@@ -492,7 +492,7 @@ app.post('/api/orders/:id/delivered', async (req, res) => {
 
         // Calculate driver fee: distance × price_per_km
         let driverFee = parseFloat(order.driver_fee || order.delivery_fee || 0);
-        let distanceKm = parseFloat(order.driver_distance_km || 0);
+        let distanceKmValue = parseFloat(order.driver_distance_km || 0);
 
         try {
             const rateRow = await query(`SELECT value FROM system_settings WHERE key = 'price_per_km'`);
@@ -506,9 +506,9 @@ app.post('/api/orders/:id/delivered', async (req, res) => {
             const custLng = order.location_lng ? parseFloat(order.location_lng) : null;
 
             if (restLat && restLng && custLat && custLng) {
-                const calcDist = distanceKm(restLat, restLng, custLat, custLng);
-                distanceKm = Math.round(calcDist * 10) / 10;
-                driverFee  = Math.round(calcDist * pricePerKm * 10) / 10;
+                const calcDist = haversineKm(restLat, restLng, custLat, custLng);
+                distanceKmValue = Math.round(calcDist * 10) / 10;
+                driverFee = Math.round(calcDist * pricePerKm * 10) / 10;
             }
         } catch (feeErr) {
             console.error('Driver fee calc error:', feeErr.message);
@@ -518,11 +518,11 @@ app.post('/api/orders/:id/delivered', async (req, res) => {
         await store.updateById('orders', order.id, {
             status: 'delivered',
             driver_fee: driverFee,
-            driver_distance_km: distanceKm
+            driver_distance_km: distanceKmValue
         });
 
         const updated = await store.findById('orders', order.id);
-        res.json({ success: true, order: updated, driver_fee: driverFee, distance_km: distanceKm });
+        res.json({ success: true, order: updated, driver_fee: driverFee, distance_km: distanceKmValue });
 
         // Send customer a detailed price breakdown with Accept button
         if (updated.telegram_user_id) {

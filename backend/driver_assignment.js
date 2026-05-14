@@ -137,4 +137,4 @@ async function handleDriverAccept(orderId, driverTelegramId) {
     return { success: true, order: updated, driver };
 }
 
-module.exports = { dispatchOrderToDrivers, handleDriverAccept };
+module.exports = { dispatchOrderToDrivers, handleDriverAccept, haversineKm };
