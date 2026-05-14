@@ -1438,6 +1438,9 @@ app.patch('/api/kitchen/menu-items/:id/availability', requireKitchen, async (req
 // ============================================================
 
 app.get('/driver-panel', (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(__dirname, '../frontend/enhanced_driver_panel.html'));
 });
 
@@ -1852,8 +1855,11 @@ app.get('/api/drivers/telegram/:telegramId', async (req, res) => {
 
 app.get('/api/drivers/telegram/:telegramId/status', async (req, res) => {
     try {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.set('Pragma', 'no-cache');
         const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
         if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+        console.log(`[DriverStatus] ${driver.name} (${req.params.telegramId}) is_available=${driver.is_available}`);
         res.json({
             driver_id: driver.id,
             name: driver.name,
