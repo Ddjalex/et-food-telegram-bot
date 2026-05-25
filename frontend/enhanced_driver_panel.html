@@ -53,6 +53,18 @@
   .header-subtitle { font-size: 11px; color: var(--muted); }
 
   /* ── TOGGLE SWITCH ── */
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 11px; border-radius: 20px; font-size: 11px; font-weight: 800;
+    letter-spacing: 0.6px; text-transform: uppercase; white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.15); cursor: default;
+  }
+  .status-pill.online  { background: rgba(0,230,118,0.12); border-color: rgba(0,230,118,0.35); color: var(--success); }
+  .status-pill.offline { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: var(--muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .status-pill.online .status-dot { animation: pulseDot 1.5s ease-in-out infinite; }
+  @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+
   .toggle-wrap { display: flex; align-items: center; gap: 8px; }
   .toggle-label { font-size: 12px; font-weight: 600; }
   .toggle { position: relative; width: 52px; height: 28px; }
@@ -521,13 +533,12 @@
       <button onclick="openSOS()" style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.5);color:#ff3232;border-radius:10px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:0.5px;">
         🆘 SOS
       </button>
-      <div class="toggle-wrap">
-        <span class="toggle-label" id="onlineLabel" style="color:var(--muted)">OFFLINE</span>
-        <label class="toggle">
-          <input type="checkbox" id="onlineToggle" onchange="toggleOnline()">
-          <span class="toggle-slider"></span>
-        </label>
+      <div id="statusPill" class="status-pill offline" title="Change via Driver Bot">
+        <span class="status-dot"></span>
+        <span id="onlineLabel">OFFLINE</span>
       </div>
+      <!-- hidden state tracker (read-only – bot is the authority) -->
+      <input type="checkbox" id="onlineToggle" style="display:none">
     </div>
   </div>
 
@@ -1034,12 +1045,31 @@ async function toggleOnline() {
 }
 
 function setOnlineUI(online) {
-  const label = document.getElementById('onlineLabel');
-  label.textContent = online ? 'ONLINE' : 'OFFLINE';
-  label.style.color = online ? 'var(--success)' : 'var(--muted)';
+  document.getElementById('onlineLabel').textContent = online ? 'ONLINE' : 'OFFLINE';
+  document.getElementById('onlineToggle').checked = online;
+  const pill = document.getElementById('statusPill');
+  pill.className = 'status-pill ' + (online ? 'online' : 'offline');
   document.getElementById('offlineScreen').style.display = online ? 'none' : 'block';
   document.getElementById('noOrderScreen').style.display = (online && !currentOrder) ? 'block' : 'none';
 }
+
+// Sync online/offline status with the bot every 30 s (bot is the authority)
+async function syncStatusFromBot() {
+  if (!driverTelegramId) return;
+  try {
+    const res = await fetch('/api/drivers/telegram/' + driverTelegramId);
+    const data = await res.json();
+    if (!data.driver) return;
+    const wasOnline = document.getElementById('onlineToggle').checked;
+    const isNowOnline = !!data.driver.is_available;
+    if (wasOnline !== isNowOnline) {
+      setOnlineUI(isNowOnline);
+      if (isNowOnline && !pollInterval) { startGPS(); startPoll(); }
+      if (!isNowOnline) { stopPoll(); }
+    }
+  } catch(e) {}
+}
+setInterval(syncStatusFromBot, 30000);
 
 // ── POLL FOR ORDERS ──
 function startPoll() {

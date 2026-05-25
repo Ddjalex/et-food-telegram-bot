@@ -351,8 +351,6 @@ module.exports = {
 };
 
 async function notifyDriverSOS(adminTelegramIds, driver, lat, lng) {
-    const bot = getDriverBot();
-    if (!bot) return;
     const name = driver.full_name || driver.name || 'Unknown Driver';
     const phone = driver.phone || 'N/A';
     const mapsLink = lat && lng
@@ -370,7 +368,27 @@ async function notifyDriverSOS(adminTelegramIds, driver, lat, lng) {
               `🌐 Coords: \`${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}\``
             : `📍 *Location:* Not available`);
 
-    for (const adminId of adminTelegramIds) {
-        await safeSend(bot, adminId, text);
+    // Collect all unique recipient IDs
+    const allIds = new Set(adminTelegramIds.map(String));
+
+    // Also include superadmin Telegram ID from env if set
+    if (process.env.SUPERADMIN_TELEGRAM_ID) {
+        allIds.add(String(process.env.SUPERADMIN_TELEGRAM_ID));
+    }
+
+    // Send via driver bot
+    const dBot = getDriverBot();
+    if (dBot) {
+        for (const id of allIds) {
+            await safeSend(dBot, id, text);
+        }
+    }
+
+    // Also send via customer bot as fallback (superadmin may use customer bot)
+    const cBot = getCustomerBot();
+    if (cBot) {
+        for (const id of allIds) {
+            await safeSend(cBot, id, text);
+        }
     }
 }
