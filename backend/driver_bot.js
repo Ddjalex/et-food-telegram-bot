@@ -121,10 +121,36 @@ bot.onText(/\/start/, async (msg) => {
 
     try {
         let existing = await getDriver(telegramUserId);
+
         if (existing) {
-            // Reset to offline if:
-            //  - no location stored at all, OR
-            //  - location is stale (older than 2 hours) — driver is not actively sharing
+            // Resume incomplete registration if phone or vehicle not yet set
+            if (!existing.phone_number || existing.phone_number === '') {
+                session.step = 'register_phone';
+                session.data = { name: existing.name };
+                return bot.sendMessage(chatId,
+                    `👋 Welcome back, *${existing.name}*! Let's finish your registration.\n\n📞 *Step 2/3:* Enter your *phone number* (e.g. +251911234567):`,
+                    { parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }
+                );
+            }
+            if (!existing.vehicle_type || existing.vehicle_type === 'pending') {
+                session.step = 'register_vehicle';
+                session.data = { name: existing.name, phone_number: existing.phone_number };
+                return bot.sendMessage(chatId,
+                    `👋 Welcome back, *${existing.name}*! One last step.\n\n🚗 *Step 3/3:* Select your *vehicle type*:`,
+                    {
+                        parse_mode: 'Markdown',
+                        reply_markup: {
+                            keyboard: [
+                                [{ text: '🏍️ Motorcycle' }, { text: '🚗 Car' }],
+                                [{ text: '🚲 Bicycle' }, { text: '🛵 Scooter' }]
+                            ],
+                            resize_keyboard: true, one_time_keyboard: true
+                        }
+                    }
+                );
+            }
+
+            // Fully registered driver — reset stale location if needed
             const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
             const locationStale = !existing.current_lat ||
                 !existing.last_location_update ||
@@ -146,9 +172,12 @@ bot.onText(/\/start/, async (msg) => {
             } else {
                 await bot.sendMessage(chatId, `👋 Welcome back, *${existing.name}*!`, { parse_mode: 'Markdown' });
             }
+            session.step = null;
+            session.data = {};
             return sendMainMenu(chatId, existing, telegramUserId);
         }
 
+        // New driver — start registration
         session.step = 'register_name';
         session.data = {};
         bot.sendMessage(chatId,
@@ -585,32 +614,45 @@ bot.on('message', async (msg) => {
         return;
     }
 
-    // Always check DB first — if driver is already registered, never run them through registration again
-    if (session.step && session.step.startsWith('register_')) {
-        try {
-            const alreadyRegistered = await getDriver(telegramUserId);
-            if (alreadyRegistered) {
-                session.step = null;
-                session.data = {};
-                await bot.sendMessage(chatId, `✅ You are already registered, *${alreadyRegistered.name}*!`, { parse_mode: 'Markdown' });
-                return sendMainMenu(chatId, alreadyRegistered, telegramUserId);
-            }
-        } catch (e) {
-            console.error('Registration check error:', e);
-        }
-    }
-
     if (session.step === 'register_name') {
         if (text.length < 2) return bot.sendMessage(chatId, '⚠️ Please enter a valid full name (at least 2 characters).');
-        session.data.name = text.trim();
+        const name = text.trim();
+        session.data.name = name;
         session.step = 'register_phone';
-        return bot.sendMessage(chatId, `✅ Name saved: *${session.data.name}*\n\n📞 *Step 2/3:* Enter your *phone number* (e.g. +251911234567):`, { parse_mode: 'Markdown' });
+        try {
+            // Save driver to DB immediately so a bot restart won't lose progress
+            const existing = await getDriver(telegramUserId);
+            if (!existing) {
+                await store.insertOne('drivers', {
+                    name,
+                    phone_number: '',
+                    telegram_user_id: telegramUserId,
+                    vehicle_type: 'pending',
+                    is_active: true,
+                    is_available: false,
+                    is_approved: false,
+                    total_deliveries: 0,
+                    rating: 5.0
+                });
+            } else {
+                await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { name });
+            }
+        } catch (e) {
+            console.error('Registration step 1 save error:', e);
+        }
+        return bot.sendMessage(chatId, `✅ Name saved: *${name}*\n\n📞 *Step 2/3:* Enter your *phone number* (e.g. +251911234567):`, { parse_mode: 'Markdown' });
     }
 
     if (session.step === 'register_phone') {
         if (text.length < 7) return bot.sendMessage(chatId, '⚠️ Please enter a valid phone number.');
-        session.data.phone_number = text.trim();
+        const phone = text.trim();
+        session.data.phone_number = phone;
         session.step = 'register_vehicle';
+        try {
+            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { phone_number: phone });
+        } catch (e) {
+            console.error('Registration step 2 save error:', e);
+        }
         return bot.sendMessage(chatId,
             `✅ Phone saved.\n\n🚗 *Step 3/3:* Select your *vehicle type*:`,
             {
@@ -633,17 +675,7 @@ bot.on('message', async (msg) => {
         session.step = null;
 
         try {
-            await store.insertOne('drivers', {
-                name: session.data.name,
-                phone_number: session.data.phone_number,
-                telegram_user_id: telegramUserId,
-                vehicle_type: vehicle,
-                is_active: true,
-                is_available: false,
-                is_approved: false,
-                total_deliveries: 0,
-                rating: 5.0
-            });
+            await store.updateOne('drivers', { telegram_user_id: telegramUserId }, { vehicle_type: vehicle });
             bot.sendMessage(chatId,
                 `🎉 *Registration Complete!*\n\nName: ${session.data.name}\nPhone: ${session.data.phone_number}\nVehicle: ${vehicle}\n\n⏳ Your account is now *pending approval* by our team. You will be notified once approved!\n\nUse /start anytime to check your status.`,
                 { parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }
