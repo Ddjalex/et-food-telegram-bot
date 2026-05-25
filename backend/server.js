@@ -1381,10 +1381,127 @@ app.get('/api/kitchen/menu-items', requireKitchen, async (req, res) => {
         const restaurant_id = req.session.kitchen_restaurant_id;
         const filter = restaurant_id ? { restaurant_id } : {};
         const items = await store.findMany('menu_items', filter);
-        res.json({ success: true, menu_items: items });
+        res.json({ success: true, items, menu_items: items });
     } catch (e) {
         console.error(e);
         res.status(500).json({ success: false, error: 'Failed to fetch menu items' });
+    }
+});
+
+app.post('/api/kitchen/toggle-availability', requireKitchen, async (req, res) => {
+    try {
+        const { item_id, available } = req.body;
+        const item = await store.findById('menu_items', item_id);
+        if (!item) return res.status(404).json({ success: false, error: 'Item not found' });
+        await store.updateById('menu_items', item_id, { available: !!available });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update availability' });
+    }
+});
+
+app.post('/api/kitchen/bulk-update-availability', requireKitchen, async (req, res) => {
+    try {
+        const restaurant_id = req.session.kitchen_restaurant_id;
+        const { action, category } = req.body;
+        const { query: dbQuery } = require('./db');
+        if (action === 'mark_all_available') {
+            const q = restaurant_id
+                ? `UPDATE menu_items SET available = true WHERE restaurant_id = $1`
+                : `UPDATE menu_items SET available = true`;
+            await dbQuery(q, restaurant_id ? [restaurant_id] : []);
+        } else if (action === 'mark_all_unavailable') {
+            const q = restaurant_id
+                ? `UPDATE menu_items SET available = false WHERE restaurant_id = $1`
+                : `UPDATE menu_items SET available = false`;
+            await dbQuery(q, restaurant_id ? [restaurant_id] : []);
+        } else if (action === 'mark_category_unavailable' && category) {
+            const q = restaurant_id
+                ? `UPDATE menu_items SET available = false WHERE category = $1 AND restaurant_id = $2`
+                : `UPDATE menu_items SET available = false WHERE category = $1`;
+            await dbQuery(q, restaurant_id ? [category, restaurant_id] : [category]);
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid action' });
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to bulk update availability' });
+    }
+});
+
+app.get('/api/kitchen/categories', requireKitchen, async (req, res) => {
+    try {
+        const restaurant_id = req.session.kitchen_restaurant_id;
+        const filter = restaurant_id ? { restaurant_id } : {};
+        const items = await store.findMany('menu_items', filter);
+        const cats = [...new Set(items.map(i => i.category).filter(Boolean))].map(name => ({ name }));
+        res.json({ success: true, categories: cats });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch categories' });
+    }
+});
+
+app.post('/api/kitchen/products', requireKitchen, upload.single('image'), async (req, res) => {
+    try {
+        const restaurant_id = req.session.kitchen_restaurant_id;
+        const { name, description, price, category } = req.body;
+        if (!name || !price) return res.status(400).json({ success: false, error: 'Name and price are required' });
+        let image_url = null;
+        if (req.file) image_url = '/static/uploads/' + req.file.filename;
+        const { v4: uuidv4 } = require('uuid');
+        await store.insertOne('menu_items', {
+            id: uuidv4(), restaurant_id, name, description: description || '',
+            price: parseFloat(price), category: category || '', image_url, available: true,
+            preparation_time: 15, ingredients: [], allergens: [], nutritional_info: {}
+        });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to create product' });
+    }
+});
+
+app.put('/api/kitchen/products/:id', requireKitchen, upload.single('image'), async (req, res) => {
+    try {
+        const item = await store.findById('menu_items', req.params.id);
+        if (!item) return res.status(404).json({ success: false, error: 'Product not found' });
+        const { name, description, price, category } = req.body;
+        const updates = { name, description, price: parseFloat(price), category };
+        if (req.file) updates.image_url = '/static/uploads/' + req.file.filename;
+        await store.updateById('menu_items', req.params.id, updates);
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update product' });
+    }
+});
+
+app.delete('/api/kitchen/products/:id', requireKitchen, async (req, res) => {
+    try {
+        const item = await store.findById('menu_items', req.params.id);
+        if (!item) return res.status(404).json({ success: false, error: 'Product not found' });
+        await store.deleteById('menu_items', req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to delete product' });
+    }
+});
+
+app.post('/api/kitchen/products/:id/price', requireKitchen, async (req, res) => {
+    try {
+        const item = await store.findById('menu_items', req.params.id);
+        if (!item) return res.status(404).json({ success: false, error: 'Product not found' });
+        const { price } = req.body;
+        if (!price || isNaN(parseFloat(price))) return res.status(400).json({ success: false, error: 'Invalid price' });
+        await store.updateById('menu_items', req.params.id, { price: parseFloat(price) });
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to update price' });
     }
 });
 
