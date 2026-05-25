@@ -1498,8 +1498,32 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
 }
 
+// ── WAKE LOCK (keep screen on) ──
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch(e) {}
+}
+
+async function releaseWakeLock() {
+  try { if (wakeLock) { await wakeLock.release(); wakeLock = null; } } catch(e) {}
+}
+
+// Re-acquire wake lock when the page becomes visible again (e.g. after tab switch)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
 // ── BOOT ──
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', () => {
+  requestWakeLock();
+  init();
+});
 </script>
 </body>
 </html>
