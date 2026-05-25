@@ -1053,15 +1053,18 @@ function setOnlineUI(online) {
   document.getElementById('noOrderScreen').style.display = (online && !currentOrder) ? 'block' : 'none';
 }
 
-// Sync online/offline status with the bot every 30 s (bot is the authority)
+// Sync online/offline status with the bot every 10 s (bot is the authority)
 async function syncStatusFromBot() {
   if (!driverTelegramId) return;
   try {
-    const res = await fetch('/api/drivers/telegram/' + driverTelegramId);
+    const res = await fetch('/api/drivers/telegram/' + driverTelegramId + '/status', {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     const data = await res.json();
-    if (!data.driver) return;
+    if (!data || data.error) return;
     const wasOnline = document.getElementById('onlineToggle').checked;
-    const isNowOnline = !!data.driver.is_available;
+    const isNowOnline = !!data.is_available;
     if (wasOnline !== isNowOnline) {
       setOnlineUI(isNowOnline);
       if (isNowOnline && !pollInterval) { startGPS(); startPoll(); }
@@ -1069,7 +1072,7 @@ async function syncStatusFromBot() {
     }
   } catch(e) {}
 }
-setInterval(syncStatusFromBot, 30000);
+setInterval(syncStatusFromBot, 10000);
 
 // ── POLL FOR ORDERS ──
 function startPoll() {
@@ -1729,9 +1732,11 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── BOOT ──
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   requestWakeLock();
-  init();
+  await init();
+  // Immediately sync status from bot after init so it's never stale
+  await syncStatusFromBot();
 });
 </script>
 </body>
