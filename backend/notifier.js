@@ -259,19 +259,21 @@ async function notifyCustomerDeliveryPriceConfirmation(telegramUserId, order) {
 
     const driverFee   = parseFloat(order.driver_fee || order.delivery_fee || 0);
     const distanceKm  = parseFloat(order.driver_distance_km || 0);
-    const total       = parseFloat(order.total_amount || 0);
+    const storedTotal = parseFloat(order.total_amount || 0);
+    const subtotalAmt = foodSubtotal > 0 ? foodSubtotal : Math.max(0, storedTotal - driverFee);
+    const grandTotal  = subtotalAmt + driverFee;
 
     let text = `🛵 *Your order has arrived! #${shortNum(order)}*\n\n`;
     text += `🍽️ *Order Summary*\n`;
     if (itemsText) text += `${itemsText}\n\n`;
     text += `─────────────────────\n`;
-    text += `🛒 Food subtotal:  *${foodSubtotal > 0 ? foodSubtotal.toFixed(0) : (total - driverFee).toFixed(0)} ETB*\n`;
+    text += `🛒 Food subtotal:  *${subtotalAmt.toFixed(0)} ETB*\n`;
     if (distanceKm > 0) {
         text += `📍 Delivery distance:  *${distanceKm.toFixed(1)} km*\n`;
     }
     text += `🚗 Delivery fee:  *${driverFee.toFixed(0)} ETB*\n`;
     text += `─────────────────────\n`;
-    text += `💰 *Total:  ${total.toFixed(0)} ETB*\n\n`;
+    text += `💰 *Total:  ${grandTotal.toFixed(0)} ETB*\n\n`;
     text += `Please confirm that you received your order and the price is correct.`;
 
     await safeSend(bot, telegramUserId, text, {

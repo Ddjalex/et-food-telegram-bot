@@ -526,11 +526,14 @@ app.post('/api/orders/:id/delivered', async (req, res) => {
             console.error('Driver fee calc error:', feeErr.message);
         }
 
-        // Update order: mark delivered, store calculated fee
+        // Update order: mark delivered, store calculated fee, update total to include delivery fee
+        const foodSubtotal = parseFloat(order.total_amount || 0);
+        const grandTotal = foodSubtotal + driverFee;
         await store.updateById('orders', order.id, {
             status: 'delivered',
             driver_fee: driverFee,
-            driver_distance_km: distanceKmValue
+            driver_distance_km: distanceKmValue,
+            total_amount: grandTotal
         });
 
         const updated = await store.findById('orders', order.id);
