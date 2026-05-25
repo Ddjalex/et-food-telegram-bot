@@ -165,6 +165,67 @@
   .info-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
   .info-value.big { font-size: 20px; color: var(--success); }
 
+  /* ── SOS OVERLAY ── */
+  .sos-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: #0d0010;
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .sos-overlay.show { display: flex; }
+  .sos-inner {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 24px; max-width: 360px; width: 100%; text-align: center;
+  }
+  .sos-icon-wrap {
+    font-size: 52px; margin-bottom: 20px;
+    animation: sosPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes sosPulse {
+    0%,100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,50,50,0)); }
+    50% { transform: scale(1.12); filter: drop-shadow(0 0 18px rgba(255,50,50,0.7)); }
+  }
+  .sos-title {
+    font-size: 24px; font-weight: 900; color: #ff3232; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .sos-subtitle {
+    font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-bottom: 36px;
+  }
+  .sos-hold-wrap { margin-bottom: 28px; }
+  .sos-hold-btn {
+    width: 150px; height: 150px; border-radius: 50%;
+    background: none; border: none; cursor: pointer;
+    position: relative; outline: none; -webkit-tap-highlight-color: transparent;
+  }
+  .sos-ring {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+  .sos-ring-bg { fill: none; stroke: rgba(255,50,50,0.2); stroke-width: 6; }
+  .sos-ring-fill {
+    fill: none; stroke: #ff3232; stroke-width: 6;
+    stroke-dasharray: 276.46; stroke-dashoffset: 276.46;
+    stroke-linecap: round; transition: stroke-dashoffset 0.05s linear;
+  }
+  .sos-hold-inner {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    background: rgba(255,50,50,0.12); border-radius: 50%;
+    border: 2px solid rgba(255,50,50,0.35);
+  }
+  .sos-hold-icon { font-size: 32px; }
+  .sos-hold-lbl { font-size: 13px; font-weight: 800; color: #ff3232; letter-spacing: 1px; text-transform: uppercase; }
+  .sos-status {
+    min-height: 28px; font-size: 14px; font-weight: 700; margin-bottom: 24px;
+    color: rgba(255,255,255,0.7);
+  }
+  .sos-cancel-btn {
+    padding: 14px 28px; border-radius: 50px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+
   /* ── EARNINGS OVERLAY ── */
   .earnings-overlay {
     position: fixed; inset: 0; z-index: 200;
@@ -457,6 +518,9 @@
       <button onclick="openEarnings()" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);color:var(--accent);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
         <i class="fas fa-wallet"></i> Earnings
       </button>
+      <button onclick="openSOS()" style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.5);color:#ff3232;border-radius:10px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:0.5px;">
+        🆘 SOS
+      </button>
       <div class="toggle-wrap">
         <span class="toggle-label" id="onlineLabel" style="color:var(--muted)">OFFLINE</span>
         <label class="toggle">
@@ -619,6 +683,34 @@
   </div>
 
 </div><!-- /mainApp -->
+
+<!-- SOS OVERLAY -->
+<div class="sos-overlay" id="sosOverlay">
+  <div class="sos-inner">
+    <div class="sos-icon-wrap" id="sosIconWrap">🆘</div>
+    <div class="sos-title">Emergency SOS</div>
+    <div class="sos-subtitle">Hold the button below for 3 seconds to send your location to all admins immediately.</div>
+
+    <div class="sos-hold-wrap">
+      <button class="sos-hold-btn" id="sosHoldBtn"
+        onmousedown="startSOS()" onmouseup="cancelSOS()" onmouseleave="cancelSOS()"
+        ontouchstart="startSOS(event)" ontouchend="cancelSOS()" ontouchcancel="cancelSOS()">
+        <svg class="sos-ring" viewBox="0 0 100 100">
+          <circle class="sos-ring-bg" cx="50" cy="50" r="44"/>
+          <circle class="sos-ring-fill" id="sosRingFill" cx="50" cy="50" r="44"/>
+        </svg>
+        <div class="sos-hold-inner">
+          <span class="sos-hold-icon">📡</span>
+          <span class="sos-hold-lbl" id="sosHoldLbl">Hold</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="sos-status" id="sosStatus"></div>
+
+    <button onclick="closeSOS()" class="sos-cancel-btn">Cancel — I'm okay</button>
+  </div>
+</div>
 
 <!-- EARNINGS OVERLAY -->
 <div class="earnings-overlay" id="earningsOverlay">
@@ -1405,6 +1497,93 @@ function haversine(lat1, lng1, lat2, lng2) {
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── SOS ──
+const SOS_HOLD_MS = 3000;
+const SOS_CIRCUMFERENCE = 276.46;
+let sosTimer = null;
+let sosStart = null;
+let sosRAF = null;
+
+function openSOS() {
+  resetSOS();
+  document.getElementById('sosOverlay').classList.add('show');
+}
+function closeSOS() {
+  cancelSOS();
+  document.getElementById('sosOverlay').classList.remove('show');
+}
+function resetSOS() {
+  clearTimeout(sosTimer); cancelAnimationFrame(sosRAF);
+  sosTimer = null; sosStart = null;
+  document.getElementById('sosRingFill').style.strokeDashoffset = SOS_CIRCUMFERENCE;
+  document.getElementById('sosHoldLbl').textContent = 'Hold';
+  document.getElementById('sosStatus').textContent = '';
+  document.getElementById('sosHoldBtn').disabled = false;
+}
+
+function startSOS(e) {
+  if (e) e.preventDefault();
+  if (sosTimer) return;
+  sosStart = Date.now();
+  animateSOS();
+  sosTimer = setTimeout(fireSOS, SOS_HOLD_MS);
+}
+
+function cancelSOS() {
+  if (!sosTimer) return;
+  resetSOS();
+}
+
+function animateSOS() {
+  if (!sosStart) return;
+  const elapsed = Date.now() - sosStart;
+  const progress = Math.min(elapsed / SOS_HOLD_MS, 1);
+  document.getElementById('sosRingFill').style.strokeDashoffset =
+    SOS_CIRCUMFERENCE * (1 - progress);
+  const secs = Math.ceil((SOS_HOLD_MS - elapsed) / 1000);
+  document.getElementById('sosHoldLbl').textContent = secs > 0 ? secs : '...';
+  if (progress < 1) sosRAF = requestAnimationFrame(animateSOS);
+}
+
+async function fireSOS() {
+  sosTimer = null; sosStart = null; cancelAnimationFrame(sosRAF);
+  document.getElementById('sosRingFill').style.strokeDashoffset = 0;
+  document.getElementById('sosHoldBtn').disabled = true;
+  document.getElementById('sosHoldLbl').textContent = '✓';
+  document.getElementById('sosStatus').textContent = '📡 Getting your location...';
+
+  let lat = null, lng = null;
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000 })
+    );
+    lat = pos.coords.latitude;
+    lng = pos.coords.longitude;
+  } catch(e) {
+    document.getElementById('sosStatus').textContent = '⚠️ Location unavailable — sending without GPS';
+  }
+
+  document.getElementById('sosStatus').textContent = '🆘 Sending alert to admins...';
+  try {
+    const resp = await fetch(`/api/drivers/telegram/${driverTelegramId}/sos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat, lng })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      document.getElementById('sosStatus').textContent = `✅ Alert sent to ${data.sent} admin(s)!`;
+      document.getElementById('sosIconWrap').textContent = '✅';
+    } else {
+      document.getElementById('sosStatus').textContent = '❌ Failed to send. Try calling directly.';
+    }
+  } catch(e) {
+    document.getElementById('sosStatus').textContent = '❌ Network error. Try calling directly.';
+  }
+
+  setTimeout(closeSOS, 4000);
 }
 
 // ── EARNINGS ──

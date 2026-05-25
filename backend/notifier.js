@@ -346,5 +346,31 @@ module.exports = {
     notifyCustomerOrderDelivered,
     notifyCustomerOrderCancelled,
     notifyCustomerDeliveryPriceConfirmation,
-    notifyKitchenNewOrder
+    notifyKitchenNewOrder,
+    notifyDriverSOS
 };
+
+async function notifyDriverSOS(adminTelegramIds, driver, lat, lng) {
+    const bot = getDriverBot();
+    if (!bot) return;
+    const name = driver.full_name || driver.name || 'Unknown Driver';
+    const phone = driver.phone || 'N/A';
+    const mapsLink = lat && lng
+        ? `https://maps.google.com/?q=${lat},${lng}`
+        : null;
+
+    const text =
+        `🆘 *DRIVER SOS ALERT*\n\n` +
+        `🚨 A driver needs immediate help!\n\n` +
+        `👤 *Driver:* ${name}\n` +
+        `📞 *Phone:* ${phone}\n` +
+        `🆔 *Telegram ID:* ${driver.telegram_user_id}\n` +
+        (mapsLink
+            ? `📍 *Location:* [Open in Maps](${mapsLink})\n` +
+              `🌐 Coords: \`${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}\``
+            : `📍 *Location:* Not available`);
+
+    for (const adminId of adminTelegramIds) {
+        await safeSend(bot, adminId, text);
+    }
+}

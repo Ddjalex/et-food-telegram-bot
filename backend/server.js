@@ -2110,6 +2110,33 @@ app.get('/api/drivers/telegram/:telegramId/earnings', async (req, res) => {
     }
 });
 
+app.post('/api/drivers/telegram/:telegramId/sos', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+
+        const { lat, lng } = req.body;
+
+        // Get all admin telegram IDs
+        const admins = await store.findMany('admin_users', {});
+        const adminIds = admins
+            .filter(a => a.telegram_user_id)
+            .map(a => a.telegram_user_id);
+
+        if (adminIds.length === 0) {
+            return res.json({ success: true, sent: 0, message: 'No admin Telegram IDs configured' });
+        }
+
+        const { notifyDriverSOS } = require('./notifier');
+        await notifyDriverSOS(adminIds, driver, lat, lng);
+
+        res.json({ success: true, sent: adminIds.length });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to send SOS' });
+    }
+});
+
 app.get('/api/drivers/telegram/:telegramId/documents', async (req, res) => {
     try {
         const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
