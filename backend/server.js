@@ -51,6 +51,11 @@ io.on('connection', (socket) => {
         if (orderId) socket.join(`order:${orderId}`);
     });
 
+    socket.on('join_kitchen', ({ restaurant_id }) => {
+        socket.join('kitchen:all');
+        if (restaurant_id) socket.join(`kitchen:${restaurant_id}`);
+    });
+
     socket.on('driver_gps', ({ driverId, orderId, lat, lng }) => {
         if (!lat || !lng) return;
         liveDriverGPS.set(String(driverId), { lat, lng, orderId, ts: Date.now() });
@@ -427,6 +432,13 @@ app.post('/api/orders', async (req, res) => {
         });
         const order = await store.findById('orders', order_id);
         res.json({ success: true, order_id, order, message: 'Order created successfully' });
+
+        // Real-time push to kitchen dashboard via Socket.io
+        const ioInstance = app.get('socketio');
+        if (ioInstance) {
+            const kitchenRoom = order.restaurant_id ? `kitchen:${order.restaurant_id}` : 'kitchen:all';
+            ioInstance.to(kitchenRoom).to('kitchen:all').emit('new_order', order);
+        }
 
         // Notify customer that order was received
         if (order.telegram_user_id) {
