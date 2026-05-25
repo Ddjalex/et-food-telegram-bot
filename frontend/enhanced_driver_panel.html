@@ -165,6 +165,84 @@
   .info-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
   .info-value.big { font-size: 20px; color: var(--success); }
 
+  /* ── EARNINGS OVERLAY ── */
+  .earnings-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    overflow: hidden;
+  }
+  .earnings-overlay.show { display: flex; }
+  .earnings-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: #12122a;
+    border-bottom: 1px solid rgba(0,212,255,0.15);
+    flex-shrink: 0;
+  }
+  .earnings-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: none;
+    color: var(--text); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .earn-tabs {
+    display: flex; gap: 6px; padding: 14px 16px 0; flex-shrink: 0; overflow-x: auto;
+  }
+  .earn-tab {
+    padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1); background: transparent;
+    color: var(--muted); cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  }
+  .earn-tab.active {
+    background: var(--accent); color: #000; border-color: var(--accent);
+  }
+  .earn-cards { padding: 14px 16px 0; flex-shrink: 0; }
+  .earn-big-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+  .earn-big-icon { font-size: 28px; margin-bottom: 8px; width: 54px; height: 54px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .earn-big-val { font-size: 32px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .earn-big-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .earn-stat-card {
+    background: var(--card); border-radius: 12px; padding: 14px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .earn-stat-icon { font-size: 18px; }
+  .earn-stat-val { font-size: 20px; font-weight: 800; color: var(--success); }
+  .earn-stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .earn-history-label {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 14px 16px 6px; flex-shrink: 0;
+  }
+  .earn-history {
+    flex: 1; overflow-y: auto; padding: 0 16px 20px;
+  }
+  .earn-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .earn-row:last-child { border-bottom: none; }
+  .earn-row-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg,#00e67622,#00e67611);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .earn-row-info { flex: 1; min-width: 0; }
+  .earn-row-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .earn-row-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .earn-row-fee { font-size: 15px; font-weight: 800; color: var(--success); white-space: nowrap; }
+  .earn-empty { text-align: center; padding: 40px 0; color: var(--muted); }
+  .earn-empty-icon { font-size: 36px; margin-bottom: 10px; }
+
   /* ── COUNTDOWN ── */
   .countdown-bar {
     margin: 0 16px 10px;
@@ -375,12 +453,17 @@
         <div class="header-subtitle" id="headerRating">⭐ 5.0 · 0 deliveries</div>
       </div>
     </div>
-    <div class="toggle-wrap">
-      <span class="toggle-label" id="onlineLabel" style="color:var(--muted)">OFFLINE</span>
-      <label class="toggle">
-        <input type="checkbox" id="onlineToggle" onchange="toggleOnline()">
-        <span class="toggle-slider"></span>
-      </label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="openEarnings()" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);color:var(--accent);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-wallet"></i> Earnings
+      </button>
+      <div class="toggle-wrap">
+        <span class="toggle-label" id="onlineLabel" style="color:var(--muted)">OFFLINE</span>
+        <label class="toggle">
+          <input type="checkbox" id="onlineToggle" onchange="toggleOnline()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -536,6 +619,55 @@
   </div>
 
 </div><!-- /mainApp -->
+
+<!-- EARNINGS OVERLAY -->
+<div class="earnings-overlay" id="earningsOverlay">
+  <div class="earnings-header">
+    <button class="earnings-close" onclick="closeEarnings()"><i class="fas fa-arrow-left"></i></button>
+    <div>
+      <div style="font-size:16px;font-weight:800;">My Earnings</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">Delivery fee summary</div>
+    </div>
+    <button onclick="loadEarnings()" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);color:var(--accent);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+  </div>
+
+  <!-- Period tabs -->
+  <div class="earn-tabs">
+    <button class="earn-tab active" onclick="switchEarnTab('today',this)">Today</button>
+    <button class="earn-tab" onclick="switchEarnTab('week',this)">This Week</button>
+    <button class="earn-tab" onclick="switchEarnTab('month',this)">This Month</button>
+    <button class="earn-tab" onclick="switchEarnTab('allTime',this)">All Time</button>
+  </div>
+
+  <!-- Big stat cards -->
+  <div class="earn-cards">
+    <div class="earn-big-card">
+      <div class="earn-big-icon" style="background:linear-gradient(135deg,#00d4ff22,#00d4ff11)">💰</div>
+      <div class="earn-big-val" id="earnFee">0 ETB</div>
+      <div class="earn-big-lbl">Delivery Fees Earned</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="earn-stat-card">
+        <div class="earn-stat-icon">🛵</div>
+        <div class="earn-stat-val" id="earnCount">0</div>
+        <div class="earn-stat-lbl">Deliveries</div>
+      </div>
+      <div class="earn-stat-card">
+        <div class="earn-stat-icon">📍</div>
+        <div class="earn-stat-val" id="earnDist">0 km</div>
+        <div class="earn-stat-lbl">Distance</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent history -->
+  <div class="earn-history-label">Recent Deliveries</div>
+  <div class="earn-history" id="earnHistory">
+    <div style="text-align:center;padding:40px 0;color:var(--muted)"><i class="fas fa-circle-notch fa-spin"></i><br><br>Loading...</div>
+  </div>
+</div>
 
 <!-- IN-APP NAVIGATION OVERLAY -->
 <div class="nav-overlay" id="navOverlay">
@@ -1273,6 +1405,87 @@ function haversine(lat1, lng1, lat2, lng2) {
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── EARNINGS ──
+let earningsData = null;
+let currentEarnTab = 'today';
+
+async function openEarnings() {
+  document.getElementById('earningsOverlay').classList.add('show');
+  await loadEarnings();
+}
+function closeEarnings() {
+  document.getElementById('earningsOverlay').classList.remove('show');
+}
+
+async function loadEarnings() {
+  if (!driverTelegramId) return;
+  document.getElementById('earnHistory').innerHTML =
+    '<div style="text-align:center;padding:40px 0;color:var(--muted)"><i class="fas fa-circle-notch fa-spin"></i><br><br>Loading...</div>';
+  try {
+    const res  = await fetch(`/api/drivers/telegram/${driverTelegramId}/earnings`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    earningsData = data;
+    renderEarnings(currentEarnTab);
+  } catch(e) {
+    document.getElementById('earnHistory').innerHTML =
+      '<div class="earn-empty"><div class="earn-empty-icon">⚠️</div><p>Could not load earnings. Try again.</p></div>';
+  }
+}
+
+function switchEarnTab(tab, el) {
+  currentEarnTab = tab;
+  document.querySelectorAll('.earn-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (earningsData) renderEarnings(tab);
+}
+
+function renderEarnings(tab) {
+  if (!earningsData) return;
+  const d = earningsData[tab] || { fee: 0, count: 0, distance: 0 };
+  document.getElementById('earnFee').textContent   = `${d.fee} ETB`;
+  document.getElementById('earnCount').textContent = d.count;
+  document.getElementById('earnDist').textContent  = `${d.distance} km`;
+
+  const hist = document.getElementById('earnHistory');
+  const recent = earningsData.recent || [];
+  if (!recent.length) {
+    hist.innerHTML = '<div class="earn-empty"><div class="earn-empty-icon">🛵</div><p>No deliveries yet.<br>Complete your first delivery to see history.</p></div>';
+    return;
+  }
+
+  const now = new Date();
+  const startOfDay   = new Date(now); startOfDay.setHours(0,0,0,0);
+  const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  let filtered = recent;
+  if (tab === 'today')  filtered = recent.filter(o => new Date(o.created_at) >= startOfDay);
+  if (tab === 'week')   filtered = recent.filter(o => new Date(o.created_at) >= startOfWeek);
+  if (tab === 'month')  filtered = recent.filter(o => new Date(o.created_at) >= startOfMonth);
+
+  if (!filtered.length) {
+    hist.innerHTML = '<div class="earn-empty"><div class="earn-empty-icon">📭</div><p>No deliveries in this period.</p></div>';
+    return;
+  }
+
+  hist.innerHTML = filtered.map(o => {
+    const date = new Date(o.created_at);
+    const dateStr = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    const num = o.order_number ? o.order_number.toString().slice(-6).toUpperCase() : o.id.slice(-6).toUpperCase();
+    return `
+    <div class="earn-row">
+      <div class="earn-row-icon">🛵</div>
+      <div class="earn-row-info">
+        <div class="earn-row-name">${o.customer_name || 'Customer'}</div>
+        <div class="earn-row-meta">#${num} · ${dateStr}, ${timeStr} · ${o.driver_distance_km} km</div>
+      </div>
+      <div class="earn-row-fee">+${o.driver_fee} ETB</div>
+    </div>`;
+  }).join('');
 }
 
 // ── TOAST ──

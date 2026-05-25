@@ -2059,6 +2059,57 @@ app.get('/api/drivers/telegram/:telegramId/orders', async (req, res) => {
     }
 });
 
+app.get('/api/drivers/telegram/:telegramId/earnings', async (req, res) => {
+    try {
+        const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
+        if (!driver) return res.status(404).json({ success: false, error: 'Driver not found' });
+
+        const allOrders = await store.findMany('orders', {}, 'created_at');
+        const delivered = allOrders.filter(o => o.driver_id === driver.id && o.status === 'delivered');
+
+        const now = new Date();
+        const startOfDay   = new Date(now); startOfDay.setHours(0,0,0,0);
+        const startOfWeek  = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const calc = (orders) => {
+            const fee   = orders.reduce((s, o) => s + parseFloat(o.driver_fee || 0), 0);
+            const dist  = orders.reduce((s, o) => s + parseFloat(o.driver_distance_km || 0), 0);
+            return { count: orders.length, fee: Math.round(fee * 10) / 10, distance: Math.round(dist * 10) / 10 };
+        };
+
+        const todayOrders  = delivered.filter(o => new Date(o.created_at) >= startOfDay);
+        const weekOrders   = delivered.filter(o => new Date(o.created_at) >= startOfWeek);
+        const monthOrders  = delivered.filter(o => new Date(o.created_at) >= startOfMonth);
+
+        // Build recent delivery history (last 20)
+        const recent = delivered
+            .slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 20)
+            .map(o => ({
+                id: o.id,
+                order_number: o.order_number,
+                customer_name: o.customer_name,
+                created_at: o.created_at,
+                driver_fee: parseFloat(o.driver_fee || 0),
+                driver_distance_km: parseFloat(o.driver_distance_km || 0),
+                total_amount: parseFloat(o.total_amount || 0)
+            }));
+
+        res.json({
+            success: true,
+            today:   calc(todayOrders),
+            week:    calc(weekOrders),
+            month:   calc(monthOrders),
+            allTime: calc(delivered),
+            recent
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: 'Failed to fetch earnings' });
+    }
+});
+
 app.get('/api/drivers/telegram/:telegramId/documents', async (req, res) => {
     try {
         const driver = await store.findOne('drivers', { telegram_user_id: String(req.params.telegramId) });
