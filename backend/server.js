@@ -2001,8 +2001,8 @@ app.get('/api/drivers/telegram/:telegramId/status', async (req, res) => {
             current_lat: driver.current_lat,
             current_lng: driver.current_lng,
             last_location_update: driver.last_location_update,
-            total_deliveries: driver.total_deliveries || 0,
-            rating: driver.rating || 5.0
+            total_deliveries: parseInt(driver.total_deliveries) || 0,
+            rating: parseFloat(driver.rating) || 5.0
         });
     } catch (e) {
         console.error(e);

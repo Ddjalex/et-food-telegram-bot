@@ -972,14 +972,27 @@ async function init() {
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
 
+    const driverRating = parseFloat(driverData.rating) || 5.0;
+    const driverDeliveries = parseInt(driverData.total_deliveries) || 0;
     document.getElementById('headerName').textContent = driverData.name || 'Driver';
     document.getElementById('headerRating').textContent =
-      '⭐ ' + (driverData.rating || 5.0).toFixed(1) + ' · ' + (driverData.total_deliveries || 0) + ' deliveries';
-    document.getElementById('statDeliveries').textContent = driverData.total_deliveries || 0;
-    document.getElementById('statRating').textContent = (driverData.rating || 5.0).toFixed(1);
+      '⭐ ' + driverRating.toFixed(1) + ' · ' + driverDeliveries + ' deliveries';
+    document.getElementById('statDeliveries').textContent = driverDeliveries;
+    document.getElementById('statRating').textContent = driverRating.toFixed(1);
 
     initMap();
     initSocket();
+
+    // Load today's km from earnings
+    fetch('/api/drivers/telegram/' + driverTelegramId + '/earnings')
+      .then(r => r.json())
+      .then(e => {
+        if (e.success) {
+          document.getElementById('statDistance').textContent =
+            (parseFloat(e.today.distance) || 0).toFixed(1);
+        }
+      })
+      .catch(() => {});
 
     // Sync online state from server — always use is_available as source of truth
     // (driver may have gone online/offline via the bot, not the WebApp)
