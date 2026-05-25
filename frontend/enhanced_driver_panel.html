@@ -45,12 +45,13 @@
     top: 0;
     z-index: 100;
     border-bottom: 1px solid rgba(0,212,255,0.15);
+    gap: 8px;
   }
-  .header-brand { display: flex; align-items: center; gap: 10px; }
-  .header-logo { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #a855f7);
+  .header-brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; overflow: hidden; }
+  .header-logo { width: 36px; height: 36px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent), #a855f7);
     border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  .header-title { font-weight: 700; font-size: 16px; }
-  .header-subtitle { font-size: 11px; color: var(--muted); }
+  .header-title { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-subtitle { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
   /* ── TOGGLE SWITCH ── */
   .status-pill {
@@ -526,14 +527,14 @@
         <div class="header-subtitle" id="headerRating">⭐ 5.0 · 0 deliveries</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <button onclick="openEarnings()" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);color:var(--accent);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button onclick="openEarnings()" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);color:var(--accent);border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
         <i class="fas fa-wallet"></i> Earnings
       </button>
-      <button onclick="openSOS()" style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.5);color:#ff3232;border-radius:10px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:0.5px;">
+      <button onclick="openSOS()" style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.5);color:#ff3232;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:5px;letter-spacing:0.5px;white-space:nowrap;">
         🆘 SOS
       </button>
-      <div id="statusPill" class="status-pill offline" title="Change via Driver Bot">
+      <div id="statusPill" class="status-pill offline" title="Change via Driver Bot" style="flex-shrink:0;">
         <span class="status-dot"></span>
         <span id="onlineLabel">OFFLINE</span>
       </div>
